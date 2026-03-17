@@ -4,3 +4,5 @@ dist
 .env.local
 prisma/
 /src/generated/prisma
+
+logs/*.log

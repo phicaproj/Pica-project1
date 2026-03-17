@@ -37,22 +37,22 @@ const limiter = rateLimit({
   },
 });
 app.use(limiter);
-
-// Better Auth catch-all
-app.all('/auth/*splat', toNodeHandler(auth));
-
-// Request Parsing
-app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// Logging & Context
+// Better Auth catch-all
+app.all('/api/auth/*splat', toNodeHandler(auth));
 app.use(requestContextMiddleware);
+
+// Logging & Context
 app.use(
   morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined', {
     stream: { write: (message) => logger.info(message.trim()) },
   })
 );
+
+// Request Parsing
+app.use(express.json({ limit: '10kb' }));
 
 // Health Checks
 app.get('/health', (_req, res) => {
