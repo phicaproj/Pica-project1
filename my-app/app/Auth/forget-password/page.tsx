@@ -2,16 +2,40 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/authClient";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: call your API to send reset code to email
-    // On success, navigate to verify-code page and pass email along
-    router.push(`/auth/verify-code?email=${encodeURIComponent(email)}`);
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const res = await authClient.forgetPassword.emailOtp({
+        email,
+      });
+
+      if (res.error) {
+        setError(
+          res.error.message ?? "Failed to send reset code. Please try again.",
+        );
+        return;
+      }
+
+      // OTP email was sent — go to verify page with forgot-password type
+      router.push(
+        `/auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
+      );
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -19,7 +43,7 @@ export default function ForgotPasswordPage() {
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('./images/loginbg.jpeg')" }}
+        style={{ backgroundImage: "url('/images/loginbg.jpeg')" }}
       />
 
       {/* Main content */}
@@ -28,15 +52,13 @@ export default function ForgotPasswordPage() {
         <div className="pt-10 flex justify-center">
           <div className="flex items-center gap-2">
             {/* Replace with your logo */}
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">
-              Beauvision
-            </span>
+            <img src="/images/logo.png" alt="logo" />
           </div>
         </div>
 
         {/* Card - centered */}
         <div className="flex-1 flex items-center justify-center pb-10">
-          <div className="bg-white rounded-2xl shadow-xl p-10 w-full max-w-md mx-4">
+          <div className="bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
               Forgot Password
             </h2>
@@ -46,20 +68,32 @@ export default function ForgotPasswordPage() {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-              />
+              <div>
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError("");
+                  }}
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                    error
+                      ? "border-red-500 focus:ring-red-400"
+                      : "border-gray-200 focus:ring-[#017CA3]"
+                  }`}
+                />
+                {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+              </div>
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold text-sm tracking-wide transition-colors duration-200"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-[#017CA3] hover:bg-[#046f91] active:bg-[#017CA3] text-white font-semibold text-sm tracking-wide transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Continue
+                {isLoading ? "Sending..." : "Continue"}
               </button>
             </form>
 
@@ -67,7 +101,7 @@ export default function ForgotPasswordPage() {
               Remembered your password?{" "}
               <a
                 href="/auth/login"
-                className="font-bold text-gray-900 hover:text-teal-600 transition"
+                className="font-bold text-gray-900 hover:text-[#017CA3] transition"
               >
                 Login
               </a>
@@ -83,7 +117,7 @@ export default function ForgotPasswordPage() {
           href="https://sundimension.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-teal-600 transition"
+          className="underline hover:text-[#017CA3] transition"
         >
           SunDimension
         </a>

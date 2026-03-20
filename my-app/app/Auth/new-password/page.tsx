@@ -1,28 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { resetPassword } from "@/lib/authClient";
 
 export default function NewPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email") || "";
+  const otp = searchParams.get("otp") || "";
+
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmError, setConfirmError] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setConfirmError("");
+    setError("");
 
     if (newPassword !== confirmPassword) {
       setConfirmError("Passwords do not match");
       return;
     }
 
-    // TODO: call your API to update password
-    // On success:
-    router.push("/auth/login");
+    if (!email || !otp) {
+      setError("Invalid or expired reset link. Please start over.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await resetPassword({ newPassword, email, otp });
+
+      if (res.error) {
+        setError(
+          res.error.message ?? "Failed to reset password. Please try again.",
+        );
+        return;
+      }
+      alert("Password reset successfully");
+      router.push("/auth/login");
+    } catch {
+      setError("Something went wrong. Please try again.");
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const EyeIcon = () => (
@@ -69,7 +97,7 @@ export default function NewPasswordPage() {
       {/* Background image */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('./images/loginbg.jpeg')" }}
+        style={{ backgroundImage: "url('/images/loginbg.jpeg')" }}
       />
 
       {/* Main content */}
@@ -77,19 +105,23 @@ export default function NewPasswordPage() {
         {/* Logo - centered */}
         <div className="pt-10 flex justify-center">
           <div className="flex items-center gap-2">
-            {/* Replace with your logo */}
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">
-              Beauvision
-            </span>
+            <img src="/images/logo.png" alt="logo" />
           </div>
         </div>
 
         {/* Card - centered */}
         <div className="flex-1 flex items-center justify-center pb-10">
-          <div className="bg-white rounded-2xl shadow-xl p-10 w-full max-w-md mx-4">
+          <div className="bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold text-gray-900 text-center mb-8">
               New Password
             </h2>
+
+            {/* General error (e.g. invalid token) */}
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm text-center">
+                {error}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* New Password */}
@@ -100,7 +132,8 @@ export default function NewPasswordPage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition pr-12"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#017CA3] focus:border-transparent transition pr-12 disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -124,10 +157,11 @@ export default function NewPasswordPage() {
                       if (confirmError) setConfirmError("");
                     }}
                     required
-                    className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${
+                    disabled={isLoading}
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 disabled:opacity-60 ${
                       confirmError
                         ? "border-red-500 focus:ring-red-400"
-                        : "border-gray-200 focus:ring-teal-500"
+                        : "border-gray-200 focus:ring-[#017CA3]"
                     }`}
                   />
                   <button
@@ -146,9 +180,10 @@ export default function NewPasswordPage() {
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold text-sm tracking-wide transition-colors duration-200"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-[#017CA3] hover:bg-[#046f91] active:bg-[#017CA3] text-white font-semibold text-sm tracking-wide transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Continue
+                {isLoading ? "Saving..." : "Continue"}
               </button>
             </form>
           </div>
@@ -162,7 +197,7 @@ export default function NewPasswordPage() {
           href="https://sundimension.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline hover:text-teal-600 transition"
+          className="underline hover:text-[#017CA3] transition"
         >
           SunDimension
         </a>

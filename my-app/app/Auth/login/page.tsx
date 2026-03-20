@@ -2,26 +2,44 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Login, sendVerificationOtp } from "@/lib/authClient";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPasswordError("");
+    setError("");
+    setIsLoading(true);
 
-    // Example validation — replace with your actual auth logic
-    if (!password) {
-      setPasswordError("Incorrect password");
-      return;
+    try {
+      const res = await Login({ payload: { email, password } });
+
+      if (res.error) {
+        setError(res.error.message ?? "Login failed. Please try again.");
+        return;
+      }
+
+      if (res.data?.user.emailVerified === false) {
+        await sendVerificationOtp({ email, type: "email-verification" });
+        router.push(
+          `/auth/verify-code?email=${encodeURIComponent(email)}&type=email-verification`,
+        );
+        return;
+      }
+
+      router.push("/");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    // TODO: call your auth API here
-    // On failed auth response, call: setPasswordError("Incorrect password");
-    console.log("Login:", { email, password });
   };
 
   return (
@@ -30,7 +48,7 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: "url('./images/loginbg.jpeg')",
+          backgroundImage: "url('/images/loginbg.jpeg')",
         }}
       />
 
@@ -39,16 +57,13 @@ export default function LoginPage() {
         {/* Logo - centered */}
         <div className="pt-10 flex justify-center">
           <div className="flex items-center gap-2">
-            {/* Replace with your logo */}
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">
-              Beauvision
-            </span>
+            <img src="/images/logo.png" alt="logo" />
           </div>
         </div>
 
         {/* Login card - centered */}
         <div className="flex-1 flex items-center justify-center pb-10">
-          <div className="bg-white rounded-2xl shadow-xl p-10 w-full max-w-md mx-4">
+          <div className="bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4">
             <h2 className="text-xl font-bold text-gray-900 text-center mb-8">
               Login to your account
             </h2>
@@ -62,7 +77,8 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                  disabled={isLoading}
+                  className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#017CA3] focus:border-transparent transition disabled:opacity-60"
                 />
               </div>
 
@@ -75,13 +91,14 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
-                      if (passwordError) setPasswordError("");
+                      if (error) setError("");
                     }}
                     required
-                    className={`w-full px-4 py-3.5 rounded-xl border text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 bg-gray-50 ${
-                      passwordError
+                    disabled={isLoading}
+                    className={`w-full px-4 py-3.5 rounded-xl border text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 bg-gray-50 disabled:opacity-60 ${
+                      error
                         ? "border-red-500 focus:ring-red-400"
-                        : "border-gray-200 focus:ring-teal-500"
+                        : "border-gray-200 focus:ring-[#017CA3]"
                     }`}
                   />
                   <button
@@ -131,14 +148,14 @@ export default function LoginPage() {
 
                 {/* Error + Forgot Password row */}
                 <div className="flex items-center justify-between mt-2">
-                  {passwordError ? (
-                    <p className="text-red-500 text-xs">{passwordError}</p>
+                  {error ? (
+                    <p className="text-red-500 text-xs">{error}</p>
                   ) : (
                     <span />
                   )}
                   <Link
-                    href="/Auth/forgot-password"
-                    className="text-sm text-gray-500 hover:text-teal-600 transition ml-auto"
+                    href="/auth/forget-password"
+                    className="text-sm text-gray-500 hover:text-[#017CA3] transition ml-auto"
                   >
                     Forgot Password?
                   </Link>
@@ -148,9 +165,10 @@ export default function LoginPage() {
               {/* Login button */}
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold text-sm tracking-wide transition-colors duration-200"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-[#017CA3] hover:bg-[#046f91] active:bg-[#017CA3] text-white font-semibold text-sm tracking-wide transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Login
+                {isLoading ? "Logging in..." : "Login"}
               </button>
             </form>
 
