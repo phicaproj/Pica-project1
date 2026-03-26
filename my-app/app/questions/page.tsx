@@ -228,8 +228,8 @@ export default function QuestionPage() {
   if (showResults) {
     return (
       <div className="relative min-h-screen w-full flex flex-col overflow-hidden">
-        {/* Background — replace with your image */}
-        <div className="absolute inset-0 bg-gray-900" />
+        
+        <img src="./images/image1.png" className="absolute inset-0 w-full h-full object-cover" />
 
         <div className="relative flex-1 flex flex-col">
           {/* Header */}
@@ -238,7 +238,7 @@ export default function QuestionPage() {
               Back to Homepage
             </Link>
             {/* Replace with your logo */}
-            <span className="text-3xl font-bold text-white tracking-tight mt-2">Beauvision</span>
+            <img src="./images/logo.png" className="h-10 mt-2" />
           </div>
 
           {/* Results card */}
@@ -300,8 +300,8 @@ export default function QuestionPage() {
   // ── Question page ─────────────────────────────────────────────────────────
   return (
     <div className="relative min-h-screen w-full flex flex-col overflow-hidden">
-      {/* Background — replace with your image */}
-      <div className="absolute inset-0 bg-gray-100" />
+      
+      <img src="./images/image2.png" className="absolute inset-0 w-full h-full object-cover" />
 
       <div className="relative flex-1 flex flex-col">
         {/* Header */}
@@ -309,8 +309,8 @@ export default function QuestionPage() {
           <Link href="/" className="absolute left-8 top-0 text-gray-800 text-sm underline hover:opacity-70 transition">
             Back to Homepage
           </Link>
-          {/* Replace with your logo */}
-          <span className="text-3xl font-bold text-gray-900 tracking-tight">Beauvision</span>
+          
+          <img src="./images/logo.png" className="h-10 mt-2" />
         </div>
 
         {/* Question card */}

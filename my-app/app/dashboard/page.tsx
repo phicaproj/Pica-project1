@@ -96,7 +96,7 @@ export default function DashboardPage() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           {/* Replace with your logo */}
-          <span className="text-xl font-bold text-white tracking-tight">Beauvision</span>
+          <img src="./images/logo.png"></img>
         </div>
 
         {/* Right controls */}
@@ -255,8 +255,11 @@ export default function DashboardPage() {
           ) : (
             /* ── Empty state ── */
             <div className="relative rounded-2xl bg-[#243044] overflow-hidden flex items-center justify-center" style={{ minHeight: "480px" }}>
-              {/* Background image placeholder — replace with your image */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#243044] to-[#1a2235]" />
+              
+              <div
+  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+  style={{ backgroundImage: "url('./images/dashboard img.png')" }}
+/>
               {/* Yellow glow blob */}
               <div className="absolute left-16 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-yellow-300 opacity-80 blur-sm pointer-events-none" />
               <div className="relative z-10 text-center">
