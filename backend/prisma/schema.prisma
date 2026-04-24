@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum Phase {
+  PHASE1
+  PHASE2A
+  PHASE2B
+}
+
+enum RiskType {
+  NORMAL
+  RISK
+  KNOCKOUT
+}
+
+enum ColorBand {
+  RED
+  AMBER
+  GREEN
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  PAID
+  REPORT_GENERATED
+}
+
+enum InsightRule {
+  KNOCKOUT
+  BOTH_RISK
+  ONE_RISK
+  BOTH_NORMAL
+}
+
+// ============================================================
+// LAYER A — CONTENT (Static / Admin-Managed)
+// ============================================================
+
+model Pillar {
+  id           String   @id @default(uuid())
+  code         String   @unique // e.g. "FL", "FR", "BM", "OP", "MS", "GC", "SS"
+  name         String   // e.g. "Founder & Leadership"
+  description  String?
+  phase        Phase    // which phase this pillar belongs to
+  weight       Decimal  @db.Decimal(5, 2) // e.g. 14.28 for equal 7-pillar weighting
+  displayOrder Int      @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  // Relations
+  questions         Question[]
+  sessionPillarScores SessionPillarScore[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("pillars")
+}
+
+model Question {
+  id           String   @id @default(uuid())
+  pillarId     String   @map("pillar_id")
+  questionCode String   @unique @map("question_code") // e.g. "FL-001"
+  questionText String   @map("question_text")
+  phase        Phase
+  displayOrder Int      @map("display_order")
+  hasKnockoutOption Boolean @default(false) @map("has_knockout_option")
+  isActive Boolean @default(true) @map("is_active")
+
+  // Relations
+  pillar    Pillar           @relation(fields: [pillarId], references: [id])
+  options   QuestionOption[]
+  responses SessionResponse[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id             String   @id @default(uuid())
+  questionId     String   @map("question_id")
+  optionLabel    String   @map("option_label") // "A", "B", "C", "D"
+  optionText     String   @map("option_text")
+  score          Int      // 0, 3, 5, 6, 10
+  riskType       RiskType @map("risk_type")
+  observation    String   // e.g. "High focus"
+  recommendation String   // e.g. "Maintain this; you are in the Growth Zone"
+  displayOrder   Int      @map("display_order")
+
+  // Relations
+  question  Question          @relation(fields: [questionId], references: [id])
+  responses SessionResponse[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([questionId, optionLabel]) // no duplicate A/B/C/D per question
+  @@map("question_options")
+}
+
+// ============================================================
+// LAYER B — USERS
+// ============================================================
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String? @map("password_hash") // null for Phase 1 lead-only users
+  firstName    String? @map("first_name")
+  lastName     String? @map("last_name")
+  businessName String? @map("business_name")
+  phone        String?
+  isVerified   Boolean @default(false) @map("is_verified")
+
+  // Relations
+  sessions AssessmentSession[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+// ============================================================
+// LAYER C — SESSION (Per User Assessment Run)
+// ============================================================
+
+model AssessmentSession {
+  id           String        @id @default(uuid())
+  userId       String?       @map("user_id") 
+  phase        Phase
+  status       SessionStatus @default(IN_PROGRESS)
+
+  // Phase 1 lead capture fields (filled before account creation)
+  leadEmail        String? @map("lead_email")   @unique
+  staffSize         String? @map("lead_staff_size")
+  businessName String @map("lead_business_name")
+  industry     String @map("lead_industry")
+  location     String @map("lead_location")
+  operatingYears     String @map("lead_operating_years")
+  annualRevenue     String @map("lead_annual_revenue_range")
+  
+  
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  // Relations
+  user               User?                @relation(fields: [userId], references: [id])
+  responses          SessionResponse[]
+  pillarScores       SessionPillarScore[]
+  result             SessionResult?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("assessment_sessions")
+}
+
+model SessionResponse {
+  id        String @id @default(uuid())
+  sessionId String @map("session_id")
+  questionId       String @map("question_id")
+  selectedOptionId String @map("selected_option_id")
+
+  // Captured at answer time so reports are immune to future admin edits on the question/option content.
+  scoreAtTime    Int      @map("score_at_time")
+  riskTypeAtTime RiskType @map("risk_type_at_time")
+
+  answeredAt DateTime @default(now()) @map("answered_at")
+
+  // Relations
+  session        AssessmentSession @relation(fields: [sessionId], references: [id])
+  question       Question          @relation(fields: [questionId], references: [id])
+  selectedOption QuestionOption    @relation(fields: [selectedOptionId], references: [id])
+
+  // One answer per question per session
+  @@unique([sessionId, questionId])
+  @@map("session_responses")
+}
+
+/// Pillar-level score and insight for a session.
+/// One row per pillar per session — 7 rows total for a full Phase 1 run.
+model SessionPillarScore {
+  id           String @id @default(uuid())
+  sessionId    String @map("session_id")
+  pillarId     String @map("pillar_id")
+
+  rawScore         Int     @map("raw_score")         // sum of selected scores
+  maxPossibleScore Int     @map("max_possible_score") // sum of max scores for answered Qs
+  weightedScore    Decimal @db.Decimal(6, 2) @map("weighted_score") // 0–100
+
+  hasKnockout  Boolean   @default(false) @map("has_knockout")
+  colorBand    ColorBand @map("color_band")
+
+  insightRuleApplied InsightRule @map("insight_rule_applied")
+
+  // ─── Findings stored as JSON ──────────────────────────────
+  // Array of 1–2 findings selected by the rule above.
+  // Shape per item:
+  // {
+  //   optionId:       string,
+  //   questionText:   string,
+  //   selectedLabel:  string,   // "A" | "B" | "C" | "D"
+  //   observation:    string,
+  //   recommendation: string,
+  //   riskType:       RiskType,
+  //   score:          number
+  // }
+  findings Json // Json[] shape described above
+
+  // Relations
+  session AssessmentSession @relation(fields: [sessionId], references: [id])
+  pillar  Pillar            @relation(fields: [pillarId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([sessionId, pillarId]) // one score row per pillar per session
+  @@map("session_pillar_scores")
+}
+
+/// Overall session result — one row per completed session.
+model SessionResult {
+  id        String @id @default(uuid())
+  sessionId String @unique @map("session_id") // 1:1 with AssessmentSession
+
+  totalScore   Decimal   @db.Decimal(6, 2) @map("total_score") // 0–100
+  colorBand    ColorBand @map("color_band")
+  hasAnyKnockout Boolean @default(false) @map("has_any_knockout")
+
+  // Array of question_ids that triggered a knockout, e.g. ["uuid-1", "uuid-2"]
+  knockoutQuestionIds Json @map("knockout_question_ids")
+
+  insightPayload Json @map("insight_payload")
+
+  // Populated after payment + PDF generation
+  reportPdfUrl String?   @map("report_pdf_url")
+  generatedAt  DateTime? @map("generated_at")
+
+  // Relations
+  session AssessmentSession @relation(fields: [sessionId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("session_results")
+}

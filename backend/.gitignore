@@ -1,8 +1,7 @@
-node_modules
-dist
 .env
-.env.local
-prisma/
+node_modules*
 /src/generated/prisma
-
-logs/*.log
+.prettierignore
+nodemon.json
+/dist
+/src/generated/prisma
