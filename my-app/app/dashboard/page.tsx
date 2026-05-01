@@ -2,273 +2,421 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  Search,
+  ArrowRight,
+  CheckCircle2,
+  Radar,
+  FileText,
+  Lock,
+  RotateCcw,
+  Sparkles,
+  Shield,
+} from "lucide-react";
 
-// ─── Gauge ────────────────────────────────────────────────────────────────────
-function Gauge({ score }: { score: number }) {
-  const r = 90;
-  const cx = 120;
-  const cy = 120;
-  const startAngle = 135;
-  const sweep = 270;
-  const endAngle = startAngle + sweep;
+// ─── Toggle this to switch between empty and active states ───────────────────
+const HAS_SCANS = false; // Set to true to see the active/returning user state
 
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const arcPath = (start: number, end: number) => {
-    const s = toRad(start);
-    const e = toRad(end);
-    const x1 = cx + r * Math.cos(s);
-    const y1 = cy + r * Math.sin(s);
-    const x2 = cx + r * Math.cos(e);
-    const y2 = cy + r * Math.sin(e);
-    const large = end - start > 180 ? 1 : 0;
-    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
-  };
+// ─── Empty State (Welcome to PICA) ──────────────────────────────────────────
+function EmptyState() {
+  return (
+    <div className="space-y-6 max-w-full">
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] overflow-hidden p-6 md:p-10 border border-white/5">
+        {/* Decorative glow */}
+        <div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-20 bottom-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-  const scoreAngle = startAngle + (score / 100) * sweep;
-  const arcColor = score >= 70 ? "#22c55e" : score >= 40 ? "#eab308" : "#ef4444";
-  const label = score >= 70 ? "Good Health" : score >= 40 ? "Moderate Risk" : "At Risk";
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <span className="inline-block px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-[10px] font-bold uppercase tracking-wider mb-4">
+              New Workspace Activated
+            </span>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4">
+              Welcome to <span className="text-orange-400">PICA</span>
+            </h1>
+            <p className="text-gray-400 text-sm md:text-base max-w-lg mb-6">
+              Unlock architectural precision in your business strategy. PICA illuminates
+              hidden pain points and maps the celestial trajectory of your organization
+              through deep-data intelligence.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard/strategic-scan"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
+              >
+                Start Your First Strategic Scan
+                <Sparkles className="w-4 h-4" />
+              </Link>
+              <button className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition">
+                View Onboarding Guide
+              </button>
+            </div>
+          </div>
 
-  const segments = [
-    { from: startAngle, to: startAngle + sweep * 0.4, color: "#ef4444" },
-    { from: startAngle + sweep * 0.4, to: startAngle + sweep * 0.7, color: "#eab308" },
-    { from: startAngle + sweep * 0.7, to: endAngle, color: "#22c55e" },
+          {/* Decorative visual placeholder */}
+          <div className="hidden lg:flex items-center justify-center w-52 h-40 rounded-xl bg-gradient-to-br from-teal-500/10 to-purple-500/10 border border-white/5">
+            <div className="w-20 h-20 rounded-lg bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
+              <Radar className="w-8 h-8 text-teal-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Identify Pain Points + Predictive Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Identify Pain Points */}
+        <div className="lg:col-span-2 rounded-2xl bg-[#111827] border border-white/5 p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0">
+              <Search className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Identify Pain Points</h3>
+              <p className="text-gray-400 text-sm mt-1">
+                Our proprietary Strategic Scan analyzes your operational data to find
+                inefficiencies before they become liabilities. It&apos;s the first step to building a
+                resilient business architecture.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <div className="px-4 py-3 rounded-lg bg-[#0d1117] border border-teal-500/20">
+              <p className="text-[10px] text-orange-400 font-bold uppercase">Step 01</p>
+              <p className="text-sm text-white mt-0.5">Connect Data Source</p>
+            </div>
+            <div className="px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5">
+              <p className="text-[10px] text-gray-500 font-bold uppercase">Step 02</p>
+              <p className="text-sm text-gray-400 mt-0.5">AI Analysis</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Predictive Insights */}
+        <div className="rounded-2xl bg-[#111827] border border-white/5 p-6 relative overflow-hidden">
+          <span className="absolute top-4 right-4 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-teal-500/20 text-teal-400">
+            Coming Soon
+          </span>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+            </div>
+          </div>
+          <h3 className="text-lg font-bold text-white mb-2">Predictive Insights</h3>
+          {/* Skeleton lines */}
+          <div className="space-y-2 mb-4">
+            <div className="h-2 rounded-full bg-blue-500/30 w-full" />
+            <div className="h-2 rounded-full bg-blue-500/20 w-4/5" />
+            <div className="h-2 rounded-full bg-blue-500/30 w-full" />
+            <div className="h-2 rounded-full bg-blue-500/20 w-3/5" />
+          </div>
+          <p className="text-xs text-gray-500">
+            Automated intelligence gathering based on your first 3 scans.
+          </p>
+        </div>
+      </div>
+
+      {/* Industry Benchmarks */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white">Industry Benchmarks</h2>
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-orange-500/20 text-orange-400">
+            Locked <Lock className="w-3 h-3" />
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-xl bg-[#111827] border border-white/5 p-6 h-28 flex items-end"
+            >
+              {i === 0 && (
+                <p className="text-xs text-gray-500">Requires 1 Scan</p>
+              )}
+              {/* Skeleton bars */}
+              <div className="w-full space-y-1.5">
+                <div className="h-1.5 rounded-full bg-white/5 w-3/4" />
+                <div className="h-1.5 rounded-full bg-white/5 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* No Scan Activity */}
+      <div className="rounded-2xl bg-[#111827] border border-white/5 p-10 text-center">
+        <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+          <RotateCcw className="w-7 h-7 text-gray-500" />
+        </div>
+        <h3 className="text-lg font-bold text-white mb-2">No Scan Activity Yet</h3>
+        <p className="text-gray-400 text-sm max-w-md mx-auto mb-4">
+          Your strategic journey begins here. Complete your first scan to see results,
+          recommendations, and comparative data.
+        </p>
+        <Link
+          href="/dashboard/strategic-scan"
+          className="inline-flex items-center gap-1 text-teal-400 text-sm font-bold uppercase tracking-wide hover:text-teal-300 transition"
+        >
+          Learn How It Works <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ─── Active State (Returning User) ──────────────────────────────────────────
+function ActiveState() {
+  const stats = [
+    {
+      label: "Overall Score",
+      value: "85%",
+      trend: "+2.4",
+      barColor: "bg-teal-400",
+      barWidth: "w-[85%]",
+    },
+    {
+      label: "Modules Completed",
+      value: "3/5",
+      sub: "Next: Finance",
+      dots: [true, true, true, false, false],
+    },
+    {
+      label: "Risk Level",
+      value: "Low",
+      valueColor: "text-green-400",
+      sub: "System integrity verified 2 hours ago.",
+      hasShield: true,
+    },
+  ];
+
+  const scanSteps = [
+    { label: "Data Feed", status: "Completed", icon: CheckCircle2, color: "text-green-400 bg-green-400/20" },
+    { label: "Risk Mapping", status: "Processing...", icon: Radar, color: "text-teal-400 bg-teal-400/20" },
+    { label: "Benchmark", status: "Pending", icon: FileText, color: "text-gray-500 bg-white/5" },
+    { label: "Final Report", status: "Locked", icon: Lock, color: "text-gray-500 bg-white/5" },
+  ];
+
+  const assessments = [
+    { name: "Financial Health Index", type: "Quarterly Audit", status: "Optimized", statusColor: "text-green-400", score: "92/100", date: "Mar 24, 2026" },
+    { name: "Supply Chain Resilience", type: "External Scan", status: "Analyzing", statusColor: "text-yellow-400", score: "Pending", date: "Mar 22, 2026" },
+    { name: "Talent Retention Bench", type: "HR Analytics", status: "Attention", statusColor: "text-red-400", score: "64/100", date: "Mar 18, 2026" },
   ];
 
   return (
-    <svg viewBox="0 0 240 240" className="w-52 h-52">
-      <path d={arcPath(startAngle, endAngle)} fill="none" stroke="#374151" strokeWidth={16} strokeLinecap="round" />
-      {segments.map((seg, i) => (
-        <path key={i} d={arcPath(seg.from, seg.to)} fill="none" stroke={seg.color} strokeWidth={16} strokeLinecap="butt" opacity={0.3} />
-      ))}
-      {score > 0 && (
-        <path d={arcPath(startAngle, scoreAngle)} fill="none" stroke={arcColor} strokeWidth={16} strokeLinecap="round" />
-      )}
-      <circle cx={cx} cy={cy} r={72} fill="#111827" />
-      <text x={cx} y={cy - 6} textAnchor="middle" fill="white" fontSize={44} fontWeight="bold">{score}</text>
-      <text x={cx} y={cy + 16} textAnchor="middle" fill={arcColor} fontSize={11}>{label}</text>
-      <text x={cx} y={cy + 30} textAnchor="middle" fill="#6b7280" fontSize={9}>Since last Test</text>
+    <div className="space-y-6 max-w-full">
+      {/* Greeting Banner */}
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] overflow-hidden p-6 md:p-10 border border-white/5">
+        <div className="absolute right-0 top-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
+            Good morning, Alex.
+          </h1>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-orange-400 leading-tight">
+            PICA is monitoring your performance.
+          </h2>
+          <p className="text-gray-400 text-sm mt-3">
+            Operational efficiency is up 12% since your last scan. Explore your latest benchmarks below.
+          </p>
+        </div>
+      </div>
+
+      {/* Stats + AI Insight */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Stats Cards */}
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-xl bg-[#111827] border border-white/5 p-5"
+          >
+            <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">
+              {stat.label}
+            </p>
+            <div className="flex items-end gap-2">
+              <p className={`text-3xl font-bold ${stat.valueColor || "text-white"}`}>
+                {stat.value}
+              </p>
+              {stat.trend && (
+                <span className="text-xs text-teal-400 flex items-center gap-0.5 mb-1">
+                  <TrendingUpIcon /> {stat.trend}
+                </span>
+              )}
+              {stat.hasShield && <Shield className="w-4 h-4 text-teal-400 mb-1" />}
+            </div>
+            {stat.sub && <p className="text-xs text-gray-500 mt-1">{stat.sub}</p>}
+            {stat.barColor && (
+              <div className="mt-3 h-1.5 rounded-full bg-white/5">
+                <div className={`h-full rounded-full ${stat.barColor} ${stat.barWidth}`} />
+              </div>
+            )}
+            {stat.dots && (
+              <div className="flex gap-1.5 mt-3">
+                {stat.dots.map((filled, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 flex-1 rounded-full ${filled ? "bg-teal-400" : "bg-white/10"}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* AI Insight Pulse */}
+        <div className="rounded-xl bg-[#111827] border border-teal-500/20 p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-teal-400" />
+            </div>
+            <h3 className="text-sm font-bold text-white">AI Insight Pulse</h3>
+          </div>
+          <p className="text-sm text-gray-300 leading-relaxed">
+            &ldquo;We&apos;ve detected a shift in your <strong className="text-white">Operations</strong> pillar.
+            Relative efficiency has dipped 4% vs top-tier benchmarks. We recommend an immediate
+            deep-dive into supply chain latency.&rdquo;
+          </p>
+          <button className="mt-4 w-full py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition">
+            Explore Variance
+          </button>
+        </div>
+      </div>
+
+      {/* Scan Progress + Action + Team Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Scan Completion Progress */}
+        <div className="lg:col-span-2 rounded-xl bg-[#111827] border border-white/5 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-base font-bold text-white">Scan Completion Progress</h3>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400">
+              In Progress
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 md:gap-8">
+            {scanSteps.map((step) => (
+              <div key={step.label} className="flex items-center gap-2">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${step.color}`}>
+                  <step.icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">{step.label}</p>
+                  <p className={`text-[10px] ${step.status === "Completed" ? "text-green-400" : step.status === "Processing..." ? "text-teal-400" : "text-gray-500"}`}>
+                    {step.status}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right column: Action + Team Activity */}
+        <div className="flex flex-col gap-4">
+          {/* Start Strategic Scan CTA */}
+          <Link
+            href="/dashboard/strategic-scan"
+            className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-5 flex items-center justify-between hover:from-orange-600 hover:to-orange-700 transition-all"
+          >
+            <div>
+              <p className="text-[10px] text-orange-200 font-bold uppercase">Available Action</p>
+              <p className="text-lg font-bold text-white">Start Strategic Scan</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <ArrowRight className="w-5 h-5 text-white" />
+            </div>
+          </Link>
+
+          {/* Team Activity */}
+          <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-bold text-white">Team Activity</h4>
+              <span className="text-gray-500 text-xs">...</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">Sarah Miller</p>
+                  <p className="text-xs text-gray-500 truncate">Updated Finance Module</p>
+                </div>
+                <span className="text-[10px] text-gray-500 flex-shrink-0">12m</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-teal-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">David Chen</p>
+                  <p className="text-xs text-gray-500 truncate">Downloaded Q3 Report</p>
+                </div>
+                <span className="text-[10px] text-gray-500 flex-shrink-0">2h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Assessments */}
+      <div className="rounded-2xl bg-[#111827] border border-white/5 p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-white">Recent Assessments</h3>
+            <p className="text-xs text-gray-500">Last 5 modules processed across all departments.</p>
+          </div>
+          <button className="text-teal-400 text-sm font-semibold flex items-center gap-1 hover:text-teal-300 transition">
+            View All <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto -mx-6 px-6">
+          <table className="w-full min-w-[540px]">
+            <thead>
+              <tr className="text-[10px] text-gray-500 uppercase tracking-wider">
+                <th className="text-left pb-3 font-semibold">Assessment Name</th>
+                <th className="text-left pb-3 font-semibold">Status</th>
+                <th className="text-left pb-3 font-semibold">Score</th>
+                <th className="text-left pb-3 font-semibold">Completion Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {assessments.map((a) => (
+                <tr key={a.name} className="text-sm">
+                  <td className="py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">{a.name}</p>
+                        <p className="text-xs text-gray-500">{a.type}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4">
+                    <span className={`flex items-center gap-1.5 text-sm ${a.statusColor}`}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                      {a.status}
+                    </span>
+                  </td>
+                  <td className="py-4 font-semibold text-white">{a.score}</td>
+                  <td className="py-4 text-gray-400">{a.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Small SVG icon helper ───────────────────────────────────────────────────
+function TrendingUpIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
     </svg>
   );
 }
 
-// ─── Nav items ────────────────────────────────────────────────────────────────
-const NAV_ITEMS = [
-  "Home",
-  "Strategic Scan",
-  "Deep Dive Module",
-  "Insights",
-  "Benchmarks",
-  "Reports",
-  "Consultation",
-  "Subscription",
-  "Settings",
-];
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-export default function DashboardPage() {
-  const [activeNav, setActiveNav] = useState("Home");
-  const [hasActivity] = useState(true); // toggle to false to see empty state
-
-  // Mock data
-  const overallScore = 70;
-  const categories = [
-    { label: "Financial",       score: 80, status: "Good",   color: "text-green-400"  },
-    { label: "Marketing",       score: 69, status: "Stable", color: "text-yellow-400" },
-    { label: "Human Resources", score: 37, status: "At Risk", color: "text-red-400"   },
-  ];
-  const heatmap = [
-    { label: "Financial",       risk: "Low",      bg: "bg-green-600"  },
-    { label: "Marketing",       risk: "Moderate", bg: "bg-yellow-500" },
-    { label: "Human Resources", risk: "High",     bg: "bg-red-600"    },
-  ];
-  const priorities = [
-    "Inculcate a proper reward system",
-    "Inculcate a proper reward system",
-    "Inculcate a proper reward system",
-    "Inculcate a proper reward system",
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#1a2235] text-white flex flex-col">
-
-      {/* ── Top Nav ── */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[#1a2235]">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          {/* Replace with your logo */}
-          <img src="./images/logo.png"></img>
-        </div>
-
-        {/* Right controls */}
-        <div className="flex items-center gap-3">
-          {/* Search */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#243044] text-gray-300 text-sm hover:bg-[#2d3a52] transition">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-            </svg>
-            Search
-          </button>
-
-          {/* Notifications */}
-          <button className="relative flex items-center gap-2 px-4 py-2 rounded-full bg-[#243044] text-gray-300 text-sm hover:bg-[#2d3a52] transition">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">2 New</span>
-          </button>
-
-          {/* User */}
-          <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#243044] text-gray-300 text-sm hover:bg-[#2d3a52] transition">
-            <span className="w-6 h-6 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold">P</span>
-            B. Pica
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      {/* ── Body ── */}
-      <div className="flex flex-1 gap-0">
-
-        {/* ── Sidebar ── */}
-        <aside className="w-72 flex-shrink-0 flex flex-col justify-between py-6 px-4">
-          <nav className="bg-[#243044] rounded-2xl p-4 space-y-1">
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item}
-                onClick={() => setActiveNav(item)}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition ${
-                  activeNav === item
-                    ? "text-orange-400 font-semibold"
-                    : "text-gray-300 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
-          </nav>
-
-          {/* Bottom actions */}
-          <div className="bg-[#243044] rounded-2xl p-4 space-y-1 mt-4">
-            <button className="w-full text-left px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition">
-              Delete Account
-            </button>
-            <button className="w-full text-left px-4 py-2.5 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition">
-              Log Out
-            </button>
-          </div>
-        </aside>
-
-        {/* ── Main content ── */}
-        <main className="flex-1 p-6 overflow-y-auto">
-
-          {/* Free plan banner */}
-          <div className="relative rounded-2xl bg-[#243044] overflow-hidden mb-6 p-8" style={{ minHeight: "160px" }}>
-            {/* Blurred glow blobs */}
-            <div className="absolute right-32 top-4 w-24 h-24 rounded-full bg-orange-500 opacity-60 blur-2xl pointer-events-none" />
-            <div className="absolute right-56 top-8 w-16 h-16 rounded-full bg-yellow-300 opacity-50 blur-2xl pointer-events-none" />
-            <div className="relative z-10">
-              <h2 className="text-2xl font-bold text-white mb-1">Your Profile Is Currently On<br />The Free Plan</h2>
-              <p className="text-gray-400 text-sm mb-4">Achieve more with Pica Premium</p>
-              <button className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition">
-                View Plans
-              </button>
-            </div>
-          </div>
-
-          {hasActivity ? (
-            /* ── Active state ── */
-            <div className="grid grid-cols-3 gap-6">
-
-              {/* Overall Business Health card — spans 2 cols */}
-              <div className="col-span-2 bg-[#243044] rounded-2xl p-6 relative overflow-hidden">
-                {/* Glow blobs */}
-                <div className="absolute left-12 top-16 w-20 h-20 rounded-full bg-yellow-300 opacity-30 blur-2xl pointer-events-none" />
-
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-white">Overall Business Health</h3>
-                  <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition">
-                    See All
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Gauge */}
-                <div className="flex justify-center my-4">
-                  <Gauge score={overallScore} />
-                </div>
-
-                {/* Category breakdown */}
-                <div>
-                  <h4 className="text-sm font-semibold text-white mb-3">Overall Business Health</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {categories.map(({ label, score, status, color }) => (
-                      <div key={label} className="bg-[#1a2235] rounded-xl p-4 text-center">
-                        <p className="text-xs text-gray-400 mb-1">{label}</p>
-                        <p className="text-3xl font-bold text-white">{score}</p>
-                        <p className={`text-xs font-semibold mt-1 ${color}`}>{status}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right column */}
-              <div className="col-span-1 flex flex-col gap-6">
-
-                {/* Risk Heatmap */}
-                <div className="bg-[#243044] rounded-2xl p-6">
-                  <h3 className="text-lg font-bold text-white mb-4">Risk Heatmap</h3>
-                  <div className="space-y-2">
-                    {heatmap.map(({ label, risk, bg }) => (
-                      <div key={label} className="flex items-center justify-between gap-3">
-                        <span className="flex-1 px-3 py-2.5 rounded-lg bg-[#1a2235] text-sm text-gray-300">{label}</span>
-                        <span className={`px-4 py-2.5 rounded-lg text-white text-sm font-semibold ${bg}`}>{risk}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="mt-4 w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition">
-                    View Recommendations
-                  </button>
-                </div>
-
-                {/* Priority Fixes */}
-                <div className="bg-[#243044] rounded-2xl p-6 flex-1">
-                  <h3 className="text-lg font-bold text-white mb-4">Priority Fixes</h3>
-                  <ol className="space-y-2 list-none">
-                    {priorities.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
-                        <span className="text-gray-500 font-medium min-w-[18px]">{i + 1}.</span>
-                        {item}
-                      </li>
-                    ))}
-                  </ol>
-                  <button className="mt-5 w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition">
-                    Start Improvement Plan
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* ── Empty state ── */
-            <div className="relative rounded-2xl bg-[#243044] overflow-hidden flex items-center justify-center" style={{ minHeight: "480px" }}>
-              
-              <div
-  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-  style={{ backgroundImage: "url('./images/dashboard img.png')" }}
-/>
-              {/* Yellow glow blob */}
-              <div className="absolute left-16 top-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-yellow-300 opacity-80 blur-sm pointer-events-none" />
-              <div className="relative z-10 text-center">
-                <p className="text-2xl font-bold text-white">No Activities</p>
-              </div>
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
-  );
+// ─── Page Export ──────────────────────────────────────────────────────────────
+export default function DashboardHomePage() {
+  return HAS_SCANS ? <ActiveState /> : <EmptyState />;
 }

@@ -77,7 +77,7 @@ export default function Navbar({
             {d ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
           <Link
-            href="/auth/login"
+            href="/Auth/login"
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${d
                 ? "text-white hover:bg-white/10"
                 : "text-gray-700 hover:bg-gray-100"
@@ -86,7 +86,7 @@ export default function Navbar({
             Login
           </Link>
           <Link
-            href="/auth/signup"
+            href="/Auth/signup"
             className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
           >
             Get Started
@@ -148,7 +148,7 @@ export default function Navbar({
 
             {/* Auth Buttons - Mobile */}
             <Link
-              href="/auth/login"
+              href="/Auth/login"
               onClick={() => setMobileMenuOpen(false)}
               className={`px-3 py-2 rounded-lg text-sm font-medium text-center transition ${d
                   ? "text-white hover:bg-white/10"
@@ -158,7 +158,7 @@ export default function Navbar({
               Login
             </Link>
             <Link
-              href="/auth/signup"
+              href="/Auth/signup"
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 rounded-lg text-sm font-semibold text-center bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
             >

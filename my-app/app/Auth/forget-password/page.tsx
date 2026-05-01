@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/authClient";
 
@@ -27,7 +28,6 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      // OTP email was sent — go to verify page with forgot-password type
       router.push(
         `/auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
       );
@@ -39,89 +39,87 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col">
-      {/* Background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/images/loginbg.jpeg')" }}
-      />
-
+    <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
       {/* Main content */}
-      <div className="relative flex-1 flex flex-col">
-        {/* Logo - centered */}
-        <div className="pt-10 flex justify-center">
-          <div className="flex items-center gap-2">
-            {/* Replace with your logo */}
-            <img src="/images/logo.png" alt="logo" />
-          </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-10">
+          <img src="/images/logo.png" alt="Beauvision" className="h-8" />
+          <span className="text-white text-lg font-bold">Beauvision</span>
         </div>
 
-        {/* Card - centered */}
-        <div className="flex-1 flex items-center justify-center pb-10">
-          <div className="bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4">
-            <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
-              Forgot Password
-            </h2>
-            <p className="text-sm text-gray-500 text-center mb-8">
-              Enter your email address and we'll send you a code to reset your
-              password.
-            </p>
+        {/* Card */}
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#161b22] p-8 md:p-10">
+          <h2 className="text-2xl font-bold text-white text-center mb-2">
+            Reset Password
+          </h2>
+          <p className="text-sm text-gray-400 text-center mb-8">
+            Enter your email address and we&apos;ll send you a code to reset your password.
+          </p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (error) setError("");
-                  }}
-                  required
-                  disabled={isLoading}
-                  className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
-                    error
-                      ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-200 focus:ring-[#017CA3]"
-                  }`}
-                />
-                {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-              </div>
-
-              <button
-                type="submit"
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <input
+                type="email"
+                placeholder="Business email*"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (error) setError("");
+                }}
+                required
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl bg-[#017CA3] hover:bg-[#046f91] active:bg-[#017CA3] text-white font-semibold text-sm tracking-wide transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Sending..." : "Continue"}
-              </button>
-            </form>
+                className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                  error
+                    ? "border-red-500 focus:ring-red-400"
+                    : "border-white/10 focus:ring-[#f97316]/50"
+                }`}
+              />
+              {error && (
+                <p className="text-red-500 text-xs mt-1">{error}</p>
+              )}
+            </div>
 
-            <p className="text-center text-sm text-gray-500 mt-6">
-              Remembered your password?{" "}
-              <a
-                href="/auth/login"
-                className="font-bold text-gray-900 hover:text-[#017CA3] transition"
-              >
-                Login
-              </a>
-            </p>
-          </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] to-[#f59e0b] hover:from-[#ea6c0a] hover:to-[#d97706] text-white font-semibold text-sm tracking-wide transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Sending..." : "Continue"}
+            </button>
+          </form>
+
+          <p className="text-center text-sm text-gray-400 mt-6">
+            Remembered your password?{" "}
+            <Link
+              href="/Auth/login"
+              className="font-bold text-white hover:text-[#f97316] transition underline"
+            >
+              Login
+            </Link>
+          </p>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 py-4 text-center text-sm text-gray-600 bg-white/80 backdrop-blur-sm">
-        © Beauvision 2024 . All rights reserved. Powered By{" "}
-        <a
-          href="https://sundimension.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-[#017CA3] transition"
-        >
-          SunDimension
-        </a>
-      </div>
+      <footer className="py-6 text-center border-t border-white/5">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
+          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
+            (item) => (
+              <Link
+                key={item}
+                href="#"
+                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+              >
+                {item}
+              </Link>
+            )
+          )}
+        </div>
+        <p className="text-xs text-gray-600 uppercase tracking-wider">
+          © 2024 PICA Intelligence Systems. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }

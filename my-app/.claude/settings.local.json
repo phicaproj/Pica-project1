@@ -3,7 +3,10 @@
     "allow": [
       "Bash(find C:/Users/PreshCodes/Documents/Pica/pica-project/my-app -maxdepth 2 -type f \\\\\\(-name *.md -o -name *.env* -o -name *.config.* \\\\\\))",
       "Bash(npx next:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find /c/Users/PreshCodes/Documents/Pica/pica-project/my-app -type f -name *layer*)",
+      "Bash(find /c/Users/PreshCodes/Documents/Pica/pica-project/my-app -type f -name *diagnostic*)",
+      "Bash(find /c/Users/PreshCodes/Documents/Pica/pica-project/my-app/src -type f -name *.tsx -o -name *.ts)"
     ]
   }
 }

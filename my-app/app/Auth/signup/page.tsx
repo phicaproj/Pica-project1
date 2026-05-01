@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { SignUp } from "@/lib/authClient";
 import { useRouter } from "next/navigation";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [showPasswordHint, setShowPasswordHint] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,10 +17,8 @@ export default function SignUpPage() {
   const [form, setForm] = useState({
     businessName: "",
     email: "",
-    rcNumber: "",
     phone: "",
     password: "",
-    confirmPassword: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -37,8 +35,6 @@ export default function SignUpPage() {
     if (!form.email) newErrors.email = "Email is required";
     if (!form.phone) newErrors.phone = "Phone number is required";
     if (!form.password) newErrors.password = "Password is required";
-    if (form.password !== form.confirmPassword)
-      newErrors.confirmPassword = "Passwords do not match";
     if (!agreed) newErrors.agreed = "You must accept the terms";
     return newErrors;
   };
@@ -49,9 +45,9 @@ export default function SignUpPage() {
     const newErrors = validate();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setIsLoading(false);
       return;
     }
-    // TODO: call your register API here
     const res = await SignUp({ payload: form });
     if (res.error) {
       setIsLoading(false);
@@ -106,42 +102,37 @@ export default function SignUpPage() {
   );
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col">
-      {/* Background image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/images/signupbg.png')" }}
-      />
-
+    <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
       {/* Main content */}
-      <div className="relative flex-1 flex flex-col">
-        {/* Logo - top left */}
-        <div className="pt-8 pl-10">
-          <div className="flex items-center gap-2">
-            {/* Replace with your logo */}
-            <img src="/images/logo.png" alt="logo"></img>
-          </div>
-        </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+          {/* Left — Form */}
+          <div className="px-8 md:px-12 py-10">
+            {/* Logo */}
+            <div className="flex items-center gap-2 mb-8">
+              <img src="/images/logo.png" alt="Beauvision" className="h-8" />
+              <span className="text-white text-lg font-bold">Beauvision</span>
+            </div>
 
-        {/* Card - center */}
-        <div className="flex-1 flex items-center justify-center py-8">
-          <div className="bg-white rounded-md shadow-xl px-10 py-8 w-full max-w-lg mx-4">
-            <h2 className="text-xl font-bold text-gray-900 text-center mb-6">
-              Create account
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Create Account
             </h2>
+            <p className="text-sm text-gray-400 mb-8">
+              Join us today and get complete comprehensive analysis
+            </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               {/* Business Name */}
               <div>
                 <input
                   type="text"
-                  placeholder="Business Name*"
+                  placeholder="Business name*"
                   value={form.businessName}
                   onChange={(e) => handleChange("businessName", e.target.value)}
-                  className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
                     errors.businessName
                       ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-200 focus:ring-[#017CA3]"
+                      : "border-white/10 focus:ring-[#f97316]/50"
                   }`}
                 />
                 {errors.businessName && (
@@ -155,13 +146,13 @@ export default function SignUpPage() {
               <div>
                 <input
                   type="email"
-                  placeholder="Business Email Address*"
+                  placeholder="Business email*"
                   value={form.email}
                   onChange={(e) => handleChange("email", e.target.value)}
-                  className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
                     errors.email
                       ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-200 focus:ring-[#017CA3]"
+                      : "border-white/10 focus:ring-[#f97316]/50"
                   }`}
                 />
                 {errors.email && (
@@ -169,28 +160,17 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              {/* RC Number */}
-              <div>
-                <input
-                  type="text"
-                  placeholder="Rc number"
-                  value={form.rcNumber}
-                  onChange={(e) => handleChange("rcNumber", e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                />
-              </div>
-
               {/* Phone Number */}
               <div>
                 <input
                   type="tel"
-                  placeholder="Phone Number*"
+                  placeholder="Phone number*"
                   value={form.phone}
                   onChange={(e) => handleChange("phone", e.target.value)}
-                  className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
                     errors.phone
                       ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-200 focus:ring-[#017CA3]"
+                      : "border-white/10 focus:ring-[#f97316]/50"
                   }`}
                 />
                 {errors.phone && (
@@ -198,26 +178,26 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              {/* Enter Password with tooltip */}
+              {/* Password with tooltip */}
               <div className="relative">
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter Password*"
+                    placeholder="Password*"
                     value={form.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     onFocus={() => setShowPasswordHint(true)}
                     onBlur={() => setShowPasswordHint(false)}
-                    className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${
                       errors.password
                         ? "border-red-500 focus:ring-red-400"
-                        : "border-gray-200 focus:ring-[#017CA3]"
+                        : "border-white/10 focus:ring-[#f97316]/50"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
                   >
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
@@ -228,59 +208,28 @@ export default function SignUpPage() {
 
                 {/* Password hint tooltip */}
                 {showPasswordHint && (
-                  <div className="absolute left-full top-0 ml-3 z-10 bg-white rounded-2xl shadow-lg p-4 w-64">
-                    <p className="text-sm font-semibold text-gray-800 mb-2">
+                  <div className="absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-10 bg-[#1c2333] border border-white/10 rounded-2xl shadow-lg p-4 w-64">
+                    <p className="text-sm font-semibold text-white mb-2">
                       Your password should contain:
                     </p>
                     <ul className="space-y-1">
                       {[
-                        "A Uppercase letter e.g  (E)",
-                        "An Lowercase letter e.g (e)",
-                        "A special character e.g  (!@#)",
+                        "A Uppercase letter e.g (E)",
+                        "An Lowercase letter e.g (a)",
+                        "A special character e.g. (!@#)",
                         "A number e.g (1)",
                         "8 characters minimum",
                       ].map((rule) => (
                         <li
                           key={rule}
-                          className="flex items-start gap-2 text-sm text-gray-600"
+                          className="flex items-start gap-2 text-sm text-gray-400"
                         >
-                          <span className="mt-0.5 text-gray-400">•</span>
+                          <span className="mt-0.5 text-gray-500">•</span>
                           {rule}
                         </li>
                       ))}
                     </ul>
                   </div>
-                )}
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <div className="relative">
-                  <input
-                    type={showConfirm ? "text" : "password"}
-                    placeholder="Confirm Password*"
-                    value={form.confirmPassword}
-                    onChange={(e) =>
-                      handleChange("confirmPassword", e.target.value)
-                    }
-                    className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${
-                      errors.confirmPassword
-                        ? "border-red-500 focus:ring-red-400"
-                        : "border-gray-200 focus:ring-[#017CA3]"
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                  >
-                    {showConfirm ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.confirmPassword}
-                  </p>
                 )}
               </div>
 
@@ -295,22 +244,22 @@ export default function SignUpPage() {
                       if (errors.agreed)
                         setErrors((prev) => ({ ...prev, agreed: "" }));
                     }}
-                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-[#017CA3] focus:ring-[#017CA3] cursor-pointer"
+                    className="mt-0.5 w-4 h-4 rounded border-gray-600 bg-[#0d1117] text-[#f97316] focus:ring-[#f97316] cursor-pointer"
                   />
-                  <span className="text-sm text-gray-600 leading-snug">
-                    I have read and accepted the{" "}
+                  <span className="text-sm text-gray-400 leading-snug">
+                    I agree with{" "}
                     <Link
                       href="/terms"
-                      className="text-[#017CA3] hover:underline"
+                      className="text-white hover:underline"
                     >
-                      Terms & conditions
+                      Terms of use
                     </Link>{" "}
                     and{" "}
                     <Link
                       href="/data-policy"
-                      className="text-[#017CA3] hover:underline"
+                      className="text-white hover:underline"
                     >
-                      Data Processing Policy
+                      Data Privacy Policy
                     </Link>
                   </span>
                 </label>
@@ -322,38 +271,56 @@ export default function SignUpPage() {
               {/* Submit button */}
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-[#017CA3] hover:bg-[#046f91] active:bg-[#017CA3] text-white font-semibold text-sm tracking-wide transition-colors duration-200"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] to-[#f59e0b] hover:from-[#ea6c0a] hover:to-[#d97706] text-white font-semibold text-sm tracking-wide transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? "Creating account..." : "Create my account"}
               </button>
             </form>
 
             {/* Login link */}
-            <p className="text-center text-sm text-gray-500 mt-5">
-              Already have an account?{" "}
+            <p className="text-center text-sm text-gray-400 mt-5">
+              Already have an account?
               <Link
-                href="/auth/login"
-                className="font-bold text-gray-900 hover:text-[#017CA3] transition"
+                href="/Auth/login"
+                className="font-bold text-white hover:text-[#f97316] transition ml-1 underline"
               >
                 Login
               </Link>
             </p>
           </div>
+
+          {/* Right — Image */}
+          <div className="hidden md:block relative">
+            <Image
+              src="/images/assessques.png"
+              alt="Create Account"
+              fill
+              className="object-cover"
+            />
+          </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 py-4 text-center text-sm text-gray-600 bg-white/80 backdrop-blur-sm">
-        © Beauvision 2024 . All rights reserved. Powered By{" "}
-        <a
-          href="https://sundimension.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-[#017CA3] transition"
-        >
-          SunDimension
-        </a>
-      </div>
+      <footer className="py-6 text-center border-t border-white/5">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
+          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
+            (item) => (
+              <Link
+                key={item}
+                href="#"
+                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+              >
+                {item}
+              </Link>
+            )
+          )}
+        </div>
+        <p className="text-xs text-gray-600 uppercase tracking-wider">
+          © 2024 PICA Intelligence Systems. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }

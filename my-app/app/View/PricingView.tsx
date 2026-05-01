@@ -104,9 +104,9 @@ export default function PricingPage() {
                 </li>
               ))}
             </ul>
-            <button className={`w-full py-3.5 rounded-xl text-sm font-bold border transition ${d ? "bg-[#1a2010] border-white/10 text-white hover:bg-white/5" : "bg-gray-800 border-gray-700 text-white hover:bg-gray-700"}`}>
+            <Link href="/pages/picafulldiagnostic" className={`block w-full py-3.5 rounded-xl text-sm font-bold border transition text-center ${d ? "bg-[#1a2010] border-white/10 text-white hover:bg-white/5" : "bg-gray-800 border-gray-700 text-white hover:bg-gray-700"}`}>
               Contact Expert
-            </button>
+            </Link>
           </div>
         </div>
       </section>

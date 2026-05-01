@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { Sun, Moon } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider, useTheme } from "@/components/ThemeContext";
 
@@ -119,15 +120,25 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const { dark, setDark } = useTheme();
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement | null>(null);
+  const isDashboard = pathname.startsWith("/dashboard");
 
   useScrollAnimations(mainRef);
+
+  // Dashboard has its own layout — skip the site Navbar
+  if (isDashboard) {
+    return (
+      <div className="min-h-screen">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <div
       className={
         dark
-          ? "bg-[#0d1117] text-white min-h-screen"
-          : "bg-white text-gray-900 min-h-screen"
+          ? "bg-[#0d1117] text-white min-h-screen overflow-x-hidden"
+          : "bg-white text-gray-900 min-h-screen overflow-x-hidden"
       }
     >
       <Navbar dark={dark} setDark={setDark} navItems={navItems} isFixed={true} />
@@ -138,6 +149,19 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
+
+      {/* Floating dark/light mode toggle — bottom right on mobile */}
+      <button
+        onClick={() => setDark(!dark)}
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition md:hidden"
+        style={{
+          backgroundColor: dark ? "#1c2333" : "#f3f4f6",
+          border: dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
+          color: dark ? "#d1d5db" : "#374151",
+        }}
+      >
+        {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </button>
     </div>
   );
 }
