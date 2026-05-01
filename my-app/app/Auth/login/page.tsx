@@ -79,7 +79,7 @@ export default function LoginPage() {
     <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+        <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2">
           {/* Left — Form */}
           <div className="px-8 md:px-12 py-10 flex flex-col justify-center">
             {/* Logo */}
@@ -184,7 +184,7 @@ export default function LoginPage() {
           </div>
 
           {/* Right — Image */}
-          <div className="hidden md:block relative">
+          <div className="hidden md:block relative rounded-r-2xl overflow-hidden">
             <Image
               src="/images/assessques.png"
               alt="Welcome Back"

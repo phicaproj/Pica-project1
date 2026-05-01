@@ -121,11 +121,21 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement | null>(null);
   const isDashboard = pathname.startsWith("/dashboard");
+  const isAuth = pathname.startsWith("/Auth");
 
   useScrollAnimations(mainRef);
 
   // Dashboard has its own layout — skip the site Navbar
   if (isDashboard) {
+    return (
+      <div className="min-h-screen">
+        {children}
+      </div>
+    );
+  }
+
+  // Auth pages render full-bleed with no site navbar
+  if (isAuth) {
     return (
       <div className="min-h-screen">
         {children}

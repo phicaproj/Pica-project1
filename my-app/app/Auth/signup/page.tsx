@@ -102,7 +102,7 @@ export default function SignUpPage() {
     <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+        <div className="w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2">
           {/* Left — Form */}
           <div className="px-8 md:px-12 py-10">
             {/* Logo */}
@@ -211,7 +211,7 @@ export default function SignUpPage() {
 
                 {/* Password hint tooltip */}
                 {showPasswordHint && (
-                  <div className="absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-10 bg-[#1c2333] border border-white/10 rounded-2xl shadow-lg p-4 w-64">
+                  <div className="absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-50 bg-[#1c2333] border border-white/10 rounded-2xl shadow-lg p-4 w-64">
                     <p className="text-sm font-semibold text-white mb-2">
                       Your password should contain:
                     </p>
@@ -294,7 +294,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Right — Image */}
-          <div className="hidden md:block relative">
+          <div className="hidden md:block relative rounded-r-2xl overflow-hidden">
             <Image
               src="/images/assessques.png"
               alt="Create Account"
