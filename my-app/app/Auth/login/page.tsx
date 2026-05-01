@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Login, sendVerificationOtp } from "@/lib/authClient";
+import { Login } from "@/lib/authClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,14 +25,6 @@ export default function LoginPage() {
 
       if (res.error) {
         setError(res.error.message ?? "Login failed. Please try again.");
-        return;
-      }
-
-      if (res.data?.user.emailVerified === false) {
-        await sendVerificationOtp({ email, type: "email-verification" });
-        router.push(
-          `/auth/verify-code?email=${encodeURIComponent(email)}&type=email-verification`,
-        );
         return;
       }
 

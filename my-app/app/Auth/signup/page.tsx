@@ -20,6 +20,7 @@ export default function SignUpPage() {
     phone: "",
     password: "",
   });
+  const [submitError, setSubmitError] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -51,14 +52,10 @@ export default function SignUpPage() {
     const res = await SignUp({ payload: form });
     if (res.error) {
       setIsLoading(false);
-      setErrors({ ...errors, email: res.error.message as string });
+      setSubmitError(res.error.message);
     } else {
       setIsLoading(false);
-      router.push(
-        `/auth/verify-code?email=${encodeURIComponent(
-          form.email,
-        )}&type=email-verification`,
-      );
+      router.push("/Auth/login");
     }
   };
 
@@ -120,6 +117,12 @@ export default function SignUpPage() {
             <p className="text-sm text-gray-400 mb-8">
               Join us today and get complete comprehensive analysis
             </p>
+
+            {submitError && (
+              <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                {submitError}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Business Name */}

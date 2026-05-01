@@ -1,14 +1,11 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { resetPassword } from '@/lib/authClient'
 
 function NewPasswordContent() {
 	const router = useRouter()
-	const searchParams = useSearchParams()
-	const email = searchParams.get('email') || ''
-	const otp = searchParams.get('otp') || ''
 
 	const [showNew, setShowNew] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
@@ -28,14 +25,9 @@ function NewPasswordContent() {
 			return
 		}
 
-		if (!email || !otp) {
-			setError('Invalid or expired reset link. Please start over.')
-			return
-		}
-
 		setIsLoading(true)
 		try {
-			const res = await resetPassword({ newPassword, email, otp })
+			const res = await resetPassword({ newPassword })
 
 			if (res.error) {
 				setError(
@@ -45,7 +37,7 @@ function NewPasswordContent() {
 				return
 			}
 			alert('Password reset successfully')
-			router.push('/auth/login')
+			router.push('/Auth/login')
 		} catch {
 			setError('Something went wrong. Please try again.')
 			alert('Something went wrong. Please try again.')

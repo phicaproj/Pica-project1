@@ -8,6 +8,7 @@ import errorHandler from './service/middleware/errorHandler'
 import assessmentRouter from './module/assessment/assessment.routes'
 import questionRouter from './module/question/question.routes'
 import resultRouter from './module/result/result.routes'
+import authRouter from './module/auth/auth.route'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.use((req, res, next) => {
 	next()
 })
 // Routes
+app.use('/api/auth', authRouter)
 app.use('/api/assessment', assessmentRouter)
 app.use('/api/questions', questionRouter)
 app.use('/api/result', resultRouter)

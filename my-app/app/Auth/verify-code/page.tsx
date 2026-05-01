@@ -3,15 +3,12 @@
 import { Suspense, useState, useRef, KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { verifyOtp, sendVerificationOtp } from "@/lib/authClient";
+import { forgotPassword, verifyResetOtp } from "@/lib/authClient";
 
 function VerifyCodeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
-  const type = (searchParams.get("type") || "forget-password") as
-    | "email-verification"
-    | "forget-password";
 
   const [otp, setOtp] = useState<string[]>(["", "", "", "", ""]);
   const [codeError, setCodeError] = useState("");
@@ -62,7 +59,7 @@ function VerifyCodeContent() {
     setCodeError("");
 
     try {
-      const res = await verifyOtp({ code, email, type });
+      const res = await verifyResetOtp({ code, email });
 
       if (res.error) {
         setCodeError(
@@ -71,14 +68,9 @@ function VerifyCodeContent() {
         return;
       }
 
-      if (type === "email-verification") {
-        alert("Email verified successfully");
-        router.push("/");
-      } else if (type === "forget-password") {
-        router.push(
-          `/auth/new-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(code)}`,
-        );
-      }
+      router.push(
+        `/Auth/new-password?email=${encodeURIComponent(email)}`,
+      );
     } catch {
       setCodeError("Something went wrong. Please try again.");
     } finally {
@@ -93,7 +85,10 @@ function VerifyCodeContent() {
     inputRefs.current[0]?.focus();
 
     try {
-      await sendVerificationOtp({ email, type });
+      const res = await forgotPassword({ email });
+      if (res.error) {
+        setCodeError(res.error.message ?? "Failed to resend code.");
+      }
     } catch {
       setCodeError("Failed to resend code. Please try again.");
     } finally {
@@ -101,8 +96,7 @@ function VerifyCodeContent() {
     }
   };
 
-  const heading =
-    type === "email-verification" ? "Verify Your Email" : "Reset Password";
+  const heading = "Reset Password";
   const subtext = "We have sent a code to your email";
 
   return (

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/authClient";
+import { forgotPassword } from "@/lib/authClient";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -17,9 +17,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      const res = await authClient.forgetPassword.emailOtp({
-        email,
-      });
+      const res = await forgotPassword({ email });
 
       if (res.error) {
         setError(
@@ -29,7 +27,7 @@ export default function ForgotPasswordPage() {
       }
 
       router.push(
-        `/auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
+        `/Auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
       );
     } catch {
       setError("Something went wrong. Please try again.");

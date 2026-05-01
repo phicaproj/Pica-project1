@@ -1,13 +1,15 @@
-import {
-  emailOTPClient,
-  inferAdditionalFields,
-} from "better-auth/client/plugins";
-import { createAuthClient } from "better-auth/react";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001/api";
+
+const ACCESS_TOKEN_KEY = "pica.accessToken";
+const REFRESH_TOKEN_KEY = "pica.refreshToken";
+const USER_KEY = "pica.user";
+const RESET_OTP_TOKEN_KEY = "pica.resetOtpToken";
+const RESET_PASSWORD_TOKEN_KEY = "pica.resetPasswordToken";
 
 interface SignUpPayload {
   businessName: string;
   email: string;
-  rcNumber: string;
   phone: string;
   password: string;
 }
@@ -17,91 +19,178 @@ interface LoginPayload {
   password: string;
 }
 
-export const authClient = createAuthClient({
-  /** The base URL of the server (optional if you're using the same domain) */
-  baseURL: "http://localhost:3001",
-  plugins: [
-    inferAdditionalFields({
-      user: {
-        rcNumber: {
-          type: "string",
-        },
-        phone: {
-          type: "string",
-        },
-      },
-    }),
-    emailOTPClient(),
-  ],
-});
+export interface AuthUser {
+  id: string;
+  email: string;
+  businessName: string | null;
+  phone: string | null;
+  isVerified: boolean;
+}
+
+interface ApiError {
+  message: string;
+}
+
+interface ApiResult<T> {
+  data: T | null;
+  error: ApiError | null;
+}
+
+async function apiFetch<T>(
+  path: string,
+  body: unknown
+): Promise<ApiResult<T>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
+    if (!res.ok) {
+      const message =
+        (typeof json.message === "string" && json.message) ||
+        `Request failed with status ${res.status}`;
+      return { data: null, error: { message } };
+    }
+
+    return { data: json as T, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network error";
+    return { data: null, error: { message } };
+  }
+}
+
+function setSession(
+  accessToken: string,
+  refreshToken: string,
+  user: AuthUser
+) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getStoredUser(): AuthUser | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
-  const res = await authClient.signUp.email({
+  return apiFetch<{ message: string; user: AuthUser }>("/auth/register", {
     email: payload.email,
     password: payload.password,
-    name: payload.businessName,
-    rcNumber: payload.rcNumber,
+    businessName: payload.businessName,
     phone: payload.phone,
   });
-  return res;
-};
-export const Login = async ({ payload }: { payload: LoginPayload }) => {
-  const res = await authClient.signIn.email({
-    email: payload.email,
-    password: payload.password,
-  });
-  return res;
 };
 
-export const verifyOtp = async ({
-  code,
-  email,
-  type,
-}: {
-  code: string;
-  email: string;
-  type: "sign-in" | "change-email" | "email-verification" | "forget-password";
-}) => {
-  // verifyEmail is the ONLY method that marks emailVerified = true in the DB.
-  if (type === "email-verification") {
-    return await authClient.emailOtp.verifyEmail({ email, otp: code });
+export const Login = async ({ payload }: { payload: LoginPayload }) => {
+  const res = await apiFetch<{
+    message: string;
+    user: AuthUser;
+    accessToken: string;
+    refreshToken: string;
+  }>("/auth/login", payload);
+
+  if (res.data) {
+    setSession(res.data.accessToken, res.data.refreshToken, res.data.user);
   }
 
-  // checkVerificationOtp validates codes for any other need.
-  return await authClient.emailOtp.checkVerificationOtp({
-    email,
-    otp: code,
-    type,
-  });
+  return res;
 };
 
-export const sendVerificationOtp = async ({
+export const forgotPassword = async ({ email }: { email: string }) => {
+  const res = await apiFetch<{ message: string; otpToken: string }>(
+    "/auth/forgot-password",
+    { email }
+  );
+
+  if (res.data && typeof window !== "undefined") {
+    sessionStorage.setItem(RESET_OTP_TOKEN_KEY, res.data.otpToken);
+  }
+
+  return res;
+};
+
+export const verifyResetOtp = async ({
   email,
-  type,
+  code,
 }: {
   email: string;
-  type: "sign-in" | "email-verification" | "forget-password";
+  code: string;
 }) => {
-  const res = await authClient.emailOtp.sendVerificationOtp({
-    email,
-    type,
-  });
+  const otpToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(RESET_OTP_TOKEN_KEY)
+      : null;
+
+  if (!otpToken) {
+    return {
+      data: null,
+      error: { message: "Reset session expired. Please start over." },
+    };
+  }
+
+  const res = await apiFetch<{ message: string; passwordToken: string }>(
+    "/auth/verify-reset-otp",
+    { email, code, otpToken }
+  );
+
+  if (res.data && typeof window !== "undefined") {
+    sessionStorage.setItem(RESET_PASSWORD_TOKEN_KEY, res.data.passwordToken);
+    sessionStorage.removeItem(RESET_OTP_TOKEN_KEY);
+  }
+
   return res;
 };
 
 export const resetPassword = async ({
   newPassword,
-  email,
-  otp,
 }: {
   newPassword: string;
-  email: string;
-  otp: string;
 }) => {
-  const res = await authClient.emailOtp.resetPassword({
-    email,
-    otp,
-    password: newPassword,
-  });
+  const passwordToken =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(RESET_PASSWORD_TOKEN_KEY)
+      : null;
+
+  if (!passwordToken) {
+    return {
+      data: null,
+      error: { message: "Reset session expired. Please start over." },
+    };
+  }
+
+  const res = await apiFetch<{ message: string }>(
+    "/auth/reset-password",
+    { passwordToken, newPassword }
+  );
+
+  if (res.data && typeof window !== "undefined") {
+    sessionStorage.removeItem(RESET_PASSWORD_TOKEN_KEY);
+  }
+
   return res;
 };

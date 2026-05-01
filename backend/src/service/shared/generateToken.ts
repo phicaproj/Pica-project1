@@ -6,6 +6,8 @@ import {
   JWT_REFRESH_EXPIRE,
   JWT_OTP_SECRET,
   JWT_OTP_EXPIRE,
+  JWT_PASSWORD_RESET_SECRET,
+  JWT_PASSWORD_RESET_EXPIRE,
 } from '../../Config/env';
 import AppError from './appError';
 import { BAD_REQUEST } from './http';
@@ -17,6 +19,11 @@ export interface TokenPayload {
 export interface OtpTokenPayload {
   email: string;
   code: string;
+}
+
+export interface PasswordResetTokenPayload {
+  email: string;
+  purpose: 'password-reset';
 }
 
 export function generateAccessToken(payload: TokenPayload) {
@@ -63,5 +70,24 @@ export function verifyRefreshToken(token: string): TokenPayload {
     return decoded;
   } catch (error) {
     throw new AppError('Invalid or expired refresh token', BAD_REQUEST);
+  }
+}
+
+export function generatePasswordResetToken(payload: PasswordResetTokenPayload) {
+  return jwt.sign(payload, JWT_PASSWORD_RESET_SECRET as jwt.Secret, {
+    expiresIn: JWT_PASSWORD_RESET_EXPIRE as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifyPasswordResetToken(token: string): PasswordResetTokenPayload {
+  try {
+    const decoded = jwt.verify(
+      token,
+      JWT_PASSWORD_RESET_SECRET as jwt.Secret
+    ) as PasswordResetTokenPayload;
+
+    return decoded;
+  } catch (error) {
+    throw new AppError('Invalid or expired password reset token', BAD_REQUEST);
   }
 }
