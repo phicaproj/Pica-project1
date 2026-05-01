@@ -4,15 +4,13 @@ import AppError from '../shared/appError'
 import { ZodError } from 'zod'
 
 const handleZodError = (res: Response, error: ZodError) => {
-	const message = error.issues
-		.map((issue) => {
-			const field = issue.path.length > 0 ? issue.path.join('.') : 'Request'
-			return `${field}: ${issue.message}`
-		})
-		.join('; ')
+	const issue = error.issues[0]
+	const message = issue
+		? `${issue.path.length > 0 ? issue.path.join('.') : 'Request'}: ${issue.message}`
+		: 'Validation error'
 
 	return res.status(BAD_REQUEST).json({
-		message: message || 'Validation error',
+		message,
 	})
 }
 

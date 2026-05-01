@@ -15,9 +15,10 @@ export const registerSchema = z.object({
     .max(100, 'Business name must be at most 100 characters long'),
   phone: z
     .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format')
-    .min(10)
-    .max(15),
+    .regex(
+      /^\+?\d{10,15}$/,
+      'Phone number must be 10–15 digits, optionally starting with +'
+    ),
 });
 
 export const loginSchema = z.object({
