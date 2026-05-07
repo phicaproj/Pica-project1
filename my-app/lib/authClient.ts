@@ -7,6 +7,7 @@ const REFRESH_TOKEN_KEY = 'pica.refreshToken'
 const USER_KEY = 'pica.user'
 const RESET_OTP_TOKEN_KEY = 'pica.resetOtpToken'
 const RESET_PASSWORD_TOKEN_KEY = 'pica.resetPasswordToken'
+const LAST_SESSION_ID_KEY = 'pica.lastSessionId'
 
 interface SignUpPayload {
 	businessName: string
@@ -92,6 +93,22 @@ export function clearSession() {
 	localStorage.removeItem(ACCESS_TOKEN_KEY)
 	localStorage.removeItem(REFRESH_TOKEN_KEY)
 	localStorage.removeItem(USER_KEY)
+	localStorage.removeItem(LAST_SESSION_ID_KEY)
+}
+
+export function setLastSessionId(sessionId: string) {
+	if (typeof window === 'undefined') return
+	localStorage.setItem(LAST_SESSION_ID_KEY, sessionId)
+}
+
+export function getLastSessionId(): string | null {
+	if (typeof window === 'undefined') return null
+	return localStorage.getItem(LAST_SESSION_ID_KEY)
+}
+
+export function clearLastSessionId() {
+	if (typeof window === 'undefined') return
+	localStorage.removeItem(LAST_SESSION_ID_KEY)
 }
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {

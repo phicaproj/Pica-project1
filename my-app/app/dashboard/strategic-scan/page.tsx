@@ -1,25 +1,92 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Banknote,
-  Users,
-  Settings2,
+  CheckCircle,
+  Loader,
   Megaphone,
   Radar,
-  FileText,
-  Download,
-  Sparkles,
-  Zap,
-  RotateCcw,
-  CheckCircle2,
+  Save,
+  Settings2,
+  Users,
 } from "lucide-react";
+import { getAccessToken, setLastSessionId } from "@/lib/authClient";
 
-type ScanState = "landing" | "processing" | "results";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://pica-project1.onrender.com/api";
+
+type ScanState = "landing" | "questions" | "processing";
+
+interface QuestionOption {
+  id: string;
+  optionLabel: string;
+  optionText: string;
+  displayOrder: number;
+}
+
+interface Phase2AQuestion {
+  id: string;
+  questionCode: string;
+  questionText: string;
+  displayOrder: number;
+  answered: boolean;
+  selectedOptionId: string | null;
+  options: QuestionOption[];
+}
+
+interface Phase2APillar {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+  questions: Phase2AQuestion[];
+}
+
+interface FlatQuestion {
+  question: Phase2AQuestion;
+  pillarName: string;
+}
+
+async function authFetch(path: string, init?: RequestInit) {
+  const token = getAccessToken();
+  const headers = new Headers(init?.headers || {});
+  headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(`${API_BASE}${path}`, { ...init, headers });
+}
+
+function flattenPillars(pillars: Phase2APillar[]): FlatQuestion[] {
+  const flat: FlatQuestion[] = [];
+  pillars
+    .slice()
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .forEach((pillar) => {
+      pillar.questions
+        .slice()
+        .sort((a, b) => a.displayOrder - b.displayOrder)
+        .forEach((question) => {
+          flat.push({ question, pillarName: pillar.name });
+        });
+    });
+  return flat;
+}
 
 // ─── Landing State ──────────────────────────────────────────────────────────
-function LandingState({ onStart }: { onStart: () => void }) {
+function LandingState({
+  onStart,
+  loading,
+  error,
+}: {
+  onStart: () => void;
+  loading: boolean;
+  error: string | null;
+}) {
   const departments = [
     { label: "Finance", icon: Banknote, color: "text-teal-400 border-teal-400/30 bg-teal-400/5" },
     { label: "HR", icon: Users, color: "text-blue-400 border-blue-400/30 bg-blue-400/5" },
@@ -30,7 +97,6 @@ function LandingState({ onStart }: { onStart: () => void }) {
 
   return (
     <div className="space-y-8 max-w-full">
-      {/* Hero Section */}
       <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 overflow-hidden">
         <div className="absolute right-0 top-0 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute left-1/3 bottom-0 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -56,11 +122,11 @@ function LandingState({ onStart }: { onStart: () => void }) {
             </h1>
 
             <p className="text-gray-400 text-sm md:text-base max-w-lg mb-8">
-              Unfold the mathematical architecture of your business. Our celestial engine parses
-              complex data points into actionable holographic insights.
+              Unfold the mathematical architecture of your business. The full diagnostic asks 70
+              calibrated questions across 7 strategic pillars. Your progress is saved automatically &mdash;
+              you can leave any time and resume right where you stopped.
             </p>
 
-            {/* Department icons */}
             <div className="flex flex-wrap gap-3 mb-8">
               {departments.map((dept) => (
                 <div
@@ -75,29 +141,43 @@ function LandingState({ onStart }: { onStart: () => void }) {
               ))}
             </div>
 
-            {/* CTA + Stats */}
+            {error && (
+              <div className="mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-6">
               <button
                 onClick={onStart}
-                className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
               >
-                Start New Scan
-                <ArrowRight className="w-4 h-4" />
+                {loading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Preparing Scan...
+                  </>
+                ) : (
+                  <>
+                    Start New Scan
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
               <div className="flex gap-6">
                 <div>
-                  <p className="text-2xl font-bold text-white">1,200+</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Scans Performed</p>
+                  <p className="text-2xl font-bold text-white">70</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Calibrated Questions</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">4.8/5</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Accuracy Rating</p>
+                  <p className="text-2xl font-bold text-white">7</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Strategic Pillars</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right visual panel */}
           <div className="hidden lg:flex flex-col items-center gap-4 w-72">
             <div className="rounded-xl bg-[#0d1117] border border-teal-500/20 px-4 py-2 flex items-center gap-2 self-end">
               <span className="w-2 h-2 rounded-full bg-green-400" />
@@ -110,15 +190,8 @@ function LandingState({ onStart }: { onStart: () => void }) {
               </div>
               <h4 className="text-sm font-bold text-white mb-1">Neural Link Active</h4>
               <p className="text-xs text-gray-500 text-center">
-                Analyzing multi-dimensional data vectors across 14 global nodes...
+                Save-and-continue is enabled. Your answers persist across sessions.
               </p>
-            </div>
-
-            <div className="rounded-lg bg-[#0d1117] border border-white/5 px-4 py-2 w-full">
-              <div className="h-2 rounded-full bg-white/5 mb-1">
-                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-teal-400 w-[74%]" />
-              </div>
-              <p className="text-[10px] text-gray-500 font-mono">HEURISTIC LOAD: 74%</p>
             </div>
           </div>
         </div>
@@ -127,64 +200,214 @@ function LandingState({ onStart }: { onStart: () => void }) {
   );
 }
 
+// ─── Questions State ────────────────────────────────────────────────────────
+function QuestionsState({
+  flat,
+  currentIndex,
+  selectedOptionId,
+  pillarName,
+  answeredCount,
+  saving,
+  submitting,
+  error,
+  onSelect,
+  onPrev,
+  onNext,
+  onSaveAndExit,
+}: {
+  flat: FlatQuestion[];
+  currentIndex: number;
+  selectedOptionId: string | null;
+  pillarName: string;
+  answeredCount: number;
+  saving: boolean;
+  submitting: boolean;
+  error: string | null;
+  onSelect: (optionId: string) => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onSaveAndExit: () => void;
+}) {
+  const total = flat.length;
+  const current = flat[currentIndex];
+  const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
+  const completionProgress = total > 0 ? (answeredCount / total) * 100 : 0;
+  const isLast = currentIndex === total - 1;
+
+  if (!current) return null;
+
+  return (
+    <div className="space-y-6 max-w-full">
+      <div className="rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-6 md:p-10">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1">
+              Current Pillar
+            </p>
+            <p className="text-xl font-bold text-white">{pillarName}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+              Progress
+            </p>
+            <p className="text-sm text-gray-300">
+              Question{" "}
+              <span className="font-bold text-orange-400">{currentIndex + 1}</span> of {total}
+              <span className="ml-3 text-xs text-gray-500">
+                ({answeredCount}/{total} answered)
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="h-1 rounded-full bg-white/10 mb-2 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300 transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="h-1 rounded-full bg-white/5 mb-8 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-orange-400/70 transition-all duration-500"
+            style={{ width: `${completionProgress}%` }}
+          />
+        </div>
+
+        <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-8">
+          {current.question.questionText}
+        </h2>
+
+        <div className="space-y-3 mb-8">
+          {current.question.options
+            .slice()
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map((opt) => {
+              const isSelected = selectedOptionId === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => onSelect(opt.id)}
+                  disabled={saving || submitting}
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition disabled:cursor-not-allowed ${
+                    isSelected
+                      ? "border-teal-400 bg-teal-400/10"
+                      : "border-white/10 bg-[#161b22] hover:border-white/20"
+                  }`}
+                >
+                  <span
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                      isSelected ? "bg-teal-400 text-gray-900" : "bg-[#243044] text-gray-400"
+                    }`}
+                  >
+                    {opt.optionLabel}
+                  </span>
+                  <span
+                    className={`text-sm font-medium ${
+                      isSelected ? "text-white font-bold" : "text-gray-300"
+                    }`}
+                  >
+                    {opt.optionText}
+                  </span>
+                  {isSelected && (
+                    <CheckCircle className="w-5 h-5 text-teal-400 ml-auto flex-shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+        </div>
+
+        {error && (
+          <div className="mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            onClick={onPrev}
+            disabled={currentIndex === 0 || saving || submitting}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ArrowLeft className="w-4 h-4" /> Previous
+          </button>
+
+          <button
+            onClick={onSaveAndExit}
+            disabled={saving || submitting}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 text-gray-300 hover:bg-white/5 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Save className="w-4 h-4" /> Save &amp; Exit
+          </button>
+
+          <button
+            onClick={onNext}
+            disabled={!selectedOptionId || saving || submitting}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition ${
+              selectedOptionId && !saving && !submitting
+                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                : "bg-orange-500/40 text-gray-300 cursor-not-allowed"
+            }`}
+          >
+            {submitting ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" /> Submitting...
+              </>
+            ) : saving ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" /> Saving...
+              </>
+            ) : isLast ? (
+              <>
+                Submit Assessment <CheckCircle className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                Next Question <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Processing State ───────────────────────────────────────────────────────
-function ProcessingState({ onComplete }: { onComplete: () => void }) {
+function ProcessingState() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(onComplete, 500);
-          return 100;
-        }
-        return prev + 0.5;
-      });
+      setProgress((prev) => (prev >= 100 ? 100 : prev + 0.5));
     }, 50);
     return () => clearInterval(interval);
-  }, [onComplete]);
-
-  const insights = [
-    { icon: Banknote, title: "Finance Vector Detected", desc: "Liquidity cycles showing 12% variance from baseline projections.", color: "text-teal-400" },
-    { icon: Users, title: "HR Structural Analysis", desc: "Talent retention patterns correlating with Q3 operation shift.", color: "text-pink-400" },
-    { icon: Megaphone, title: "Market Sentiment Parsing", desc: "Scanning external brand perception across global nodes...", color: "text-purple-400" },
-  ];
+  }, []);
 
   return (
     <div className="space-y-6 max-w-full">
-      {/* Main processing view */}
       <div className="relative rounded-2xl bg-gradient-to-b from-[#0a1628] via-[#0d1117] to-[#0d1117] border border-white/5 overflow-hidden min-h-[60vh] flex flex-col items-center justify-center p-6 md:p-10">
-        {/* Animated glow */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-64 h-64 rounded-full bg-teal-500/10 blur-3xl animate-pulse" />
         </div>
 
-        {/* Orb visualization */}
         <div className="relative z-10 flex flex-col items-center mb-8">
           <div className="relative w-48 h-48 md:w-56 md:h-56">
-            {/* Outer ring */}
             <div className="absolute inset-0 rounded-full border-2 border-dashed border-teal-500/20 animate-[spin_20s_linear_infinite]" />
-            {/* Inner orb */}
             <div className="absolute inset-6 rounded-full bg-gradient-to-br from-teal-900/50 via-blue-900/50 to-purple-900/50 border border-teal-500/20 flex items-center justify-center">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-400/30 to-blue-500/30 flex items-center justify-center">
                 <Radar className="w-8 h-8 text-white animate-pulse" />
               </div>
             </div>
-            {/* Floating dots */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-teal-400 animate-bounce" />
-            <div className="absolute bottom-4 right-4 w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: "0.3s" }} />
           </div>
           <p className="text-[10px] text-teal-400 uppercase tracking-widest mt-2 font-mono">
-            Neural Link Active
+            Synthesizing Diagnostic
           </p>
         </div>
 
-        {/* Title + Progress */}
         <div className="relative z-10 text-center max-w-lg">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">Strategic Scan</h2>
           <p className="text-gray-400 text-sm mb-6">
-            Analyzing multi-dimensional data vectors...
+            Routing you to the next step...
           </p>
           <div className="h-2 rounded-full bg-white/5 mb-2">
             <div
@@ -194,228 +417,202 @@ function ProcessingState({ onComplete }: { onComplete: () => void }) {
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-gray-500 font-mono">PROCESSING</span>
-            <span className="text-teal-400 font-mono">{progress.toFixed(1)}% COMPLETE</span>
+            <span className="text-teal-400 font-mono">{progress.toFixed(0)}% COMPLETE</span>
           </div>
-        </div>
-
-        {/* Footer info */}
-        <div className="absolute bottom-6 left-6 space-y-1 hidden md:block">
-          <p className="text-[10px]">
-            <span className="text-orange-400 font-bold">AURORA KINETIC</span>{" "}
-            <span className="text-gray-500">ENGINE VERSION 4.2.1</span>
-          </p>
-          <p className="text-[10px]">
-            <span className="text-orange-400 font-bold">NODE LOCATION</span>{" "}
-            <span className="text-gray-500">CLUSTER-X9 GLOBAL</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Active Insights Stream */}
-      <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">
-            Active Insights Stream
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {insights.map((insight) => (
-            <div
-              key={insight.title}
-              className="rounded-lg bg-[#0d1117] border border-white/5 p-4 flex items-start gap-3"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                <insight.icon className={`w-4 h-4 ${insight.color}`} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">{insight.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{insight.desc}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Results State ──────────────────────────────────────────────────────────
-function ResultsState({ onReset }: { onReset: () => void }) {
-  const score = 82;
-  const pillars = [
-    { label: "Finance", score: 94, status: "Stable", statusColor: "bg-teal-500/20 text-teal-400", barColor: "bg-teal-400", icon: Banknote },
-    { label: "HR", score: 78, status: "Growth", statusColor: "bg-blue-500/20 text-blue-400", barColor: "bg-blue-400", icon: Users },
-    { label: "Operations", score: 42, status: "Attention", statusColor: "bg-red-500/20 text-red-400", barColor: "bg-red-400", icon: Settings2 },
-    { label: "Marketing", score: 88, status: "Active", statusColor: "bg-teal-500/20 text-teal-400", barColor: "bg-teal-400", icon: Megaphone },
-    { label: "Strategy", score: 91, status: "Optimized", statusColor: "bg-green-500/20 text-green-400", barColor: "bg-green-400", icon: Radar },
-  ];
-
-  // Circular progress SVG
-  const radius = 90;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (score / 100) * circumference;
-
-  return (
-    <div className="space-y-6 max-w-full">
-      {/* Score + Summary */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 overflow-hidden p-6 md:p-10">
-        <div className="flex flex-col lg:flex-row items-center gap-8">
-          {/* Score Ring */}
-          <div className="relative flex-shrink-0">
-            <svg width="200" height="200" viewBox="0 0 200 200" className="w-44 h-44 md:w-52 md:h-52">
-              <circle cx="100" cy="100" r={radius} fill="none" stroke="#1f2937" strokeWidth="12" />
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                fill="none"
-                stroke="#00d4aa"
-                strokeWidth="12"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                transform="rotate(-90 100 100)"
-                className="drop-shadow-[0_0_8px_rgba(0,212,170,0.4)]"
-              />
-              <text x="100" y="92" textAnchor="middle" fill="white" fontSize="42" fontWeight="bold">
-                {score}%
-              </text>
-              <text x="100" y="118" textAnchor="middle" fill="#00d4aa" fontSize="12" fontWeight="600">
-                EXCELLENT
-              </text>
-            </svg>
-          </div>
-
-          {/* Summary text */}
-          <div className="flex-1 min-w-0 text-center lg:text-left">
-            <h1 className="text-3xl md:text-4xl font-bold text-white leading-tight">
-              Diagnostic <span className="text-orange-400">Complete.</span>
-            </h1>
-            <p className="text-gray-400 text-sm mt-3 max-w-lg">
-              Your strategic architecture is resilient. We&apos;ve synthesized data from 12 channels
-              to provide a comprehensive health mapping of your enterprise operations.
-            </p>
-            <div className="flex flex-wrap gap-3 mt-6 justify-center lg:justify-start">
-              <button className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition">
-                <Box className="w-4 h-4" /> Deep Dive into Operations
-              </button>
-              <button className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition">
-                <Download className="w-4 h-4" /> Download Report
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI Pulse Insight */}
-      <div className="rounded-xl bg-[#111827] border-l-2 border-teal-400 p-5 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center flex-shrink-0">
-          <Sparkles className="w-5 h-5 text-teal-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-bold text-white mb-1">AI Pulse Insight</h3>
-          <p className="text-sm text-gray-300">
-            &ldquo;We detected <span className="text-teal-400 font-semibold">3 critical issues</span> in your
-            Operations pillar related to supply chain latency. Rectifying these could increase overall
-            efficiency by <span className="text-teal-400 font-semibold">14%</span> within the next fiscal quarter.&rdquo;
-          </p>
-        </div>
-        <Zap className="w-8 h-8 text-purple-400/30 flex-shrink-0 hidden md:block" />
-      </div>
-
-      {/* Pillar Breakdown */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Pillar Breakdown</h2>
-          <span className="text-xs text-gray-500">Last updated 2 mins ago</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {pillars.map((pillar) => (
-            <div
-              key={pillar.label}
-              className={`rounded-xl bg-[#111827] border p-4 ${
-                pillar.score < 50 ? "border-red-400/30" : "border-white/5"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <pillar.icon className="w-4 h-4 text-gray-400" />
-                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${pillar.statusColor}`}>
-                  {pillar.status}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 uppercase font-semibold">{pillar.label}</p>
-              <p className="text-3xl font-bold text-white">
-                {pillar.score}<span className="text-lg text-gray-500"> %</span>
-              </p>
-              <div className="mt-2 h-1 rounded-full bg-white/5">
-                <div
-                  className={`h-full rounded-full ${pillar.barColor}`}
-                  style={{ width: `${pillar.score}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Re-scan CTA */}
-      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <RotateCcw className="w-5 h-5 text-gray-400" />
-          <div>
-            <p className="text-sm font-semibold text-white">Ready for a fresh perspective?</p>
-            <p className="text-xs text-gray-500">Clear cache and re-initialize scan engine</p>
-          </div>
-        </div>
-        <button
-          onClick={onReset}
-          className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition"
-        >
-          Start Another Scan
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Icon helper (Box from lucide not imported above, let me alias) ──────────
-function Box(props: React.SVGProps<SVGSVGElement> & { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-      <path d="m3.3 7 8.7 5 8.7-5" />
-      <path d="M12 22V12" />
-    </svg>
-  );
-}
-
-// ─── Page Export ──────────────────────────────────────────────────────────────
+// ─── Page ───────────────────────────────────────────────────────────────────
 export default function StrategicScanPage() {
+  const router = useRouter();
   const [scanState, setScanState] = useState<ScanState>("landing");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [pillars, setPillars] = useState<Phase2APillar[]>([]);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  return (
-    <>
-      {scanState === "landing" && (
-        <LandingState onStart={() => setScanState("processing")} />
-      )}
-      {scanState === "processing" && (
-        <ProcessingState onComplete={() => setScanState("results")} />
-      )}
-      {scanState === "results" && (
-        <ResultsState onReset={() => setScanState("landing")} />
-      )}
-    </>
+  const flat = useMemo(() => flattenPillars(pillars), [pillars]);
+  const answeredCount = Object.keys(answers).length;
+
+  const loadQuestions = useCallback(async (id: string) => {
+    const res = await authFetch(`/questions/phase2a?sessionId=${id}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load Phase 2A questions");
+    }
+
+    const loadedPillars = (data.pillars || []) as Phase2APillar[];
+    setPillars(loadedPillars);
+
+    const seeded: Record<string, string> = {};
+    loadedPillars.forEach((pillar) => {
+      pillar.questions.forEach((q) => {
+        if (q.answered && q.selectedOptionId) {
+          seeded[q.id] = q.selectedOptionId;
+        }
+      });
+    });
+    setAnswers(seeded);
+
+    const flatQuestions = flattenPillars(loadedPillars);
+    const firstUnansweredIndex = flatQuestions.findIndex(
+      (item) => !seeded[item.question.id],
+    );
+    setCurrentIndex(firstUnansweredIndex === -1 ? 0 : firstUnansweredIndex);
+  }, []);
+
+  const handleStart = useCallback(async () => {
+    setError(null);
+
+    if (!getAccessToken()) {
+      setError("You need to be signed in to start the full diagnostic.");
+      router.push("/Auth/login");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const startRes = await authFetch("/assessment/phase2a/start", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const startData = await startRes.json().catch(() => ({}));
+      if (!startRes.ok) {
+        throw new Error(startData.message || "Failed to start Phase 2A session");
+      }
+
+      const newSessionId = startData.sessionId as string;
+      setSessionId(newSessionId);
+      setLastSessionId(newSessionId);
+
+      await loadQuestions(newSessionId);
+      setScanState("questions");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }, [loadQuestions, router]);
+
+  const handleSelect = useCallback(
+    async (optionId: string) => {
+      if (!sessionId) return;
+      const current = flat[currentIndex];
+      if (!current) return;
+
+      const previous = answers[current.question.id];
+      setAnswers((prev) => ({ ...prev, [current.question.id]: optionId }));
+      setError(null);
+      setSaving(true);
+
+      try {
+        const res = await authFetch(`/assessment/${sessionId}/answer`, {
+          method: "POST",
+          body: JSON.stringify({
+            questionId: current.question.id,
+            selectedOptionId: optionId,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to save answer");
+        }
+      } catch (err) {
+        setAnswers((prev) => {
+          const next = { ...prev };
+          if (previous) {
+            next[current.question.id] = previous;
+          } else {
+            delete next[current.question.id];
+          }
+          return next;
+        });
+        setError(err instanceof Error ? err.message : "Failed to save answer");
+      } finally {
+        setSaving(false);
+      }
+    },
+    [answers, currentIndex, flat, sessionId],
   );
+
+  const handlePrev = useCallback(() => {
+    setCurrentIndex((idx) => Math.max(0, idx - 1));
+    setError(null);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    if (!sessionId) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await authFetch(`/assessment/${sessionId}/submit`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to submit assessment");
+      }
+
+      setScanState("processing");
+      const redirectTo =
+        typeof data.redirectTo === "string" && data.redirectTo
+          ? data.redirectTo
+          : "/dashboard/subscription";
+
+      setTimeout(() => {
+        router.push(redirectTo);
+      }, 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit assessment");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [router, sessionId]);
+
+  const handleNext = useCallback(() => {
+    if (currentIndex < flat.length - 1) {
+      setCurrentIndex((idx) => idx + 1);
+      setError(null);
+    } else {
+      handleSubmit();
+    }
+  }, [currentIndex, flat.length, handleSubmit]);
+
+  const handleSaveAndExit = useCallback(() => {
+    router.push("/dashboard");
+  }, [router]);
+
+  if (scanState === "questions" && flat.length > 0) {
+    const current = flat[currentIndex];
+    return (
+      <QuestionsState
+        flat={flat}
+        currentIndex={currentIndex}
+        selectedOptionId={answers[current.question.id] || null}
+        pillarName={current.pillarName}
+        answeredCount={answeredCount}
+        saving={saving}
+        submitting={submitting}
+        error={error}
+        onSelect={handleSelect}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onSaveAndExit={handleSaveAndExit}
+      />
+    );
+  }
+
+  if (scanState === "processing") {
+    return <ProcessingState />;
+  }
+
+  return <LandingState onStart={handleStart} loading={loading} error={error} />;
 }
