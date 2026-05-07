@@ -1,4 +1,4 @@
-import { SessionStatus } from '@prisma/client';
+import { Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
@@ -10,12 +10,18 @@ const allowedResultStatuses = new Set<SessionStatus>([
   SessionStatus.REPORT_GENERATED,
 ]);
 
+const paidStatuses = new Set<SessionStatus>([
+  SessionStatus.PAID,
+  SessionStatus.REPORT_GENERATED,
+]);
+
 export async function getResultService(sessionId: string): Promise<GetResultResponse> {
   const session = await prisma.assessmentSession.findUnique({
     where: { id: sessionId },
     select: {
       id: true,
       status: true,
+      phase: true,
     },
   });
 
@@ -82,19 +88,29 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     ],
   });
 
+  // Phase 2A is paywalled: until status is PAID/REPORT_GENERATED, redact the
+  // detailed insight payload, findings, knockout list, and PDF URL. Users still
+  // see overall and pillar scores so the dashboard can render a teaser.
+  const isPaywalled = session.phase === Phase.PHASE2A && !paidStatuses.has(session.status);
+
   const payload: ResultResponse = {
     ...result,
     totalScore: Number(result.totalScore),
-    knockoutQuestionIds: result.knockoutQuestionIds as string[],
+    knockoutQuestionIds: isPaywalled ? [] : (result.knockoutQuestionIds as string[]),
+    insightPayload: isPaywalled ? null : result.insightPayload,
+    reportPdfUrl: isPaywalled ? null : result.reportPdfUrl,
     pillarScores: pillarScores.map<ResultPillarScoreResponse>((pillarScore) => ({
       ...pillarScore,
       weightedScore: Number(pillarScore.weightedScore),
-      findings: pillarScore.findings as ResultPillarScoreResponse['findings'],
+      findings: isPaywalled
+        ? []
+        : (pillarScore.findings as ResultPillarScoreResponse['findings']),
     })),
   };
 
   return {
     message: 'Result fetched successfully',
     result: payload,
+    paywalled: isPaywalled,
   };
 }

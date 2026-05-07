@@ -39,6 +39,11 @@ enum InsightRule {
   BOTH_NORMAL
 }
 
+enum BusinessSize {
+  SMALL
+  MEDIUM
+}
+
 // ============================================================
 // LAYER A — CONTENT (Static / Admin-Managed)
 // ============================================================
@@ -69,6 +74,8 @@ model Question {
   questionCode String   @unique @map("question_code") // e.g. "FL-001"
   questionText String   @map("question_text")
   phase        Phase
+  businessSize BusinessSize @map("business_size")
+  isPhase1Featured Boolean @default(false) @map("is_phase1_featured")
   displayOrder Int      @map("display_order")
   hasKnockoutOption Boolean @default(false) @map("has_knockout_option")
   isActive Boolean @default(true) @map("is_active")
@@ -89,7 +96,7 @@ model QuestionOption {
   questionId     String   @map("question_id")
   optionLabel    String   @map("option_label") // "A", "B", "C", "D"
   optionText     String   @map("option_text")
-  score          Int      // 0, 3, 5, 6, 10
+  score          Int      // 0, 3, 5, 6, 7, 10
   riskType       RiskType @map("risk_type")
   observation    String   // e.g. "High focus"
   recommendation String   // e.g. "Maintain this; you are in the Growth Zone"
@@ -120,6 +127,15 @@ model User {
   phone        String?
   isVerified   Boolean @default(false) @map("is_verified")
 
+  // Snapshotted from the originating Phase 1 AssessmentSession at registration.
+  // Source of truth for Phase 2A `businessSize` filtering.
+  businessSize    BusinessSize? @map("business_size")
+  staffSize       String?       @map("staff_size")
+  industry        String?
+  location        String?
+  operatingYears  String?       @map("operating_years")
+  annualRevenue   String?       @map("annual_revenue_range")
+
   // Relations
   sessions AssessmentSession[]
 
@@ -135,7 +151,7 @@ model User {
 
 model AssessmentSession {
   id           String        @id @default(uuid())
-  userId       String?       @map("user_id") 
+  userId       String?       @map("user_id")
   phase        Phase
   status       SessionStatus @default(IN_PROGRESS)
 
@@ -147,8 +163,11 @@ model AssessmentSession {
   location     String @map("lead_location")
   operatingYears     String @map("lead_operating_years")
   annualRevenue     String @map("lead_annual_revenue_range")
-  
-  
+  businessSize  BusinessSize? @map("business_size")
+
+  // Phase 2A snapshot: array of question UUIDs (length = 7 pillars × 10 = 70)
+  // Frozen on Phase 2A start so admin edits to questions mid-session do not change the user's set.
+  selectedQuestionIds Json? @map("selected_question_ids")
 
   startedAt   DateTime  @default(now()) @map("started_at")
   completedAt DateTime? @map("completed_at")

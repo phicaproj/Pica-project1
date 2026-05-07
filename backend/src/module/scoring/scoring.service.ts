@@ -1,4 +1,4 @@
-import { ColorBand, InsightRule, Phase, Prisma, RiskType, type PrismaClient } from '@prisma/client';
+import { BusinessSize, ColorBand, InsightRule, Phase, Prisma, RiskType, type PrismaClient } from '@prisma/client';
 import type { ScoringFinding, ScoringPillarPayload, ScoringResultPayload } from './scoring.types';
 
 type ScoringTx = Prisma.TransactionClient | PrismaClient;
@@ -118,32 +118,40 @@ const pickFindings = (responses: SessionResponseRecord[], rule: InsightRule): Sc
   }));
 };
 
+type ComputeScoringOptions = {
+  phase: Phase;
+  /** Phase 2A: restrict scoring to the snapshotted question IDs on the session. */
+  questionIdScope?: string[];
+  /** Phase 1: restrict to a specific business size's featured set. */
+  businessSize?: BusinessSize;
+};
+
 /**
- * Computes the full Phase 1 scoring result for a session.
+ * Computes the full scoring result for a session — works for both Phase 1
+ * and Phase 2A. Phase 2A callers MUST pass `questionIdScope` (the snapshot
+ * of question IDs on the session) so admin edits to the question bank
+ * mid-session don't change the user's set.
  *
- * This function is intentionally backend-only — never expose
- * it via an HTTP route directly. Call it from assessment.service
- * inside a transaction after the session is submitted.
- *
- * Flow:
- *   1. Fetch all Phase 1 questions (with options + pillar weights)
- *   2. Fetch all session responses (with selected option details)
- *   3. Build lookup maps for O(1) access during scoring
- *   4. Loop through each pillar → compute score + findings
- *   5. Aggregate pillar scores into one overall result
- *   6. Return the full payload — caller is responsible for saving to DB
+ * Backend-only — never expose via an HTTP route directly. Call from
+ * assessment.service inside a transaction after the session is submitted.
  */
-export async function computePhase1Scoring(
+export async function computeScoring(
   tx: ScoringTx,
-  sessionId: string
+  sessionId: string,
+  options: ComputeScoringOptions
 ): Promise<ScoringResultPayload> {
+  const phaseQuestionWhere = {
+    phase: options.phase,
+    isActive: true,
+    ...(options.businessSize ? { businessSize: options.businessSize } : {}),
+    ...(options.phase === Phase.PHASE1 ? { isPhase1Featured: true } : {}),
+    ...(options.questionIdScope ? { id: { in: options.questionIdScope } } : {}),
+  } as const;
+
   // ── 1. Fetch questions and responses in parallel ────────
   const [phaseQuestions, responses] = await Promise.all([
     tx.question.findMany({
-      where: {
-        phase: Phase.PHASE1,
-        isActive: true,
-      },
+      where: phaseQuestionWhere,
       select: {
         id: true,
         pillarId: true,

@@ -45,4 +45,5 @@ export type ResultResponse = {
 export type GetResultResponse = {
 	message: string
 	result: ResultResponse
+	paywalled: boolean
 }

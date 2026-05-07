@@ -50,3 +50,8 @@ export type SubmitAssessmentResponse = {
 	sessionId: string
 	redirectTo: string
 }
+
+export type StartPhase2AResponse = {
+	message: string
+	sessionId: string
+}

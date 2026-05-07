@@ -1,7 +1,14 @@
 import bcrypt from 'bcrypt';
+import { Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
-import { BAD_REQUEST, CONFLICT, NOT_FOUND, UNAUTHORIZED } from '../../service/shared/http';
+import {
+  BAD_REQUEST,
+  CONFLICT,
+  FORBIDDEN,
+  NOT_FOUND,
+  UNAUTHORIZED,
+} from '../../service/shared/http';
 import {
   generateAccessToken,
   generateOtpToken,
@@ -10,10 +17,7 @@ import {
   verifyOtpToken,
   verifyPasswordResetToken,
 } from '../../service/shared/generateToken';
-import {
-  sendPasswordResetEmail,
-  sendWelcomeEmail,
-} from '../../service/shared/email.service';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '../../service/shared/email.service';
 import type {
   ForgotPasswordInput,
   ForgotPasswordResponse,
@@ -30,8 +34,10 @@ import type {
 const SALT_ROUNDS = 10;
 
 export async function registerService(data: RegisterInput): Promise<RegisterResponse> {
+  const normalizedEmail = data.email.trim().toLowerCase();
+
   const existingUser = await prisma.user.findUnique({
-    where: { email: data.email },
+    where: { email: normalizedEmail },
     select: { id: true },
   });
 
@@ -39,14 +45,49 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     throw new AppError('An account with this email already exists', CONFLICT);
   }
 
+  // Gate: registration is only allowed for users who have completed (or progressed past)
+  // a Phase 1 assessment under this email. We snapshot the Phase 1 lead data onto the User
+  // so Phase 2A can read businessSize directly from req.user.
+  const phase1Session = await prisma.assessmentSession.findFirst({
+    where: {
+      leadEmail: normalizedEmail,
+      phase: Phase.PHASE1,
+      status: {
+        in: [SessionStatus.COMPLETED, SessionStatus.PAID, SessionStatus.REPORT_GENERATED],
+      },
+    },
+    select: {
+      id: true,
+      businessSize: true,
+      staffSize: true,
+      industry: true,
+      location: true,
+      operatingYears: true,
+      annualRevenue: true,
+    },
+  });
+
+  if (!phase1Session) {
+    throw new AppError(
+      'You must take the free Phase 1 scan before creating an account. Please complete the free assessment first.',
+      FORBIDDEN
+    );
+  }
+
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
   const user = await prisma.user.create({
     data: {
-      email: data.email,
+      email: normalizedEmail,
       passwordHash,
       businessName: data.businessName,
       phone: data.phone,
+      businessSize: phase1Session.businessSize,
+      staffSize: phase1Session.staffSize,
+      industry: phase1Session.industry,
+      location: phase1Session.location,
+      operatingYears: phase1Session.operatingYears,
+      annualRevenue: phase1Session.annualRevenue,
     },
     select: {
       id: true,
@@ -76,8 +117,10 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
 }
 
 export async function loginService(data: LoginInput): Promise<LoginResponse> {
+  const normalizedEmail = data.email.trim().toLowerCase();
+
   const user = await prisma.user.findUnique({
-    where: { email: data.email },
+    where: { email: normalizedEmail },
     select: {
       id: true,
       email: true,

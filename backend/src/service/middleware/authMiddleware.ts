@@ -41,6 +41,27 @@ export const authenticate = (
 	}
 }
 
+// Soft auth — populates req.user if a valid Bearer token is present, but does not
+// reject anonymous requests. Used on routes shared between guest (Phase 1) and
+// authenticated (Phase 2A) flows; the service layer enforces ownership where required.
+export const softAuthenticate = (
+	req: Request,
+	_res: Response,
+	next: NextFunction,
+) => {
+	const authHeader = req.headers.authorization
+	if (!authHeader?.startsWith('Bearer ')) {
+		return next()
+	}
+	const token = authHeader.split(' ')[1]
+	try {
+		req.user = verifyAccessToken(token)
+	} catch {
+		// silently ignore — the route is also reachable anonymously
+	}
+	return next()
+}
+
 // OTP auth
 export const otpAuth = (req: Request, res: Response, next: NextFunction) => {
 	const authHeader = req.headers.authorization
