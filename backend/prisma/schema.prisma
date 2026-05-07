@@ -53,7 +53,6 @@ model Pillar {
   code         String   @unique // e.g. "FL", "FR", "BM", "OP", "MS", "GC", "SS"
   name         String   // e.g. "Founder & Leadership"
   description  String?
-  phase        Phase    // which phase this pillar belongs to
   weight       Decimal  @db.Decimal(5, 2) // e.g. 14.28 for equal 7-pillar weighting
   displayOrder Int      @map("display_order")
   isActive     Boolean  @default(true) @map("is_active")
@@ -73,7 +72,8 @@ model Question {
   pillarId     String   @map("pillar_id")
   questionCode String   @unique @map("question_code") // e.g. "FL-001"
   questionText String   @map("question_text")
-  phase        Phase
+  // A single question can serve both phases. Phase 2A draws from the full active set
+  // for the user's businessSize; Phase 1 surfaces only those flagged isPhase1Featured.
   businessSize BusinessSize @map("business_size")
   isPhase1Featured Boolean @default(false) @map("is_phase1_featured")
   displayOrder Int      @map("display_order")

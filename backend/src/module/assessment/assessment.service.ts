@@ -14,15 +14,12 @@ import type {
   AnswerAssessmentResponse,
 } from './assessment.types';
 
-const PHASE2A_QUESTIONS_PER_PILLAR = 10;
-
 const phase1QuestionCount = async (
   tx: Prisma.TransactionClient,
   businessSize: BusinessSize | null
 ) => {
   return tx.question.count({
     where: {
-      phase: Phase.PHASE1,
       isActive: true,
       isPhase1Featured: true,
       ...(businessSize ? { businessSize } : {}),
@@ -145,6 +142,7 @@ export async function answerAssessmentService(
       status: true,
       phase: true,
       userId: true,
+      businessSize: true,
       selectedQuestionIds: true,
     },
   });
@@ -176,12 +174,12 @@ export async function answerAssessmentService(
     const question = await tx.question.findFirst({
       where: {
         id: data.questionId,
-        phase: session.phase,
         isActive: true,
       },
       select: {
         id: true,
-        phase: true,
+        businessSize: true,
+        isPhase1Featured: true,
       },
     });
 
@@ -189,8 +187,19 @@ export async function answerAssessmentService(
       throw new AppError('Question not found', NOT_FOUND);
     }
 
-    if (question.phase !== session.phase) {
-      throw new AppError('Question does not belong to this assessment phase', CONFLICT);
+    // For Phase 1 sessions: the question must match the session's businessSize
+    // and be flagged as Phase 1 featured. (Phase 2A ownership/snapshot was already
+    // checked above.)
+    if (session.phase === Phase.PHASE1) {
+      if (
+        (session.businessSize && question.businessSize !== session.businessSize) ||
+        !question.isPhase1Featured
+      ) {
+        throw new AppError(
+          'Question does not belong to this Phase 1 assessment',
+          CONFLICT
+        );
+      }
     }
 
     const option = await tx.questionOption.findFirst({
@@ -528,19 +537,20 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
     };
   }
 
+  // Snapshot every active question for the user's businessSize, ordered by pillar
+  // then question displayOrder. The admin controls the question count by activating
+  // or deactivating questions in the bank — no hard-coded per-pillar quota.
   const pillars = await prisma.pillar.findMany({
-    where: { phase: Phase.PHASE2A, isActive: true },
+    where: { isActive: true },
     select: {
       id: true,
       questions: {
         where: {
-          phase: Phase.PHASE2A,
           businessSize: user.businessSize,
           isActive: true,
         },
         select: { id: true },
         orderBy: { displayOrder: 'asc' },
-        take: PHASE2A_QUESTIONS_PER_PILLAR,
       },
     },
     orderBy: { displayOrder: 'asc' },
@@ -548,10 +558,9 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
 
   const selectedQuestionIds = pillars.flatMap((p) => p.questions.map((q) => q.id));
 
-  const expected = pillars.length * PHASE2A_QUESTIONS_PER_PILLAR;
-  if (selectedQuestionIds.length !== expected) {
+  if (selectedQuestionIds.length === 0) {
     throw new AppError(
-      `Phase 2A question bank is incomplete for businessSize=${user.businessSize}. Expected ${expected}, got ${selectedQuestionIds.length}.`,
+      `No active Phase 2A questions configured for businessSize=${user.businessSize}.`,
       UNPROCESSABLE_CONTENT
     );
   }

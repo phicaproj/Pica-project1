@@ -140,8 +140,9 @@ export async function computeScoring(
   sessionId: string,
   options: ComputeScoringOptions
 ): Promise<ScoringResultPayload> {
+  // Phase 1 = featured subset for the user's businessSize.
+  // Phase 2A = the snapshotted question ID set on the session.
   const phaseQuestionWhere = {
-    phase: options.phase,
     isActive: true,
     ...(options.businessSize ? { businessSize: options.businessSize } : {}),
     ...(options.phase === Phase.PHASE1 ? { isPhase1Featured: true } : {}),

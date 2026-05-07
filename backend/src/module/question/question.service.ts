@@ -62,7 +62,6 @@ export async function getPhase1QuestionsService(
 ): Promise<Phase1QuestionsResponse> {
   const pillars = await prisma.pillar.findMany({
     where: {
-      phase: Phase.PHASE1,
       isActive: true,
     },
     select: {
@@ -73,7 +72,6 @@ export async function getPhase1QuestionsService(
       displayOrder: true,
       questions: {
         where: {
-          phase: Phase.PHASE1,
           businessSize,
           isPhase1Featured: true,
           isActive: true,
@@ -150,7 +148,7 @@ export async function getPhase2AQuestionsService(
 
   const [pillars, answers] = await Promise.all([
     prisma.pillar.findMany({
-      where: { phase: Phase.PHASE2A, isActive: true },
+      where: { isActive: true },
       select: {
         id: true,
         code: true,

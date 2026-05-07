@@ -5,3 +5,6 @@ node_modules*
 nodemon.json
 /dist
 /src/generated/prisma
+Sample Questions.pdf
+sample_questions.txt
+/prisma/seed.ts

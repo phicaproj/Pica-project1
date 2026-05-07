@@ -3,7 +3,10 @@
     "allow": [
       "Bash(cmd *)",
       "Bash(powershell *)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(pdftotext -layout \"Sample Questions.pdf\" sample_questions.txt)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
