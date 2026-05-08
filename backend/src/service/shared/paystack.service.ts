@@ -18,7 +18,6 @@ export type PaystackInitInput = {
   amount: number;
   /** Idempotency key — if reused, Paystack will reject. */
   reference: string;
-  callbackUrl: string;
   /** Free-form key/value snapshot Paystack echoes back on verify. */
   metadata?: Record<string, unknown>;
 };
@@ -54,7 +53,6 @@ export async function initializeTransaction(input: PaystackInitInput): Promise<P
       email: input.email,
       amount: Math.round(input.amount * 100), // NGN -> kobo
       reference: input.reference,
-      callback_url: input.callbackUrl,
       metadata: input.metadata ?? {},
     }),
   });

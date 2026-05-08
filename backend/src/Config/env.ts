@@ -25,5 +25,3 @@ export const JWT_PASSWORD_RESET_EXPIRE = getEnv('JWT_PASSWORD_RESET_EXPIRE');
 export const PAYSTACK_SECRET_KEY = getEnv('PAYSTACK_SECRET_KEY');
 export const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL ?? 'https://api.paystack.co';
 export const APP_URL = process.env.APP_URL ?? 'https://pica.beauvision.com';
-export const PAYMENT_CALLBACK_URL =
-  process.env.PAYMENT_CALLBACK_URL ?? `${APP_URL}/payment/callback`;

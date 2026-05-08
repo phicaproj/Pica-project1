@@ -23,7 +23,7 @@ import {
   type PaystackVerifyData,
 } from '../../service/shared/paystack.service';
 import { sendPaymentSuccessEmail } from '../../service/shared/email.service';
-import { APP_URL, PAYMENT_CALLBACK_URL } from '../../Config/env';
+import { APP_URL } from '../../Config/env';
 import type {
   AdminPaymentRow,
   InitPaymentInput,
@@ -130,7 +130,6 @@ export async function initPaymentService(
     email: user.email,
     amount: input.amount,
     reference,
-    callbackUrl: PAYMENT_CALLBACK_URL,
     metadata: {
       paymentId: payment.id,
       userId: user.id,
@@ -339,9 +338,7 @@ export async function handleWebhookService(params: {
 // 4. ADMIN — GET /api/payment/admin  (auth + isAdmin)
 // ==============================================================
 
-export async function listPaymentsService(
-  query: ListPaymentsQuery
-): Promise<ListPaymentsResponse> {
+export async function listPaymentsService(query: ListPaymentsQuery): Promise<ListPaymentsResponse> {
   const where: Prisma.PaymentWhereInput = {
     ...(query.status ? { status: query.status } : {}),
     ...(query.plan ? { plan: query.plan } : {}),
@@ -444,7 +441,7 @@ async function applyVerificationResult(
         paymentMethod: verifyData.channel ?? null,
         paidAt: verifyData.paid_at ? new Date(verifyData.paid_at) : null,
         failureReason:
-          newStatus === PaymentStatus.FAILED ? verifyData.gateway_response ?? null : null,
+          newStatus === PaymentStatus.FAILED ? (verifyData.gateway_response ?? null) : null,
         verifyPayload: verifyData as unknown as Prisma.InputJsonValue,
       },
     });
