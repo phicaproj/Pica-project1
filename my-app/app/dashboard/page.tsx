@@ -103,6 +103,15 @@ const COLOR_BAND_TO_STATUS: Record<ColorBand, { label: string; pill: string }> =
   RED: { label: "Attention", pill: "bg-red-500/20 text-red-400" },
 };
 
+function normalizeColorBand(value: unknown): ColorBand {
+  if (typeof value !== "string") return "YELLOW";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "GREEN" || normalized === "YELLOW" || normalized === "RED") {
+    return normalized;
+  }
+  return "YELLOW";
+}
+
 function formatDate(iso: string | null) {
   if (!iso) return "—";
   try {
@@ -289,8 +298,9 @@ function ActiveState({
     .sort((a, b) => a.pillar.displayOrder - b.pillar.displayOrder);
 
   const totalScore = Math.round(result.totalScore);
-  const overallRisk = COLOR_BAND_TO_RISK[result.colorBand];
-  const overallBar = COLOR_BAND_TO_BAR[result.colorBand];
+  const overallBand = normalizeColorBand(result.colorBand);
+  const overallRisk = COLOR_BAND_TO_RISK[overallBand];
+  const overallBar = COLOR_BAND_TO_BAR[overallBand];
 
   // Pull the lowest-scoring pillar's first finding for the AI insight card
   const weakestPillar = pillarScores
@@ -355,7 +365,7 @@ function ActiveState({
           <div className="flex items-end gap-2">
             <p className="text-3xl font-bold text-white">{totalScore}%</p>
             <span className={`text-xs ${overallRisk.color} mb-1 font-semibold uppercase`}>
-              {result.colorBand}
+              {overallBand}
             </span>
           </div>
           <div className="mt-3 h-1.5 rounded-full bg-white/5">
@@ -381,7 +391,9 @@ function ActiveState({
             {pillarScores.map((p) => (
               <div
                 key={p.id}
-                className={`h-1.5 flex-1 rounded-full ${COLOR_BAND_TO_BAR[p.colorBand]}`}
+                className={`h-1.5 flex-1 rounded-full ${
+                  COLOR_BAND_TO_BAR[normalizeColorBand(p.colorBand)]
+                }`}
               />
             ))}
           </div>
@@ -443,14 +455,15 @@ function ActiveState({
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {pillarScores.map((p) => {
-            const status = COLOR_BAND_TO_STATUS[p.colorBand];
-            const barColor = COLOR_BAND_TO_BAR[p.colorBand];
+            const pillarBand = normalizeColorBand(p.colorBand);
+            const status = COLOR_BAND_TO_STATUS[pillarBand];
+            const barColor = COLOR_BAND_TO_BAR[pillarBand];
             const score = Math.round(p.weightedScore);
             return (
               <div
                 key={p.id}
                 className={`rounded-xl bg-[#111827] border p-4 ${
-                  p.colorBand === "RED" ? "border-red-400/30" : "border-white/5"
+                  pillarBand === "RED" ? "border-red-400/30" : "border-white/5"
                 }`}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -516,7 +529,8 @@ function ActiveState({
             </thead>
             <tbody className="divide-y divide-white/5">
               {pillarScores.map((p) => {
-                const status = COLOR_BAND_TO_STATUS[p.colorBand];
+                const pillarBand = normalizeColorBand(p.colorBand);
+                const status = COLOR_BAND_TO_STATUS[pillarBand];
                 const score = Math.round(p.weightedScore);
                 return (
                   <tr key={p.id} className="text-sm">
