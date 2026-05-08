@@ -56,8 +56,8 @@ function classifyStaffSize(staffSize: string): BusinessSize {
 
 function classifyRevenue(annualRevenue: string): BusinessSize {
   const normalized = annualRevenue.trim().toLowerCase();
-  if (normalized.includes('under')) return BusinessSize.SMALL;
-  if (normalized.includes('mid') || normalized.includes('enterprise')) {
+  if (normalized.includes('5m')) return BusinessSize.SMALL;
+  if (normalized.includes('5m - 50m') || normalized.includes('enterprise')) {
     return BusinessSize.MEDIUM;
   }
   // Unknown bucket — be conservative.
@@ -195,10 +195,7 @@ export async function answerAssessmentService(
         (session.businessSize && question.businessSize !== session.businessSize) ||
         !question.isPhase1Featured
       ) {
-        throw new AppError(
-          'Question does not belong to this Phase 1 assessment',
-          CONFLICT
-        );
+        throw new AppError('Question does not belong to this Phase 1 assessment', CONFLICT);
       }
     }
 
@@ -483,7 +480,8 @@ async function submitPhase2AService(sessionId: string): Promise<SubmitAssessment
 
   // No PDF, no email — those are unlocked by the payment module.
   return {
-    message: 'Phase 2A assessment submitted successfully. Payment is required to access the full report.',
+    message:
+      'Phase 2A assessment submitted successfully. Payment is required to access the full report.',
     sessionId: transactionResult.sessionId,
     redirectTo: '/payment',
   };
