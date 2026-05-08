@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   ArrowRight,
@@ -20,6 +21,7 @@ import {
   AuthUser,
   getAccessToken,
   getLastSessionId,
+  getMe,
   getStoredUser,
 } from "@/lib/authClient";
 
@@ -112,6 +114,22 @@ function formatDate(iso: string | null) {
   } catch {
     return "—";
   }
+}
+
+function isResultResponse(value: unknown): value is GetResultResponse {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as {
+    message?: unknown;
+    paywalled?: unknown;
+    result?: { pillarScores?: unknown } | null;
+  };
+
+  return (
+    typeof candidate.message === "string" &&
+    typeof candidate.paywalled === "boolean" &&
+    !!candidate.result &&
+    Array.isArray(candidate.result.pillarScores)
+  );
 }
 
 // ─── Loading / Error / In-progress shells ───────────────────────────────────
@@ -547,26 +565,43 @@ function ActiveState({
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 export default function DashboardHomePage() {
+  const router = useRouter();
   const [state, setState] = useState<DashboardState>("loading");
   const [data, setData] = useState<GetResultResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    setUser(getStoredUser());
-    const sessionId = getLastSessionId();
-
-    if (!sessionId) {
-      setState("empty");
+    const token = getAccessToken();
+    if (!token) {
+      router.push("/Auth/login");
       return;
     }
+
+    setUser(getStoredUser());
+    const sessionId = getLastSessionId();
 
     let cancelled = false;
     (async () => {
       try {
-        const token = getAccessToken();
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        const meRes = await getMe();
+        if (cancelled) return;
+
+        if (meRes.error || !meRes.data) {
+          router.push("/Auth/login");
+          return;
+        }
+
+        setUser(meRes.data.user);
+
+        if (!sessionId) {
+          setState("empty");
+          return;
+        }
+
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+        };
 
         const res = await fetch(`${API_BASE}/result/${sessionId}`, { headers });
         const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
@@ -574,6 +609,10 @@ export default function DashboardHomePage() {
         if (cancelled) return;
 
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            router.push("/Auth/login");
+            return;
+          }
           if (res.status === 409) {
             setState("in-progress");
             return;
@@ -591,7 +630,13 @@ export default function DashboardHomePage() {
           return;
         }
 
-        setData(json as unknown as GetResultResponse);
+        if (!isResultResponse(json)) {
+          setErrorMessage("Dashboard data is incomplete. Please run your scan again.");
+          setState("error");
+          return;
+        }
+
+        setData(json);
         setState("active");
       } catch (err) {
         if (cancelled) return;
@@ -603,7 +648,7 @@ export default function DashboardHomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   if (state === "loading") return <LoadingState />;
   if (state === "empty") return <EmptyState user={user} />;

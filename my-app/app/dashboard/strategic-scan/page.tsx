@@ -1,18 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Banknote,
   CheckCircle,
+  Download,
   Loader,
-  Megaphone,
   Radar,
+  Shield,
+  Sparkles,
+  Target,
   Save,
-  Settings2,
-  Users,
 } from "lucide-react";
 import { getAccessToken, setLastSessionId } from "@/lib/authClient";
 
@@ -20,7 +22,9 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://pica-project1.onrender.com/api";
 
-type ScanState = "landing" | "questions" | "processing";
+type ScanState = "landing" | "questions" | "processing" | "result";
+
+type ColorBand = "RED" | "YELLOW" | "GREEN";
 
 interface QuestionOption {
   id: string;
@@ -50,7 +54,118 @@ interface Phase2APillar {
 
 interface FlatQuestion {
   question: Phase2AQuestion;
-  pillarName: string;
+}
+
+interface PillarMeta {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  displayOrder: number;
+}
+
+interface Finding {
+  optionId: string;
+  questionText: string;
+  selectedLabel: string;
+  observation: string;
+  recommendation: string;
+  riskType: string;
+  score: number;
+}
+
+interface PillarScore {
+  id: string;
+  pillarId: string;
+  rawScore: number;
+  maxPossibleScore: number;
+  weightedScore: number;
+  hasKnockout: boolean;
+  colorBand: ColorBand;
+  insightRuleApplied: string;
+  findings: Finding[];
+  pillar: PillarMeta;
+}
+
+interface ResultPayload {
+  id: string;
+  sessionId: string;
+  totalScore: number;
+  colorBand: ColorBand;
+  hasAnyKnockout: boolean;
+  knockoutQuestionIds: string[];
+  insightPayload: unknown;
+  reportPdfUrl: string | null;
+  generatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  pillarScores: PillarScore[];
+}
+
+interface GetResultResponse {
+  message: string;
+  paywalled: boolean;
+  result: ResultPayload;
+}
+
+const COLOR_BAND_TO_STATUS: Record<
+  ColorBand,
+  { label: string; bar: string; pill: string }
+> = {
+  GREEN: {
+    label: "Optimized",
+    bar: "bg-emerald-400",
+    pill: "bg-emerald-500/15 text-emerald-300 border-emerald-400/20",
+  },
+  YELLOW: {
+    label: "Active",
+    bar: "bg-amber-400",
+    pill: "bg-amber-500/15 text-amber-300 border-amber-400/20",
+  },
+  RED: {
+    label: "Attention",
+    bar: "bg-rose-400",
+    pill: "bg-rose-500/15 text-rose-300 border-rose-400/20",
+  },
+};
+
+const COLOR_BAND_TO_RING: Record<ColorBand, string> = {
+  GREEN: "from-emerald-400 to-teal-300",
+  YELLOW: "from-amber-400 to-orange-300",
+  RED: "from-rose-400 to-orange-300",
+};
+
+function isResultResponse(value: unknown): value is GetResultResponse {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as {
+    message?: unknown;
+    paywalled?: unknown;
+    result?: { pillarScores?: unknown; totalScore?: unknown } | null;
+  };
+
+  return (
+    typeof candidate.message === "string" &&
+    typeof candidate.paywalled === "boolean" &&
+    !!candidate.result &&
+    typeof candidate.result.totalScore === "number" &&
+    Array.isArray(candidate.result.pillarScores)
+  );
+}
+
+function formatRelativeTime(iso: string | null) {
+  if (!iso) return "Recently updated";
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return "Recently updated";
+  const diffMinutes = Math.max(1, Math.round((Date.now() - ms) / 60000));
+  if (diffMinutes < 60) {
+    return `Last updated ${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `Last updated ${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+  }
+  const diffDays = Math.round(diffHours / 24);
+  return `Last updated ${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 }
 
 async function authFetch(path: string, init?: RequestInit) {
@@ -71,7 +186,7 @@ function flattenPillars(pillars: Phase2APillar[]): FlatQuestion[] {
         .slice()
         .sort((a, b) => a.displayOrder - b.displayOrder)
         .forEach((question) => {
-          flat.push({ question, pillarName: pillar.name });
+          flat.push({ question });
         });
     });
   return flat;
@@ -87,14 +202,6 @@ function LandingState({
   loading: boolean;
   error: string | null;
 }) {
-  const departments = [
-    { label: "Finance", icon: Banknote, color: "text-teal-400 border-teal-400/30 bg-teal-400/5" },
-    { label: "HR", icon: Users, color: "text-blue-400 border-blue-400/30 bg-blue-400/5" },
-    { label: "Ops", icon: Settings2, color: "text-green-400 border-green-400/30 bg-green-400/5" },
-    { label: "Marketing", icon: Megaphone, color: "text-purple-400 border-purple-400/30 bg-purple-400/5" },
-    { label: "Strategy", icon: Radar, color: "text-cyan-400 border-cyan-400/30 bg-cyan-400/5" },
-  ];
-
   return (
     <div className="space-y-8 max-w-full">
       <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 overflow-hidden">
@@ -122,21 +229,22 @@ function LandingState({
             </h1>
 
             <p className="text-gray-400 text-sm md:text-base max-w-lg mb-8">
-              Unfold the mathematical architecture of your business. The full diagnostic asks 70
-              calibrated questions across 7 strategic pillars. Your progress is saved automatically &mdash;
-              you can leave any time and resume right where you stopped.
+              Unfold the mathematical architecture of your business through a guided diagnostic.
+              Your progress is saved automatically, so you can leave any time and resume right
+              where you stopped.
             </p>
 
             <div className="flex flex-wrap gap-3 mb-8">
-              {departments.map((dept) => (
+              {[
+                "Guided assessment flow",
+                "Auto-save enabled",
+                "Secure session tracking",
+              ].map((item) => (
                 <div
-                  key={dept.label}
-                  className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border ${dept.color} transition hover:scale-105 cursor-pointer`}
+                  key={item}
+                  className="px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-wider text-gray-300"
                 >
-                  <dept.icon className="w-5 h-5" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-300">
-                    {dept.label}
-                  </span>
+                  {item}
                 </div>
               ))}
             </div>
@@ -165,16 +273,9 @@ function LandingState({
                   </>
                 )}
               </button>
-              <div className="flex gap-6">
-                <div>
-                  <p className="text-2xl font-bold text-white">70</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Calibrated Questions</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">7</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">Strategic Pillars</p>
-                </div>
-              </div>
+              <p className="text-xs text-gray-500 uppercase tracking-widest">
+                Resume is available whenever you return.
+              </p>
             </div>
           </div>
 
@@ -205,8 +306,6 @@ function QuestionsState({
   flat,
   currentIndex,
   selectedOptionId,
-  pillarName,
-  answeredCount,
   saving,
   submitting,
   error,
@@ -218,8 +317,6 @@ function QuestionsState({
   flat: FlatQuestion[];
   currentIndex: number;
   selectedOptionId: string | null;
-  pillarName: string;
-  answeredCount: number;
   saving: boolean;
   submitting: boolean;
   error: string | null;
@@ -231,7 +328,6 @@ function QuestionsState({
   const total = flat.length;
   const current = flat[currentIndex];
   const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
-  const completionProgress = total > 0 ? (answeredCount / total) * 100 : 0;
   const isLast = currentIndex === total - 1;
 
   if (!current) return null;
@@ -242,34 +338,27 @@ function QuestionsState({
         <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1">
-              Current Pillar
+              Strategic Scan
             </p>
-            <p className="text-xl font-bold text-white">{pillarName}</p>
+            <p className="text-xl font-bold text-white">Assessment in progress</p>
           </div>
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
               Progress
             </p>
             <p className="text-sm text-gray-300">
-              Question{" "}
-              <span className="font-bold text-orange-400">{currentIndex + 1}</span> of {total}
-              <span className="ml-3 text-xs text-gray-500">
-                ({answeredCount}/{total} answered)
-              </span>
+              <span className="font-bold text-orange-400">
+                {Math.round(progress)}%
+              </span>{" "}
+              complete
             </p>
           </div>
         </div>
 
-        <div className="h-1 rounded-full bg-white/10 mb-2 overflow-hidden">
+        <div className="h-1 rounded-full bg-white/10 mb-8 overflow-hidden">
           <div
             className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300 transition-all duration-500"
             style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="h-1 rounded-full bg-white/5 mb-8 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-orange-400/70 transition-all duration-500"
-            style={{ width: `${completionProgress}%` }}
           />
         </div>
 
@@ -425,6 +514,194 @@ function ProcessingState() {
   );
 }
 
+function ResultState({
+  data,
+  onDownloadPdf,
+  onDeepDive,
+  onStartAnotherScan,
+}: {
+  data: GetResultResponse;
+  onDownloadPdf: () => void;
+  onDeepDive: () => void;
+  onStartAnotherScan: () => void;
+}) {
+  const { result, paywalled } = data;
+  const pillarScores = result.pillarScores
+    .slice()
+    .sort((a, b) => a.pillar.displayOrder - b.pillar.displayOrder);
+  const totalScore = Math.round(result.totalScore);
+  const weakestPillar = pillarScores
+    .slice()
+    .sort((a, b) => a.weightedScore - b.weightedScore)[0];
+  const headlineFinding =
+    weakestPillar?.findings.find((item) => item.observation || item.recommendation) ??
+    weakestPillar?.findings[0] ??
+    null;
+  const ringGradient = COLOR_BAND_TO_RING[result.colorBand];
+  const updatedLabel = formatRelativeTime(
+    result.generatedAt || result.updatedAt || result.createdAt,
+  );
+
+  return (
+    <div className="space-y-6 max-w-full">
+      <section className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-[#0e2b2b] via-[#111827] to-[#19132b]">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.14),transparent_36%),radial-gradient(circle_at_top_right,rgba(249,115,22,0.12),transparent_34%)]" />
+        <div className="relative z-10 grid gap-8 px-6 py-8 md:px-10 md:py-10 lg:grid-cols-[280px,1fr] lg:items-center">
+          <div className="flex justify-center">
+            <div
+              className={`relative flex h-44 w-44 flex-col items-center justify-center rounded-full border border-white/10 bg-[#07141b]/80 shadow-[0_0_40px_rgba(20,184,166,0.18)]`}
+            >
+              <div
+                className={`absolute inset-0 rounded-full bg-gradient-to-br ${ringGradient} opacity-20 blur-md`}
+              />
+              <div className="absolute inset-[10px] rounded-full border-[6px] border-teal-300/90" />
+              <p className="relative text-5xl font-black text-white">{totalScore}%</p>
+              <p className="relative mt-1 text-[11px] font-bold uppercase tracking-[0.28em] text-teal-200">
+                Complete
+              </p>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <h1 className="text-3xl font-extrabold text-white md:text-5xl">
+              Diagnostic <span className="text-orange-400">Complete.</span>
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-300 md:text-base">
+              Your strategic scan has been synthesized into a live performance snapshot.
+              Review the health markers below, then unlock your full report for PDF download
+              and email delivery.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                onClick={onDeepDive}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+              >
+                <Target className="h-4 w-4" />
+                Deep Dive Into Operations
+              </button>
+              <button
+                onClick={onDownloadPdf}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </button>
+            </div>
+
+            {paywalled && (
+              <p className="mt-4 text-xs uppercase tracking-[0.22em] text-orange-300">
+                PDF and emailed report unlock after subscription.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-teal-500/30 bg-[#101c23] px-6 py-6 shadow-[0_0_30px_rgba(13,148,136,0.08)]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-500/15">
+              <Sparkles className="h-5 w-5 text-teal-300" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">AI Pulse Insight</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-gray-300">
+                {headlineFinding
+                  ? `"${headlineFinding.observation || headlineFinding.recommendation}"`
+                  : "We detected performance signals across your operating model. Unlock the full report to review detailed findings and recommended actions."}
+              </p>
+              {weakestPillar && (
+                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-teal-300">
+                  Focus area: {weakestPillar.pillar.name}
+                </p>
+              )}
+            </div>
+          </div>
+          <Shield className="hidden h-10 w-10 text-white/20 lg:block" />
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold text-white">Pillar Breakdown</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{updatedLabel}</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {pillarScores.map((pillarScore) => {
+            const status = COLOR_BAND_TO_STATUS[pillarScore.colorBand];
+            const score = Math.round(pillarScore.weightedScore);
+            return (
+              <div
+                key={pillarScore.id}
+                className={`rounded-2xl border bg-[#0f1722] p-5 transition ${
+                  pillarScore.colorBand === "RED"
+                    ? "border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.08)]"
+                    : "border-white/5"
+                }`}
+              >
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <Radar className="h-4 w-4 text-gray-400" />
+                  <span
+                    className={`rounded-md border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] ${status.pill}`}
+                  >
+                    {status.label}
+                  </span>
+                </div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-gray-500">
+                  {pillarScore.pillar.name}
+                </p>
+                <p className="mt-3 text-4xl font-black text-white">
+                  {score}
+                  <span className="ml-1 text-lg text-gray-500">%</span>
+                </p>
+                <div className="mt-4 h-1.5 rounded-full bg-white/5">
+                  <div
+                    className={`h-full rounded-full ${status.bar}`}
+                    style={{ width: `${score}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/5 bg-[#0f1722] px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+              <AlertTriangle className="h-4 w-4 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Ready for the full report?</p>
+              <p className="text-xs text-gray-500">
+                Subscribe to unlock the downloadable PDF and email delivery, or start a fresh scan.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={onStartAnotherScan}
+              className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Start Another Scan
+            </button>
+            <Link
+              href="/dashboard/subscription"
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+            >
+              Unlock Full Report
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ─── Page ───────────────────────────────────────────────────────────────────
 export default function StrategicScanPage() {
   const router = useRouter();
@@ -437,9 +714,44 @@ export default function StrategicScanPage() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resultData, setResultData] = useState<GetResultResponse | null>(null);
 
   const flat = useMemo(() => flattenPillars(pillars), [pillars]);
-  const answeredCount = Object.keys(answers).length;
+
+  const loadResult = useCallback(async (id: string) => {
+    const res = await authFetch(`/result/${id}`);
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 409) {
+      return { status: 409 as const, data: null };
+    }
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to load diagnostic result");
+    }
+
+    if (!isResultResponse(data)) {
+      throw new Error("Diagnostic result payload is incomplete.");
+    }
+
+    return { status: 200 as const, data };
+  }, []);
+
+  const waitForResult = useCallback(
+    async (id: string) => {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const response = await loadResult(id);
+        if (response.status === 200 && response.data) {
+          return response.data;
+        }
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1200);
+        });
+      }
+      throw new Error("Your diagnostic is still processing. Please reopen Strategic Scan shortly.");
+    },
+    [loadResult],
+  );
 
   const loadQuestions = useCallback(async (id: string) => {
     const res = await authFetch(`/questions/phase2a?sessionId=${id}`);
@@ -562,20 +874,16 @@ export default function StrategicScanPage() {
       }
 
       setScanState("processing");
-      const redirectTo =
-        typeof data.redirectTo === "string" && data.redirectTo
-          ? data.redirectTo
-          : "/dashboard/subscription";
-
-      setTimeout(() => {
-        router.push(redirectTo);
-      }, 5000);
+      const result = await waitForResult(sessionId);
+      setResultData(result);
+      setScanState("result");
     } catch (err) {
+      setScanState("questions");
       setError(err instanceof Error ? err.message : "Failed to submit assessment");
     } finally {
       setSubmitting(false);
     }
-  }, [router, sessionId]);
+  }, [sessionId, waitForResult]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < flat.length - 1) {
@@ -590,6 +898,29 @@ export default function StrategicScanPage() {
     router.push("/dashboard");
   }, [router]);
 
+  const handleDownloadPdf = useCallback(() => {
+    if (!resultData) return;
+    if (resultData.paywalled || !resultData.result.reportPdfUrl) {
+      router.push("/dashboard/subscription");
+      return;
+    }
+    window.open(resultData.result.reportPdfUrl, "_blank", "noopener,noreferrer");
+  }, [resultData, router]);
+
+  const handleDeepDive = useCallback(() => {
+    router.push("/dashboard/deep-dive");
+  }, [router]);
+
+  const handleStartAnotherScan = useCallback(() => {
+    setResultData(null);
+    setPillars([]);
+    setAnswers({});
+    setCurrentIndex(0);
+    setError(null);
+    setSessionId(null);
+    setScanState("landing");
+  }, []);
+
   if (scanState === "questions" && flat.length > 0) {
     const current = flat[currentIndex];
     return (
@@ -597,8 +928,6 @@ export default function StrategicScanPage() {
         flat={flat}
         currentIndex={currentIndex}
         selectedOptionId={answers[current.question.id] || null}
-        pillarName={current.pillarName}
-        answeredCount={answeredCount}
         saving={saving}
         submitting={submitting}
         error={error}
@@ -612,6 +941,17 @@ export default function StrategicScanPage() {
 
   if (scanState === "processing") {
     return <ProcessingState />;
+  }
+
+  if (scanState === "result" && resultData) {
+    return (
+      <ResultState
+        data={resultData}
+        onDownloadPdf={handleDownloadPdf}
+        onDeepDive={handleDeepDive}
+        onStartAnotherScan={handleStartAnotherScan}
+      />
+    );
   }
 
   return <LandingState onStart={handleStart} loading={loading} error={error} />;
