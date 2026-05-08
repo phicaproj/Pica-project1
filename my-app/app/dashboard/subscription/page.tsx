@@ -1,29 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Script from "next/script";
 import Link from "next/link";
 import {
+  AlertTriangle,
+  ArrowRight,
+  BarChart2,
+  Building2,
   Check,
+  CheckCircle,
+  CircleDot,
+  Cpu,
+  CreditCard,
+  HelpCircle,
+  Landmark,
+  Loader,
   Lock,
   Rocket,
   Shield,
-  Users,
-  CircleDot,
-  CreditCard,
-  Building2,
-  Landmark,
-  ArrowRight,
-  HelpCircle,
-  CheckCircle,
-  Loader,
-  BarChart2,
   Star,
+  Users,
   Zap,
-  AlertTriangle,
-  Cpu,
 } from "lucide-react";
 import {
+  getLastSessionId,
   getMe,
   initPayment,
   verifyPayment,
@@ -31,19 +31,15 @@ import {
   type MeUser,
   type VerifyPaymentResponse,
 } from "@/lib/authClient";
-import { getLastSessionId } from "@/lib/authClient";
 
 type View = "plans" | "checkout" | "success";
 
-const PAYSTACK_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "";
+const PENDING_PAYMENT_REFERENCE_KEY = "pica.pendingPaymentReference";
 
 // Phase 2A price in NGN major units. Backend accepts whatever the FE sends
 // (validated <= 10_000_000); align this with admin pricing once that ships.
 const PHASE2A_PRICE_NGN = 50000;
 
-// Plans visible per businessSize. Phase 2A is the only plan currently wired
-// to the backend; everything else is informational until those backends ship.
 type PlanCard = {
   tier: string;
   name: string;
@@ -52,8 +48,6 @@ type PlanCard = {
   buttonLabel: string;
   buttonVariant: "filled" | "outlined";
   recommended?: boolean;
-  // Identifies the backend plan when "Begin Integration" is clicked.
-  // Only PHASE2A actually triggers payment today.
   backendPlan?: "PHASE2A";
 };
 
@@ -61,7 +55,7 @@ const SMALL_PLANS: PlanCard[] = [
   {
     tier: "FOUNDATION",
     name: "Free",
-    price: "₦0",
+    price: "N0",
     features: [
       "Phase 1 quick scan",
       "Standard insights summary",
@@ -73,7 +67,7 @@ const SMALL_PLANS: PlanCard[] = [
   {
     tier: "ACCELERATOR",
     name: "Plan 2A",
-    price: `₦${PHASE2A_PRICE_NGN.toLocaleString()}`,
+    price: `N${PHASE2A_PRICE_NGN.toLocaleString()}`,
     features: [
       "Full Phase 2A diagnostic",
       "Pillar-by-pillar findings",
@@ -90,7 +84,7 @@ const MEDIUM_PLANS: PlanCard[] = [
   {
     tier: "FOUNDATION",
     name: "Free",
-    price: "₦0",
+    price: "N0",
     features: [
       "Phase 1 quick scan",
       "Standard insights summary",
@@ -102,7 +96,7 @@ const MEDIUM_PLANS: PlanCard[] = [
   {
     tier: "ACCELERATOR",
     name: "Plan 2A",
-    price: `₦${PHASE2A_PRICE_NGN.toLocaleString()}`,
+    price: `N${PHASE2A_PRICE_NGN.toLocaleString()}`,
     features: [
       "Full Phase 2A diagnostic",
       "Medium-business question set",
@@ -115,26 +109,6 @@ const MEDIUM_PLANS: PlanCard[] = [
   },
 ];
 
-type PaystackPop = {
-  setup: (config: {
-    key: string;
-    email: string;
-    amount: number;
-    currency?: string;
-    ref: string;
-    metadata?: Record<string, unknown>;
-    onSuccess?: (tx: { reference: string }) => void;
-    onCancel?: () => void;
-    onClose?: () => void;
-  }) => { openIframe: () => void };
-};
-
-declare global {
-  interface Window {
-    PaystackPop?: PaystackPop;
-  }
-}
-
 export default function SubscriptionPage() {
   const [view, setView] = useState<View>("plans");
   const [me, setMe] = useState<MeUser | null>(null);
@@ -143,6 +117,8 @@ export default function SubscriptionPage() {
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
   const [verifyResult, setVerifyResult] =
     useState<VerifyPaymentResponse | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [verifyingReturn, setVerifyingReturn] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,21 +140,89 @@ export default function SubscriptionPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (meLoading || !me || verifyResult || typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const returnedReference =
+      params.get("reference") ||
+      params.get("trxref") ||
+      sessionStorage.getItem(PENDING_PAYMENT_REFERENCE_KEY);
+
+    if (!returnedReference) return;
+
+    let cancelled = false;
+
+    const cleanupReference = () => {
+      sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+      if (params.has("reference") || params.has("trxref")) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    };
+
+    (async () => {
+      setVerifyingReturn(true);
+      setPaymentError(null);
+
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const verify = await verifyPayment(returnedReference);
+        if (cancelled) return;
+
+        if (!verify.error && verify.data?.paid) {
+          cleanupReference();
+          setPaymentError(null);
+          setVerifyResult(verify.data);
+          setView("success");
+          setVerifyingReturn(false);
+          return;
+        }
+
+        const status = verify.data?.status;
+        if (verify.error || (status && status !== "PENDING")) {
+          cleanupReference();
+          setPaymentError(
+            verify.error?.message ??
+              `Payment status: ${status}. If you were charged, please contact support.`,
+          );
+          setVerifyingReturn(false);
+          return;
+        }
+
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 1500);
+        });
+      }
+
+      cleanupReference();
+      setPaymentError(
+        "Payment confirmation is taking longer than expected. Please refresh in a moment.",
+      );
+      setVerifyingReturn(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [me, meLoading, verifyResult]);
+
   const handleSelectPlan = (plan: PlanCard) => {
     if (!plan.backendPlan) return;
+    setPaymentError(null);
     setSelectedPlan(plan);
     setView("checkout");
   };
 
-  const handlePaymentVerified = (result: VerifyPaymentResponse) => {
-    setVerifyResult(result);
-    setView("success");
-  };
-
-  if (meLoading) {
+  if (meLoading || verifyingReturn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
-        <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
+        <div className="flex flex-col items-center gap-3 text-center px-6">
+          <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
+          <p className="text-sm text-gray-400">
+            {verifyingReturn ? "Confirming your payment..." : "Loading your account..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -201,22 +245,17 @@ export default function SubscriptionPage() {
 
   return (
     <>
-      <Script
-        src="https://js.paystack.co/v1/inline.js"
-        strategy="afterInteractive"
-      />
       {view === "plans" && (
         <ChoosePlanView
           me={me}
           onSelectPlan={handleSelectPlan}
+          paymentError={paymentError}
         />
       )}
       {view === "checkout" && selectedPlan && (
         <CheckoutView
-          me={me}
           plan={selectedPlan}
           onChangePlan={() => setView("plans")}
-          onPaymentVerified={handlePaymentVerified}
         />
       )}
       {view === "success" && verifyResult && (
@@ -230,16 +269,14 @@ export default function SubscriptionPage() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   STATE 1 — CHOOSE PLAN  (filtered by businessSize)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 function ChoosePlanView({
   me,
   onSelectPlan,
+  paymentError,
 }: {
   me: MeUser;
   onSelectPlan: (plan: PlanCard) => void;
+  paymentError: string | null;
 }) {
   const businessSize: BusinessSize | null = me.businessSize;
   const plans =
@@ -251,7 +288,6 @@ function ChoosePlanView({
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white pb-20">
-      {/* ── Hero ── */}
       <section className="text-center px-4 pt-16 pb-12 max-w-4xl mx-auto">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
           Celestial Intelligence{" "}
@@ -260,8 +296,8 @@ function ChoosePlanView({
           </span>
         </h1>
         <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">
-          Plans tailored to your business profile. The PICA engine has
-          classified your operation as{" "}
+          Plans tailored to your business profile. The PICA engine has classified
+          your operation as{" "}
           <span className="text-orange-400 font-semibold">
             {businessSize === "MEDIUM"
               ? "Medium Business"
@@ -276,9 +312,16 @@ function ChoosePlanView({
       {!businessSize && (
         <div className="max-w-2xl mx-auto px-4 mb-12">
           <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5 text-sm text-yellow-300">
-            We couldn&apos;t determine your business size yet. Please complete
-            the free Phase 1 scan first so we can show plans that fit your
-            operation.
+            We couldn&apos;t determine your business size yet. Please complete the
+            free Phase 1 scan first so we can show plans that fit your operation.
+          </div>
+        </div>
+      )}
+
+      {paymentError && (
+        <div className="max-w-2xl mx-auto px-4 mb-12">
+          <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-5 text-sm text-red-300">
+            {paymentError}
           </div>
         </div>
       )}
@@ -289,10 +332,7 @@ function ChoosePlanView({
             <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               You&apos;ve already unlocked Plan 2A. Head to your{" "}
-              <Link
-                href="/dashboard/reports"
-                className="underline font-semibold"
-              >
+              <Link href="/dashboard/reports" className="underline font-semibold">
                 reports
               </Link>{" "}
               to download the full diagnostic.
@@ -301,7 +341,6 @@ function ChoosePlanView({
         </div>
       )}
 
-      {/* ── Plan Grid ── */}
       <section className="max-w-6xl mx-auto px-4 mb-20">
         <div className="mb-8">
           <h2 className="text-xl md:text-2xl font-bold text-orange-400 mb-1">
@@ -329,7 +368,6 @@ function ChoosePlanView({
         </div>
       </section>
 
-      {/* ── Deep Feature Spectrum ── */}
       <section className="max-w-6xl mx-auto px-4">
         <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-8">
           What you get with Plan 2A
@@ -351,16 +389,16 @@ function ChoosePlanView({
               title: "Lifetime Access",
               desc: "One payment unlocks Phase 2A for your account permanently.",
             },
-          ].map((f) => (
+          ].map((feature) => (
             <div
-              key={f.title}
+              key={feature.title}
               className="bg-[#111827] border border-white/5 rounded-xl p-6"
             >
               <div className="flex items-center gap-3 mb-3">
-                {f.icon}
-                <p className="text-sm font-bold text-white">{f.title}</p>
+                {feature.icon}
+                <p className="text-sm font-bold text-white">{feature.title}</p>
               </div>
-              <p className="text-sm text-gray-400">{f.desc}</p>
+              <p className="text-sm text-gray-400">{feature.desc}</p>
             </div>
           ))}
         </div>
@@ -395,17 +433,16 @@ function PricingCard({
         </p>
         <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
         <p className="text-gray-400 text-sm mb-6">
-          {plan.price}{" "}
-          <span className="text-gray-600">/one-time</span>
+          {plan.price} <span className="text-gray-600">/one-time</span>
         </p>
         <ul className="space-y-3 mb-8">
-          {plan.features.map((f) => (
+          {plan.features.map((feature) => (
             <li
-              key={f}
+              key={feature}
               className="flex items-center gap-2 text-sm text-gray-300"
             >
               <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-              {f}
+              {feature}
             </li>
           ))}
         </ul>
@@ -427,20 +464,12 @@ function PricingCard({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   STATE 2 — SECURE CHECKOUT (Paystack inline)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 function CheckoutView({
-  me,
   plan,
   onChangePlan,
-  onPaymentVerified,
 }: {
-  me: MeUser;
   plan: PlanCard;
   onChangePlan: () => void;
-  onPaymentVerified: (result: VerifyPaymentResponse) => void;
 }) {
   const [activeTab, setActiveTab] = useState<string>("Card");
   const [busy, setBusy] = useState(false);
@@ -455,19 +484,8 @@ function CheckoutView({
 
   const handlePay = async () => {
     setError(null);
-
-    if (!PAYSTACK_PUBLIC_KEY) {
-      setError(
-        "Payment is not configured. Please contact support (missing public key).",
-      );
-      return;
-    }
-    if (typeof window === "undefined" || !window.PaystackPop) {
-      setError("Payment library is still loading. Please try again in a moment.");
-      return;
-    }
-
     setBusy(true);
+
     try {
       const sessionId = getLastSessionId() ?? undefined;
       const init = await initPayment({
@@ -475,53 +493,28 @@ function CheckoutView({
         amount: PHASE2A_PRICE_NGN,
         sessionId,
       });
+
       if (init.error || !init.data) {
         setError(init.error?.message ?? "Could not initialize payment");
         setBusy(false);
         return;
       }
 
-      const { reference } = init.data;
+      const { authorizationUrl, reference } = init.data;
+      if (!authorizationUrl) {
+        setError("Payment link is unavailable. Please try again.");
+        setBusy(false);
+        return;
+      }
 
-      const handler = window.PaystackPop.setup({
-        key: PAYSTACK_PUBLIC_KEY,
-        email: me.email,
-        amount: PHASE2A_PRICE_NGN * 100, // Paystack expects kobo
-        currency: "NGN",
-        ref: reference,
-        metadata: {
-          plan: "PHASE2A",
-          userId: me.id,
-        },
-        onSuccess: async (tx) => {
-          // Always re-verify server-side. The inline callback firing is not
-          // proof of payment — the backend must confirm with Paystack.
-          const verify = await verifyPayment(tx.reference);
-          setBusy(false);
-          if (verify.error || !verify.data) {
-            setError(
-              verify.error?.message ?? "Could not verify payment. Try again.",
-            );
-            return;
-          }
-          if (!verify.data.paid) {
-            setError(
-              `Payment status: ${verify.data.status}. If you were charged, please contact support.`,
-            );
-            return;
-          }
-          onPaymentVerified(verify.data);
-        },
-        onCancel: () => {
-          setBusy(false);
-          setError("Payment cancelled.");
-        },
-        onClose: () => {
-          setBusy(false);
-        },
-      });
+      if (typeof window === "undefined") {
+        setError("Payment redirect is unavailable in this environment.");
+        setBusy(false);
+        return;
+      }
 
-      handler.openIframe();
+      sessionStorage.setItem(PENDING_PAYMENT_REFERENCE_KEY, reference);
+      window.location.assign(authorizationUrl);
     } catch (err) {
       setBusy(false);
       setError(err instanceof Error ? err.message : "Payment failed");
@@ -531,7 +524,6 @@ function CheckoutView({
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
       <div className="max-w-6xl mx-auto px-4 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-        {/* ── Left Column ── */}
         <div>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
             Complete your{" "}
@@ -540,11 +532,10 @@ function CheckoutView({
             </span>
           </h1>
           <p className="text-gray-400 text-sm md:text-base mb-10 max-w-md">
-            Secure your access to the full Phase 2A diagnostic. Payment is
-            processed by Paystack — your card is never stored on our servers.
+            Secure your access to the full Phase 2A diagnostic. Payment is processed
+            by Paystack and completes on a secure hosted checkout page.
           </p>
 
-          {/* Plan summary card */}
           <div className="rounded-xl bg-gradient-to-br from-teal-900/60 to-[#111827] border border-teal-500/20 p-6">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
@@ -558,13 +549,13 @@ function CheckoutView({
               {plan.name}
             </h3>
             <ul className="space-y-2.5 mb-6">
-              {plan.features.map((f) => (
+              {plan.features.map((feature) => (
                 <li
-                  key={f}
+                  key={feature}
                   className="flex items-center gap-2 text-sm text-gray-300"
                 >
                   <Check className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                  {f}
+                  {feature}
                 </li>
               ))}
             </ul>
@@ -581,9 +572,7 @@ function CheckoutView({
           </div>
         </div>
 
-        {/* ── Right Column — Payment Form ── */}
         <div>
-          {/* Tabs (visual only — Paystack inline handles all methods) */}
           <div className="flex border-b border-white/10 mb-8">
             {tabs.map((tab) => (
               <button
@@ -604,18 +593,18 @@ function CheckoutView({
             ))}
           </div>
 
-          {/* Inline Paystack notice */}
           <div className="rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-teal-400" />
               <p className="text-xs font-bold uppercase tracking-widest text-teal-400">
-                Secure Inline Payment
+                Secure Hosted Payment
               </p>
             </div>
             <p className="text-sm text-gray-300 mb-4 leading-relaxed">
               Clicking <span className="font-semibold">Complete Payment</span>{" "}
-              opens a secure Paystack window inside this page. Card details are
-              entered directly with Paystack — we never see or store them.
+              opens Paystack&apos;s secure checkout to complete your purchase. After
+              payment, you&apos;ll return here and we&apos;ll confirm the transaction
+              before unlocking the success page.
             </p>
             <div className="grid grid-cols-2 gap-3 text-xs text-gray-400">
               <div className="flex items-center gap-2">
@@ -646,7 +635,7 @@ function CheckoutView({
           >
             {busy ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" /> Processing…
+                <Loader className="w-4 h-4 animate-spin" /> Redirecting...
               </>
             ) : (
               <>
@@ -663,7 +652,6 @@ function CheckoutView({
         </div>
       </div>
 
-      {/* ── Footer ── */}
       <footer className="max-w-6xl mx-auto px-4 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-600">
         <span className="font-bold text-gray-400 tracking-wider">PICA</span>
         <div className="flex items-center gap-6">
@@ -682,10 +670,6 @@ function CheckoutView({
     </div>
   );
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   STATE 3 — SUCCESS  (verified by backend)
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 function SuccessView({
   me,
@@ -715,7 +699,7 @@ function SuccessView({
     {
       icon: <Star className="w-5 h-5 text-[#f97316]" />,
       title: "Lifetime Access",
-      desc: "Re-run the assessment any time — no further charges.",
+      desc: "Re-run the assessment any time - no further charges.",
     },
   ];
 
@@ -734,7 +718,6 @@ function SuccessView({
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-          {/* Transaction Details */}
           <div className="rounded-2xl p-8 border bg-[#161b22] border-white/10">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-[#00ffaa]" />
@@ -768,7 +751,7 @@ function SuccessView({
               </p>
               <p className="text-xs mb-1 text-gray-400">Total amount</p>
               <p className="text-3xl font-extrabold text-[#00ffaa]">
-                {plan?.price ?? `₦${PHASE2A_PRICE_NGN.toLocaleString()}`}
+                {plan?.price ?? `N${PHASE2A_PRICE_NGN.toLocaleString()}`}
               </p>
             </div>
 
@@ -788,7 +771,6 @@ function SuccessView({
             </div>
           </div>
 
-          {/* Capabilities */}
           <div className="rounded-2xl p-8 border bg-[#1a2010] border-[#00ffaa]/20">
             <div className="flex items-center gap-2 mb-6">
               <Star className="w-4 h-4 text-[#f97316]" />
@@ -814,8 +796,6 @@ function SuccessView({
           </div>
         </div>
 
-        {/* Hidden references to lucide imports the linter would otherwise flag.
-            Cpu is kept in scope to match the original visual vocabulary. */}
         <div className="hidden">
           <Cpu />
         </div>
