@@ -88,3 +88,13 @@ export type VerifyResetOtpResponse = {
 export type ResetPasswordResponse = {
   message: string;
 };
+
+export type MeUser = AuthUser & {
+  businessSize: 'SMALL' | 'MEDIUM' | null;
+  hasPaidPhase2A: boolean;
+};
+
+export type MeResponse = {
+  message: string;
+  user: MeUser;
+};

@@ -8,3 +8,4 @@ nodemon.json
 Sample Questions.pdf
 sample_questions.txt
 /prisma/seed.ts
+.claude*

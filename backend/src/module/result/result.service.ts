@@ -1,7 +1,11 @@
 import { Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
-import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
+import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
+import { generatePhase1PDF } from '../../service/shared/pdf.service';
+import { sendReportEmail } from '../../service/shared/email.service';
+import { APP_URL } from '../../Config/env';
+import type { ScoringResultPayload } from '../scoring/scoring.types';
 import type { GetResultResponse, ResultPillarScoreResponse, ResultResponse } from './result.types';
 
 const allowedResultStatuses = new Set<SessionStatus>([
@@ -22,6 +26,10 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
       id: true,
       status: true,
       phase: true,
+      userId: true,
+      user: {
+        select: { hasPaidPhase2A: true },
+      },
     },
   });
 
@@ -88,10 +96,15 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     ],
   });
 
-  // Phase 2A is paywalled: until status is PAID/REPORT_GENERATED, redact the
-  // detailed insight payload, findings, knockout list, and PDF URL. Users still
-  // see overall and pillar scores so the dashboard can render a teaser.
-  const isPaywalled = session.phase === Phase.PHASE2A && !paidStatuses.has(session.status);
+  // Phase 2A is paywalled per-user (one-time purchase): if the session's owner
+  // has User.hasPaidPhase2A === true, every Phase 2A session they own auto-unlocks
+  // — even retakes after the first paid session. The legacy session.status check
+  // remains as a fallback for sessions whose status was promoted directly.
+  const userHasPaidPhase2A = session.user?.hasPaidPhase2A ?? false;
+  const isPaywalled =
+    session.phase === Phase.PHASE2A &&
+    !paidStatuses.has(session.status) &&
+    !userHasPaidPhase2A;
 
   const payload: ResultResponse = {
     ...result,
@@ -113,4 +126,111 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     result: payload,
     paywalled: isPaywalled,
   };
+}
+
+/**
+ * Builds the PDF for a session and triggers the report email in parallel.
+ * Returns the PDF buffer and filename for the controller to stream.
+ *
+ * Authorization rules:
+ *   - Phase 1: open (anyone with the sessionId can download — same as the
+ *     auto-emailed PDF on submit).
+ *   - Phase 2A: requires the authenticated user to own the session AND have
+ *     hasPaidPhase2A === true (or the session status to be PAID/REPORT_GENERATED).
+ */
+export async function downloadResultPdfService(
+  sessionId: string,
+  authenticatedUserId: string | undefined
+): Promise<{ pdfBuffer: Buffer; filename: string }> {
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      phase: true,
+      status: true,
+      userId: true,
+      leadEmail: true,
+      businessName: true,
+      user: {
+        select: { id: true, email: true, hasPaidPhase2A: true },
+      },
+    },
+  });
+
+  if (!session) {
+    throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+
+  if (!allowedResultStatuses.has(session.status)) {
+    throw new AppError(
+      'Assessment session must be completed before report can be downloaded',
+      CONFLICT
+    );
+  }
+
+  // Phase 2A: owner-only, paywalled.
+  if (session.phase === Phase.PHASE2A) {
+    if (!authenticatedUserId || session.userId !== authenticatedUserId) {
+      throw new AppError('You are not authorized to download this report', FORBIDDEN);
+    }
+    const userPaid = session.user?.hasPaidPhase2A ?? false;
+    const sessionPaid = paidStatuses.has(session.status);
+    if (!userPaid && !sessionPaid) {
+      throw new AppError(
+        'Payment is required to download the Phase 2A report',
+        FORBIDDEN
+      );
+    }
+  }
+
+  const result = await prisma.sessionResult.findUnique({
+    where: { sessionId },
+    select: { insightPayload: true },
+  });
+
+  if (!result?.insightPayload) {
+    throw new AppError('Report data not found for this session', NOT_FOUND);
+  }
+
+  const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;
+  const businessName = session.businessName ?? 'Business';
+
+  const pdfBuffer = await generatePhase1PDF(scoringPayload, businessName);
+  const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
+
+  // Fire-and-forget: send the report email without blocking the download.
+  // For Phase 2A use the authenticated user's email (their account). For Phase 1
+  // fall back to leadEmail (no user yet).
+  const recipientEmail =
+    session.phase === Phase.PHASE2A
+      ? session.user?.email ?? null
+      : session.leadEmail ?? session.user?.email ?? null;
+
+  if (recipientEmail) {
+    void sendReportEmail({
+      toEmail: recipientEmail,
+      businessName,
+      pdfBuffer,
+      reportPdfUrl: `${APP_URL}/result/${sessionId}/pdf`,
+    }).catch((error) => {
+      console.error('downloadResultPdfService: email send failed:', error);
+    });
+  }
+
+  // For Phase 2A, mark the session REPORT_GENERATED on first download so
+  // SessionResult.generatedAt + status reflect that the report has been issued.
+  if (session.phase === Phase.PHASE2A && session.status !== SessionStatus.REPORT_GENERATED) {
+    await prisma.$transaction([
+      prisma.assessmentSession.update({
+        where: { id: sessionId },
+        data: { status: SessionStatus.REPORT_GENERATED },
+      }),
+      prisma.sessionResult.update({
+        where: { sessionId },
+        data: { generatedAt: new Date() },
+      }),
+    ]);
+  }
+
+  return { pdfBuffer, filename };
 }

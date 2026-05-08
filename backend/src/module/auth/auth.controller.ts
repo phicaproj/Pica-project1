@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
-import { CREATED, OK } from '../../service/shared/http';
+import AppError from '../../service/shared/appError';
+import { CREATED, OK, UNAUTHORIZED } from '../../service/shared/http';
 import {
   forgotPasswordSchema,
   loginSchema,
@@ -11,6 +12,7 @@ import {
 import {
   forgotPasswordService,
   loginService,
+  meService,
   registerService,
   resetPasswordService,
   verifyResetOtpService,
@@ -48,5 +50,13 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
   const request = resetPasswordSchema.parse(req.body);
   const result = await resetPasswordService(request);
 
+  return res.status(OK).json(result);
+});
+
+export const me = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const result = await meService(req.user.id);
   return res.status(OK).json(result);
 });

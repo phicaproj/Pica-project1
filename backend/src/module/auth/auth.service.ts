@@ -23,6 +23,7 @@ import type {
   ForgotPasswordResponse,
   LoginInput,
   LoginResponse,
+  MeResponse,
   RegisterInput,
   RegisterResponse,
   ResetPasswordInput,
@@ -242,5 +243,37 @@ export async function resetPasswordService(
 
   return {
     message: 'Password reset successfully',
+  };
+}
+
+export async function meService(userId: string): Promise<MeResponse> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      isVerified: true,
+      businessSize: true,
+      hasPaidPhase2A: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  return {
+    message: 'User fetched successfully',
+    user: {
+      id: user.id,
+      email: user.email,
+      businessName: user.businessName,
+      phone: user.phone,
+      isVerified: user.isVerified,
+      businessSize: user.businessSize,
+      hasPaidPhase2A: user.hasPaidPhase2A,
+    },
   };
 }

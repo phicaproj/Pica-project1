@@ -29,6 +29,13 @@ export interface AuthUser {
 	isVerified: boolean
 }
 
+export type BusinessSize = 'SMALL' | 'MEDIUM'
+
+export interface MeUser extends AuthUser {
+	businessSize: BusinessSize | null
+	hasPaidPhase2A: boolean
+}
+
 interface ApiError {
 	message: string
 }
@@ -109,6 +116,93 @@ export function getLastSessionId(): string | null {
 export function clearLastSessionId() {
 	if (typeof window === 'undefined') return
 	localStorage.removeItem(LAST_SESSION_ID_KEY)
+}
+
+async function authedFetch<T>(
+	path: string,
+	init: RequestInit = {},
+): Promise<ApiResult<T>> {
+	const token = getAccessToken()
+	if (!token) {
+		return { data: null, error: { message: 'Not authenticated' } }
+	}
+	try {
+		const res = await fetch(`${API_BASE_URL}${path}`, {
+			...init,
+			headers: {
+				'Content-Type': 'application/json',
+				...(init.headers || {}),
+				Authorization: `Bearer ${token}`,
+			},
+		})
+		const json = (await res.json().catch(() => ({}))) as Record<
+			string,
+			unknown
+		>
+		if (!res.ok) {
+			const message =
+				(typeof json.message === 'string' && json.message) ||
+				`Request failed with status ${res.status}`
+			return { data: null, error: { message } }
+		}
+		return { data: json as T, error: null }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Network error'
+		return { data: null, error: { message } }
+	}
+}
+
+export const getMe = async () => {
+	const res = await authedFetch<{ message: string; user: MeUser }>(
+		'/auth/me',
+		{ method: 'GET' },
+	)
+	if (res.data && typeof window !== 'undefined') {
+		// Mirror the canonical user fields back into local storage so the
+		// rest of the app stays in sync.
+		const stored: AuthUser = {
+			id: res.data.user.id,
+			email: res.data.user.email,
+			businessName: res.data.user.businessName,
+			phone: res.data.user.phone,
+			isVerified: res.data.user.isVerified,
+		}
+		localStorage.setItem(USER_KEY, JSON.stringify(stored))
+	}
+	return res
+}
+
+export type InitPaymentResponse = {
+	message: string
+	authorizationUrl: string
+	accessCode: string
+	reference: string
+	paymentId: string
+}
+
+export type VerifyPaymentResponse = {
+	message: string
+	status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED' | 'REVERSED'
+	paid: boolean
+	reference: string
+}
+
+export const initPayment = async (payload: {
+	plan: 'PHASE2A'
+	amount: number
+	sessionId?: string
+}) => {
+	return authedFetch<InitPaymentResponse>('/payment/init', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const verifyPayment = async (reference: string) => {
+	return authedFetch<VerifyPaymentResponse>(
+		`/payment/verify/${encodeURIComponent(reference)}`,
+		{ method: 'GET' },
+	)
 }
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {

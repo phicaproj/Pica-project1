@@ -56,8 +56,8 @@ function classifyStaffSize(staffSize: string): BusinessSize {
 
 function classifyRevenue(annualRevenue: string): BusinessSize {
   const normalized = annualRevenue.trim().toLowerCase();
-  if (normalized.includes('5m')) return BusinessSize.SMALL;
-  if (normalized.includes('5m - 50m') || normalized.includes('enterprise')) {
+  if (normalized.includes('under')) return BusinessSize.SMALL;
+  if (normalized.includes('mid') || normalized.includes('enterprise')) {
     return BusinessSize.MEDIUM;
   }
   // Unknown bucket — be conservative.
@@ -88,6 +88,7 @@ export async function startAssessmentService(
     select: {
       id: true,
       status: true,
+      businessSize: true,
     },
   });
 
@@ -103,6 +104,7 @@ export async function startAssessmentService(
       message:
         'An assessment session is already in progress for this email. Resuming the existing session.',
       sessionId: existingSession.id,
+      businessSize: existingSession.businessSize ?? businessSize,
     };
   }
 
@@ -127,6 +129,7 @@ export async function startAssessmentService(
   return {
     message: 'Assessment session started successfully',
     sessionId: session.id,
+    businessSize,
   };
 }
 

@@ -37,6 +37,7 @@ export type AnswerAssessmentInput = z.infer<typeof answerAssessmentInput>
 export type StartAssessmentResponse = {
 	message: string
 	sessionId: string
+	businessSize: 'SMALL' | 'MEDIUM'
 }
 
 export type AnswerAssessmentResponse = {
