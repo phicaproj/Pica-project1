@@ -783,13 +783,38 @@ export default function DashboardHomePage() {
 
 				setUser(meRes.data.user)
 
-				if (!sessionId) {
-					setState('empty')
-					return
-				}
-
 				const headers: Record<string, string> = {
 					Authorization: `Bearer ${token}`,
+				}
+
+				if (!sessionId) {
+					const latestRes = await fetch(
+						`${API_BASE}/result/me/latest`,
+						{ headers },
+					)
+					if (cancelled) return
+					if (latestRes.ok) {
+						const latestJson = (await latestRes
+							.json()
+							.catch(() => ({}))) as Record<string, unknown>
+						if (cancelled) return
+						if (isResultResponse(latestJson)) {
+							setData(latestJson)
+							setState('active')
+							return
+						}
+						setErrorMessage(
+							'Dashboard data is incomplete. Please run your scan again.',
+						)
+						setState('error')
+						return
+					}
+					if (latestRes.status === 401 || latestRes.status === 403) {
+						router.push('/Auth/login')
+						return
+					}
+					setState('empty')
+					return
 				}
 
 				const res = await fetch(`${API_BASE}/result/${sessionId}`, {
@@ -828,6 +853,22 @@ export default function DashboardHomePage() {
 						return
 					}
 					if (res.status === 404) {
+						const latestRes = await fetch(
+							`${API_BASE}/result/me/latest`,
+							{ headers },
+						)
+						if (cancelled) return
+						if (latestRes.ok) {
+							const latestJson = (await latestRes
+								.json()
+								.catch(() => ({}))) as Record<string, unknown>
+							if (cancelled) return
+							if (isResultResponse(latestJson)) {
+								setData(latestJson)
+								setState('active')
+								return
+							}
+						}
 						setState('empty')
 						return
 					}
