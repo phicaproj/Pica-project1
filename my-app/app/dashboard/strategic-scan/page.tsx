@@ -24,7 +24,7 @@ const API_BASE =
 
 type ScanState = "landing" | "questions" | "processing" | "result";
 
-type ColorBand = "RED" | "YELLOW" | "GREEN";
+type ColorBand = "RED" | "AMBER" | "GREEN";
 
 interface QuestionOption {
   id: string;
@@ -117,7 +117,7 @@ const COLOR_BAND_TO_STATUS: Record<
     bar: "bg-emerald-400",
     pill: "bg-emerald-500/15 text-emerald-300 border-emerald-400/20",
   },
-  YELLOW: {
+  AMBER: {
     label: "Active",
     bar: "bg-amber-400",
     pill: "bg-amber-500/15 text-amber-300 border-amber-400/20",
@@ -131,9 +131,19 @@ const COLOR_BAND_TO_STATUS: Record<
 
 const COLOR_BAND_TO_RING: Record<ColorBand, string> = {
   GREEN: "from-emerald-400 to-teal-300",
-  YELLOW: "from-amber-400 to-orange-300",
+  AMBER: "from-amber-400 to-orange-300",
   RED: "from-rose-400 to-orange-300",
 };
+
+function normalizeColorBand(value: unknown): ColorBand {
+  if (typeof value !== "string") return "AMBER";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "GREEN" || normalized === "AMBER" || normalized === "RED") {
+    return normalized;
+  }
+  if (normalized === "YELLOW") return "AMBER";
+  return "AMBER";
+}
 
 function isResultResponse(value: unknown): value is GetResultResponse {
   if (!value || typeof value !== "object") return false;
@@ -537,7 +547,7 @@ function ResultState({
     weakestPillar?.findings.find((item) => item.observation || item.recommendation) ??
     weakestPillar?.findings[0] ??
     null;
-  const ringGradient = COLOR_BAND_TO_RING[result.colorBand];
+  const ringGradient = COLOR_BAND_TO_RING[normalizeColorBand(result.colorBand)];
   const updatedLabel = formatRelativeTime(
     result.generatedAt || result.updatedAt || result.createdAt,
   );
@@ -630,13 +640,14 @@ function ResultState({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           {pillarScores.map((pillarScore) => {
-            const status = COLOR_BAND_TO_STATUS[pillarScore.colorBand];
+            const band = normalizeColorBand(pillarScore.colorBand);
+            const status = COLOR_BAND_TO_STATUS[band];
             const score = Math.round(pillarScore.weightedScore);
             return (
               <div
                 key={pillarScore.id}
                 className={`rounded-2xl border bg-[#0f1722] p-5 transition ${
-                  pillarScore.colorBand === "RED"
+                  band === "RED"
                     ? "border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.08)]"
                     : "border-white/5"
                 }`}

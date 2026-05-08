@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import {
   AlertTriangle,
   ArrowRight,
@@ -35,6 +36,22 @@ import {
 type View = "plans" | "checkout" | "success";
 
 const PENDING_PAYMENT_REFERENCE_KEY = "pica.pendingPaymentReference";
+
+type PaystackHandler = { openIframe: () => void };
+
+type PaystackSetupOptions = {
+  accessCode: string;
+  callback: (response: { reference: string }) => void;
+  onClose: () => void;
+};
+
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (options: PaystackSetupOptions) => PaystackHandler;
+    };
+  }
+}
 
 // Phase 2A price in NGN major units. Backend accepts whatever the FE sends
 // (validated <= 10_000_000); align this with admin pricing once that ships.
@@ -214,6 +231,12 @@ export default function SubscriptionPage() {
     setView("checkout");
   };
 
+  const handlePaymentSuccess = (result: VerifyPaymentResponse) => {
+    setPaymentError(null);
+    setVerifyResult(result);
+    setView("success");
+  };
+
   if (meLoading || verifyingReturn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
@@ -245,6 +268,7 @@ export default function SubscriptionPage() {
 
   return (
     <>
+      <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" />
       {view === "plans" && (
         <ChoosePlanView
           me={me}
@@ -256,6 +280,7 @@ export default function SubscriptionPage() {
         <CheckoutView
           plan={selectedPlan}
           onChangePlan={() => setView("plans")}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
       {view === "success" && verifyResult && (
@@ -467,13 +492,17 @@ function PricingCard({
 function CheckoutView({
   plan,
   onChangePlan,
+  onPaymentSuccess,
 }: {
   plan: PlanCard;
   onChangePlan: () => void;
+  onPaymentSuccess: (result: VerifyPaymentResponse) => void;
 }) {
   const [activeTab, setActiveTab] = useState<string>("Card");
   const [busy, setBusy] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const paidRef = useRef(false);
 
   const tabs = [
     { label: "Card", icon: <CreditCard className="w-4 h-4" /> },
@@ -482,11 +511,46 @@ function CheckoutView({
     { label: "Paystack", icon: <Shield className="w-4 h-4" /> },
   ];
 
+  const verifyWithRetry = async (reference: string) => {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const verify = await verifyPayment(reference);
+      if (!verify.error && verify.data?.paid) {
+        return { ok: true as const, data: verify.data };
+      }
+      const status = verify.data?.status;
+      if (verify.error || (status && status !== "PENDING")) {
+        return {
+          ok: false as const,
+          message:
+            verify.error?.message ??
+            `Payment status: ${status}. If you were charged, please contact support.`,
+        };
+      }
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 1500);
+      });
+    }
+    return {
+      ok: false as const,
+      message:
+        "Payment confirmation is taking longer than expected. Please refresh in a moment.",
+    };
+  };
+
   const handlePay = async () => {
     setError(null);
     setBusy(true);
+    paidRef.current = false;
 
     try {
+      if (typeof window === "undefined" || !window.PaystackPop) {
+        setError(
+          "Payment SDK is still loading. Please wait a moment and try again.",
+        );
+        setBusy(false);
+        return;
+      }
+
       const sessionId = getLastSessionId() ?? undefined;
       const init = await initPayment({
         plan: "PHASE2A",
@@ -500,21 +564,40 @@ function CheckoutView({
         return;
       }
 
-      const { authorizationUrl, reference } = init.data;
-      if (!authorizationUrl) {
+      const { accessCode, reference } = init.data;
+      if (!accessCode) {
         setError("Payment link is unavailable. Please try again.");
         setBusy(false);
         return;
       }
 
-      if (typeof window === "undefined") {
-        setError("Payment redirect is unavailable in this environment.");
-        setBusy(false);
-        return;
-      }
-
       sessionStorage.setItem(PENDING_PAYMENT_REFERENCE_KEY, reference);
-      window.location.assign(authorizationUrl);
+
+      const handler = window.PaystackPop.setup({
+        accessCode,
+        callback: (response) => {
+          paidRef.current = true;
+          setVerifying(true);
+          void (async () => {
+            const result = await verifyWithRetry(response.reference);
+            sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+            setVerifying(false);
+            setBusy(false);
+            if (result.ok) {
+              onPaymentSuccess(result.data);
+            } else {
+              setError(result.message);
+            }
+          })();
+        },
+        onClose: () => {
+          if (paidRef.current) return;
+          sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+          setBusy(false);
+          setError("Payment was cancelled before completion.");
+        },
+      });
+      handler.openIframe();
     } catch (err) {
       setBusy(false);
       setError(err instanceof Error ? err.message : "Payment failed");
@@ -533,7 +616,7 @@ function CheckoutView({
           </h1>
           <p className="text-gray-400 text-sm md:text-base mb-10 max-w-md">
             Secure your access to the full Phase 2A diagnostic. Payment is processed
-            by Paystack and completes on a secure hosted checkout page.
+            by Paystack in a secure popup — you stay on this page the whole time.
           </p>
 
           <div className="rounded-xl bg-gradient-to-br from-teal-900/60 to-[#111827] border border-teal-500/20 p-6">
@@ -602,9 +685,8 @@ function CheckoutView({
             </div>
             <p className="text-sm text-gray-300 mb-4 leading-relaxed">
               Clicking <span className="font-semibold">Complete Payment</span>{" "}
-              opens Paystack&apos;s secure checkout to complete your purchase. After
-              payment, you&apos;ll return here and we&apos;ll confirm the transaction
-              before unlocking the success page.
+              opens a Paystack checkout popup on this page. We confirm the
+              transaction with our servers before unlocking your success page.
             </p>
             <div className="grid grid-cols-2 gap-3 text-xs text-gray-400">
               <div className="flex items-center gap-2">
@@ -630,12 +712,17 @@ function CheckoutView({
 
           <button
             onClick={handlePay}
-            disabled={busy}
+            disabled={busy || verifying}
             className="w-full py-4 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold text-sm transition flex items-center justify-center gap-2"
           >
-            {busy ? (
+            {verifying ? (
               <>
-                <Loader className="w-4 h-4 animate-spin" /> Redirecting...
+                <Loader className="w-4 h-4 animate-spin" /> Confirming
+                payment...
+              </>
+            ) : busy ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" /> Opening checkout...
               </>
             ) : (
               <>

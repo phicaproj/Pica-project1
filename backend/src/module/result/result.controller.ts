@@ -1,8 +1,13 @@
 import { Request, Response } from 'express'
 import asyncHandler from '../../service/shared/catchErrors'
-import { OK } from '../../service/shared/http'
+import AppError from '../../service/shared/appError'
+import { NOT_FOUND, OK, UNAUTHORIZED } from '../../service/shared/http'
 import { assessmentSessionParams } from '../assessment/assessment.types'
-import { downloadResultPdfService, getResultService } from './result.service'
+import {
+	downloadResultPdfService,
+	getLatestCompletedResultForUserService,
+	getResultService,
+} from './result.service'
 
 export const getResult = asyncHandler(async (req: Request, res: Response) => {
 	const { sessionId } = assessmentSessionParams.parse(req.params)
@@ -10,6 +15,19 @@ export const getResult = asyncHandler(async (req: Request, res: Response) => {
 
 	return res.status(OK).json(result)
 })
+
+export const getMyLatestCompletedResult = asyncHandler(
+	async (req: Request, res: Response) => {
+		if (!req.user?.id) {
+			throw new AppError('User not authenticated', UNAUTHORIZED)
+		}
+		const result = await getLatestCompletedResultForUserService(req.user.id)
+		if (!result) {
+			throw new AppError('No completed assessment found for this user', NOT_FOUND)
+		}
+		return res.status(OK).json(result)
+	},
+)
 
 export const downloadResultPdf = asyncHandler(async (req: Request, res: Response) => {
 	const { sessionId } = assessmentSessionParams.parse(req.params)

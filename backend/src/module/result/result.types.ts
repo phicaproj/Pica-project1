@@ -1,4 +1,4 @@
-import { ColorBand, InsightRule, RiskType, SessionStatus } from '@prisma/client'
+import { ColorBand, InsightRule, Phase, RiskType, SessionStatus } from '@prisma/client'
 
 export type ResultPillarScoreResponse = {
 	id: string
@@ -30,6 +30,7 @@ export type ResultPillarScoreResponse = {
 export type ResultResponse = {
 	id: string
 	sessionId: string
+	phase: Phase
 	totalScore: number
 	colorBand: ColorBand
 	hasAnyKnockout: boolean

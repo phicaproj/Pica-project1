@@ -29,7 +29,14 @@ const API_BASE =
 	process.env.NEXT_PUBLIC_API_BASE_URL ||
 	'https://pica-project1.onrender.com/api'
 
-type ColorBand = 'RED' | 'YELLOW' | 'GREEN'
+type ColorBand = 'RED' | 'AMBER' | 'GREEN'
+
+type Phase = 'PHASE1' | 'PHASE2A'
+
+function phaseDisplayName(phase: Phase | undefined): string {
+	if (phase === 'PHASE2A') return 'Phase 2A'
+	return 'Phase 1'
+}
 
 interface PillarMeta {
 	id: string
@@ -65,6 +72,7 @@ interface PillarScore {
 interface ResultPayload {
 	id: string
 	sessionId: string
+	phase: Phase
 	totalScore: number
 	colorBand: ColorBand
 	hasAnyKnockout: boolean
@@ -83,39 +91,46 @@ interface GetResultResponse {
 	result: ResultPayload
 }
 
-type DashboardState = 'loading' | 'empty' | 'in-progress' | 'active' | 'error'
+type DashboardState =
+	| 'loading'
+	| 'empty'
+	| 'in-progress'
+	| 'in-progress-active'
+	| 'active'
+	| 'error'
 
 const COLOR_BAND_TO_RISK: Record<ColorBand, { label: string; color: string }> =
 	{
 		GREEN: { label: 'Low', color: 'text-green-400' },
-		YELLOW: { label: 'Moderate', color: 'text-yellow-400' },
+		AMBER: { label: 'Moderate', color: 'text-yellow-400' },
 		RED: { label: 'High', color: 'text-red-400' },
 	}
 
 const COLOR_BAND_TO_BAR: Record<ColorBand, string> = {
 	GREEN: 'bg-green-400',
-	YELLOW: 'bg-yellow-400',
+	AMBER: 'bg-yellow-400',
 	RED: 'bg-red-400',
 }
 
 const COLOR_BAND_TO_STATUS: Record<ColorBand, { label: string; pill: string }> =
 	{
 		GREEN: { label: 'Healthy', pill: 'bg-green-500/20 text-green-400' },
-		YELLOW: { label: 'Watch', pill: 'bg-yellow-500/20 text-yellow-400' },
+		AMBER: { label: 'Watch', pill: 'bg-yellow-500/20 text-yellow-400' },
 		RED: { label: 'Attention', pill: 'bg-red-500/20 text-red-400' },
 	}
 
 function normalizeColorBand(value: unknown): ColorBand {
-	if (typeof value !== 'string') return 'YELLOW'
+	if (typeof value !== 'string') return 'AMBER'
 	const normalized = value.trim().toUpperCase()
 	if (
 		normalized === 'GREEN' ||
-		normalized === 'YELLOW' ||
+		normalized === 'AMBER' ||
 		normalized === 'RED'
 	) {
 		return normalized
 	}
-	return 'YELLOW'
+	if (normalized === 'YELLOW') return 'AMBER'
+	return 'AMBER'
 }
 
 function formatDate(iso: string | null) {
@@ -312,9 +327,11 @@ function EmptyState({ user }: { user: AuthUser | null }) {
 function ActiveState({
 	data,
 	user,
+	inProgress = false,
 }: {
 	data: GetResultResponse
 	user: AuthUser | null
+	inProgress?: boolean
 }) {
 	const { result, paywalled } = data
 	const pillarScores = result.pillarScores
@@ -325,6 +342,12 @@ function ActiveState({
 	const overallBand = normalizeColorBand(result.colorBand)
 	const overallRisk = COLOR_BAND_TO_RISK[overallBand]
 	const overallBar = COLOR_BAND_TO_BAR[overallBand]
+	const overallStatus = COLOR_BAND_TO_STATUS[overallBand]
+	const phaseLabel = phaseDisplayName(result.phase)
+	const totalFindings = pillarScores.reduce(
+		(sum, p) => sum + (p.findings?.length ?? 0),
+		0,
+	)
 
 	// Pull the lowest-scoring pillar's first finding for the AI insight card
 	const weakestPillar = pillarScores
@@ -363,8 +386,31 @@ function ActiveState({
 				</div>
 			</div>
 
-			{/* Paywall banner */}
-			{paywalled && (
+			{/* Resume / Paywall banner */}
+			{inProgress ? (
+				<div className='rounded-2xl bg-gradient-to-r from-teal-500/10 to-teal-500/5 border border-teal-500/30 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
+					<div className='flex items-start gap-3'>
+						<div className='w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center flex-shrink-0'>
+							<RotateCcw className='w-5 h-5 text-teal-400' />
+						</div>
+						<div>
+							<p className='text-sm font-bold text-white'>
+								You have a scan in progress
+							</p>
+							<p className='text-xs text-gray-400 mt-0.5'>
+								Pick up where you left off — your answers are
+								saved automatically.
+							</p>
+						</div>
+					</div>
+					<Link
+						href='/dashboard/strategic-scan'
+						className='flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition'
+					>
+						Resume Strategic Scan <ArrowRight className='w-4 h-4' />
+					</Link>
+				</div>
+			) : paywalled ? (
 				<div className='rounded-2xl bg-gradient-to-r from-orange-500/10 to-orange-500/5 border border-orange-500/30 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
 					<div className='flex items-start gap-3'>
 						<div className='w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0'>
@@ -388,7 +434,7 @@ function ActiveState({
 						Unlock Report <ArrowRight className='w-4 h-4' />
 					</Link>
 				</div>
-			)}
+			) : null}
 
 			{/* Stats + AI Insight */}
 			<div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
@@ -570,19 +616,22 @@ function ActiveState({
 				<div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6'>
 					<div>
 						<h3 className='text-lg font-bold text-white'>
-							Pillar Findings
+							{inProgress ? 'Phase Findings' : 'Pillar Findings'}
 						</h3>
 						<p className='text-xs text-gray-500'>
-							{paywalled
-								? 'Unlock the full report to access detailed findings per pillar.'
-								: 'Top-line per-pillar status from your latest scan.'}
+							{inProgress
+								? 'Your most recent completed phase. Resume the scan in progress to see detailed pillar findings.'
+								: paywalled
+									? 'Unlock the full report to access detailed findings per pillar.'
+									: 'Top-line per-pillar status from your latest scan.'}
 						</p>
 					</div>
 					<Link
 						href='/dashboard/strategic-scan'
 						className='text-teal-400 text-sm font-semibold flex items-center gap-1 hover:text-teal-300 transition'
 					>
-						Run Again <ArrowRight className='w-3.5 h-3.5' />
+						{inProgress ? 'Resume Scan' : 'Run Again'}
+						<ArrowRight className='w-3.5 h-3.5' />
 					</Link>
 				</div>
 
@@ -591,7 +640,7 @@ function ActiveState({
 						<thead>
 							<tr className='text-[10px] text-gray-500 uppercase tracking-wider'>
 								<th className='text-left pb-3 font-semibold'>
-									Pillar
+									{inProgress ? 'Phase' : 'Pillar'}
 								</th>
 								<th className='text-left pb-3 font-semibold'>
 									Status
@@ -605,7 +654,45 @@ function ActiveState({
 							</tr>
 						</thead>
 						<tbody className='divide-y divide-white/5'>
-							{pillarScores.map((p) => {
+							{inProgress ? (
+								<tr className='text-sm'>
+									<td className='py-4'>
+										<div className='flex items-center gap-3'>
+											<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
+												<FileText className='w-4 h-4 text-gray-400' />
+											</div>
+											<div>
+												<p className='font-semibold text-white'>
+													{phaseLabel}
+												</p>
+												<p className='text-xs text-gray-500'>
+													Completed
+												</p>
+											</div>
+										</div>
+									</td>
+									<td className='py-4'>
+										<span
+											className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${overallStatus.pill}`}
+										>
+											<span className='w-1.5 h-1.5 rounded-full bg-current' />
+											{overallStatus.label}
+										</span>
+									</td>
+									<td className='py-4 font-semibold text-white'>
+										{totalScore}
+										<span className='text-xs text-gray-500'>
+											{' '}
+											/ 100
+										</span>
+									</td>
+									<td className='py-4 text-gray-400'>
+										{totalFindings} finding
+										{totalFindings === 1 ? '' : 's'}
+									</td>
+								</tr>
+							) : (
+								pillarScores.map((p) => {
 								const pillarBand = normalizeColorBand(
 									p.colorBand,
 								)
@@ -655,7 +742,8 @@ function ActiveState({
 										</td>
 									</tr>
 								)
-							})}
+							})
+							)}
 						</tbody>
 					</table>
 				</div>
@@ -720,6 +808,22 @@ export default function DashboardHomePage() {
 						return
 					}
 					if (res.status === 409) {
+						const latestRes = await fetch(
+							`${API_BASE}/result/me/latest`,
+							{ headers },
+						)
+						if (cancelled) return
+						if (latestRes.ok) {
+							const latestJson = (await latestRes
+								.json()
+								.catch(() => ({}))) as Record<string, unknown>
+							if (cancelled) return
+							if (isResultResponse(latestJson)) {
+								setData(latestJson)
+								setState('in-progress-active')
+								return
+							}
+						}
 						setState('in-progress')
 						return
 					}
@@ -766,5 +870,7 @@ export default function DashboardHomePage() {
 	if (state === 'error') return <ErrorState message={errorMessage} />
 	if (state === 'active' && data)
 		return <ActiveState data={data} user={user} />
+	if (state === 'in-progress-active' && data)
+		return <ActiveState data={data} user={user} inProgress />
 	return <EmptyState user={user} />
 }

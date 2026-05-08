@@ -108,6 +108,7 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
 
   const payload: ResultResponse = {
     ...result,
+    phase: session.phase,
     totalScore: Number(result.totalScore),
     knockoutQuestionIds: isPaywalled ? [] : (result.knockoutQuestionIds as string[]),
     insightPayload: isPaywalled ? null : result.insightPayload,
@@ -126,6 +127,23 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     result: payload,
     paywalled: isPaywalled,
   };
+}
+
+export async function getLatestCompletedResultForUserService(
+  userId: string
+): Promise<GetResultResponse | null> {
+  const session = await prisma.assessmentSession.findFirst({
+    where: {
+      userId,
+      status: { in: Array.from(allowedResultStatuses) },
+    },
+    orderBy: { completedAt: 'desc' },
+    select: { id: true },
+  });
+
+  if (!session) return null;
+
+  return getResultService(session.id);
 }
 
 /**
