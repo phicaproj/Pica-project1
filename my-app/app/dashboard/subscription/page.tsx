@@ -40,7 +40,11 @@ const PENDING_PAYMENT_REFERENCE_KEY = "pica.pendingPaymentReference";
 type PaystackHandler = { openIframe: () => void };
 
 type PaystackSetupOptions = {
-  accessCode: string;
+  key: string;
+  email: string;
+  amount: number;
+  ref: string;
+  currency?: string;
   callback: (response: { reference: string }) => void;
   onClose: () => void;
 };
@@ -52,6 +56,8 @@ declare global {
     };
   }
 }
+
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
 // Phase 2A price in NGN major units. Backend accepts whatever the FE sends
 // (validated <= 10_000_000); align this with admin pricing once that ships.
@@ -279,6 +285,7 @@ export default function SubscriptionPage() {
       {view === "checkout" && selectedPlan && (
         <CheckoutView
           plan={selectedPlan}
+          me={me}
           onChangePlan={() => setView("plans")}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -491,10 +498,12 @@ function PricingCard({
 
 function CheckoutView({
   plan,
+  me,
   onChangePlan,
   onPaymentSuccess,
 }: {
   plan: PlanCard;
+  me: MeUser;
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse) => void;
 }) {
@@ -551,6 +560,14 @@ function CheckoutView({
         return;
       }
 
+      if (!PAYSTACK_PUBLIC_KEY) {
+        setError(
+          "Payment is not configured for this environment. Please contact support.",
+        );
+        setBusy(false);
+        return;
+      }
+
       const sessionId = getLastSessionId() ?? undefined;
       const init = await initPayment({
         plan: "PHASE2A",
@@ -564,9 +581,9 @@ function CheckoutView({
         return;
       }
 
-      const { accessCode, reference } = init.data;
-      if (!accessCode) {
-        setError("Payment link is unavailable. Please try again.");
+      const { reference } = init.data;
+      if (!reference) {
+        setError("Payment reference is unavailable. Please try again.");
         setBusy(false);
         return;
       }
@@ -574,7 +591,11 @@ function CheckoutView({
       sessionStorage.setItem(PENDING_PAYMENT_REFERENCE_KEY, reference);
 
       const handler = window.PaystackPop.setup({
-        accessCode,
+        key: PAYSTACK_PUBLIC_KEY,
+        email: me.email,
+        amount: PHASE2A_PRICE_NGN * 100,
+        ref: reference,
+        currency: "NGN",
         callback: (response) => {
           paidRef.current = true;
           setVerifying(true);

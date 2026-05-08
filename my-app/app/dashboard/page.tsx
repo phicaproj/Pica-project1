@@ -611,19 +611,17 @@ function ActiveState({
 				</div>
 			</div>
 
-			{/* Recent Assessments table */}
+			{/* Phase Findings */}
 			<div className='rounded-2xl bg-[#111827] border border-white/5 p-6'>
 				<div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6'>
 					<div>
 						<h3 className='text-lg font-bold text-white'>
-							{inProgress ? 'Phase Findings' : 'Pillar Findings'}
+							Phase Findings
 						</h3>
 						<p className='text-xs text-gray-500'>
 							{inProgress
-								? 'Your most recent completed phase. Resume the scan in progress to see detailed pillar findings.'
-								: paywalled
-									? 'Unlock the full report to access detailed findings per pillar.'
-									: 'Top-line per-pillar status from your latest scan.'}
+								? 'Your most recent completed phase. Resume the scan in progress to see updated findings.'
+								: 'Top-line phase status from your latest scan.'}
 						</p>
 					</div>
 					<Link
@@ -640,7 +638,7 @@ function ActiveState({
 						<thead>
 							<tr className='text-[10px] text-gray-500 uppercase tracking-wider'>
 								<th className='text-left pb-3 font-semibold'>
-									{inProgress ? 'Phase' : 'Pillar'}
+									Phase
 								</th>
 								<th className='text-left pb-3 font-semibold'>
 									Status
@@ -654,96 +652,50 @@ function ActiveState({
 							</tr>
 						</thead>
 						<tbody className='divide-y divide-white/5'>
-							{inProgress ? (
-								<tr className='text-sm'>
-									<td className='py-4'>
-										<div className='flex items-center gap-3'>
-											<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
-												<FileText className='w-4 h-4 text-gray-400' />
-											</div>
-											<div>
-												<p className='font-semibold text-white'>
-													{phaseLabel}
-												</p>
-												<p className='text-xs text-gray-500'>
-													Completed
-												</p>
-											</div>
+							<tr className='text-sm'>
+								<td className='py-4'>
+									<div className='flex items-center gap-3'>
+										<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
+											<FileText className='w-4 h-4 text-gray-400' />
 										</div>
-									</td>
-									<td className='py-4'>
-										<span
-											className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${overallStatus.pill}`}
-										>
-											<span className='w-1.5 h-1.5 rounded-full bg-current' />
-											{overallStatus.label}
+										<div>
+											<p className='font-semibold text-white'>
+												{phaseLabel}
+											</p>
+											<p className='text-xs text-gray-500'>
+												Completed
+											</p>
+										</div>
+									</div>
+								</td>
+								<td className='py-4'>
+									<span
+										className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${overallStatus.pill}`}
+									>
+										<span className='w-1.5 h-1.5 rounded-full bg-current' />
+										{overallStatus.label}
+									</span>
+								</td>
+								<td className='py-4 font-semibold text-white'>
+									{totalScore}
+									<span className='text-xs text-gray-500'>
+										{' '}
+										/ 100
+									</span>
+								</td>
+								<td className='py-4 text-gray-400'>
+									{paywalled ? (
+										<span className='inline-flex items-center gap-1 text-gray-500'>
+											<Lock className='w-3 h-3' /> Locked
 										</span>
-									</td>
-									<td className='py-4 font-semibold text-white'>
-										{totalScore}
-										<span className='text-xs text-gray-500'>
-											{' '}
-											/ 100
-										</span>
-									</td>
-									<td className='py-4 text-gray-400'>
-										{totalFindings} finding
-										{totalFindings === 1 ? '' : 's'}
-									</td>
-								</tr>
-							) : (
-								pillarScores.map((p) => {
-								const pillarBand = normalizeColorBand(
-									p.colorBand,
-								)
-								const status = COLOR_BAND_TO_STATUS[pillarBand]
-								const score = Math.round(p.weightedScore)
-								return (
-									<tr key={p.id} className='text-sm'>
-										<td className='py-4'>
-											<div className='flex items-center gap-3'>
-												<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
-													<FileText className='w-4 h-4 text-gray-400' />
-												</div>
-												<div>
-													<p className='font-semibold text-white'>
-														{p.pillar.name}
-													</p>
-													<p className='text-xs text-gray-500'>
-														{p.pillar.code}
-													</p>
-												</div>
-											</div>
-										</td>
-										<td className='py-4'>
-											<span
-												className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${status.pill}`}
-											>
-												<span className='w-1.5 h-1.5 rounded-full bg-current' />
-												{status.label}
-											</span>
-										</td>
-										<td className='py-4 font-semibold text-white'>
-											{score}
-											<span className='text-xs text-gray-500'>
-												{' '}
-												/ 100
-											</span>
-										</td>
-										<td className='py-4 text-gray-400'>
-											{paywalled ? (
-												<span className='inline-flex items-center gap-1 text-gray-500'>
-													<Lock className='w-3 h-3' />{' '}
-													Locked
-												</span>
-											) : (
-												`${p.findings.length} finding${p.findings.length === 1 ? '' : 's'}`
-											)}
-										</td>
-									</tr>
-								)
-							})
-							)}
+									) : (
+										<>
+											{totalFindings} finding
+											{totalFindings === 1 ? '' : 's'}
+										</>
+									)}
+								</td>
+							</tr>
 						</tbody>
 					</table>
 				</div>
