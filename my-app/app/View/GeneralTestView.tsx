@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useTheme } from "@/components/ThemeContext";
+import { setLastSessionId } from "@/lib/authClient";
 import {
   Clock,
   CheckSquare,
@@ -523,6 +524,7 @@ export default function GeneralTestPage() {
       if (!res.ok) throw new Error(data.message || "Failed to start assessment");
 
       setSessionId(data.sessionId);
+      setLastSessionId(data.sessionId);
       setStep("questions");
     } catch (err: any) {
       setError(err.message);

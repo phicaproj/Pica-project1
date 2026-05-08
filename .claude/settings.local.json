@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\PreshCodes\\\\Documents\\\\Pica\\\\pica-project\\\\my-app\" -Force -Recurse -Depth 3 | Where-Object { $_.FullName -notmatch 'node_modules|\\\\.git|\\\\.next' } | Select-Object FullName | Format-Table -AutoSize | Out-String -Width 200)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"EXIT_CODE=$?\")"
+    ]
+  }
+}
