@@ -63,7 +63,6 @@ export async function initPaymentService(
       id: true,
       email: true,
       businessName: true,
-      hasPaidPhase2A: true,
     },
   });
 
@@ -71,38 +70,46 @@ export async function initPaymentService(
     throw new AppError('User not found', NOT_FOUND);
   }
 
-  // One-time purchase: if the user already paid for Phase 2A, no charge.
-  if (input.plan === Plan.PHASE2A && user.hasPaidPhase2A) {
+  // Per-result paywall: validate the target session + result.
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: input.sessionId },
+    select: {
+      id: true,
+      userId: true,
+      phase: true,
+      status: true,
+      result: { select: { id: true, isPaid: true } },
+    },
+  });
+  if (!session) {
+    throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+  if (session.userId !== user.id) {
+    throw new AppError('You are not authorized to pay for this session', FORBIDDEN);
+  }
+  if (input.plan === Plan.PHASE2A && session.phase !== Phase.PHASE2A) {
     throw new AppError(
-      'You have already paid for Phase 2A. You can retake the assessment for free.',
+      'Plan PHASE2A can only be applied to a PHASE2A session',
+      UNPROCESSABLE_CONTENT
+    );
+  }
+  if (session.status !== SessionStatus.COMPLETED) {
+    throw new AppError(
+      'Phase 2A session must be submitted before payment can be initialized',
       CONFLICT
     );
   }
-
-  // If a sessionId is supplied, validate ownership + phase + state.
-  if (input.sessionId) {
-    const session = await prisma.assessmentSession.findUnique({
-      where: { id: input.sessionId },
-      select: { id: true, userId: true, phase: true, status: true },
-    });
-    if (!session) {
-      throw new AppError('Assessment session not found', NOT_FOUND);
-    }
-    if (session.userId !== user.id) {
-      throw new AppError('You are not authorized to pay for this session', FORBIDDEN);
-    }
-    if (input.plan === Plan.PHASE2A && session.phase !== Phase.PHASE2A) {
-      throw new AppError(
-        'Plan PHASE2A can only be applied to a PHASE2A session',
-        UNPROCESSABLE_CONTENT
-      );
-    }
-    if (session.status !== SessionStatus.COMPLETED) {
-      throw new AppError(
-        'Phase 2A session must be submitted before payment can be initialized',
-        CONFLICT
-      );
-    }
+  if (!session.result) {
+    throw new AppError(
+      'No result exists for this session yet — submit the assessment first',
+      CONFLICT
+    );
+  }
+  if (session.result.isPaid) {
+    throw new AppError(
+      'This result has already been paid for. Retake the assessment for a new chargeable result.',
+      CONFLICT
+    );
   }
 
   const reference = newPaymentReference();
@@ -113,7 +120,7 @@ export async function initPaymentService(
   const payment = await prisma.payment.create({
     data: {
       userId: user.id,
-      sessionId: input.sessionId ?? null,
+      sessionId: input.sessionId,
       plan: input.plan,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
@@ -133,7 +140,7 @@ export async function initPaymentService(
     metadata: {
       paymentId: payment.id,
       userId: user.id,
-      sessionId: input.sessionId ?? null,
+      sessionId: input.sessionId,
       plan: input.plan,
     },
   });
@@ -400,8 +407,8 @@ export async function listPaymentsService(query: ListPaymentsQuery): Promise<Lis
 
 /**
  * Idempotent. Translates the Paystack verify response into Payment row state,
- * flips User.hasPaidPhase2A on first SUCCESS for a Phase 2A plan, and fires the
- * unlock email once per payment (best-effort).
+ * flips SessionResult.isPaid on first SUCCESS for a Phase 2A plan, and fires
+ * the unlock email once per payment (best-effort).
  *
  * Called by both the verify endpoint and the webhook. Either path produces
  * the same end state; whichever runs first wins, the other is a no-op.
@@ -416,6 +423,7 @@ async function applyVerificationResult(
     select: {
       id: true,
       userId: true,
+      sessionId: true,
       plan: true,
       status: true,
       amount: true,
@@ -432,6 +440,7 @@ async function applyVerificationResult(
   const newStatus = mapPaystackStatus(verifyData.status);
   const wasAlreadySuccess = payment.status === PaymentStatus.SUCCESS;
   const flippingToSuccess = !wasAlreadySuccess && newStatus === PaymentStatus.SUCCESS;
+  const paidAt = verifyData.paid_at ? new Date(verifyData.paid_at) : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.payment.update({
@@ -439,19 +448,31 @@ async function applyVerificationResult(
       data: {
         status: newStatus,
         paymentMethod: verifyData.channel ?? null,
-        paidAt: verifyData.paid_at ? new Date(verifyData.paid_at) : null,
+        paidAt,
         failureReason:
           newStatus === PaymentStatus.FAILED ? (verifyData.gateway_response ?? null) : null,
         verifyPayload: verifyData as unknown as Prisma.InputJsonValue,
       },
     });
 
-    // Flip the user-level entitlement on first successful Phase 2A payment.
+    // Per-result paywall: on first successful Phase 2A payment, mark the
+    // SessionResult as paid. The Payment row carries the sessionId set at
+    // init time; legacy rows without a sessionId are skipped and logged.
     if (flippingToSuccess && payment.plan === Plan.PHASE2A) {
-      await tx.user.update({
-        where: { id: payment.userId },
-        data: { hasPaidPhase2A: true },
-      });
+      if (!payment.sessionId) {
+        console.warn(
+          `[payment:${opts.source}] SUCCESS Phase 2A payment ${payment.id} has no sessionId — cannot mark result paid`
+        );
+      } else {
+        await tx.sessionResult.update({
+          where: { sessionId: payment.sessionId },
+          data: {
+            isPaid: true,
+            paidAt: paidAt ?? new Date(),
+            paidByPaymentId: payment.id,
+          },
+        });
+      }
     }
   });
 

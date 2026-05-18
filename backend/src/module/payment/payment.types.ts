@@ -2,10 +2,11 @@ import { z } from 'zod';
 import type { Plan, PaymentStatus, PaymentProvider } from '@prisma/client';
 
 export const initPaymentSchema = z.object({
-  // sessionId is contextual only — the paywall is per-user (User.hasPaidPhase2A).
-  // We accept it so the FE can pass the session being unlocked, and we attach it
-  // to the Payment row for the admin transaction page.
-  sessionId: z.string().uuid().optional(),
+  // sessionId is REQUIRED — under the per-result paywall, every Phase 2A
+  // payment unlocks one specific SessionResult. The FE must send the session
+  // whose result is being paid for; the BE validates ownership and that the
+  // session has a result and that the result is not already paid.
+  sessionId: z.string().uuid(),
   plan: z.enum(['PHASE2A']),
   // Major units (NGN). Until the admin pricing module ships, FE supplies this.
   amount: z.number().positive().max(10_000_000),

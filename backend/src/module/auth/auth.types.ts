@@ -91,7 +91,10 @@ export type ResetPasswordResponse = {
 
 export type MeUser = AuthUser & {
   businessSize: 'SMALL' | 'MEDIUM' | null;
-  hasPaidPhase2A: boolean;
+  // True iff the user owns at least one paid Phase 2A SessionResult.
+  // Coarse-grained — for per-result paywall UX, read isPaid off the result
+  // itself from /api/result/:sessionId.
+  hasAnyPaidPhase2AResult: boolean;
 };
 
 export type MeResponse = {

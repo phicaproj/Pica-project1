@@ -38,6 +38,7 @@ export type ResultResponse = {
 	insightPayload: unknown
 	reportPdfUrl: string | null
 	generatedAt: Date | null
+	isPaid: boolean
 	createdAt: Date
 	updatedAt: Date
 	pillarScores: ResultPillarScoreResponse[]

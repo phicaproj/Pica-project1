@@ -45,6 +45,7 @@ enum BusinessSize {
 
 enum Plan {
   PHASE2A
+  PHASE2B_PILLAR
 }
 
 enum PaymentStatus {
@@ -82,6 +83,10 @@ model Pillar {
   // Relations
   questions           Question[]
   sessionPillarScores SessionPillarScore[]
+  // Phase 2B: a payment / session / unlock can be scoped to one pillar.
+  payments            Payment[]
+  sessions            AssessmentSession[]
+  phase2bUnlocks      Phase2BPillarUnlock[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -98,6 +103,12 @@ model Question {
   // for the user's businessSize; Phase 1 surfaces only those flagged isPhase1Featured.
   businessSize      BusinessSize @map("business_size")
   isPhase1Featured  Boolean      @default(false) @map("is_phase1_featured")
+  // Which deep-dive phase this question belongs to.
+  //   PHASE2A — Phase 1 and Phase 2A draw from these rows.
+  //   PHASE2B — pillar-specific deep-dive content, surfaced only when a user
+  //             starts a Phase 2B session for the matching pillar.
+  // Existing rows default to PHASE2A so the migration is non-destructive.
+  phase             Phase        @default(PHASE2A) @map("phase")
   displayOrder      Int          @map("display_order")
   hasKnockoutOption Boolean      @default(false) @map("has_knockout_option")
   isActive          Boolean      @default(true) @map("is_active")
@@ -158,11 +169,10 @@ model User {
   operatingYears String?       @map("operating_years")
   annualRevenue  String?       @map("annual_revenue_range")
 
-  hasPaidPhase2A Boolean @default(false) @map("has_paid_phase2a")
-
   // Relations
-  sessions AssessmentSession[]
-  payments Payment[]
+  sessions       AssessmentSession[]
+  payments       Payment[]
+  phase2bUnlocks Phase2BPillarUnlock[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -179,6 +189,9 @@ model AssessmentSession {
   userId String?       @map("user_id")
   phase  Phase
   status SessionStatus @default(IN_PROGRESS)
+
+  // Phase 2B only — the pillar being deep-dived. Null for PHASE1 / PHASE2A.
+  pillarId String? @map("pillar_id")
 
   // Phase 1 lead capture fields (filled before account creation)
   leadEmail      String?       @unique @map("lead_email")
@@ -199,9 +212,11 @@ model AssessmentSession {
 
   // Relations
   user         User?                @relation(fields: [userId], references: [id])
+  pillar       Pillar?              @relation(fields: [pillarId], references: [id])
   responses    SessionResponse[]
   pillarScores SessionPillarScore[]
   result       SessionResult?
+  phase2bUnlock Phase2BPillarUnlock?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -286,8 +301,11 @@ model SessionResult {
   insightPayload Json @map("insight_payload")
 
   // Populated after payment + PDF generation
-  reportPdfUrl String?   @map("report_pdf_url")
-  generatedAt  DateTime? @map("generated_at")
+  reportPdfUrl    String?   @map("report_pdf_url")
+  generatedAt     DateTime? @map("generated_at")
+  isPaid          Boolean   @default(false) @map("is_paid")
+  paidAt          DateTime? @map("paid_at")
+  paidByPaymentId String?   @unique @map("paid_by_payment_id")
 
   // Relations
   session AssessmentSession @relation(fields: [sessionId], references: [id])
@@ -310,8 +328,12 @@ model SessionResult {
 model Payment {
   id        String  @id @default(uuid())
   userId    String  @map("user_id")
-  sessionId String? @map("session_id") // optional — paywall is per-user, but FE
-  // sends sessionId for context/audit.
+  // PHASE2A: required (set at init time, identifies the SessionResult being paid for).
+  // PHASE2B_PILLAR: null (no session exists yet at payment time; pillarId is set instead).
+  sessionId String? @map("session_id")
+  // PHASE2B_PILLAR: required (the pillar being unlocked).
+  // PHASE2A: null.
+  pillarId  String? @map("pillar_id")
 
   plan     Plan
   provider PaymentProvider @default(PAYSTACK)
@@ -342,8 +364,10 @@ model Payment {
   verifyPayload Json? @map("verify_payload")
 
   // Relations
-  user          User           @relation(fields: [userId], references: [id])
+  user          User                 @relation(fields: [userId], references: [id])
+  pillar        Pillar?              @relation(fields: [pillarId], references: [id])
   webhookEvents WebhookEvent[]
+  phase2bUnlock Phase2BPillarUnlock?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -380,4 +404,50 @@ model WebhookEvent {
   @@unique([provider, providerEventId])
   @@index([eventType])
   @@map("webhook_events")
+}
+
+// ============================================================
+// LAYER E — PHASE 2B ENTITLEMENTS
+// ============================================================
+
+/// One row per successful Phase 2B pillar purchase.
+///
+/// Lifecycle:
+///   1. POST /api/payment/init (plan PHASE2B_PILLAR) creates a Payment.
+///   2. On verify/webhook SUCCESS, an unlock row is created with
+///      sessionId = null. The user now holds a redeemable credit for that
+///      pillar.
+///   3. POST /api/assessment/phase2b/start claims the unlock, creating a
+///      new AssessmentSession and setting unlock.sessionId.
+///   4. POST /api/assessment/:sessionId/submit consumes the unlock:
+///      consumedAt is set, the linked SessionResult.isPaid flips to true
+///      (so the existing result/PDF code path works without 2B-specific
+///      branching).
+///
+/// "One open unlock per (user, pillar)" is enforced in application code
+/// (see initPaymentService) rather than via a DB partial-unique index —
+/// users can have many historical CONSUMED unlocks for the same pillar
+/// (retakes), so the constraint only applies to rows where consumedAt IS NULL.
+///
+/// Refund policy: PaymentStatus.REVERSED is recorded but does NOT delete or
+/// re-open the unlock. Per anti-fraud policy.
+model Phase2BPillarUnlock {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  pillarId   String    @map("pillar_id")
+  paymentId  String    @unique @map("payment_id") // the SUCCESS Payment that granted this
+  sessionId  String?   @unique @map("session_id") // null = unstarted; set when user starts test
+  unlockedAt DateTime  @default(now()) @map("unlocked_at")
+  consumedAt DateTime? @map("consumed_at") // set when the session is submitted
+
+  // Relations
+  user    User               @relation(fields: [userId], references: [id])
+  pillar  Pillar             @relation(fields: [pillarId], references: [id])
+  payment Payment            @relation(fields: [paymentId], references: [id])
+  session AssessmentSession? @relation(fields: [sessionId], references: [id])
+
+  // Open-unlock lookup is hot (every init payment + every start session
+  // hits this index).
+  @@index([userId, pillarId])
+  @@map("phase2b_pillar_unlocks")
 }

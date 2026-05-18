@@ -256,13 +256,21 @@ export async function meService(userId: string): Promise<MeResponse> {
       phone: true,
       isVerified: true,
       businessSize: true,
-      hasPaidPhase2A: true,
     },
   });
 
   if (!user) {
     throw new AppError('User not found', NOT_FOUND);
   }
+
+  // Per-result paywall: "has the user paid for anything?" is now derived
+  // from SessionResult.isPaid rather than a user-level flag.
+  const paidResultCount = await prisma.sessionResult.count({
+    where: {
+      isPaid: true,
+      session: { userId: user.id, phase: 'PHASE2A' },
+    },
+  });
 
   return {
     message: 'User fetched successfully',
@@ -273,7 +281,7 @@ export async function meService(userId: string): Promise<MeResponse> {
       phone: user.phone,
       isVerified: user.isVerified,
       businessSize: user.businessSize,
-      hasPaidPhase2A: user.hasPaidPhase2A,
+      hasAnyPaidPhase2AResult: paidResultCount > 0,
     },
   };
 }

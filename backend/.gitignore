@@ -9,3 +9,7 @@ Sample Questions.pdf
 sample_questions.txt
 /prisma/seed.ts
 .claude*
+/scripts
+/TODO-phase2b.md
+# Ignore all JSON files in the .claude directory
+.claude/*.json

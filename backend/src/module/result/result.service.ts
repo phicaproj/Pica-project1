@@ -14,11 +14,6 @@ const allowedResultStatuses = new Set<SessionStatus>([
   SessionStatus.REPORT_GENERATED,
 ]);
 
-const paidStatuses = new Set<SessionStatus>([
-  SessionStatus.PAID,
-  SessionStatus.REPORT_GENERATED,
-]);
-
 export async function getResultService(sessionId: string): Promise<GetResultResponse> {
   const session = await prisma.assessmentSession.findUnique({
     where: { id: sessionId },
@@ -27,9 +22,6 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
       status: true,
       phase: true,
       userId: true,
-      user: {
-        select: { hasPaidPhase2A: true },
-      },
     },
   });
 
@@ -56,6 +48,7 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
       insightPayload: true,
       reportPdfUrl: true,
       generatedAt: true,
+      isPaid: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -96,15 +89,10 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     ],
   });
 
-  // Phase 2A is paywalled per-user (one-time purchase): if the session's owner
-  // has User.hasPaidPhase2A === true, every Phase 2A session they own auto-unlocks
-  // — even retakes after the first paid session. The legacy session.status check
-  // remains as a fallback for sessions whose status was promoted directly.
-  const userHasPaidPhase2A = session.user?.hasPaidPhase2A ?? false;
-  const isPaywalled =
-    session.phase === Phase.PHASE2A &&
-    !paidStatuses.has(session.status) &&
-    !userHasPaidPhase2A;
+  // Phase 2A is paywalled per-result: each completed session produces a
+  // SessionResult that is independently paid/unpaid. Retakes generate a new
+  // unpaid result and re-trigger the paywall.
+  const isPaywalled = session.phase === Phase.PHASE2A && !result.isPaid;
 
   const payload: ResultResponse = {
     ...result,
@@ -153,8 +141,9 @@ export async function getLatestCompletedResultForUserService(
  * Authorization rules:
  *   - Phase 1: open (anyone with the sessionId can download — same as the
  *     auto-emailed PDF on submit).
- *   - Phase 2A: requires the authenticated user to own the session AND have
- *     hasPaidPhase2A === true (or the session status to be PAID/REPORT_GENERATED).
+ *   - Phase 2A: requires the authenticated user to own the session AND for
+ *     this specific SessionResult to be isPaid === true. Each result is
+ *     independently paywalled.
  */
 export async function downloadResultPdfService(
   sessionId: string,
@@ -170,7 +159,7 @@ export async function downloadResultPdfService(
       leadEmail: true,
       businessName: true,
       user: {
-        select: { id: true, email: true, hasPaidPhase2A: true },
+        select: { id: true, email: true },
       },
     },
   });
@@ -186,28 +175,26 @@ export async function downloadResultPdfService(
     );
   }
 
-  // Phase 2A: owner-only, paywalled.
+  const result = await prisma.sessionResult.findUnique({
+    where: { sessionId },
+    select: { insightPayload: true, isPaid: true },
+  });
+
+  if (!result?.insightPayload) {
+    throw new AppError('Report data not found for this session', NOT_FOUND);
+  }
+
+  // Phase 2A: owner-only, per-result paywall.
   if (session.phase === Phase.PHASE2A) {
     if (!authenticatedUserId || session.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to download this report', FORBIDDEN);
     }
-    const userPaid = session.user?.hasPaidPhase2A ?? false;
-    const sessionPaid = paidStatuses.has(session.status);
-    if (!userPaid && !sessionPaid) {
+    if (!result.isPaid) {
       throw new AppError(
         'Payment is required to download the Phase 2A report',
         FORBIDDEN
       );
     }
-  }
-
-  const result = await prisma.sessionResult.findUnique({
-    where: { sessionId },
-    select: { insightPayload: true },
-  });
-
-  if (!result?.insightPayload) {
-    throw new AppError('Report data not found for this session', NOT_FOUND);
   }
 
   const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;

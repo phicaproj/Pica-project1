@@ -3,6 +3,7 @@ import 'dotenv/config'
 import cors from 'cors'
 import morgan from 'morgan'
 import helmet from 'helmet'
+import swaggerUi from 'swagger-ui-express'
 import { GlobalLimiter } from './service/shared/rateLimiter'
 import errorHandler from './service/middleware/errorHandler'
 import assessmentRouter from './module/assessment/assessment.routes'
@@ -10,6 +11,7 @@ import questionRouter from './module/question/question.routes'
 import resultRouter from './module/result/result.routes'
 import authRouter from './module/auth/auth.route'
 import paymentRouter from './module/payment/payment.routes'
+import { buildOpenApiDocument } from './docs/openapi'
 
 const app = express()
 
@@ -38,6 +40,14 @@ app.use('/api/assessment', assessmentRouter)
 app.use('/api/questions', questionRouter)
 app.use('/api/result', resultRouter)
 app.use('/api/payment', paymentRouter)
+
+// OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
+const openApiDocument = buildOpenApiDocument()
+app.get('/api/docs.json', (_req, res) => res.json(openApiDocument))
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, {
+	swaggerOptions: { persistAuthorization: true },
+	customSiteTitle: 'PICA API Docs',
+}))
 
 app.use(errorHandler)
 
