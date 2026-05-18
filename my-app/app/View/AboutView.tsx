@@ -25,10 +25,10 @@ export default function AboutPage() {
   const d = dark;
 
   return (
-    <div className={d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}>
+    <div className={`antialiased ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative pt-20 md:pt-32 pb-12 md:pb-20 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative pt-10 md:pt-16 pb-6 md:pb-10 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-20 right-1/4 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div>
@@ -43,10 +43,10 @@ export default function AboutPage() {
               PICA is a structured diagnostic system designed to replace guesswork with analytical clarity. Scale on a foundation of truth, not assumptions.
             </p>
             <div className="flex items-center gap-4">
-              <Link href="/questions" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
+              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
                 Start Assessment
               </Link>
-              <Link href="#" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="#pica-ecosystem" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 View Framework
               </Link>
             </div>
@@ -66,13 +66,13 @@ export default function AboutPage() {
       </section>
 
       {/* ── Misdiagnosis Section ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-7xl mx-auto">
           <h2 className={`text-3xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>
             Most Businesses Are Not Broken —<br />They Are Misdiagnosed
           </h2>
           <p className={`text-sm mb-12 ${d ? "text-gray-400" : "text-gray-600"}`}>
-            Growth failure is rarely a lack of effort; it's a lack of clarity in the initial assessment.
+            Growth failure is rarely a lack of effort; it&apos;s a lack of clarity in the initial assessment.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
@@ -91,11 +91,11 @@ export default function AboutPage() {
       </section>
 
       {/* ── Quote Section ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
         <div className="max-w-4xl mx-auto text-center">
           <blockquote className={`text-2xl md:text-4xl font-extrabold italic leading-tight mb-8 ${d ? "text-white" : "text-gray-900"}`}>
-            "You cannot fix what you<br />
-            cannot <span className="text-[#f97316] not-italic">see.</span>"
+            &quot;You cannot fix what you<br />
+            cannot <span className="text-[#f97316] not-italic">see.</span>&quot;
           </blockquote>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-12">
             <div className="text-center">
@@ -112,12 +112,12 @@ export default function AboutPage() {
       </section>
 
       {/* ── PICA Ecosystem ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section id="pica-ecosystem" className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-7xl mx-auto text-center mb-12">
           <h2 className={`text-3xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>The PICA Ecosystem</h2>
           <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>A unified framework that transforms raw business energy into structured intelligence.</p>
         </div>
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { letter: "P", color: "text-[#f97316]", title: "Pain-point",      desc: "Isolating the core friction points that drain resources and energy." },
             { letter: "I", color: "text-[#f97316]", title: "Identification",  desc: "Pinpointing the structural root causes within the business architecture." },
@@ -130,19 +130,19 @@ export default function AboutPage() {
                 <p className={`text-sm font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
                 <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
               </div>
-              {i < 3 && <ChevronRight className="w-5 h-5 text-gray-600 mt-8 flex-shrink-0" />}
+              {i < 3 && <ChevronRight className="hidden lg:block w-5 h-5 text-gray-600 mt-8 flex-shrink-0" />}
             </div>
           ))}
         </div>
       </section>
 
       {/* ── 3-Layer Intelligence Model ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className={`text-3xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>The 3-Layer Intelligence Model</h2>
             <p className={`text-sm leading-relaxed mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
-              We don't just give you a dashboard; we build a layered hierarchy of understanding.
+              We don&apos;t just give you a dashboard; we build a layered hierarchy of understanding.
             </p>
             <div className="space-y-5">
               {[
@@ -177,7 +177,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── 7 Pillars of Business Logic ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-7xl mx-auto text-center mb-12">
           <h2 className={`text-3xl font-bold ${d ? "text-white" : "text-gray-900"}`}>The 7 Pillars of Business Logic</h2>
         </div>
@@ -200,10 +200,10 @@ export default function AboutPage() {
       </section>
 
       {/* ── Path to Clarity ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
         <div className="max-w-7xl mx-auto">
           <h2 className={`text-3xl font-bold mb-12 ${d ? "text-white" : "text-gray-900"}`}>The Path to Clarity</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { step: "1. Take Assessment",  desc: "A 15-minute precision inquiry into your current operations."                          },
               { step: "2. Get Scored",       desc: "Our engine evaluates your data against the 7-pillar framework."                       },
@@ -223,7 +223,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Business Types ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
           {[
             {
@@ -256,7 +256,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── Built on Structured Logic ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start mb-12">
             <div>
@@ -284,7 +284,7 @@ export default function AboutPage() {
               { quote: "The clarity PICA provided was jarring but necessary. We were building on sand. Today, every decision we make is backed by the 3-Layer model.", name: "Kofi Mensah" },
             ].map(({ quote, name }) => (
               <div key={name} className={`rounded-2xl p-6 border ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
-                <p className={`text-sm italic leading-relaxed mb-4 ${d ? "text-gray-300" : "text-gray-700"}`}>"{quote}"</p>
+                <p className={`text-sm italic leading-relaxed mb-4 ${d ? "text-gray-300" : "text-gray-700"}`}>&quot;{quote}&quot;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">
                     {name.charAt(0)}
@@ -298,7 +298,7 @@ export default function AboutPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className={`py-12 md:py-20 px-4 sm:px-6 md:px-8 text-center ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 text-center ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-3xl mx-auto">
           <h2 className={`text-2xl md:text-4xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>
             Understand your business before<br />you try to grow it.
@@ -306,7 +306,7 @@ export default function AboutPage() {
           <p className={`text-sm mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
             The diagnostic assessment takes 15 minutes. The clarity it provides lasts a lifetime.
           </p>
-          <Link href="/questions" className="inline-block px-4 sm:px-6 md:px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
+          <Link href="/pages/freescan" className="inline-block px-4 sm:px-6 md:px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
             Start Your Free Assessment
           </Link>
         </div>

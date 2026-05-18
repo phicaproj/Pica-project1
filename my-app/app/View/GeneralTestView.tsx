@@ -100,7 +100,7 @@ function IntroStep({ dark, onStart }: { dark: boolean; onStart: () => void }) {
 				opportunities across your business.
 			</p>
 
-			<div className='grid grid-cols-3 gap-4 mb-12 w-full max-w-2xl'>
+			<div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 w-full max-w-2xl'>
 				{[
 					{
 						icon: <Clock className='w-4 h-4 text-[#00ffaa]' />,
@@ -177,6 +177,28 @@ function ProfileStep({
 }) {
 	const d = dark
 	const [industryOpen, setIndustryOpen] = useState(false)
+	const [countriesData, setCountriesData] = useState<{country: string, cities: string[]}[]>([])
+	const [countryOpen, setCountryOpen] = useState(false)
+	const [cityOpen, setCityOpen] = useState(false)
+	const [selectedCountry, setSelectedCountry] = useState('')
+	const [selectedCity, setSelectedCity] = useState('')
+
+	useEffect(() => {
+		fetch('https://countriesnow.space/api/v0.1/countries')
+			.then((res) => res.json())
+			.then((data) => {
+				if (!data.error) {
+					setCountriesData(data.data)
+				}
+			})
+			.catch((err) => console.error('Failed to load countries', err))
+	}, [])
+
+	useEffect(() => {
+		if (selectedCountry && selectedCity) {
+			setProfile(prev => ({ ...prev, location: `${selectedCity}, ${selectedCountry}` }))
+		}
+	}, [selectedCountry, selectedCity])
 
 	const update = (field: keyof ProfileData, value: string) => {
 		setProfile({ ...profile, [field]: value })
@@ -212,7 +234,7 @@ function ProfileStep({
 					</p>
 				</div>
 
-				<div className='grid grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -266,7 +288,7 @@ function ProfileStep({
 					</div>
 				</div>
 
-				<div className='grid grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -301,7 +323,7 @@ function ProfileStep({
 					</div>
 				</div>
 
-				<div className='grid grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -320,25 +342,75 @@ function ProfileStep({
 							))}
 						</div>
 					</div>
-					<div>
-						<label
-							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
-						>
-							Primary Business Location
-						</label>
-						<div
-							className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${d ? 'bg-[#0d1117] border-white/10' : 'bg-gray-50 border-gray-200'}`}
-						>
-							<MapPin className='w-4 h-4 text-gray-500' />
-							<input
-								type='text'
-								placeholder='Lagos, Nigeria'
-								value={profile.location}
-								onChange={(e) =>
-									update('location', e.target.value)
-								}
-								className={`flex-1 bg-transparent text-sm outline-none ${d ? 'text-white placeholder-gray-600' : 'text-gray-900 placeholder-gray-400'}`}
-							/>
+					<div className='grid grid-cols-2 gap-3'>
+						<div>
+							<label
+								className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
+							>
+								Country
+							</label>
+							<div className='relative'>
+								<button
+									onClick={() => { setCountryOpen(!countryOpen); setCityOpen(false); }}
+									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+								>
+									<span className="truncate mr-2">{selectedCountry || 'Country'}</span>
+									<ChevronDown className='w-4 h-4 text-gray-400 flex-shrink-0' />
+								</button>
+								{countryOpen && (
+									<div
+										className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-y-auto max-h-48 ${d ? 'bg-[#1a2235] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
+									>
+										{countriesData.map((c) => (
+											<button
+												key={c.country}
+												onClick={() => {
+													setSelectedCountry(c.country)
+													setSelectedCity('')
+													setCountryOpen(false)
+												}}
+												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
+											>
+												{c.country}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+						<div>
+							<label
+								className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
+							>
+								City
+							</label>
+							<div className='relative'>
+								<button
+									onClick={() => selectedCountry && setCityOpen(!cityOpen)}
+									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${!selectedCountry ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+								>
+									<span className="truncate mr-2">{selectedCity || 'City'}</span>
+									<ChevronDown className='w-4 h-4 text-gray-400 flex-shrink-0' />
+								</button>
+								{cityOpen && selectedCountry && (
+									<div
+										className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-y-auto max-h-48 ${d ? 'bg-[#1a2235] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
+									>
+										{countriesData.find(c => c.country === selectedCountry)?.cities?.map((city) => (
+											<button
+												key={city}
+												onClick={() => {
+													setSelectedCity(city)
+													setCityOpen(false)
+												}}
+												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
+											>
+												{city}
+											</button>
+										))}
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -349,7 +421,7 @@ function ProfileStep({
 					>
 						Annual Revenue Range
 					</label>
-					<div className='grid grid-cols-3 gap-3'>
+					<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
 						{[
 							{ key: 'Under ₦5M', label: 'Under', value: '₦5M' },
 							{
@@ -491,7 +563,7 @@ function QuestionStep({
 					/>
 				</div>
 
-				<div className='grid grid-cols-2 gap-12 items-start'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-stretch'>
 					<div>
 						<h2
 							className={`text-3xl font-extrabold leading-tight mb-8 ${d ? 'text-white' : 'text-gray-900'}`}
@@ -541,17 +613,15 @@ function QuestionStep({
 						</div>
 					</div>
 
-					<div>
+					<div className='flex flex-col h-full'>
 						<div
-							className={`rounded-2xl overflow-hidden mb-0 relative ${d ? 'bg-[#161b22]' : 'bg-gray-200'}`}
-							style={{ minHeight: '320px' }}
+							className={`rounded-2xl overflow-hidden mb-0 relative flex-grow min-h-[320px] ${d ? 'bg-[#161b22]' : 'bg-gray-200'}`}
 						>
 							<Image
 								src='/images/assessques.png'
 								alt='Question'
-								width={500}
-								height={320}
-								className='w-full h-full object-cover'
+								fill
+								className='object-cover'
 							/>
 							<div className='absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent'>
 								<p className='text-xs font-bold text-[#f97316] uppercase tracking-wider'>

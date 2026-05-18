@@ -15,7 +15,7 @@ export default function FreeScanPage() {
   const d = dark;
 
   return (
-    <div className={`min-h-screen ${d ? "bg-[#111111] text-white" : "bg-white text-gray-900"}`}>
+    <div className={`antialiased min-h-screen ${d ? "bg-[#111111] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
       <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
@@ -34,13 +34,10 @@ export default function FreeScanPage() {
               Experience the precision of the Clinical Architect Framework at zero cost. Designed for individual professionals seeking immediate baseline visibility into their operational health.
             </p>
             <div className="flex items-center gap-4">
-              <Link href="/questions"
+              <Link href="/pages/generaltest"
                 className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
                 Start Quick Scan <ArrowRight className="w-4 h-4" />
               </Link>
-              <button className={`px-6 py-3 rounded-lg text-sm font-semibold border transition ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-                View Sample Report
-              </button>
             </div>
           </div>
 
@@ -150,9 +147,9 @@ export default function FreeScanPage() {
             No credit card, no commitment. Just the data you need to understand your current operational standing.
           </p>
           <div className="flex items-center justify-center gap-6 mb-6">
-            <Link href="/questions"
+            <Link href="/pages/generaltest"
               className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
-              Start Your Free Scan
+              Start Assessment
             </Link>
             <Link href="/pricing"
               className="text-sm font-semibold text-[#f97316] hover:underline transition">
