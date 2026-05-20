@@ -755,7 +755,7 @@ export default function StrategicScanPage() {
       setScanState("processing");
       const result = await waitForResult(sessionId);
       await new Promise((r) => setTimeout(r, 1000));
-      router.push(`/dashboard/reports/${result.id}`);
+      router.push(`/dashboard/reports/${result.result.id}`);
     } catch (err) {
       setScanState("questions");
       setError(err instanceof Error ? err.message : "Failed to submit assessment");
