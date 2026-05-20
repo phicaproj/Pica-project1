@@ -299,11 +299,11 @@ function ActiveState({ results }: { results: any[] }) {
     const totalScore = Math.round(res.totalScore || 0);
 
     return {
-      id: res.id,
+      id: res.sessionId,
       badge: "STRATEGIC",
       badgeColor,
       title: "Strategic Scan Summary",
-      subtitle: `Generated ${formatRelativeTime(res.generatedAt || res.updatedAt || res.createdAt)} \u2022 ID: ${res.id.substring(0, 8)}`,
+      subtitle: `Generated ${formatRelativeTime(res.generatedAt || res.updatedAt || res.createdAt)} \u2022 ID: ${res.sessionId.substring(0, 8)}`,
       metrics: [
         {
           label: "OVERALL SCORE",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
 import {
@@ -24,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import {
+  getAccessToken,
   getLastSessionId,
   getMe,
   initPayment,
@@ -32,6 +34,18 @@ import {
   type MeUser,
   type VerifyPaymentResponse,
 } from "@/lib/authClient";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://pica-project1.onrender.com/api";
+
+type LockedScan = {
+  sessionId: string;
+  phase: string;
+  totalScore: number;
+  colorBand: string;
+  completedAt: string | null;
+};
 
 type View = "plans" | "checkout" | "success";
 
@@ -133,15 +147,38 @@ const MEDIUM_PLANS: PlanCard[] = [
 ];
 
 export default function SubscriptionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
+          <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
+        </div>
+      }
+    >
+      <SubscriptionPageInner />
+    </Suspense>
+  );
+}
+
+function SubscriptionPageInner() {
+  const searchParams = useSearchParams();
+  const urlSessionId = searchParams?.get("sessionId") ?? null;
+  const urlAutoCheckout = searchParams?.get("autoCheckout") === "1";
+
   const [view, setView] = useState<View>("plans");
   const [me, setMe] = useState<MeUser | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [meLoading, setMeLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [verifyResult, setVerifyResult] =
     useState<VerifyPaymentResponse | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [verifyingReturn, setVerifyingReturn] = useState(false);
+  const [lockedScans, setLockedScans] = useState<LockedScan[] | null>(null);
+  const [loadingLocked, setLoadingLocked] = useState(false);
+  const [showLockedPicker, setShowLockedPicker] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<PlanCard | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -230,11 +267,107 @@ export default function SubscriptionPage() {
     };
   }, [me, meLoading, verifyResult]);
 
-  const handleSelectPlan = (plan: PlanCard) => {
+  useEffect(() => {
+    if (meLoading || !me || verifyResult) return;
+    if (!urlSessionId || !urlAutoCheckout) return;
+    const phase2aPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
+      (p) => p.backendPlan === "PHASE2A",
+    );
+    if (!phase2aPlan) return;
+    setPaymentError(null);
+    setSelectedPlan(phase2aPlan);
+    setCheckoutSessionId(urlSessionId);
+    setView("checkout");
+  }, [me, meLoading, verifyResult, urlSessionId, urlAutoCheckout]);
+
+  const fetchLockedScans = async (): Promise<LockedScan[]> => {
+    const token = getAccessToken();
+    if (!token) return [];
+    const res = await fetch(`${API_BASE}/result/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    const json = await res.json().catch(() => ({}));
+    const items: unknown[] = Array.isArray(json)
+      ? json
+      : Array.isArray((json as { results?: unknown[] })?.results)
+        ? (json as { results: unknown[] }).results
+        : [];
+    const locked: LockedScan[] = [];
+    for (const item of items) {
+      if (!item || typeof item !== "object") continue;
+      const entry = item as {
+        paywalled?: unknown;
+        result?: {
+          sessionId?: unknown;
+          phase?: unknown;
+          totalScore?: unknown;
+          colorBand?: unknown;
+          generatedAt?: unknown;
+          updatedAt?: unknown;
+          createdAt?: unknown;
+        } | null;
+      };
+      if (entry.paywalled !== true || !entry.result) continue;
+      const r = entry.result;
+      if (typeof r.sessionId !== "string") continue;
+      if (r.phase !== "PHASE2A") continue;
+      locked.push({
+        sessionId: r.sessionId,
+        phase: typeof r.phase === "string" ? r.phase : "PHASE2A",
+        totalScore: typeof r.totalScore === "number" ? r.totalScore : 0,
+        colorBand: typeof r.colorBand === "string" ? r.colorBand : "AMBER",
+        completedAt:
+          (typeof r.generatedAt === "string" && r.generatedAt) ||
+          (typeof r.updatedAt === "string" && r.updatedAt) ||
+          (typeof r.createdAt === "string" && r.createdAt) ||
+          null,
+      });
+    }
+    return locked;
+  };
+
+  const handleSelectPlan = async (plan: PlanCard) => {
     if (!plan.backendPlan) return;
     setPaymentError(null);
+
+    if (plan.backendPlan === "PHASE2A") {
+      setPendingPlan(plan);
+      setLoadingLocked(true);
+      const locked = await fetchLockedScans();
+      setLockedScans(locked);
+      setLoadingLocked(false);
+
+      if (locked.length === 0) {
+        setShowLockedPicker(true);
+        return;
+      }
+      if (locked.length === 1) {
+        setSelectedPlan(plan);
+        setCheckoutSessionId(locked[0].sessionId);
+        setView("checkout");
+        return;
+      }
+      setShowLockedPicker(true);
+      return;
+    }
+
     setSelectedPlan(plan);
+    setCheckoutSessionId(null);
     setView("checkout");
+  };
+
+  const handlePickLockedScan = (sessionId: string) => {
+    if (!pendingPlan) return;
+    setShowLockedPicker(false);
+    setSelectedPlan(pendingPlan);
+    setCheckoutSessionId(sessionId);
+    setView("checkout");
+  };
+
+  const closeLockedPicker = () => {
+    setShowLockedPicker(false);
+    setPendingPlan(null);
   };
 
   const handlePaymentSuccess = (result: VerifyPaymentResponse) => {
@@ -286,6 +419,7 @@ export default function SubscriptionPage() {
         <CheckoutView
           plan={selectedPlan}
           me={me}
+          sessionId={checkoutSessionId}
           onChangePlan={() => setView("plans")}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -297,7 +431,135 @@ export default function SubscriptionPage() {
           verifyResult={verifyResult}
         />
       )}
+
+      {showLockedPicker && (
+        <LockedScanPickerModal
+          scans={lockedScans ?? []}
+          loading={loadingLocked}
+          onPick={handlePickLockedScan}
+          onClose={closeLockedPicker}
+        />
+      )}
     </>
+  );
+}
+
+function LockedScanPickerModal({
+  scans,
+  loading,
+  onPick,
+  onClose,
+}: {
+  scans: LockedScan[];
+  loading: boolean;
+  onPick: (sessionId: string) => void;
+  onClose: () => void;
+}) {
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const bandColor = (band: string) => {
+    const b = band.toUpperCase();
+    if (b === "GREEN") return "text-emerald-400";
+    if (b === "RED") return "text-rose-400";
+    return "text-amber-400";
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-white">
+              Choose a scan to unlock
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              Phase 2A is unlocked per scan. Pick which locked scan this payment should
+              unlock.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-white text-sm"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-12 flex items-center justify-center">
+            <Loader className="w-6 h-6 text-orange-400 animate-spin" />
+          </div>
+        ) : scans.length === 0 ? (
+          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5">
+            <p className="text-sm text-yellow-300 mb-3">
+              You don&apos;t have any locked Phase 2A scans yet. Take a Strategic Scan
+              first, then come back to unlock the full diagnostic.
+            </p>
+            <Link
+              href="/dashboard/strategic-scan"
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-500 hover:bg-orange-600 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Start Strategic Scan
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+            {scans.map((scan) => (
+              <button
+                key={scan.sessionId}
+                onClick={() => onPick(scan.sessionId)}
+                className="w-full text-left rounded-xl bg-[#0d1117] border border-white/5 hover:border-orange-500/40 hover:bg-[#161f33] p-4 transition"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      Phase 2A Scan · {scan.sessionId.substring(0, 8)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDate(scan.completedAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase text-gray-500">Score</p>
+                      <p className="text-sm font-bold text-white">
+                        {Math.round(scan.totalScore)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase text-gray-500">Status</p>
+                      <p
+                        className={`text-sm font-bold inline-flex items-center gap-1 ${bandColor(scan.colorBand)}`}
+                      >
+                        <Lock className="w-3 h-3" />
+                        Locked
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -499,11 +761,13 @@ function PricingCard({
 function CheckoutView({
   plan,
   me,
+  sessionId: explicitSessionId,
   onChangePlan,
   onPaymentSuccess,
 }: {
   plan: PlanCard;
   me: MeUser;
+  sessionId: string | null;
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse) => void;
 }) {
@@ -568,7 +832,14 @@ function CheckoutView({
         return;
       }
 
-      const sessionId = getLastSessionId() ?? undefined;
+      const sessionId = explicitSessionId ?? getLastSessionId() ?? undefined;
+      if (!sessionId) {
+        setError(
+          "No scan selected. Please pick a locked Phase 2A scan to unlock, or take a Strategic Scan first.",
+        );
+        setBusy(false);
+        return;
+      }
       const init = await initPayment({
         plan: "PHASE2A",
         amount: PHASE2A_PRICE_NGN,

@@ -10,7 +10,6 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "About", href: "/pages/about" },
   { label: "Free Scan", href: "/pages/freescan" },
-  { label: "General Test", href: "/pages/generaltest" },
   { label: "Pricing", href: "/pages/pricing" },
 ];
 

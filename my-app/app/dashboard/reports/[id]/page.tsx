@@ -452,7 +452,7 @@ export default function ReportDetailPage() {
               Start Another Scan
             </button>
             <Link
-              href="/dashboard/subscription"
+              href={`/dashboard/subscription?sessionId=${id}&autoCheckout=1`}
               className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
             >
               Unlock Full Report

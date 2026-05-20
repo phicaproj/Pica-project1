@@ -335,6 +335,7 @@ function ActiveState({
 	allResults?: GetResultResponse[]
 	inProgress?: boolean
 }) {
+	const router = useRouter()
 	const { result, paywalled } = data
 	const displayResults = allResults.length > 0 ? allResults : [data];
 	const pillarScores = result.pillarScores
@@ -664,7 +665,11 @@ function ActiveState({
 								const pLabel = phaseDisplayName(res.phase);
 								const tFindings = pScores.reduce((sum, p) => sum + (p.findings?.length ?? 0), 0);
 								return (
-									<tr key={res.id || index} className='text-sm'>
+									<tr
+										key={res.id || index}
+										onClick={() => res.sessionId && router.push(`/dashboard/reports/${res.sessionId}`)}
+										className='text-sm cursor-pointer hover:bg-white/5 transition'
+									>
 										<td className='py-4'>
 											<div className='flex items-center gap-3'>
 												<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>

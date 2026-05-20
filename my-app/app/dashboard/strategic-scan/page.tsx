@@ -755,7 +755,7 @@ export default function StrategicScanPage() {
       setScanState("processing");
       const result = await waitForResult(sessionId);
       await new Promise((r) => setTimeout(r, 1000));
-      router.push(`/dashboard/reports/${result.result.id}`);
+      router.push(`/dashboard/reports/${result.result.sessionId}`);
     } catch (err) {
       setScanState("questions");
       setError(err instanceof Error ? err.message : "Failed to submit assessment");
@@ -780,7 +780,8 @@ export default function StrategicScanPage() {
   const handleDownloadPdf = useCallback(() => {
     if (!resultData) return;
     if (resultData.paywalled || !resultData.result.reportPdfUrl) {
-      router.push("/dashboard/subscription");
+      const sid = resultData.result.sessionId;
+      router.push(`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`);
       return;
     }
     window.open(resultData.result.reportPdfUrl, "_blank", "noopener,noreferrer");
