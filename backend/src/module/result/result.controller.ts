@@ -5,6 +5,7 @@ import { NOT_FOUND, OK, UNAUTHORIZED } from '../../service/shared/http'
 import { assessmentSessionParams } from '../assessment/assessment.types'
 import {
 	downloadResultPdfService,
+	getAllCompletedResultsForUserService,
 	getLatestCompletedResultForUserService,
 	getResultService,
 } from './result.service'
@@ -15,6 +16,16 @@ export const getResult = asyncHandler(async (req: Request, res: Response) => {
 
 	return res.status(OK).json(result)
 })
+
+export const getAllMyCompletedResults = asyncHandler(
+	async (req: Request, res: Response) => {
+		if (!req.user?.id) {
+			throw new AppError('User not authenticated', UNAUTHORIZED)
+		}
+		const results = await getAllCompletedResultsForUserService(req.user.id)
+		return res.status(OK).json({ results })
+	},
+)
 
 export const getMyLatestCompletedResult = asyncHandler(
 	async (req: Request, res: Response) => {

@@ -134,6 +134,21 @@ export async function getLatestCompletedResultForUserService(
   return getResultService(session.id);
 }
 
+export async function getAllCompletedResultsForUserService(
+  userId: string
+): Promise<GetResultResponse[]> {
+  const sessions = await prisma.assessmentSession.findMany({
+    where: {
+      userId,
+      status: { in: Array.from(allowedResultStatuses) },
+    },
+    orderBy: { completedAt: 'desc' },
+    select: { id: true },
+  });
+
+  return Promise.all(sessions.map((s) => getResultService(s.id)));
+}
+
 /**
  * Builds the PDF for a session and triggers the report email in parallel.
  * Returns the PDF buffer and filename for the controller to stream.
