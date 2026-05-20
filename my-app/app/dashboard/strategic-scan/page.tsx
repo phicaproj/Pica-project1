@@ -777,14 +777,40 @@ export default function StrategicScanPage() {
     router.push("/dashboard");
   }, [router]);
 
-  const handleDownloadPdf = useCallback(() => {
+  const handleDownloadPdf = useCallback(async () => {
     if (!resultData) return;
-    if (resultData.paywalled || !resultData.result.reportPdfUrl) {
-      const sid = resultData.result.sessionId;
+    const sid = resultData.result.sessionId;
+    if (resultData.paywalled) {
       router.push(`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`);
       return;
     }
-    window.open(resultData.result.reportPdfUrl, "_blank", "noopener,noreferrer");
+    try {
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/result/${sid}/pdf`, { headers });
+      if (!res.ok) {
+        if (res.status === 402 || res.status === 403) {
+          router.push(`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`);
+          return;
+        }
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to download report");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dispo = res.headers.get("Content-Disposition") || "";
+      const match = /filename="?([^"]+)"?/.exec(dispo);
+      a.download = match?.[1] || `pica-report-${sid}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to download report");
+    }
   }, [resultData, router]);
 
   const handleDeepDive = useCallback(() => {

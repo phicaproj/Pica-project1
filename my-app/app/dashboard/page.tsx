@@ -664,11 +664,19 @@ function ActiveState({
 								const status = COLOR_BAND_TO_STATUS[band];
 								const pLabel = phaseDisplayName(res.phase);
 								const tFindings = pScores.reduce((sum, p) => sum + (p.findings?.length ?? 0), 0);
+								const targetSessionId = res.sessionId;
 								return (
 									<tr
 										key={res.id || index}
-										onClick={() => res.sessionId && router.push(`/dashboard/reports/${res.sessionId}`)}
-										className='text-sm cursor-pointer hover:bg-white/5 transition'
+										onClick={(e) => {
+											e.stopPropagation();
+											if (!targetSessionId) {
+												console.warn('Phase row missing sessionId', res);
+												return;
+											}
+											router.push(`/dashboard/reports/${targetSessionId}`);
+										}}
+										className={`text-sm transition ${targetSessionId ? 'cursor-pointer hover:bg-white/5' : 'cursor-default opacity-60'}`}
 									>
 										<td className='py-4'>
 											<div className='flex items-center gap-3'>
