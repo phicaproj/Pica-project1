@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@/components/ThemeContext";
+import { useRouter } from "next/navigation";
+import { getAccessToken } from "@/lib/authClient";
 import {
   CheckCircle, BarChart2, Users,
   Zap, Star, Shield, CreditCard, Building2, Lock,
@@ -56,7 +58,7 @@ function IntelligenceProductPage({
           d ? "bg-[#0d1117]" : "bg-gray-50"
         }`}
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
           <div className="inline-flex items-center px-3 py-1 rounded-md border border-[#f97316]/40 text-[#f97316] text-xs font-bold uppercase tracking-widest mb-6">
             Architectural Intelligence Systems
           </div>
@@ -83,10 +85,10 @@ function IntelligenceProductPage({
           d ? "bg-[#0d1117]" : "bg-gray-50"
         }`}
       >
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-start">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-stretch">
           {/* Left — Plan card */}
           <div
-            className={`rounded-2xl p-6 md:p-8 border ${
+            className={`rounded-2xl p-6 md:p-8 border flex flex-col ${
               d
                 ? "bg-[#161b22] border-white/10"
                 : "bg-gray-50 border-gray-200"
@@ -151,14 +153,14 @@ function IntelligenceProductPage({
             {/* CTA Button */}
             <button
               onClick={onCheckout}
-              className="w-full sm:w-auto px-12 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-extrabold uppercase tracking-widest transition"
+              className="mt-auto w-full sm:w-auto px-12 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-extrabold uppercase tracking-widest transition"
             >
               Contact Expert
             </button>
           </div>
 
           {/* Right — Image + Testimonial */}
-          <div className="space-y-6">
+          <div className="flex flex-col space-y-6">
             <div
               className={`rounded-2xl overflow-hidden relative ${
                 d ? "bg-[#161b22]" : "bg-gray-200"
@@ -168,9 +170,8 @@ function IntelligenceProductPage({
               <Image
                 src="/images/assessques.png"
                 alt="Intelligence at Scale"
-                width={500}
-                height={320}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
               <div
                 className={`absolute bottom-0 left-0 right-0 p-5 ${
@@ -979,25 +980,22 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
 
 // ─── Main Export ───────────────────────────────────────────────────────────────
 export default function PicaFullDiagnosticFlow() {
-  const { dark, setDark } = useTheme();
-  const [screen, setScreen] = useState<"product" | "checkout" | "success">(
-    "product"
-  );
+  const { dark } = useTheme();
+  const router = useRouter();
 
-  if (screen === "product")
-    return (
-      <IntelligenceProductPage
-        dark={dark}
-        onCheckout={() => setScreen("checkout")}
-      />
-    );
-  if (screen === "checkout")
-    return (
-      <IntelligenceCheckoutPage
-        dark={dark}
-        onSuccess={() => setScreen("success")}
-      />
-    );
-  if (screen === "success") return <IntelligenceSuccessPage dark={dark} />;
-  return null;
+  const handleContactExpert = () => {
+    const token = getAccessToken();
+    if (token) {
+      router.push("/dashboard/subscription");
+    } else {
+      router.push("/Auth/login");
+    }
+  };
+
+  return (
+    <IntelligenceProductPage
+      dark={dark}
+      onCheckout={handleContactExpert}
+    />
+  );
 }

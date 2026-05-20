@@ -15,20 +15,20 @@ export default function PricingPage() {
 
       {/* ── Hero ── */}
       <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
           <div className="inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-xs font-semibold uppercase tracking-widest text-gray-300 mb-6">
             Strategic Intelligence
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 max-w-xl">
+          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 max-w-xl mx-auto">
             Architectural Pricing for<br />
             <span className="text-[#00ffaa]">African Enterprise.</span>
           </h1>
-          <p className={`text-sm leading-relaxed mb-8 max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+          <p className={`text-sm leading-relaxed mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
             Choose a framework designed to scale with your organizational complexity. From solo ventures to multi-layered conglomerates.
           </p>
 
           {/* Scale toggle */}
-          <div>
+          <div className="flex flex-col items-center">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Organization Scale</p>
             <div className="flex items-center gap-2">
               {(["Small Business","Medium Business"] as const).map((s) => (
@@ -73,9 +73,15 @@ export default function PricingPage() {
             </div>
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 02</p>
             <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Full Diagnostic</h3>
-            <div className="mb-6">
-              <span className="text-3xl md:text-5xl font-extrabold text-white">$249</span>
-              <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+            <div className="mb-6 h-14 overflow-hidden relative">
+              <div className={`transition-transform duration-500 ease-in-out absolute inset-0 ${scale === "Medium Business" ? "-translate-y-full" : "translate-y-0"}`}>
+                <span className="text-3xl md:text-5xl font-extrabold text-white">$249</span>
+                <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+              </div>
+              <div className={`transition-transform duration-500 ease-in-out absolute inset-0 ${scale === "Medium Business" ? "translate-y-0" : "translate-y-full"}`}>
+                <span className="text-3xl md:text-5xl font-extrabold text-white">$499</span>
+                <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+              </div>
             </div>
             <ul className="space-y-3 mb-8">
               {["Deep-dive structural audit","Growth roadmap (36 months)","Compliance & Risk assessment","Detailed Insight PDF Package"].map((item) => (
@@ -93,9 +99,15 @@ export default function PricingPage() {
           <div className="rounded-2xl p-8 bg-[#2a3520] border border-[#4a6030]/40">
             <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 03</p>
             <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Intelligence</h3>
-            <div className="mb-6">
-              <span className="text-3xl md:text-5xl font-extrabold text-white">$1,200</span>
-              <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+            <div className="mb-6 h-14 overflow-hidden relative">
+              <div className={`transition-transform duration-500 ease-in-out absolute inset-0 ${scale === "Medium Business" ? "-translate-y-full" : "translate-y-0"}`}>
+                <span className="text-3xl md:text-5xl font-extrabold text-white">$1,200</span>
+                <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+              </div>
+              <div className={`transition-transform duration-500 ease-in-out absolute inset-0 ${scale === "Medium Business" ? "translate-y-0" : "translate-y-full"}`}>
+                <span className="text-3xl md:text-5xl font-extrabold text-white">$2,400</span>
+                <span className="text-sm text-gray-400 ml-1">/ yearly</span>
+              </div>
             </div>
             <ul className="space-y-3 mb-8">
               {["Advanced Analytics Dashboard","Medium: > 10 Employees Focus","Real-time market volatility alerts","API access for custom CRM"].map((item) => (
@@ -114,7 +126,7 @@ export default function PricingPage() {
       {/* ── PICA Advantage ── */}
       <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#111111]" : "bg-white"}`}>
         <div className="max-w-6xl mx-auto">
-          <div className={`rounded-2xl p-5 md:p-10border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
+          <div className={`rounded-2xl p-5 md:p-10 border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
               {/* Left */}
               <div>

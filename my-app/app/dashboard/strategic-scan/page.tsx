@@ -8,21 +8,18 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle,
-  Download,
   Loader,
   Radar,
-  Shield,
-  Sparkles,
-  Target,
   Save,
 } from "lucide-react";
 import { getAccessToken, setLastSessionId } from "@/lib/authClient";
+import { motion, AnimatePresence } from "framer-motion";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://pica-project1.onrender.com/api";
 
-type ScanState = "landing" | "questions" | "processing" | "result";
+type ScanState = "landing" | "questions" | "processing";
 
 type ColorBand = "RED" | "AMBER" | "GREEN";
 
@@ -213,18 +210,34 @@ function LandingState({
   error: string | null;
 }) {
   return (
-    <div className="space-y-8 max-w-full">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8 max-w-full"
+    >
       <div className="relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 overflow-hidden">
         <div className="absolute right-0 top-0 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute left-1/3 bottom-0 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row gap-8 p-6 md:p-10">
           <div className="flex-1 min-w-0">
-            <span className="inline-block px-3 py-1 rounded-full bg-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-wider mb-6">
+            <motion.span 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="inline-block px-3 py-1 rounded-full bg-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-wider mb-6"
+            >
               System Ready
-            </span>
+            </motion.span>
 
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6">
+            <motion.h1 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-6"
+            >
               <span className="bg-gradient-to-r from-teal-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Initiate Your
               </span>
@@ -236,15 +249,25 @@ function LandingState({
               <span className="bg-gradient-to-r from-orange-400 via-yellow-400 to-teal-400 bg-clip-text text-transparent">
                 Scan.
               </span>
-            </h1>
+            </motion.h1>
 
-            <p className="text-gray-400 text-sm md:text-base max-w-lg mb-8">
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="text-gray-400 text-sm md:text-base max-w-lg mb-8"
+            >
               Unfold the mathematical architecture of your business through a guided diagnostic.
               Your progress is saved automatically, so you can leave any time and resume right
               where you stopped.
-            </p>
+            </motion.p>
 
-            <div className="flex flex-wrap gap-3 mb-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex flex-wrap gap-3 mb-8"
+            >
               {[
                 "Guided assessment flow",
                 "Auto-save enabled",
@@ -257,7 +280,7 @@ function LandingState({
                   {item}
                 </div>
               ))}
-            </div>
+            </motion.div>
 
             {error && (
               <div className="mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
@@ -265,8 +288,15 @@ function LandingState({
               </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-6">
-              <button
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-wrap items-center gap-6"
+            >
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={onStart}
                 disabled={loading}
                 className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
@@ -282,14 +312,19 @@ function LandingState({
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
-              </button>
+              </motion.button>
               <p className="text-xs text-gray-500 uppercase tracking-widest">
                 Resume is available whenever you return.
               </p>
-            </div>
+            </motion.div>
           </div>
 
-          <div className="hidden lg:flex flex-col items-center gap-4 w-72">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="hidden lg:flex flex-col items-center gap-4 w-72"
+          >
             <div className="rounded-xl bg-[#0d1117] border border-teal-500/20 px-4 py-2 flex items-center gap-2 self-end">
               <span className="w-2 h-2 rounded-full bg-green-400" />
               <span className="text-xs text-gray-300 font-mono">CORE_OS V.4.2</span>
@@ -304,10 +339,10 @@ function LandingState({
                 Save-and-continue is enabled. Your answers persist across sessions.
               </p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -343,7 +378,12 @@ function QuestionsState({
   if (!current) return null;
 
   return (
-    <div className="space-y-6 max-w-full">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="space-y-6 max-w-full"
+    >
       <div className="rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-6 md:p-10">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
           <div>
@@ -366,54 +406,66 @@ function QuestionsState({
         </div>
 
         <div className="h-1 rounded-full bg-white/10 mb-8 overflow-hidden">
-          <div
+          <motion.div
             className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300 transition-all duration-500"
-            style={{ width: `${progress}%` }}
+            animate={{ width: `${progress}%` }}
           />
         </div>
 
-        <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-8">
-          {current.question.questionText}
-        </h2>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current.question.id}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-8">
+              {current.question.questionText}
+            </h2>
 
-        <div className="space-y-3 mb-8">
-          {current.question.options
-            .slice()
-            .sort((a, b) => a.displayOrder - b.displayOrder)
-            .map((opt) => {
-              const isSelected = selectedOptionId === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => onSelect(opt.id)}
-                  disabled={saving || submitting}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition disabled:cursor-not-allowed ${
-                    isSelected
-                      ? "border-teal-400 bg-teal-400/10"
-                      : "border-white/10 bg-[#161b22] hover:border-white/20"
-                  }`}
-                >
-                  <span
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      isSelected ? "bg-teal-400 text-gray-900" : "bg-[#243044] text-gray-400"
-                    }`}
-                  >
-                    {opt.optionLabel}
-                  </span>
-                  <span
-                    className={`text-sm font-medium ${
-                      isSelected ? "text-white font-bold" : "text-gray-300"
-                    }`}
-                  >
-                    {opt.optionText}
-                  </span>
-                  {isSelected && (
-                    <CheckCircle className="w-5 h-5 text-teal-400 ml-auto flex-shrink-0" />
-                  )}
-                </button>
-              );
-            })}
-        </div>
+            <div className="space-y-3 mb-8">
+              {current.question.options
+                .slice()
+                .sort((a, b) => a.displayOrder - b.displayOrder)
+                .map((opt) => {
+                  const isSelected = selectedOptionId === opt.id;
+                  return (
+                    <motion.button
+                      whileHover={!saving && !submitting ? { scale: 1.01 } : {}}
+                      whileTap={!saving && !submitting ? { scale: 0.99 } : {}}
+                      key={opt.id}
+                      onClick={() => onSelect(opt.id)}
+                      disabled={saving || submitting}
+                      className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition disabled:cursor-not-allowed ${
+                        isSelected
+                          ? "border-teal-400 bg-teal-400/10"
+                          : "border-white/10 bg-[#161b22] hover:border-white/20"
+                      }`}
+                    >
+                      <span
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                          isSelected ? "bg-teal-400 text-gray-900" : "bg-[#243044] text-gray-400"
+                        }`}
+                      >
+                        {opt.optionLabel}
+                      </span>
+                      <span
+                        className={`text-sm font-medium ${
+                          isSelected ? "text-white font-bold" : "text-gray-300"
+                        }`}
+                      >
+                        {opt.optionText}
+                      </span>
+                      {isSelected && (
+                        <CheckCircle className="w-5 h-5 text-teal-400 ml-auto flex-shrink-0" />
+                      )}
+                    </motion.button>
+                  );
+                })}
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
         {error && (
           <div className="mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
@@ -467,7 +519,7 @@ function QuestionsState({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -483,7 +535,11 @@ function ProcessingState() {
   }, []);
 
   return (
-    <div className="space-y-6 max-w-full">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6 max-w-full"
+    >
       <div className="relative rounded-2xl bg-gradient-to-b from-[#0a1628] via-[#0d1117] to-[#0d1117] border border-white/5 overflow-hidden min-h-[60vh] flex flex-col items-center justify-center p-6 md:p-10">
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-64 h-64 rounded-full bg-teal-500/10 blur-3xl animate-pulse" />
@@ -508,10 +564,11 @@ function ProcessingState() {
           <p className="text-gray-400 text-sm mb-6">
             Routing you to the next step...
           </p>
-          <div className="h-2 rounded-full bg-white/5 mb-2">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300 transition-all duration-100"
-              style={{ width: `${progress}%` }}
+          <div className="h-2 rounded-full bg-white/5 mb-2 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300"
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.1 }}
             />
           </div>
           <div className="flex justify-between text-xs">
@@ -520,196 +577,7 @@ function ProcessingState() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ResultState({
-  data,
-  onDownloadPdf,
-  onDeepDive,
-  onStartAnotherScan,
-}: {
-  data: GetResultResponse;
-  onDownloadPdf: () => void;
-  onDeepDive: () => void;
-  onStartAnotherScan: () => void;
-}) {
-  const { result, paywalled } = data;
-  const pillarScores = result.pillarScores
-    .slice()
-    .sort((a, b) => a.pillar.displayOrder - b.pillar.displayOrder);
-  const totalScore = Math.round(result.totalScore);
-  const weakestPillar = pillarScores
-    .slice()
-    .sort((a, b) => a.weightedScore - b.weightedScore)[0];
-  const headlineFinding =
-    weakestPillar?.findings.find((item) => item.observation || item.recommendation) ??
-    weakestPillar?.findings[0] ??
-    null;
-  const ringGradient = COLOR_BAND_TO_RING[normalizeColorBand(result.colorBand)];
-  const updatedLabel = formatRelativeTime(
-    result.generatedAt || result.updatedAt || result.createdAt,
-  );
-
-  return (
-    <div className="space-y-6 max-w-full">
-      <section className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-[#0e2b2b] via-[#111827] to-[#19132b]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.14),transparent_36%),radial-gradient(circle_at_top_right,rgba(249,115,22,0.12),transparent_34%)]" />
-        <div className="relative z-10 grid gap-8 px-6 py-8 md:px-10 md:py-10 lg:grid-cols-[280px,1fr] lg:items-center">
-          <div className="flex justify-center">
-            <div
-              className={`relative flex h-44 w-44 flex-col items-center justify-center rounded-full border border-white/10 bg-[#07141b]/80 shadow-[0_0_40px_rgba(20,184,166,0.18)]`}
-            >
-              <div
-                className={`absolute inset-0 rounded-full bg-gradient-to-br ${ringGradient} opacity-20 blur-md`}
-              />
-              <div className="absolute inset-[10px] rounded-full border-[6px] border-teal-300/90" />
-              <p className="relative text-5xl font-black text-white">{totalScore}%</p>
-              <p className="relative mt-1 text-[11px] font-bold uppercase tracking-[0.28em] text-teal-200">
-                Complete
-              </p>
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <h1 className="text-3xl font-extrabold text-white md:text-5xl">
-              Diagnostic <span className="text-orange-400">Complete.</span>
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-gray-300 md:text-base">
-              Your strategic scan has been synthesized into a live performance snapshot.
-              Review the health markers below, then unlock your full report for PDF download
-              and email delivery.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                onClick={onDeepDive}
-                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
-              >
-                <Target className="h-4 w-4" />
-                Deep Dive Into Operations
-              </button>
-              <button
-                onClick={onDownloadPdf}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                <Download className="h-4 w-4" />
-                Download PDF
-              </button>
-            </div>
-
-            {paywalled && (
-              <p className="mt-4 text-xs uppercase tracking-[0.22em] text-orange-300">
-                PDF and emailed report unlock after subscription.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-teal-500/30 bg-[#101c23] px-6 py-6 shadow-[0_0_30px_rgba(13,148,136,0.08)]">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-500/15">
-              <Sparkles className="h-5 w-5 text-teal-300" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">AI Pulse Insight</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-7 text-gray-300">
-                {headlineFinding
-                  ? `"${headlineFinding.observation || headlineFinding.recommendation}"`
-                  : "We detected performance signals across your operating model. Unlock the full report to review detailed findings and recommended actions."}
-              </p>
-              {weakestPillar && (
-                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-teal-300">
-                  Focus area: {weakestPillar.pillar.name}
-                </p>
-              )}
-            </div>
-          </div>
-          <Shield className="hidden h-10 w-10 text-white/20 lg:block" />
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-white">Pillar Breakdown</h2>
-          <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{updatedLabel}</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {pillarScores.map((pillarScore) => {
-            const band = normalizeColorBand(pillarScore.colorBand);
-            const status = COLOR_BAND_TO_STATUS[band];
-            const score = Math.round(pillarScore.weightedScore);
-            return (
-              <div
-                key={pillarScore.id}
-                className={`rounded-2xl border bg-[#0f1722] p-5 transition ${
-                  band === "RED"
-                    ? "border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.08)]"
-                    : "border-white/5"
-                }`}
-              >
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <Radar className="h-4 w-4 text-gray-400" />
-                  <span
-                    className={`rounded-md border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.18em] ${status.pill}`}
-                  >
-                    {status.label}
-                  </span>
-                </div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-gray-500">
-                  {pillarScore.pillar.name}
-                </p>
-                <p className="mt-3 text-4xl font-black text-white">
-                  {score}
-                  <span className="ml-1 text-lg text-gray-500">%</span>
-                </p>
-                <div className="mt-4 h-1.5 rounded-full bg-white/5">
-                  <div
-                    className={`h-full rounded-full ${status.bar}`}
-                    style={{ width: `${score}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-white/5 bg-[#0f1722] px-6 py-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
-              <AlertTriangle className="h-4 w-4 text-gray-400" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">Ready for the full report?</p>
-              <p className="text-xs text-gray-500">
-                Subscribe to unlock the downloadable PDF and email delivery, or start a fresh scan.
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={onStartAnotherScan}
-              className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Start Another Scan
-            </button>
-            <Link
-              href="/dashboard/subscription"
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
-            >
-              Unlock Full Report
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
+    </motion.div>
   );
 }
 
@@ -886,8 +754,8 @@ export default function StrategicScanPage() {
 
       setScanState("processing");
       const result = await waitForResult(sessionId);
-      setResultData(result);
-      setScanState("result");
+      await new Promise((r) => setTimeout(r, 1000));
+      router.push(`/dashboard/reports/${result.id}`);
     } catch (err) {
       setScanState("questions");
       setError(err instanceof Error ? err.message : "Failed to submit assessment");
@@ -954,16 +822,9 @@ export default function StrategicScanPage() {
     return <ProcessingState />;
   }
 
-  if (scanState === "result" && resultData) {
-    return (
-      <ResultState
-        data={resultData}
-        onDownloadPdf={handleDownloadPdf}
-        onDeepDive={handleDeepDive}
-        onStartAnotherScan={handleStartAnotherScan}
-      />
-    );
-  }
-
-  return <LandingState onStart={handleStart} loading={loading} error={error} />;
+  return (
+    <AnimatePresence mode="wait">
+      <LandingState key="landing" onStart={handleStart} loading={loading} error={error} />
+    </AnimatePresence>
+  );
 }

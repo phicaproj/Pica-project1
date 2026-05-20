@@ -119,8 +119,16 @@ export default function SignUpPage() {
             </p>
 
             {submitError && (
-              <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                {submitError}
+              <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex flex-col gap-3">
+                <p>{submitError}</p>
+                {(submitError.toLowerCase().includes("phase 1") || 
+                  submitError.toLowerCase().includes("free scan") || 
+                  submitError.toLowerCase().includes("free assess") || 
+                  submitError.toLowerCase().includes("free assestment")) && (
+                  <Link href="/pages/freescan" className="self-start inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-xs font-bold transition">
+                    Take Free Scan
+                  </Link>
+                )}
               </div>
             )}
 

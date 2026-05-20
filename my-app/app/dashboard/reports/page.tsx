@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Download,
@@ -18,7 +18,56 @@ import {
   Database,
   Globe,
   Clock,
+  Loader,
 } from "lucide-react";
+import { getAccessToken } from "@/lib/authClient";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "https://pica-project1.onrender.com/api";
+
+type ColorBand = "RED" | "AMBER" | "GREEN";
+
+function normalizeColorBand(value: unknown): ColorBand {
+  if (typeof value !== "string") return "AMBER";
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "GREEN" || normalized === "AMBER" || normalized === "RED") {
+    return normalized;
+  }
+  if (normalized === "YELLOW") return "AMBER";
+  return "AMBER";
+}
+
+function formatRelativeTime(iso: string | null) {
+  if (!iso) return "Recently updated";
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return "Recently updated";
+  const diffMinutes = Math.max(1, Math.round((Date.now() - ms) / 60000));
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+  }
+  const diffDays = Math.round(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+}
+
+function isResultResponse(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as {
+    message?: unknown;
+    paywalled?: unknown;
+    result?: { pillarScores?: unknown; totalScore?: unknown } | null;
+  };
+  return (
+    typeof candidate.message === "string" &&
+    typeof candidate.paywalled === "boolean" &&
+    !!candidate.result &&
+    Array.isArray(candidate.result.pillarScores)
+  );
+}
 
 // ─── Decorative SVG for Empty State ─────────────────────────────────────────
 function NetworkIllustration() {
@@ -235,104 +284,52 @@ function EmptyState({ onStart }: { onStart: () => void }) {
 }
 
 // ─── STATE 2: Active Analysis State ─────────────────────────────────────────
-function ActiveState() {
-  const reports = [
-    {
+function ActiveState({ results }: { results: any[] }) {
+  if (results.length === 0) {
+    return null;
+  }
+
+  const reports = results.map((item) => {
+    const res = item.result;
+    const band = normalizeColorBand(res.colorBand);
+    let badgeColor = "bg-amber-500/20 text-amber-400";
+    if (band === "GREEN") badgeColor = "bg-emerald-500/20 text-emerald-400";
+    if (band === "RED") badgeColor = "bg-rose-500/20 text-rose-400";
+
+    const totalScore = Math.round(res.totalScore || 0);
+
+    return {
+      id: res.id,
       badge: "STRATEGIC",
-      badgeColor: "bg-green-500/20 text-green-400",
+      badgeColor,
       title: "Strategic Scan Summary",
-      subtitle: "Generated 14 hours ago \u2022 ID: AX-9902",
+      subtitle: `Generated ${formatRelativeTime(res.generatedAt || res.updatedAt || res.createdAt)} \u2022 ID: ${res.id.substring(0, 8)}`,
       metrics: [
         {
-          label: "GLOBAL POSITION",
-          value: "96.2 Percentile",
-          sub: "Top 4%",
-          valueColor: "text-teal-400",
-          subColor: "text-teal-400",
-        },
-        {
-          label: "COMPETITIVE EDGE",
-          value: "+24.8% Competitive Delta",
+          label: "OVERALL SCORE",
+          value: `${totalScore}%`,
           sub: null,
           valueColor: "text-white",
           subColor: "",
-          icon: <TrendingUp className="w-4 h-4 text-teal-400 inline ml-1" />,
         },
         {
-          label: "RISK VECTOR",
-          value: "Minimal (0.04)",
+          label: "RISK LEVEL",
+          value: band,
+          sub: res.hasAnyKnockout ? "Knockout Flagged" : "No critical knockouts",
+          valueColor: band === "GREEN" ? "text-emerald-400" : band === "RED" ? "text-rose-400" : "text-amber-400",
+          subColor: "text-gray-500",
+        },
+        {
+          label: "STATUS",
+          value: item.paywalled ? "Locked" : "Unlocked",
           sub: null,
           valueColor: "text-white",
           subColor: "",
-          icon: (
-            <ArrowDownRight className="w-4 h-4 text-green-400 inline ml-1" />
-          ),
+          icon: item.paywalled ? <Lock className="w-3 h-3 text-gray-500 inline ml-1" /> : null,
         },
       ],
-    },
-    {
-      badge: "OPERATIONS",
-      badgeColor: "bg-green-500/20 text-green-400",
-      title: "Operations Deep Dive",
-      subtitle: "Generated Yesterday at 18:42 \u2022 ID: OP-4412",
-      metrics: [
-        {
-          label: "EFFICIENCY RATING",
-          value: "98.4% Optimized",
-          sub: null,
-          valueColor: "text-teal-400",
-          subColor: "",
-        },
-        {
-          label: "LATENCY DELTA",
-          value: "-12.4ms Advantage",
-          sub: null,
-          valueColor: "text-teal-400",
-          subColor: "",
-          icon: <Zap className="w-4 h-4 text-yellow-400 inline ml-1" />,
-        },
-        {
-          label: "RESOURCE YIELD",
-          value: "1.4x Target",
-          sub: null,
-          valueColor: "text-white",
-          subColor: "",
-        },
-      ],
-    },
-    {
-      badge: "MARKET",
-      badgeColor: "bg-orange-500/20 text-orange-400",
-      title: "Market Intelligence Analysis",
-      subtitle: "Generated 3 days ago \u2022 ID: MK-1108",
-      metrics: [
-        {
-          label: "SENTIMENT INDEX",
-          value: "Bullish (0.88) Positive",
-          sub: null,
-          valueColor: "text-white",
-          subColor: "",
-        },
-        {
-          label: "GROWTH FORECAST",
-          value: "+31.2% Projected",
-          sub: null,
-          valueColor: "text-teal-400",
-          subColor: "",
-          icon: (
-            <ArrowUpRight className="w-4 h-4 text-teal-400 inline ml-1" />
-          ),
-        },
-        {
-          label: "MARKET SHARE",
-          value: "Dominant Tier",
-          sub: null,
-          valueColor: "text-white",
-          subColor: "",
-        },
-      ],
-    },
-  ];
+    };
+  });
 
   return (
     <div className="space-y-6 max-w-full relative pb-20">
@@ -399,9 +396,10 @@ function ActiveState() {
       {/* Report Cards */}
       <div className="space-y-4">
         {reports.map((report) => (
-          <div
-            key={report.title}
-            className="rounded-xl bg-[#111827] border border-white/5 p-4 md:p-5 flex gap-4 md:gap-6 hover:border-white/10 transition cursor-pointer"
+          <Link
+            key={report.id}
+            href={`/dashboard/reports/${report.id}`}
+            className="rounded-xl bg-[#111827] border border-white/5 p-4 md:p-5 flex gap-4 md:gap-6 hover:border-white/10 hover:bg-[#161f33] transition cursor-pointer block"
           >
             {/* Thumbnail */}
             <div className="hidden sm:block">
@@ -455,7 +453,7 @@ function ActiveState() {
                 ))}
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -476,11 +474,53 @@ function ActiveState() {
 
 // ─── Page Export ─────────────────────────────────────────────────────────────
 export default function ReportsPage() {
-  const [hasReports, setHasReports] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [results, setResults] = useState<any[]>([]);
 
-  return hasReports ? (
-    <ActiveState />
+  useEffect(() => {
+    const fetchResults = async () => {
+      const token = getAccessToken();
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/result/me`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const json = await res.json().catch(() => ({}));
+          let items: unknown[] = [];
+          if (Array.isArray(json)) items = json;
+          else if (json && Array.isArray(json.results)) items = json.results;
+          else if (json && Array.isArray(json.data)) items = json.data;
+
+          const validResults = items.filter(isResultResponse);
+          setResults(validResults);
+        }
+      } catch (err) {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchResults();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader className="w-6 h-6 animate-spin text-teal-400" />
+      </div>
+    );
+  }
+
+  return results.length > 0 ? (
+    <ActiveState results={results} />
   ) : (
-    <EmptyState onStart={() => setHasReports(true)} />
+    <EmptyState onStart={() => window.location.href = "/dashboard/strategic-scan"} />
   );
 }

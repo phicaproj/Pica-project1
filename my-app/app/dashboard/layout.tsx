@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeContext";
 import {
   LayoutDashboard,
@@ -19,7 +19,9 @@ import {
   X,
   Sun,
   Moon,
+  LogOut,
 } from "lucide-react";
+import { AuthUser, getStoredUser, clearSession } from "@/lib/authClient";
 
 const NAV_MAIN = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
@@ -44,9 +46,20 @@ function getPageTitle(pathname: string) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { dark, setDark } = useTheme();
   const pageTitle = getPageTitle(pathname);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
+
+  const handleLogout = () => {
+    clearSession();
+    router.push("/Auth/login");
+  };
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -88,7 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
 
           {/* Logo */}
-          <Link href="/dashboard" className="text-white font-bold text-xl tracking-wide">
+          <Link href="/" className="text-white font-bold text-xl tracking-wide">
             PICA
           </Link>
 
@@ -108,9 +121,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* User avatar */}
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-teal-400/30">
-              A
+              {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
             </div>
-            <span className="text-sm text-gray-300 hidden sm:block">Alex J.</span>
+            <span className="text-sm text-gray-300 hidden sm:block">
+              {user?.businessName || "User"}
+            </span>
           </div>
         </div>
       </header>
@@ -126,7 +141,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* ── Sidebar ── */}
         <aside
-          className={`fixed lg:static top-[57px] left-0 bottom-0 z-50 w-56 bg-[#0d1117] flex flex-col py-6 px-3 overflow-y-auto transition-transform duration-300 ${
+          className={`fixed lg:static top-[57px] left-0 bottom-0 z-50 w-56 bg-[#0d1117] flex flex-col py-6 px-3 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           } lg:flex-shrink-0`}
         >
@@ -145,6 +160,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <NavItem key={item.label} item={item} />
               ))}
             </nav>
+          </div>
+
+          <div className="mt-auto pt-6">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+              Logout
+            </button>
           </div>
         </aside>
 

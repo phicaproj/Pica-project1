@@ -327,13 +327,16 @@ function EmptyState({ user }: { user: AuthUser | null }) {
 function ActiveState({
 	data,
 	user,
+	allResults = [],
 	inProgress = false,
 }: {
 	data: GetResultResponse
 	user: AuthUser | null
+	allResults?: GetResultResponse[]
 	inProgress?: boolean
 }) {
 	const { result, paywalled } = data
+	const displayResults = allResults.length > 0 ? allResults : [data];
 	const pillarScores = result.pillarScores
 		.slice()
 		.sort((a, b) => a.pillar.displayOrder - b.pillar.displayOrder)
@@ -652,50 +655,61 @@ function ActiveState({
 							</tr>
 						</thead>
 						<tbody className='divide-y divide-white/5'>
-							<tr className='text-sm'>
-								<td className='py-4'>
-									<div className='flex items-center gap-3'>
-										<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
-											<FileText className='w-4 h-4 text-gray-400' />
-										</div>
-										<div>
-											<p className='font-semibold text-white'>
-												{phaseLabel}
-											</p>
-											<p className='text-xs text-gray-500'>
-												Completed
-											</p>
-										</div>
-									</div>
-								</td>
-								<td className='py-4'>
-									<span
-										className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${overallStatus.pill}`}
-									>
-										<span className='w-1.5 h-1.5 rounded-full bg-current' />
-										{overallStatus.label}
-									</span>
-								</td>
-								<td className='py-4 font-semibold text-white'>
-									{totalScore}
-									<span className='text-xs text-gray-500'>
-										{' '}
-										/ 100
-									</span>
-								</td>
-								<td className='py-4 text-gray-400'>
-									{paywalled ? (
-										<span className='inline-flex items-center gap-1 text-gray-500'>
-											<Lock className='w-3 h-3' /> Locked
-										</span>
-									) : (
-										<>
-											{totalFindings} finding
-											{totalFindings === 1 ? '' : 's'}
-										</>
-									)}
-								</td>
-							</tr>
+							{displayResults.map((item, index) => {
+								const res = item.result;
+								const pScores = res.pillarScores || [];
+								const tScore = Math.round(res.totalScore);
+								const band = normalizeColorBand(res.colorBand);
+								const status = COLOR_BAND_TO_STATUS[band];
+								const pLabel = phaseDisplayName(res.phase);
+								const tFindings = pScores.reduce((sum, p) => sum + (p.findings?.length ?? 0), 0);
+								return (
+									<tr key={res.id || index} className='text-sm'>
+										<td className='py-4'>
+											<div className='flex items-center gap-3'>
+												<div className='w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0'>
+													<FileText className='w-4 h-4 text-gray-400' />
+												</div>
+												<div>
+													<p className='font-semibold text-white'>
+														{pLabel}
+													</p>
+													<p className='text-xs text-gray-500'>
+														Completed
+													</p>
+												</div>
+											</div>
+										</td>
+										<td className='py-4'>
+											<span
+												className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${status.pill}`}
+											>
+												<span className='w-1.5 h-1.5 rounded-full bg-current' />
+												{status.label}
+											</span>
+										</td>
+										<td className='py-4 font-semibold text-white'>
+											{tScore}
+											<span className='text-xs text-gray-500'>
+												{' '}
+												/ 100
+											</span>
+										</td>
+										<td className='py-4 text-gray-400'>
+											{item.paywalled ? (
+												<span className='inline-flex items-center gap-1 text-gray-500'>
+													<Lock className='w-3 h-3' /> Locked
+												</span>
+											) : (
+												<>
+													{tFindings} finding
+													{tFindings === 1 ? '' : 's'}
+												</>
+											)}
+										</td>
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 				</div>
@@ -709,6 +723,7 @@ export default function DashboardHomePage() {
 	const router = useRouter()
 	const [state, setState] = useState<DashboardState>('loading')
 	const [data, setData] = useState<GetResultResponse | null>(null)
+	const [allResults, setAllResults] = useState<GetResultResponse[]>([])
 	const [errorMessage, setErrorMessage] = useState<string>('')
 	const [user, setUser] = useState<AuthUser | null>(null)
 
@@ -737,6 +752,32 @@ export default function DashboardHomePage() {
 
 				const headers: Record<string, string> = {
 					Authorization: `Bearer ${token}`,
+				}
+
+				// Fetch all results
+				try {
+					const allRes = await fetch(`${API_BASE}/result/me`, { headers })
+					if (allRes.ok) {
+						const allJson = await allRes.json().catch(() => ({}))
+						let items: unknown[] = []
+						if (Array.isArray(allJson)) items = allJson
+						else if (allJson && typeof allJson === 'object') {
+							if (Array.isArray((allJson as any).results)) items = (allJson as any).results
+							else if (Array.isArray((allJson as any).data)) items = (allJson as any).data
+						}
+						
+						const validResults: GetResultResponse[] = []
+						for (const item of items) {
+							if (isResultResponse(item)) {
+								validResults.push(item as GetResultResponse)
+							} else if (item && typeof item === 'object' && 'pillarScores' in item) {
+								validResults.push({ message: 'Success', paywalled: false, result: item as any })
+							}
+						}
+						setAllResults(validResults)
+					}
+				} catch (e) {
+					// ignore
 				}
 
 				if (!sessionId) {
@@ -861,9 +902,11 @@ export default function DashboardHomePage() {
 	if (state === 'empty') return <EmptyState user={user} />
 	if (state === 'in-progress') return <InProgressState />
 	if (state === 'error') return <ErrorState message={errorMessage} />
-	if (state === 'active' && data)
-		return <ActiveState data={data} user={user} />
-	if (state === 'in-progress-active' && data)
-		return <ActiveState data={data} user={user} inProgress />
+	if (state === 'active' && data) {
+		return <ActiveState data={data} user={user} allResults={allResults} />
+	}
+	if (state === 'in-progress-active' && data) {
+		return <ActiveState data={data} user={user} allResults={allResults} inProgress />
+	}
 	return <EmptyState user={user} />
 }
