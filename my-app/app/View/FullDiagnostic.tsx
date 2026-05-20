@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "@/components/ThemeContext";
+import { useRouter } from "next/navigation";
+import { getAccessToken } from "@/lib/authClient";
 import {
   CheckCircle, BarChart2, TrendingUp,
   Shield, FileText, CreditCard, Building2, Lock,
@@ -26,10 +28,10 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
 
       {/* ── Hero ── */}
       <section className={`px-4 sm:px-6 md:px-12 py-10 md:py-16 ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-start">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-16 items-stretch">
           {/* Left */}
-          <div>
-            <div className="inline-flex items-center px-3 py-1 rounded-md border border-[#f97316]/40 text-[#f97316] text-xs font-bold uppercase tracking-widest mb-6">
+          <div className="flex flex-col justify-center">
+            <div className="inline-flex self-start items-center px-3 py-1 rounded-md border border-[#f97316]/40 text-[#f97316] text-xs font-bold uppercase tracking-widest mb-6">
               Full Diagnostic
             </div>
             <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4">
@@ -39,14 +41,13 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
             <p className={`text-sm leading-relaxed mb-8 max-w-md ${d ? "text-gray-400" : "text-gray-600"}`}>
               A clinical analysis of your architectural infrastructure. We identify bottlenecks, hidden risks, and untapped scalability vectors before they impact your growth.
             </p>
-            <div className="mb-8">
-              <span className="text-3xl md:text-5xl font-extrabold text-white">$249</span>
-              <span className={`text-sm ml-2 uppercase tracking-widest ${d ? "text-gray-500" : "text-gray-400"}`}>/ Yearly</span>
+            <div className="mb-10 flex items-center gap-6">
+              <span className={`text-3xl md:text-5xl font-extrabold ${d ? "text-white" : "text-gray-900"}`}>$249</span>
+              <button onClick={onCheckout}
+                className="px-4 sm:px-6 md:px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
+                Get Diagnostic
+              </button>
             </div>
-            <button onClick={onCheckout}
-              className="px-4 sm:px-6 md:px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition mb-10">
-              Get Diagnostic
-            </button>
 
             {/* Feature cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -61,14 +62,13 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
           </div>
 
           {/* Right — image + testimonial */}
-          <div className="relative">
-            <div className={`rounded-2xl overflow-hidden relative ${d ? "bg-[#161b22]" : "bg-gray-200"}`} style={{ minHeight: "360px" }}>
+          <div className="relative flex flex-col h-full min-h-[360px]">
+            <div className={`rounded-2xl overflow-hidden relative flex-grow ${d ? "bg-[#161b22]" : "bg-gray-200"}`}>
               <Image
                 src="/images/assessques.png"
                 alt="Full Diagnostic"
-                width={500}
-                height={360}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
               />
             </div>
             {/* Testimonial card */}
@@ -398,10 +398,16 @@ function PaymentSuccessPage({ dark, setDark }: { dark: boolean; setDark: (v: boo
 // ─── Main Export ───────────────────────────────────────────────────────────────
 export default function FullDiagnosticFlow() {
   const { dark, setDark } = useTheme();
-  const [screen, setScreen] = useState<"product" | "checkout" | "success">("product");
+  const router = useRouter();
 
-  if (screen === "product") return <FullDiagnosticPage dark={dark} setDark={setDark} onCheckout={() => setScreen("checkout")} />;
-  if (screen === "checkout") return <CheckoutPage dark={dark} setDark={setDark} onSuccess={() => setScreen("success")} />;
-  if (screen === "success") return <PaymentSuccessPage dark={dark} setDark={setDark} />;
-  return null;
+  const handleCheckout = () => {
+    const token = getAccessToken();
+    if (token) {
+      router.push("/dashboard/subscription");
+    } else {
+      router.push("/Auth/login");
+    }
+  };
+
+  return <FullDiagnosticPage dark={dark} setDark={setDark} onCheckout={handleCheckout} />;
 }

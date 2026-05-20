@@ -8,7 +8,6 @@ import {
   CalendarX2,
   Rocket,
   Star,
-  BadgeCheck,
   Calendar,
   Clock,
   ChevronLeft,
@@ -21,9 +20,9 @@ import {
   Link2,
   BarChart3,
   TrendingUp,
-  FileText,
   Download,
   Plus,
+  Users,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -276,42 +275,45 @@ function SelectExpertState({
             key={c.name}
             className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col"
           >
-            <div className="flex items-start gap-3 mb-4">
-              <div
-                className={`w-12 h-12 rounded-full bg-gradient-to-br ${c.gradient} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ring-2 ring-white/10`}
-              >
-                {c.initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <h4 className="text-sm font-bold text-white truncate">
-                    {c.name}
-                  </h4>
-                  <BadgeCheck className="w-4 h-4 text-teal-400 flex-shrink-0" />
-                  <span className="text-[9px] font-bold uppercase text-teal-400">
-                    Verified
-                  </span>
+            {/* Card top: avatar left, rating right */}
+            <div className="flex items-start justify-between mb-4">
+              {/* Avatar with VERIFIED badge overlay */}
+              <div className="relative flex-shrink-0">
+                <div
+                  className={`w-16 h-16 rounded-xl bg-gradient-to-br ${c.gradient} flex items-center justify-center text-white text-lg font-bold ring-2 ring-white/10`}
+                >
+                  {c.initials}
                 </div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-teal-400">
-                  {c.role}
-                </p>
+                <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-teal-500 text-white text-[9px] font-bold uppercase whitespace-nowrap">
+                  VERIFIED
+                </span>
+              </div>
+              {/* Rating top-right */}
+              <div className="flex flex-col items-end gap-0.5">
+                <span className="flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                  <span className="text-white text-sm font-bold">{c.rating}</span>
+                </span>
+                <span className="text-[10px] text-gray-500">{c.reviews} Reviews</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mb-3 text-xs text-gray-400">
-              <span className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                <span className="text-white font-semibold">{c.rating}</span>
-              </span>
-              <span>{c.reviews} Reviews</span>
+            {/* Name & role */}
+            <div className="mt-3 mb-3">
+              <h4 className="text-base font-bold text-white mb-0.5">{c.name}</h4>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-teal-400">
+                {c.role}
+              </p>
             </div>
 
-            <div className="flex items-center justify-between text-xs mb-4">
-              <span className="flex items-center gap-1 text-gray-400">
-                <Calendar className="w-3 h-3 text-teal-400" />
+            {/* Next slot & badge */}
+            <div className="space-y-1.5 mb-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gray-500" />
                 {c.nextSlot}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-white/5 text-gray-400 text-[10px] font-medium">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-gray-500" />
                 {c.badge}
               </span>
             </div>
@@ -331,10 +333,9 @@ function SelectExpertState({
         ))}
       </div>
 
-      {/* Bottom */}
-      <div className="flex items-center justify-between pt-4">
-        <div />
-        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-sm font-semibold hover:text-white hover:bg-white/10 transition">
+      {/* Floating "Need Guidance?" button */}
+      <div className="fixed bottom-8 right-8 z-40">
+        <button className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold shadow-lg shadow-orange-500/20 transition">
           <HelpCircle className="w-4 h-4" />
           Need Guidance?
         </button>
@@ -515,36 +516,36 @@ function ScheduleSessionState({
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Time Slots */}
+          {/* Time Slots — 2×2 grid */}
           <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-bold text-white">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                 Select Time (CET)
               </h3>
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               {timeSlots.map((slot) => {
                 const isActive = selectedTime === slot.time;
                 return (
                   <button
                     key={slot.time}
                     onClick={() => setSelectedTime(slot.time)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border transition text-left ${
+                    className={`flex flex-col items-start px-4 py-3 rounded-lg border transition ${
                       isActive
-                        ? "border-orange-500 bg-orange-500/5"
+                        ? "border-teal-500 bg-teal-500/10"
                         : "border-white/5 bg-[#0d1117] hover:border-white/10"
                     }`}
                   >
                     <span
-                      className={`text-xs font-bold uppercase ${
-                        isActive ? "text-orange-400" : "text-gray-500"
+                      className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${
+                        isActive ? "text-teal-400" : "text-gray-500"
                       }`}
                     >
                       {isActive ? "Selected" : slot.label}
                     </span>
                     <span
-                      className={`text-sm font-semibold ${
+                      className={`text-base font-bold ${
                         isActive ? "text-white" : "text-gray-300"
                       }`}
                     >
