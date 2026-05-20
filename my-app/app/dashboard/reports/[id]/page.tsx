@@ -454,41 +454,43 @@ export default function ReportDetailPage() {
         </div>
       </motion.section>
 
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="rounded-3xl border border-white/5 bg-[#0f1722] px-6 py-5"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
-              <AlertTriangle className="h-4 w-4 text-gray-400" />
+      {paywalled && (
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="rounded-3xl border border-white/5 bg-[#0f1722] px-6 py-5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+                <AlertTriangle className="h-4 w-4 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Ready for the full report?</p>
+                <p className="text-xs text-gray-500">
+                  Subscribe to unlock the downloadable PDF and email delivery, or start a fresh scan.
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold text-white">Ready for the full report?</p>
-              <p className="text-xs text-gray-500">
-                Subscribe to unlock the downloadable PDF and email delivery, or start a fresh scan.
-              </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleStartAnotherScan}
+                className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Start Another Scan
+              </button>
+              <Link
+                href={`/dashboard/subscription?sessionId=${id}&autoCheckout=1`}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
+              >
+                Unlock Full Report
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={handleStartAnotherScan}
-              className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            >
-              Start Another Scan
-            </button>
-            <Link
-              href={`/dashboard/subscription?sessionId=${id}&autoCheckout=1`}
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600"
-            >
-              Unlock Full Report
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-      </motion.section>
+        </motion.section>
+      )}
     </motion.div>
   );
 }
