@@ -196,7 +196,7 @@ function ProfileStep({
 
 	useEffect(() => {
 		if (selectedCountry && selectedCity) {
-			setProfile(prev => ({ ...prev, location: `${selectedCity}, ${selectedCountry}` }))
+			setProfile({ ...profile, location: `${selectedCity}, ${selectedCountry}` })
 		}
 	}, [selectedCountry, selectedCity])
 
