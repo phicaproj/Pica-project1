@@ -15,6 +15,7 @@ import {
   Plus,
   Loader,
   Play,
+  X,
 } from "lucide-react";
 import {
   getMyPhase2BPillars,
@@ -22,6 +23,7 @@ import {
   getAllPillars,
   Phase2BPillarSession,
   getSessionResponses,
+  startPhase2B,
 } from "@/lib/authClient";
 import { PillarPickerModal } from "./PillarPickerModal";
 
@@ -42,6 +44,8 @@ export default function DeepDivePage() {
   const [allPillars, setAllPillars] = useState<any[]>([]);
   
   const [showPicker, setShowPicker] = useState(false);
+  const [showPainPoints, setShowPainPoints] = useState(false);
+  const [startingPillarId, setStartingPillarId] = useState<string | null>(null);
   
   // Progress state for the active (IN_PROGRESS) session, if any
   const [activeProgress, setActiveProgress] = useState<{
@@ -104,15 +108,32 @@ export default function DeepDivePage() {
   // Extract findings from completed Phase2B sessions
   const allFindings = resultsData
     .filter((r) => r.phase === "PHASE2B")
-    .flatMap((r) => r.pillarScores.flatMap((ps: any) => ps.findings))
-    .slice(0, 3);
+    .flatMap((r) => r.pillarScores.flatMap((ps: any) => 
+       (ps.findings || []).map((f: any) => ({ ...f, pillarName: ps.pillarName }))
+    ));
+
+  const topFindings = allFindings.slice(0, 3);
 
   const handlePillarSelect = (pillarId: string) => {
     router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
   };
 
-  const handlePillarAction = (session: Phase2BPillarSession) => {
-    if (session.status === "OPEN" || session.status === "IN_PROGRESS") {
+  const handlePillarAction = async (session: Phase2BPillarSession) => {
+    if (session.status === "OPEN") {
+      try {
+        setStartingPillarId(session.pillarId);
+        const res = await startPhase2B({ pillarId: session.pillarId });
+        if (res.error || !res.data) {
+          setError(res.error?.message || "Failed to start Deep Dive.");
+          setStartingPillarId(null);
+          return;
+        }
+        router.push(`/dashboard/deep-dive/${res.data.sessionId}`);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to start Deep Dive.");
+        setStartingPillarId(null);
+      }
+    } else if (session.status === "IN_PROGRESS") {
       router.push(`/dashboard/deep-dive/${session.sessionId}`);
     } else if (session.status === "COMPLETED") {
       router.push(`/dashboard/reports/${session.sessionId}`);
@@ -209,15 +230,18 @@ export default function DeepDivePage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white">Critical Pain Points</h3>
             {allFindings.length > 0 && (
-              <button className="text-orange-400 text-xs font-semibold hover:text-orange-300">
+              <button 
+                onClick={() => setShowPainPoints(true)}
+                className="text-orange-400 text-xs font-semibold hover:text-orange-300"
+              >
                 View All
               </button>
             )}
           </div>
           
           <div className="space-y-3 flex-1">
-            {allFindings.length > 0 ? (
-              allFindings.map((finding: any, i: number) => {
+            {topFindings.length > 0 ? (
+              topFindings.map((finding: any, i: number) => {
                 const Icon = finding.riskType === "Critical" ? AlertTriangle : Zap;
                 const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
                 
@@ -230,7 +254,7 @@ export default function DeepDivePage() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <span className={`text-[9px] font-bold uppercase ${severityColor.split(" ")[0]}`}>
-                            {finding.riskType || "Finding"}
+                            {finding.pillarName} • {finding.riskType || "Finding"}
                           </span>
                         </div>
                         <p className="text-sm font-semibold text-white truncate" title={finding.observation}>
@@ -309,9 +333,14 @@ export default function DeepDivePage() {
                     </span>
                     <button
                       onClick={() => handlePillarAction(session)}
-                      className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center text-white transition"
+                      disabled={startingPillarId === session.pillarId}
+                      className="w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center text-white transition disabled:opacity-50"
                     >
-                      <ArrowRight className="w-4 h-4" />
+                      {startingPillarId === session.pillarId ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ArrowRight className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -345,6 +374,66 @@ export default function DeepDivePage() {
           onSelect={handlePillarSelect}
         />
       )}
+
+      {showPainPoints && (
+        <PainPointsModal
+          findings={allFindings}
+          onClose={() => setShowPainPoints(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PainPointsModal({ findings, onClose }: { findings: any[]; onClose: () => void }) {
+  const grouped = findings.reduce((acc: any, f: any) => {
+    if (!acc[f.pillarName]) acc[f.pillarName] = [];
+    acc[f.pillarName].push(f);
+    return acc;
+  }, {});
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-2xl bg-[#0d1117] border border-white/10 shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 border-b border-white/5">
+          <div>
+            <h2 className="text-xl font-bold text-white">All Critical Pain Points</h2>
+            <p className="text-sm text-gray-500">Comprehensive findings from your Deep Dive modules.</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto space-y-8">
+          {Object.keys(grouped).map(pillarName => (
+            <div key={pillarName}>
+              <h3 className="text-lg font-bold text-white mb-4 border-b border-white/10 pb-2">{pillarName}</h3>
+              <div className="space-y-3">
+                {grouped[pillarName].map((finding: any, i: number) => {
+                  const Icon = finding.riskType === "Critical" ? AlertTriangle : Zap;
+                  const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
+                  return (
+                    <div key={i} className="rounded-xl bg-[#111827] border border-white/5 p-4 flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <Icon className={`w-4 h-4 ${severityColor.split(" ")[0]}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={`text-[9px] font-bold uppercase ${severityColor.split(" ")[0]}`}>
+                            {finding.riskType || "Finding"}
+                          </span>
+                        </div>
+                        <p className="text-sm font-semibold text-white">{finding.observation}</p>
+                        <p className="text-xs text-gray-500 mt-1">{finding.recommendation}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

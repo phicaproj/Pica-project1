@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
+import { PillarPickerModal } from "../deep-dive/PillarPickerModal";
 import {
   AlertTriangle,
   ArrowRight,
@@ -30,6 +31,8 @@ import {
   getMe,
   initPayment,
   verifyPayment,
+  getAllPillars,
+  getMyPhase2BPillars,
   type BusinessSize,
   type MeUser,
   type VerifyPaymentResponse,
@@ -209,6 +212,10 @@ function SubscriptionPageInner() {
   const [loadingLocked, setLoadingLocked] = useState(false);
   const [showLockedPicker, setShowLockedPicker] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<PlanCard | null>(null);
+  const [showPillarPicker, setShowPillarPicker] = useState(false);
+  const [allPillars, setAllPillars] = useState<any[]>([]);
+  const [ownedPillarIds, setOwnedPillarIds] = useState<Set<string>>(new Set());
+  const [loadingPillars, setLoadingPillars] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -397,9 +404,42 @@ function SubscriptionPageInner() {
       return;
     }
 
+    if (plan.backendPlan === "PHASE2B_PILLAR") {
+      setPendingPlan(plan);
+      setLoadingPillars(true);
+      setShowPillarPicker(true);
+      try {
+        const [pillarsRes, myPillarsRes] = await Promise.all([
+          getAllPillars(),
+          getMyPhase2BPillars()
+        ]);
+        if (pillarsRes.data) {
+          setAllPillars(pillarsRes.data.pillars || []);
+        }
+        if (myPillarsRes.data) {
+          const owned = new Set((myPillarsRes.data.pillars || []).map((p: any) => p.pillarId));
+          setOwnedPillarIds(owned);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPillars(false);
+      }
+      return;
+    }
+
     setSelectedPlan(plan);
     setCheckoutSessionId(null);
     setCheckoutPillarId(null);
+    setView("checkout");
+  };
+
+  const handlePickPillar = (pillarId: string) => {
+    if (!pendingPlan) return;
+    setShowPillarPicker(false);
+    setSelectedPlan(pendingPlan);
+    setCheckoutSessionId(null);
+    setCheckoutPillarId(pillarId);
     setView("checkout");
   };
 
@@ -486,6 +526,20 @@ function SubscriptionPageInner() {
           onPick={handlePickLockedScan}
           onClose={closeLockedPicker}
         />
+      )}
+
+      {showPillarPicker && (
+        <div className="relative z-[60]">
+          <PillarPickerModal
+            pillars={allPillars}
+            ownedPillarIds={ownedPillarIds}
+            onClose={() => {
+              setShowPillarPicker(false);
+              setPendingPlan(null);
+            }}
+            onSelect={handlePickPillar}
+          />
+        </div>
       )}
     </>
   );
@@ -711,24 +765,24 @@ function ChoosePlanView({
 
       <section className="max-w-6xl mx-auto px-4">
         <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-8">
-          What you get with Plan 2A
+          What you get with PICA Diagnostics
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             {
               icon: <Rocket className="w-5 h-5 text-red-400" />,
               title: "Full Diagnostic",
-              desc: "Pillar-by-pillar Phase 2A analysis with detailed findings.",
+              desc: "Complete Phase 2A analysis or Deep Dive Phase 2B Module.",
             },
             {
               icon: <CircleDot className="w-5 h-5 text-teal-400" />,
-              title: "PDF Report",
-              desc: "Downloadable, shareable report for your team.",
+              title: "Detailed Reports",
+              desc: "Downloadable, shareable PDF reports and pillar-level insights.",
             },
             {
               icon: <Shield className="w-5 h-5 text-purple-400" />,
               title: "Lifetime Access",
-              desc: "One payment unlocks Phase 2A for your account permanently.",
+              desc: "One payment unlocks the assessment for your account permanently.",
             },
           ].map((feature) => (
             <div
@@ -1152,7 +1206,9 @@ function SuccessView({
           Payment Successful.
         </h1>
         <p className="text-base text-center mb-12 max-w-lg text-gray-400">
-          Plan 2A is now active on your account. Your full diagnostic is ready.
+          {plan?.backendPlan === "PHASE2B_PILLAR"
+            ? "Plan 2B Module is now active. Your deep dive is ready."
+            : "Plan 2A is now active on your account. Your full diagnostic is ready."}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
@@ -1194,12 +1250,21 @@ function SuccessView({
             </div>
 
             <div className="flex gap-3">
-              <Link
-                href="/dashboard/reports"
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition"
-              >
-                Go to Reports <ArrowRight className="w-4 h-4" />
-              </Link>
+              {plan?.backendPlan === "PHASE2B_PILLAR" ? (
+                <Link
+                  href="/dashboard/deep-dive"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition"
+                >
+                  Start Deep Dive <ArrowRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard/reports"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition"
+                >
+                  Go to Reports <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
               <Link
                 href="/dashboard"
                 className="flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition"

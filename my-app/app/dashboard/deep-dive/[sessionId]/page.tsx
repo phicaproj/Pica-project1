@@ -30,7 +30,7 @@ async function authFetch(path: string, init?: RequestInit) {
   return fetch(`${API_BASE}${path}`, { ...init, headers });
 }
 
-type ScanState = "loading" | "questions" | "processing";
+type ScanState = "loading" | "questions" | "processing" | "error";
 
 interface QuestionOption {
   id: string;
@@ -363,6 +363,7 @@ export default function DeepDiveSessionPage() {
         setScanState("questions");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load session");
+        setScanState("error");
       }
     }
     
@@ -466,6 +467,22 @@ export default function DeepDiveSessionPage() {
 
   if (scanState === "processing") {
     return <ProcessingState />;
+  }
+
+  if (scanState === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <div className="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
+          {error}
+        </div>
+        <button
+          onClick={() => router.push("/dashboard/deep-dive")}
+          className="px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
+        >
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return (
