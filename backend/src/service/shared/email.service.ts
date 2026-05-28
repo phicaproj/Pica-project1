@@ -110,9 +110,18 @@ export async function sendPaymentSuccessEmail({
   currency: string;
   reference: string;
   reportDownloadUrl: string;
+  plan?: string;
 }): Promise<SendEmailResponse> {
   try {
     const greetingName = businessName ?? 'there';
+    
+    const isPhase2B = plan === 'PHASE2B_PILLAR';
+    const planName = isPhase2B ? 'Phase 2B Module' : 'Phase 2A report';
+    const description = isPhase2B 
+      ? 'Your Phase 2B Deep Dive module is now unlocked. You can start your session any time from your dashboard.'
+      : 'Your full Phase 2A diagnostic report is now unlocked. You can download it any time from your dashboard.';
+    const actionText = isPhase2B ? 'Start your Deep Dive' : 'Download your report';
+
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -125,12 +134,12 @@ export async function sendPaymentSuccessEmail({
           name: 'PICA by Beauvision',
         },
         to: [{ email: toEmail }],
-        subject: `Payment received — your PICA Phase 2A report is unlocked`,
+        subject: `Payment received — your PICA ${planName} is unlocked`,
         htmlContent: `
           <h2>Thank you, ${greetingName}!</h2>
           <p>We've received your payment of <strong>${currency} ${amount.toLocaleString()}</strong>.</p>
-          <p>Your full Phase 2A diagnostic report is now unlocked. You can download it any time from your dashboard.</p>
-          <p><a href="${reportDownloadUrl}">Download your report</a></p>
+          <p>${description}</p>
+          <p><a href="${reportDownloadUrl}">${actionText}</a></p>
           <p>Reference: <code>${reference}</code></p>
           <br/>
           <p>— The Beauvision Team</p>

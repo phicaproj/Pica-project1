@@ -545,7 +545,7 @@ async function applyVerificationResult(
     // newly-granted pillar credit. The email helper is plan-agnostic.
     const reportDownloadUrl =
       payment.plan === Plan.PHASE2B_PILLAR
-        ? `${APP_URL}/dashboard/phase2b`
+        ? `${APP_URL}/dashboard/deep-dive`
         : `${APP_URL}/dashboard/reports`;
     void sendPaymentSuccessEmail({
       toEmail: payment.customerEmail,
@@ -554,6 +554,7 @@ async function applyVerificationResult(
       currency: payment.currency,
       reference,
       reportDownloadUrl,
+      plan: payment.plan,
     }).catch((error) => {
       console.error(`[payment:${opts.source}] unlock email failed:`, error);
     });

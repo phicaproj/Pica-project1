@@ -417,7 +417,9 @@ function SubscriptionPageInner() {
           setAllPillars(pillarsRes.data.pillars || []);
         }
         if (myPillarsRes.data) {
-          const owned = new Set((myPillarsRes.data.pillars || []).map((p: any) => p.pillarId));
+          const owned = new Set((myPillarsRes.data.pillars || [])
+            .filter((p: any) => p.status === 'OPEN')
+            .map((p: any) => p.pillarId));
           setOwnedPillarIds(owned);
         }
       } catch (err) {

@@ -103,7 +103,7 @@ export default function DeepDivePage() {
   }, [pillarsData]);
 
   const activeSession = pillarsData.find((p) => p.status === "IN_PROGRESS");
-  const ownedPillarIds = new Set(pillarsData.map((p) => p.pillarId));
+  const ownedPillarIds = new Set(pillarsData.filter(p => p.status === "OPEN").map((p) => p.pillarId));
   
   // Extract findings from completed Phase2B sessions
   const allFindings = resultsData

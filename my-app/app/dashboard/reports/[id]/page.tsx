@@ -12,6 +12,7 @@ import {
   Radar,
   Loader,
   AlertTriangle,
+  FileText,
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
 import { motion } from "framer-motion";
@@ -56,6 +57,7 @@ interface PillarScore {
 interface ResultPayload {
   id: string;
   sessionId: string;
+  phase?: string;
   totalScore: number;
   colorBand: ColorBand;
   hasAnyKnockout: boolean;
@@ -281,6 +283,18 @@ export default function ReportDetailPage() {
     result.generatedAt || result.updatedAt || result.createdAt,
   );
 
+  if (result.phase === "PHASE2B") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Phase2BReport resultData={resultData} handleDownloadPdf={handleDownloadPdf} />
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -492,5 +506,114 @@ export default function ReportDetailPage() {
         </motion.section>
       )}
     </motion.div>
+  );
+}
+
+function Phase2BReport({ resultData, handleDownloadPdf }: { resultData: GetResultResponse, handleDownloadPdf: () => void }) {
+  const { result } = resultData;
+  const pillarScore = result.pillarScores[0];
+  if (!pillarScore) return null;
+  
+  const score = Math.round(pillarScore.weightedScore);
+  const band = normalizeColorBand(pillarScore.colorBand);
+  
+  const bandColors = {
+    RED: { ring: "from-rose-500 to-rose-400/50", border: "#f43f5e", text: "text-rose-400", label: "Attention Required" },
+    AMBER: { ring: "from-amber-500 to-amber-400/50", border: "#fbbf24", text: "text-amber-400", label: "Needs Improvement" },
+    GREEN: { ring: "from-emerald-500 to-emerald-400/50", border: "#10b981", text: "text-emerald-400", label: "Optimized" }
+  }[band];
+
+  return (
+    <div className="space-y-12 pb-20 max-w-6xl mx-auto pt-6">
+      <div className="flex flex-col lg:flex-row gap-12 lg:items-center">
+        <div className="flex-1">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6">
+            <span className="w-2 h-2 rounded-full bg-purple-500 mr-2" />
+            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Analysis Complete</span>
+          </div>
+          
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            {pillarScore.pillar.name} Deep Dive - <br/>Results
+          </h1>
+          
+          <p className="text-gray-400 text-sm md:text-base max-w-xl mb-8 leading-relaxed">
+            Diagnostic overview of the {pillarScore.pillar.name} pillar. 
+            {pillarScore.findings[0] ? ` ${pillarScore.findings[0].observation}` : ' Your deep dive analysis has been processed and your findings are ready for review.'}
+          </p>
+          
+          <div className="flex flex-wrap gap-4">
+            <button className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-2">
+               Book Consultant
+            </button>
+            <button onClick={handleDownloadPdf} className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition flex items-center gap-2">
+               <Download className="w-4 h-4"/> Download Full Report
+            </button>
+          </div>
+        </div>
+
+        <div className="flex justify-center lg:justify-end lg:pr-10">
+          <div className="relative w-64 h-64 flex items-center justify-center">
+            <div className={`absolute inset-0 rounded-full bg-gradient-to-tr ${bandColors.ring} blur-3xl opacity-20`} />
+            <div 
+              className={`relative w-56 h-56 rounded-full border-[14px] bg-[#0d1421] shadow-[0_0_50px_rgba(45,212,191,0.15)] flex flex-col items-center justify-center z-10`} 
+              style={{ borderColor: bandColors.border }}
+            >
+              <span className={`text-6xl font-black ${bandColors.text} mb-1`}>{score}%</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{bandColors.label}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-6">
+          <FileText className="w-5 h-5 text-white" />
+          <h2 className="text-xl font-bold text-white">Diagnostic Findings</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {pillarScore.findings.map((finding, idx) => {
+            const riskLower = finding.riskType.toLowerCase();
+            const isCritical = riskLower === "critical" || riskLower === "knockout";
+            const severityColor = isCritical ? "text-rose-400 bg-rose-400/10 border border-rose-400/20" : "text-amber-400 bg-amber-400/10 border border-amber-400/20";
+            
+            return (
+              <div key={idx} className="rounded-2xl bg-[#111827] border border-white/5 p-6 hover:bg-[#161f31] transition">
+                <div className="flex justify-between items-start mb-4">
+                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${severityColor}`}>
+                    {finding.riskType || "FINDING"}
+                  </span>
+                </div>
+                
+                <h3 className="text-lg font-bold text-white mb-3">
+                  {finding.observation}
+                </h3>
+                
+                <p className="text-sm text-gray-400 leading-relaxed mb-6">
+                  {finding.recommendation}
+                </p>
+                
+                <div className="flex items-center gap-4 text-xs font-semibold text-gray-500">
+                  <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5"/> Action Required</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      <div className="rounded-3xl bg-gradient-to-br from-[#121927] to-[#0a0f18] border border-white/5 p-10 flex flex-col md:flex-row md:items-center justify-between gap-8 mt-12">
+        <div className="max-w-xl">
+          <h2 className="text-2xl font-bold text-white mb-3">Ready to optimize?</h2>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            Our strategic partners specialize in transformation for high-growth firms. 
+            Secure a 30-minute deep dive session today to start implementing these findings.
+          </p>
+        </div>
+        <button className="shrink-0 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition">
+          Consult with PICA Expert
+        </button>
+      </div>
+    </div>
   );
 }

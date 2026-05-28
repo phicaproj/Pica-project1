@@ -31,10 +31,13 @@ const API_BASE =
 
 type ColorBand = 'RED' | 'AMBER' | 'GREEN'
 
-type Phase = 'PHASE1' | 'PHASE2A'
+type Phase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
 
-function phaseDisplayName(phase: Phase | undefined): string {
-	if (phase === 'PHASE2A') return 'Phase 2A'
+function phaseDisplayName(res: ResultPayload): string {
+	if (res.phase === 'PHASE2B') {
+		return res.pillarScores?.[0]?.pillar?.name || 'Phase 2B Deep Dive'
+	}
+	if (res.phase === 'PHASE2A') return 'Phase 2A'
 	return 'Phase 1'
 }
 
@@ -347,7 +350,7 @@ function ActiveState({
 	const overallRisk = COLOR_BAND_TO_RISK[overallBand]
 	const overallBar = COLOR_BAND_TO_BAR[overallBand]
 	const overallStatus = COLOR_BAND_TO_STATUS[overallBand]
-	const phaseLabel = phaseDisplayName(result.phase)
+	const phaseLabel = phaseDisplayName(result)
 	const totalFindings = pillarScores.reduce(
 		(sum, p) => sum + (p.findings?.length ?? 0),
 		0,
@@ -662,7 +665,7 @@ function ActiveState({
 								const tScore = Math.round(res.totalScore);
 								const band = normalizeColorBand(res.colorBand);
 								const status = COLOR_BAND_TO_STATUS[band];
-								const pLabel = phaseDisplayName(res.phase);
+								const pLabel = phaseDisplayName(res);
 								const tFindings = pScores.reduce((sum, p) => sum + (p.findings?.length ?? 0), 0);
 								const targetSessionId = res.sessionId;
 								return (
