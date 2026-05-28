@@ -9,7 +9,9 @@ import {
   verifyUserEmailService,
   updateAvatarUrlService,
 } from './user.service';
-import { uploadAvatar as uploadToR2 } from '../../service/shared/storage.service';
+import { uploadAvatar as uploadToR2, deleteObject } from '../../service/shared/storage.service';
+import prisma from '../../Config/db';
+import { R2_PUBLIC_BASE_URL } from '../../Config/env';
 
 export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user?.id) {
@@ -52,6 +54,25 @@ export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => 
   }
   if (!req.file) {
     throw new AppError('No avatar file provided in upload request', BAD_REQUEST);
+  }
+
+  // 1. Fetch current user to check for an existing avatarUrl
+  const existingUser = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { avatarUrl: true },
+  });
+
+  // 2. If user already has an avatar, delete it first from R2 to save space
+  if (existingUser?.avatarUrl && R2_PUBLIC_BASE_URL) {
+    const base = R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
+    if (existingUser.avatarUrl.startsWith(base)) {
+      const existingKey = existingUser.avatarUrl.replace(base, '').replace(/^\/+/, '');
+      try {
+        await deleteObject(existingKey);
+      } catch (err) {
+        console.error('Failed to delete old avatar object from R2 storage before uploading:', err);
+      }
+    }
   }
 
   // Generate an unguessable unique storage key

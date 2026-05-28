@@ -62,6 +62,7 @@ export type AuthUser = {
   phone: string | null;
   avatarUrl: string | null;
   isVerified: boolean;
+  role: string;
 };
 
 export type RegisterResponse = {

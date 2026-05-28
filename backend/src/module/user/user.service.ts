@@ -3,6 +3,8 @@ import AppError from '../../service/shared/appError';
 import { NOT_FOUND, CONFLICT } from '../../service/shared/http';
 import type { UpdateProfileInput, UpdateBusinessInfoInput } from './user.types';
 import type { AuthUser } from '../auth/auth.types';
+import { deleteObject } from '../../service/shared/storage.service';
+import { R2_PUBLIC_BASE_URL } from '../../Config/env';
 
 export async function updateProfileService(
   userId: string,
@@ -48,6 +50,7 @@ export async function updateProfileService(
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
     },
   });
 
@@ -85,6 +88,7 @@ export async function updateBusinessInfoService(
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
       businessSize: true,
       staffSize: true,
       industry: true,
@@ -118,6 +122,7 @@ export async function verifyUserEmailService(userId: string): Promise<AuthUser> 
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
     },
   });
 
@@ -130,11 +135,24 @@ export async function updateAvatarUrlService(
 ): Promise<AuthUser> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true },
+    select: { id: true, avatarUrl: true },
   });
 
   if (!user) {
     throw new AppError('User not found', NOT_FOUND);
+  }
+
+  // Clean up existing avatar file from Cloudflare R2
+  if (user.avatarUrl && R2_PUBLIC_BASE_URL) {
+    const base = R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
+    if (user.avatarUrl.startsWith(base)) {
+      const existingKey = user.avatarUrl.replace(base, '').replace(/^\/+/, '');
+      try {
+        await deleteObject(existingKey);
+      } catch (err) {
+        console.error('Failed to delete old avatar object from R2 storage:', err);
+      }
+    }
   }
 
   const updated = await prisma.user.update({
@@ -147,6 +165,7 @@ export async function updateAvatarUrlService(
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
     },
   });
 

@@ -67,6 +67,11 @@ enum WebhookProcessingStatus {
   FAILED
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 // ============================================================
 // LAYER A — CONTENT (Static / Admin-Managed)
 // ============================================================
@@ -160,6 +165,7 @@ model User {
   phone        String?
   avatarUrl    String? @map("avatar_url")
   isVerified   Boolean @default(false) @map("is_verified")
+  role         UserRole  @default(USER)
 
   // Snapshotted from the originating Phase 1 AssessmentSession at registration.
   // Source of truth for Phase 2A `businessSize` filtering.

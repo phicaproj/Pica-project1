@@ -27,7 +27,6 @@ const NAV_MAIN = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Strategic Scan", icon: Radar, href: "/dashboard/strategic-scan" },
   { label: "Deep Dive Module", icon: Box, href: "/dashboard/deep-dive" },
-  { label: "Insights", icon: Lightbulb, href: "/dashboard/insights" },
   { label: "Benchmarks", icon: TrendingUp, href: "/dashboard/benchmarks" },
   { label: "Reports", icon: FileText, href: "/dashboard/reports" },
 ];
@@ -138,7 +137,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* ── Mobile sidebar overlay ── */}
         {sidebarOpen && (
           <div
@@ -147,11 +146,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
         )}
 
-        {/* ── Sidebar ── */}
+        {/* ── Sidebar (Fixed and non-scrolling) ── */}
         <aside
-          className={`fixed lg:static top-[57px] left-0 bottom-0 z-50 w-56 bg-[#0d1117] flex flex-col py-6 px-3 transition-transform duration-300 ${
+          className={`fixed top-[57px] left-0 bottom-0 z-40 w-56 bg-[#0d1117] border-r border-white/5 flex flex-col py-6 px-3 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          } lg:flex-shrink-0`}
+          }`}
         >
           <nav className="space-y-1">
             {NAV_MAIN.map((item) => (
@@ -181,8 +180,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </aside>
 
-        {/* ── Main content ── */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+        {/* ── Main content (Offset for fixed sidebar) ── */}
+        <main className="flex-1 lg:ml-56 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
           {children}
         </main>
       </div>
@@ -195,8 +194,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
 
-      {/* ── Footer ── */}
-      <footer className="text-center py-6 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117]">
+      {/* ── Footer (Offset for fixed sidebar) ── */}
+      <footer className="text-center py-6 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117] lg:ml-56">
         <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
           <span className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</span>
           <span className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</span>

@@ -110,6 +110,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
     },
   });
 
@@ -134,6 +135,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
+      role: user.role,
     },
   };
 }
@@ -151,6 +153,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
     },
   });
 
@@ -164,7 +167,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
-  const tokenPayload = { id: user.id, role: 'User' as const };
+  const tokenPayload = { id: user.id, role: user.role as 'User' | 'Admin' };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 
@@ -177,6 +180,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
+      role: user.role,
     },
     accessToken,
     refreshToken,
@@ -279,6 +283,7 @@ export async function meService(userId: string): Promise<MeResponse> {
       phone: true,
       avatarUrl: true,
       isVerified: true,
+      role: true,
       businessSize: true,
       staffSize: true,
       industry: true,
@@ -311,6 +316,7 @@ export async function meService(userId: string): Promise<MeResponse> {
       phone: user.phone,
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
+      role: user.role,
       businessSize: user.businessSize,
       hasAnyPaidPhase2AResult: paidResultCount > 0,
       staffSize: user.staffSize,

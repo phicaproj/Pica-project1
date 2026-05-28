@@ -276,6 +276,19 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
     }
   };
 
+  // Derive a human-readable role label from the enum value
+  const rawRole = initialUser?.role as string | undefined;
+  const roleLabel =
+    rawRole === "ADMIN" ? "Admin" :
+    rawRole === "USER"  ? "User"  :
+    rawRole             ? rawRole  : "User";
+
+  // Role badge colour — orange for Admin, teal for User
+  const roleBadgeClass =
+    rawRole === "ADMIN"
+      ? "bg-orange-500/20 text-orange-400 border border-orange-500/20"
+      : "bg-teal-500/20 text-teal-400 border border-teal-500/20";
+
   return (
     <div className="space-y-6">
       <input 
@@ -325,11 +338,15 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Avatar */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-6 flex flex-col items-center justify-center shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative mb-4 group">
+      {/* ── TOP CARD: Avatar + Identity (full-width, horizontal) ── */}
+      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 sm:p-8 relative overflow-hidden shadow-lg">
+        {/* Decorative glows */}
+        <div className="absolute top-0 right-0 w-56 h-56 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0 group">
             {uploading ? (
               <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center ring-4 ring-[#0d1117]">
                 <Loader className="w-6 h-6 animate-spin text-teal-400" />
@@ -340,10 +357,10 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
                   src={avatarUrl}
                   alt="Profile Avatar"
                   onClick={triggerFileInput}
-                  className={`w-full h-full object-cover transition duration-300 ${isEditing ? 'cursor-pointer group-hover:scale-105 group-hover:brightness-50' : ''}`}
+                  className={`w-full h-full object-cover transition duration-300 ${isEditing ? 'cursor-pointer group-hover:brightness-50' : ''}`}
                 />
                 {isEditing && (
-                  <div 
+                  <div
                     onClick={triggerFileInput}
                     className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider"
                   >
@@ -353,7 +370,7 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
                 )}
               </div>
             ) : (
-              <div 
+              <div
                 onClick={triggerFileInput}
                 className={`w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-[#0d1117] relative overflow-hidden group ${isEditing ? 'cursor-pointer' : ''}`}
               >
@@ -361,100 +378,117 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
                   {fullName ? fullName.substring(0, 2).toUpperCase() : "AJ"}
                 </span>
                 {isEditing && (
-                  <div 
-                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider"
-                  >
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider">
                     <Camera className="w-5 h-5 mb-1 text-orange-400" />
                     Upload
                   </div>
                 )}
               </div>
             )}
-            
+
+            {/* Camera badge — click to upload */}
             {isEditing && (
-              <button 
+              <button
                 onClick={triggerFileInput}
+                title="Change profile picture"
                 className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg transition border-2 border-[#111827] z-10"
               >
                 <Camera className="w-4 h-4" />
               </button>
             )}
           </div>
-          <h3 className="text-lg font-bold text-white mb-1">{fullName || "Alex James"}</h3>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-            ADMIN ROLE
-          </p>
+
+          {/* Name, role badge, email, verification */}
+          <div className="flex flex-col items-center sm:items-start gap-2 flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-white truncate max-w-full">
+              {fullName || "Alex James"}
+            </h3>
+            <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass}`}>
+              {roleLabel}
+            </span>
+            <p className="text-sm text-gray-400 truncate max-w-full mt-1">{email}</p>
+
+            {isVerified ? (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-400">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Email Verified
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                Email Not Verified
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM CARD: General Info form ── */}
+      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 relative">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex items-center gap-3 mb-6 relative z-10">
+          <User className="w-5 h-5 text-orange-400" />
+          <h2 className="text-lg font-bold text-white">
+            General Information
+          </h2>
         </div>
 
-        {/* Right Column: General Info */}
-        <div className="lg:col-span-2 rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 relative">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex items-center gap-3 mb-6 relative z-10">
-            <User className="w-5 h-5 text-orange-400" />
-            <h2 className="text-lg font-bold text-white">
-              General Information
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 relative z-10">
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-                FULL NAME
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-                PHONE NUMBER
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-10 disabled:opacity-60 disabled:cursor-not-allowed"
-                />
-                <PhoneIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 relative z-10">
+          <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-              EMAIL ADDRESS
+              FULL NAME
+            </label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              disabled={!isEditing}
+              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              PHONE NUMBER
             </label>
             <div className="relative">
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-32 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-10 disabled:opacity-60 disabled:cursor-not-allowed"
               />
-              {isVerified ? (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400 border border-teal-500/10">
-                  <CheckCircle2 className="w-3 h-3" /> VERIFIED
-                </span>
-              ) : (
-                <button 
-                  onClick={handleVerifyEmail}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold uppercase bg-orange-500 hover:bg-orange-600 text-white font-semibold shadow-lg shadow-orange-500/10 transition duration-300"
-                >
-                  VERIFY EMAIL
-                </button>
-              )}
+              <PhoneIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Primary email for account access and critical notifications.
-            </p>
           </div>
+        </div>
+
+        <div className="relative z-10">
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+            EMAIL ADDRESS
+          </label>
+          <div className="relative">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={!isEditing}
+              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-36 disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+            {isVerified ? (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400 border border-teal-500/10">
+                <CheckCircle2 className="w-3 h-3" /> VERIFIED
+              </span>
+            ) : (
+              <button
+                onClick={handleVerifyEmail}
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-bold uppercase bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/10 transition duration-300"
+              >
+                VERIFY EMAIL
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Primary email for account access and critical notifications.
+          </p>
         </div>
       </div>
     </div>

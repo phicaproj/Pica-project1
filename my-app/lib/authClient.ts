@@ -28,6 +28,7 @@ export interface AuthUser {
 	phone: string | null
 	avatarUrl: string | null
 	isVerified: boolean
+	role: string
 }
 
 export type BusinessSize = 'SMALL' | 'MEDIUM'
@@ -175,6 +176,7 @@ export const getMe = async () => {
 			phone: res.data.user.phone,
 			avatarUrl: res.data.user.avatarUrl,
 			isVerified: res.data.user.isVerified,
+			role: res.data.user.role,
 			staffSize: res.data.user.staffSize,
 			industry: res.data.user.industry,
 			country: res.data.user.country,
