@@ -166,7 +166,8 @@ model User {
   businessSize   BusinessSize? @map("business_size")
   staffSize      String?       @map("staff_size")
   industry       String?
-  location       String?
+  country        String?
+  state          String?
   operatingYears String?       @map("operating_years")
   annualRevenue  String?       @map("annual_revenue_range")
 

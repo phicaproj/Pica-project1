@@ -95,7 +95,8 @@ export type MeUser = AuthUser & {
   hasAnyPaidPhase2AResult: boolean;
   staffSize: string | null;
   industry: string | null;
-  location: string | null;
+  country: string | null;
+  state: string | null;
   operatingYears: string | null;
   annualRevenue: string | null;
 };

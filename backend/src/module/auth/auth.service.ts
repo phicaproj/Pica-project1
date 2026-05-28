@@ -77,6 +77,18 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
 
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
+  let country: string | null = null;
+  let state: string | null = null;
+  if (phase1Session.location) {
+    const parts = phase1Session.location.split(',').map(p => p.trim());
+    if (parts.length > 1) {
+      country = parts[parts.length - 1];
+      state = parts.slice(0, parts.length - 1).join(', ');
+    } else {
+      country = parts[0];
+    }
+  }
+
   const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
@@ -86,7 +98,8 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
       businessSize: phase1Session.businessSize,
       staffSize: phase1Session.staffSize,
       industry: phase1Session.industry,
-      location: phase1Session.location,
+      country,
+      state,
       operatingYears: phase1Session.operatingYears,
       annualRevenue: phase1Session.annualRevenue,
     },
@@ -269,7 +282,8 @@ export async function meService(userId: string): Promise<MeResponse> {
       businessSize: true,
       staffSize: true,
       industry: true,
-      location: true,
+      country: true,
+      state: true,
       operatingYears: true,
       annualRevenue: true,
     },
@@ -301,7 +315,8 @@ export async function meService(userId: string): Promise<MeResponse> {
       hasAnyPaidPhase2AResult: paidResultCount > 0,
       staffSize: user.staffSize,
       industry: user.industry,
-      location: user.location,
+      country: user.country,
+      state: user.state,
       operatingYears: user.operatingYears,
       annualRevenue: user.annualRevenue,
     },

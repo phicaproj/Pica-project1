@@ -405,7 +405,7 @@ export default function ReportsPage() {
         /* Full Dashboard Reports View */
         <>
           {/* Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col justify-between">
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-4">
                 TOTAL ASSESSMENTS
@@ -429,27 +429,6 @@ export default function ReportsPage() {
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${healthStatusColor}`}>
                     {healthStatusLabel}
                   </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col justify-between">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-4">
-                SCORE TREND
-              </h3>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-base font-bold text-white leading-none mb-1">{trendLabel}</p>
-                  <p className={`text-sm font-bold ${trendColor}`}>{trendDelta}</p>
-                </div>
-                <div className="flex items-end gap-1 h-10">
-                  {chartScores.map((s, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`w-3 rounded-sm ${idx === chartScores.length - 1 ? 'bg-teal-400' : 'bg-white/10'}`} 
-                      style={{ height: `${Math.max(10, s)}%` }} 
-                    />
-                  ))}
                 </div>
               </div>
             </div>
@@ -491,9 +470,9 @@ export default function ReportsPage() {
                   onChange={(e) => setSelectedType(e.target.value)}
                   className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
                 >
-                  <option value="ALL">All Types</option>
-                  <option value="STRATEGIC">Strategic Scan</option>
-                  <option value="DEEP_DIVE">Deep Dive</option>
+                  <option value="ALL" className="bg-[#111827] text-white">All Types</option>
+                  <option value="STRATEGIC" className="bg-[#111827] text-white">Strategic Scan</option>
+                  <option value="DEEP_DIVE" className="bg-[#111827] text-white">Deep Dive</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               </div>
@@ -505,10 +484,10 @@ export default function ReportsPage() {
                   onChange={(e) => setSelectedScore(e.target.value)}
                   className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
                 >
-                  <option value="ALL">All Scores</option>
-                  <option value="HIGH">High (&gt;=70%)</option>
-                  <option value="MEDIUM">Medium (40% - 69%)</option>
-                  <option value="LOW">Critical (&lt;40%)</option>
+                  <option value="ALL" className="bg-[#111827] text-white">All Scores</option>
+                  <option value="HIGH" className="bg-[#111827] text-white">High (&gt;=70%)</option>
+                  <option value="MEDIUM" className="bg-[#111827] text-white">Medium (40% - 69%)</option>
+                  <option value="LOW" className="bg-[#111827] text-white">Critical (&lt;40%)</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               </div>
@@ -520,9 +499,9 @@ export default function ReportsPage() {
                   onChange={(e) => setSelectedStatus(e.target.value)}
                   className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="UNLOCKED">Unlocked</option>
-                  <option value="LOCKED">Locked</option>
+                  <option value="ALL" className="bg-[#111827] text-white">All Statuses</option>
+                  <option value="UNLOCKED" className="bg-[#111827] text-white">Unlocked</option>
+                  <option value="LOCKED" className="bg-[#111827] text-white">Locked</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               </div>

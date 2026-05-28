@@ -38,7 +38,8 @@ export interface MeUser extends AuthUser {
 	hasPaidPhase2A: boolean
 	staffSize: string | null
 	industry: string | null
-	location: string | null
+	country: string | null
+	state: string | null
 	operatingYears: string | null
 	annualRevenue: string | null
 }
@@ -176,7 +177,8 @@ export const getMe = async () => {
 			isVerified: res.data.user.isVerified,
 			staffSize: res.data.user.staffSize,
 			industry: res.data.user.industry,
-			location: res.data.user.location,
+			country: res.data.user.country,
+			state: res.data.user.state,
 			operatingYears: res.data.user.operatingYears,
 			annualRevenue: res.data.user.annualRevenue,
 			businessSize: res.data.user.businessSize,
@@ -390,7 +392,8 @@ export const updateUserProfile = async (payload: {
 export const updateUserBusiness = async (payload: {
 	businessName?: string
 	industry?: string
-	location?: string
+	country?: string
+	state?: string | null
 	operatingYears?: string
 	staffSize?: string
 	annualRevenue?: string

@@ -9,7 +9,8 @@ export const updateProfileSchema = z.object({
 export const updateBusinessInfoSchema = z.object({
   businessName: z.string().min(3).max(100).optional(),
   industry: z.string().min(2).max(100).optional(),
-  location: z.string().min(2).max(100).optional(),
+  country: z.string().min(1).max(100).optional(),
+  state: z.string().min(1).max(100).optional().nullable(),
   operatingYears: z.string().min(1).max(20).optional(),
   staffSize: z.string().min(1).max(50).optional(),
   annualRevenue: z.string().min(2).max(100).optional(),
