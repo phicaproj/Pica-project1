@@ -30,9 +30,16 @@ export const answerAssessmentInput = z.object({
 		.uuid('Selected option ID must be a valid UUID'),
 })
 
+export const startPhase2BInput = z.object({
+	pillarId: z
+		.string({ error: 'Pillar ID is required' })
+		.uuid('Pillar ID must be a valid UUID'),
+})
+
 export type StartAssessmentInput = z.infer<typeof startAssessmentInput>
 export type AssessmentSessionParams = z.infer<typeof assessmentSessionParams>
 export type AnswerAssessmentInput = z.infer<typeof answerAssessmentInput>
+export type StartPhase2BInput = z.infer<typeof startPhase2BInput>
 
 export type StartAssessmentResponse = {
 	message: string
@@ -55,4 +62,39 @@ export type SubmitAssessmentResponse = {
 export type StartPhase2AResponse = {
 	message: string
 	sessionId: string
+}
+
+export type StartPhase2BResponse = {
+	message: string
+	sessionId: string
+	pillarId: string
+	questionCount: number
+}
+
+export type Phase2BPillarStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED'
+
+export type Phase2BPillarEntry = {
+	pillarId: string
+	pillarCode: string
+	pillarName: string
+	sessionId: string | null
+	status: Phase2BPillarStatus
+	unlockedAt: Date
+}
+
+export type MyPhase2BPillarsResponse = {
+	message: string
+	pillars: Phase2BPillarEntry[]
+}
+
+export type SessionResponseEntry = {
+	questionId: string
+	selectedOptionId: string
+}
+
+export type SessionResponsesResponse = {
+	message: string
+	answeredCount: number
+	totalCount: number
+	responses: SessionResponseEntry[]
 }

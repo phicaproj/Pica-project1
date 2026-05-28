@@ -70,46 +70,79 @@ export async function initPaymentService(
     throw new AppError('User not found', NOT_FOUND);
   }
 
-  // Per-result paywall: validate the target session + result.
-  const session = await prisma.assessmentSession.findUnique({
-    where: { id: input.sessionId },
-    select: {
-      id: true,
-      userId: true,
-      phase: true,
-      status: true,
-      result: { select: { id: true, isPaid: true } },
-    },
-  });
-  if (!session) {
-    throw new AppError('Assessment session not found', NOT_FOUND);
-  }
-  if (session.userId !== user.id) {
-    throw new AppError('You are not authorized to pay for this session', FORBIDDEN);
-  }
-  if (input.plan === Plan.PHASE2A && session.phase !== Phase.PHASE2A) {
-    throw new AppError(
-      'Plan PHASE2A can only be applied to a PHASE2A session',
-      UNPROCESSABLE_CONTENT
-    );
-  }
-  if (session.status !== SessionStatus.COMPLETED) {
-    throw new AppError(
-      'Phase 2A session must be submitted before payment can be initialized',
-      CONFLICT
-    );
-  }
-  if (!session.result) {
-    throw new AppError(
-      'No result exists for this session yet — submit the assessment first',
-      CONFLICT
-    );
-  }
-  if (session.result.isPaid) {
-    throw new AppError(
-      'This result has already been paid for. Retake the assessment for a new chargeable result.',
-      CONFLICT
-    );
+  // The two plans validate against different targets — Phase 2A pays for a
+  // specific completed SessionResult; Phase 2B pays for a pillar credit
+  // (Phase2BPillarUnlock) which is later redeemed via /assessment/phase2b/start.
+  let paymentSessionId: string | null = null;
+  let paymentPillarId: string | null = null;
+
+  if (input.plan === Plan.PHASE2A) {
+    const session = await prisma.assessmentSession.findUnique({
+      where: { id: input.sessionId },
+      select: {
+        id: true,
+        userId: true,
+        phase: true,
+        status: true,
+        result: { select: { id: true, isPaid: true } },
+      },
+    });
+    if (!session) {
+      throw new AppError('Assessment session not found', NOT_FOUND);
+    }
+    if (session.userId !== user.id) {
+      throw new AppError('You are not authorized to pay for this session', FORBIDDEN);
+    }
+    if (session.phase !== Phase.PHASE2A) {
+      throw new AppError(
+        'Plan PHASE2A can only be applied to a PHASE2A session',
+        UNPROCESSABLE_CONTENT
+      );
+    }
+    if (session.status !== SessionStatus.COMPLETED) {
+      throw new AppError(
+        'Phase 2A session must be submitted before payment can be initialized',
+        CONFLICT
+      );
+    }
+    if (!session.result) {
+      throw new AppError(
+        'No result exists for this session yet — submit the assessment first',
+        CONFLICT
+      );
+    }
+    if (session.result.isPaid) {
+      throw new AppError(
+        'This result has already been paid for. Retake the assessment for a new chargeable result.',
+        CONFLICT
+      );
+    }
+    paymentSessionId = session.id;
+  } else {
+    // PHASE2B_PILLAR — validate the pillar and reject if an open (unconsumed)
+    // unlock already exists. "One open unlock per (user, pillar)" is enforced
+    // here in app code rather than via a DB partial-unique index, since users
+    // can hold many historical CONSUMED unlocks for the same pillar over time.
+    const pillar = await prisma.pillar.findUnique({
+      where: { id: input.pillarId },
+      select: { id: true, isActive: true },
+    });
+    if (!pillar || !pillar.isActive) {
+      throw new AppError('Pillar not found', NOT_FOUND);
+    }
+    const openUnlock = await prisma.phase2BPillarUnlock.findFirst({
+      where: { userId: user.id, pillarId: pillar.id, consumedAt: null },
+      select: { id: true, sessionId: true },
+    });
+    if (openUnlock) {
+      throw new AppError(
+        openUnlock.sessionId
+          ? 'You already started a Phase 2B session for this pillar — finish it before purchasing again.'
+          : 'You already have an unclaimed Phase 2B unlock for this pillar.',
+        CONFLICT
+      );
+    }
+    paymentPillarId = pillar.id;
   }
 
   const reference = newPaymentReference();
@@ -120,7 +153,8 @@ export async function initPaymentService(
   const payment = await prisma.payment.create({
     data: {
       userId: user.id,
-      sessionId: input.sessionId,
+      sessionId: paymentSessionId,
+      pillarId: paymentPillarId,
       plan: input.plan,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
@@ -140,7 +174,8 @@ export async function initPaymentService(
     metadata: {
       paymentId: payment.id,
       userId: user.id,
-      sessionId: input.sessionId,
+      sessionId: paymentSessionId,
+      pillarId: paymentPillarId,
       plan: input.plan,
     },
   });
@@ -424,6 +459,7 @@ async function applyVerificationResult(
       id: true,
       userId: true,
       sessionId: true,
+      pillarId: true,
       plan: true,
       status: true,
       amount: true,
@@ -455,23 +491,47 @@ async function applyVerificationResult(
       },
     });
 
-    // Per-result paywall: on first successful Phase 2A payment, mark the
-    // SessionResult as paid. The Payment row carries the sessionId set at
-    // init time; legacy rows without a sessionId are skipped and logged.
-    if (flippingToSuccess && payment.plan === Plan.PHASE2A) {
-      if (!payment.sessionId) {
-        console.warn(
-          `[payment:${opts.source}] SUCCESS Phase 2A payment ${payment.id} has no sessionId — cannot mark result paid`
-        );
-      } else {
-        await tx.sessionResult.update({
-          where: { sessionId: payment.sessionId },
-          data: {
-            isPaid: true,
-            paidAt: paidAt ?? new Date(),
-            paidByPaymentId: payment.id,
-          },
-        });
+    if (flippingToSuccess) {
+      // Per-result paywall: on first successful Phase 2A payment, mark the
+      // SessionResult as paid. The Payment row carries the sessionId set at
+      // init time; legacy rows without a sessionId are skipped and logged.
+      if (payment.plan === Plan.PHASE2A) {
+        if (!payment.sessionId) {
+          console.warn(
+            `[payment:${opts.source}] SUCCESS Phase 2A payment ${payment.id} has no sessionId — cannot mark result paid`
+          );
+        } else {
+          await tx.sessionResult.update({
+            where: { sessionId: payment.sessionId },
+            data: {
+              isPaid: true,
+              paidAt: paidAt ?? new Date(),
+              paidByPaymentId: payment.id,
+            },
+          });
+        }
+      }
+
+      // Phase 2B unlock: grant a redeemable credit for the pillar. The user
+      // claims it later via POST /api/assessment/phase2b/start. Idempotent via
+      // the paymentId @unique constraint — a webhook+verify race can't double-grant.
+      if (payment.plan === Plan.PHASE2B_PILLAR) {
+        if (!payment.pillarId) {
+          console.warn(
+            `[payment:${opts.source}] SUCCESS Phase 2B payment ${payment.id} has no pillarId — cannot grant unlock`
+          );
+        } else {
+          await tx.phase2BPillarUnlock.upsert({
+            where: { paymentId: payment.id },
+            create: {
+              userId: payment.userId,
+              pillarId: payment.pillarId,
+              paymentId: payment.id,
+              sessionId: null,
+            },
+            update: {}, // no-op on race — first writer wins
+          });
+        }
       }
     }
   });
@@ -480,13 +540,20 @@ async function applyVerificationResult(
     // Best-effort. Source is logged so duplicate sends from verify+webhook
     // races can be diagnosed if they ever happen (the email is idempotent
     // from the user's perspective — they'd just see the same mail twice).
+    //
+    // For Phase 2B we point the user at the dashboard where they'll find the
+    // newly-granted pillar credit. The email helper is plan-agnostic.
+    const reportDownloadUrl =
+      payment.plan === Plan.PHASE2B_PILLAR
+        ? `${APP_URL}/dashboard/phase2b`
+        : `${APP_URL}/dashboard/reports`;
     void sendPaymentSuccessEmail({
       toEmail: payment.customerEmail,
       businessName: payment.customerBusinessName,
       amount: Number(payment.amount),
       currency: payment.currency,
       reference,
-      reportDownloadUrl: `${APP_URL}/dashboard/reports`,
+      reportDownloadUrl,
     }).catch((error) => {
       console.error(`[payment:${opts.source}] unlock email failed:`, error);
     });

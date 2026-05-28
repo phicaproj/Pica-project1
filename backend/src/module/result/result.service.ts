@@ -4,6 +4,7 @@ import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
 import { generatePhase1PDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
+import { uploadPdf } from '../../service/shared/storage.service';
 import { APP_URL } from '../../Config/env';
 import type { ScoringResultPayload } from '../scoring/scoring.types';
 import type { GetResultResponse, ResultPillarScoreResponse, ResultResponse } from './result.types';
@@ -89,10 +90,13 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     ],
   });
 
-  // Phase 2A is paywalled per-result: each completed session produces a
-  // SessionResult that is independently paid/unpaid. Retakes generate a new
-  // unpaid result and re-trigger the paywall.
-  const isPaywalled = session.phase === Phase.PHASE2A && !result.isPaid;
+  // Phase 2A and Phase 2B are paywalled per-result: each completed session
+  // produces a SessionResult that is independently paid/unpaid. For 2A the
+  // paywall is gated by the Paystack payment; for 2B it is gated by consuming
+  // a Phase2BPillarUnlock at submit time (which sets isPaid: true directly).
+  const isPaywalled =
+    (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) &&
+    !result.isPaid;
 
   const payload: ResultResponse = {
     ...result,
@@ -156,9 +160,10 @@ export async function getAllCompletedResultsForUserService(
  * Authorization rules:
  *   - Phase 1: open (anyone with the sessionId can download — same as the
  *     auto-emailed PDF on submit).
- *   - Phase 2A: requires the authenticated user to own the session AND for
- *     this specific SessionResult to be isPaid === true. Each result is
- *     independently paywalled.
+ *   - Phase 2A / Phase 2B: requires the authenticated user to own the session
+ *     AND for this specific SessionResult to be isPaid === true. Each result
+ *     is independently paywalled. (For 2B, isPaid is flipped at submit time
+ *     because the pre-purchased unlock IS the payment receipt.)
  */
 export async function downloadResultPdfService(
   sessionId: string,
@@ -192,21 +197,21 @@ export async function downloadResultPdfService(
 
   const result = await prisma.sessionResult.findUnique({
     where: { sessionId },
-    select: { insightPayload: true, isPaid: true },
+    select: { insightPayload: true, isPaid: true, reportPdfUrl: true },
   });
 
   if (!result?.insightPayload) {
     throw new AppError('Report data not found for this session', NOT_FOUND);
   }
 
-  // Phase 2A: owner-only, per-result paywall.
-  if (session.phase === Phase.PHASE2A) {
+  // Phase 2A / Phase 2B: owner-only, per-result paywall.
+  if (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) {
     if (!authenticatedUserId || session.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to download this report', FORBIDDEN);
     }
     if (!result.isPaid) {
       throw new AppError(
-        'Payment is required to download the Phase 2A report',
+        `Payment is required to download the ${session.phase} report`,
         FORBIDDEN
       );
     }
@@ -218,11 +223,39 @@ export async function downloadResultPdfService(
   const pdfBuffer = await generatePhase1PDF(scoringPayload, businessName);
   const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
 
+  // Persist the PDF to R2 on first download — subsequent downloads reuse the
+  // cached URL instead of re-uploading. Phase 1 PDFs are already uploaded at
+  // submit-time, so this primarily covers Phase 2A's first authorized download.
+  // Best-effort: a failure here shouldn't block the user's download.
+  let reportPdfUrl = result.reportPdfUrl;
+  if (!reportPdfUrl) {
+    const phaseFolder =
+      session.phase === Phase.PHASE2A
+        ? 'phase2a'
+        : session.phase === Phase.PHASE2B
+          ? 'phase2b'
+          : 'phase1';
+    try {
+      const uploaded = await uploadPdf(
+        `reports/${phaseFolder}/${sessionId}.pdf`,
+        pdfBuffer
+      );
+      reportPdfUrl = uploaded.url;
+      await prisma.sessionResult.update({
+        where: { sessionId },
+        data: { reportPdfUrl, generatedAt: new Date() },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('downloadResultPdfService: R2 upload failed:', message);
+    }
+  }
+
   // Fire-and-forget: send the report email without blocking the download.
-  // For Phase 2A use the authenticated user's email (their account). For Phase 1
-  // fall back to leadEmail (no user yet).
+  // For Phase 2A / 2B use the authenticated user's email (their account).
+  // For Phase 1 fall back to leadEmail (no user yet).
   const recipientEmail =
-    session.phase === Phase.PHASE2A
+    session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B
       ? session.user?.email ?? null
       : session.leadEmail ?? session.user?.email ?? null;
 
@@ -231,25 +264,25 @@ export async function downloadResultPdfService(
       toEmail: recipientEmail,
       businessName,
       pdfBuffer,
-      reportPdfUrl: `${APP_URL}/result/${sessionId}/pdf`,
+      // Prefer the durable R2 URL; fall back to the backend route if the
+      // upload didn't succeed so the email still works.
+      reportPdfUrl: reportPdfUrl ?? `${APP_URL}/result/${sessionId}/pdf`,
     }).catch((error) => {
       console.error('downloadResultPdfService: email send failed:', error);
     });
   }
 
-  // For Phase 2A, mark the session REPORT_GENERATED on first download so
-  // SessionResult.generatedAt + status reflect that the report has been issued.
-  if (session.phase === Phase.PHASE2A && session.status !== SessionStatus.REPORT_GENERATED) {
-    await prisma.$transaction([
-      prisma.assessmentSession.update({
-        where: { id: sessionId },
-        data: { status: SessionStatus.REPORT_GENERATED },
-      }),
-      prisma.sessionResult.update({
-        where: { sessionId },
-        data: { generatedAt: new Date() },
-      }),
-    ]);
+  // For Phase 2A / Phase 2B, mark the session REPORT_GENERATED on first download
+  // so session status reflects that the report has been issued. generatedAt is
+  // already set above as part of the R2 upload block.
+  if (
+    (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) &&
+    session.status !== SessionStatus.REPORT_GENERATED
+  ) {
+    await prisma.assessmentSession.update({
+      where: { id: sessionId },
+      data: { status: SessionStatus.REPORT_GENERATED },
+    });
   }
 
   return { pdfBuffer, filename };

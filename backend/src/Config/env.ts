@@ -25,3 +25,10 @@ export const JWT_PASSWORD_RESET_EXPIRE = getEnv('JWT_PASSWORD_RESET_EXPIRE');
 export const PAYSTACK_SECRET_KEY = getEnv('PAYSTACK_SECRET_KEY');
 export const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL ?? 'https://api.paystack.co';
 export const APP_URL = process.env.APP_URL ?? 'https://pica.beauvision.com';
+
+// Cloudflare R2 (S3-compatible object storage)
+export const R2_ACCOUNT_ID = getEnv('R2_ACCOUNT_ID');
+export const R2_ACCESS_KEY_ID = getEnv('R2_ACCESS_KEY_ID');
+export const R2_SECRET_ACCESS_KEY = getEnv('R2_SECRET_ACCESS_KEY');
+export const R2_BUCKET = getEnv('R2_BUCKET');
+export const R2_PUBLIC_BASE_URL = getEnv('R2_PUBLIC_BASE_URL');

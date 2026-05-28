@@ -6,12 +6,16 @@ import {
 	answerAssessmentInput,
 	assessmentSessionParams,
 	startAssessmentInput,
+	startPhase2BInput,
 } from './assessment.types'
 import {
 	answerAssessmentService,
+	getMyPhase2BPillarsService,
 	startAssessmentService,
 	startPhase2AService,
+	startPhase2BService,
 	submitAssessmentService,
+	getSessionResponsesService,
 } from './assessment.service'
 
 export const startAssessment = asyncHandler(
@@ -34,6 +38,29 @@ export const startPhase2A = asyncHandler(
 	},
 )
 
+export const startPhase2B = asyncHandler(
+	async (req: Request, res: Response) => {
+		if (!req.user?.id) {
+			throw new AppError('Authentication required', UNAUTHORIZED)
+		}
+		const { pillarId } = startPhase2BInput.parse(req.body)
+		const result = await startPhase2BService(req.user.id, pillarId)
+
+		return res.status(CREATED).json(result)
+	},
+)
+
+export const getMyPhase2BPillars = asyncHandler(
+	async (req: Request, res: Response) => {
+		if (!req.user?.id) {
+			throw new AppError('Authentication required', UNAUTHORIZED)
+		}
+		const result = await getMyPhase2BPillarsService(req.user.id)
+
+		return res.status(OK).json(result)
+	},
+)
+
 export const answerAssessment = asyncHandler(
 	async (req: Request, res: Response) => {
 		const { sessionId } = assessmentSessionParams.parse(req.params)
@@ -48,6 +75,18 @@ export const submitAssessment = asyncHandler(
 	async (req: Request, res: Response) => {
 		const { sessionId } = assessmentSessionParams.parse(req.params)
 		const result = await submitAssessmentService(sessionId, req.user?.id)
+
+		return res.status(OK).json(result)
+	},
+)
+
+export const getSessionResponses = asyncHandler(
+	async (req: Request, res: Response) => {
+		if (!req.user?.id) {
+			throw new AppError('Authentication required', UNAUTHORIZED)
+		}
+		const { sessionId } = assessmentSessionParams.parse(req.params)
+		const result = await getSessionResponsesService(sessionId, req.user.id)
 
 		return res.status(OK).json(result)
 	},

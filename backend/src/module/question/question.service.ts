@@ -8,10 +8,12 @@ import {
   UNPROCESSABLE_CONTENT,
 } from '../../service/shared/http';
 import type {
+  AllPillarsResponse,
   Phase1QuestionsResponse,
   Phase2APillarResponse,
   Phase2AQuestionResponse,
   Phase2AQuestionsResponse,
+  Phase2BQuestionsResponse,
   PillarResponse,
   QuestionResponse,
 } from './question.types';
@@ -196,5 +198,84 @@ export async function getPhase2AQuestionsService(
     answeredCount: answers.length,
     totalCount: snapshot.length,
     pillars: response,
+  };
+}
+
+/**
+ * Returns every active PHASE2B question for a single pillar, ordered by
+ * displayOrder. Phase 2B is per-pillar — a deep-dive session covers exactly
+ * one pillar's question set, unlike Phase 2A which spans all pillars.
+ *
+ * Caller responsibility: authentication is enforced at the route layer;
+ * ownership of the related Phase2BPillarUnlock is enforced inside
+ * startPhase2BService when the user begins a session. This endpoint itself
+ * is safe to expose to any authenticated user since the questions are not
+ * confidential — only the answers and findings are.
+ */
+export async function getPhase2BQuestionsService(
+  pillarId: string
+): Promise<Phase2BQuestionsResponse> {
+  const pillar = await prisma.pillar.findUnique({
+    where: { id: pillarId },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      displayOrder: true,
+      isActive: true,
+    },
+  });
+
+  if (!pillar || !pillar.isActive) {
+    throw new AppError('Pillar not found', NOT_FOUND);
+  }
+
+  const questions = await prisma.question.findMany({
+    where: {
+      pillarId: pillar.id,
+      phase: Phase.PHASE2B,
+      isActive: true,
+    },
+    select: questionSelect,
+    orderBy: { displayOrder: 'asc' },
+  });
+
+  if (questions.length === 0) {
+    throw new AppError(
+      `No active Phase 2B questions configured for pillar ${pillar.name}.`,
+      NOT_FOUND
+    );
+  }
+
+  return {
+    message: 'Phase 2B questions fetched successfully',
+    pillar: {
+      id: pillar.id,
+      code: pillar.code,
+      name: pillar.name,
+      description: pillar.description,
+      displayOrder: pillar.displayOrder,
+    },
+    questions: questions.map(toQuestionResponse),
+  };
+}
+
+export async function getAllPillarsService(): Promise<AllPillarsResponse> {
+  const pillars = await prisma.pillar.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      displayOrder: true,
+    },
+    orderBy: { displayOrder: 'asc' },
+  });
+
+  return {
+    message: 'Pillars fetched successfully',
+    pillars,
   };
 }

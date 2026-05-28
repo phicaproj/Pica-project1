@@ -5,11 +5,17 @@ import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../ser
 import { computeScoring } from '../scoring/scoring.service';
 import { generatePhase1PDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
+import { uploadPdf } from '../../service/shared/storage.service';
 import type {
   AnswerAssessmentInput,
+  MyPhase2BPillarsResponse,
+  Phase2BPillarEntry,
+  Phase2BPillarStatus,
+  SessionResponsesResponse,
   StartAssessmentInput,
   StartAssessmentResponse,
   StartPhase2AResponse,
+  StartPhase2BResponse,
   SubmitAssessmentResponse,
   AnswerAssessmentResponse,
 } from './assessment.types';
@@ -158,8 +164,9 @@ export async function answerAssessmentService(
     throw new AppError('Assessment session is no longer editable', CONFLICT);
   }
 
-  // Phase 2A is per-user — enforce ownership
-  if (session.phase === Phase.PHASE2A) {
+  // Phase 2A and Phase 2B are per-user with a frozen question snapshot —
+  // enforce ownership and constrain answers to the snapshot.
+  if (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) {
     if (!authenticatedUserId || session.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to modify this session', FORBIDDEN);
     }
@@ -167,7 +174,7 @@ export async function answerAssessmentService(
     const snapshot = (session.selectedQuestionIds ?? []) as string[];
     if (!Array.isArray(snapshot) || !snapshot.includes(data.questionId)) {
       throw new AppError(
-        'Question does not belong to this Phase 2A session',
+        `Question does not belong to this ${session.phase} session`,
         UNPROCESSABLE_CONTENT
       );
     }
@@ -270,6 +277,13 @@ export async function submitAssessmentService(
     return submitPhase2AService(sessionId);
   }
 
+  if (sessionPhase.phase === Phase.PHASE2B) {
+    if (!authenticatedUserId || sessionPhase.userId !== authenticatedUserId) {
+      throw new AppError('You are not authorized to submit this session', FORBIDDEN);
+    }
+    return submitPhase2BService(sessionId);
+  }
+
   return submitPhase1Service(sessionId);
 }
 
@@ -360,15 +374,30 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
     }
   );
 
-  // After scoring resolves, generate PDF and send email (Phase 1 only — best-effort)
+  // After scoring resolves, generate PDF, persist to R2, and email it
+  // (Phase 1 only — best-effort; failures don't roll back the submission).
   try {
     const pdfBuffer = await generatePhase1PDF(
       transactionResult.result,
       transactionResult.session.businessName
     );
 
-    // TODO: Update with actual PDF URL from storage service
-    const reportPdfUrl = `${process.env.APP_URL || 'https://pica.beauvision.com'}/reports/${sessionId}`;
+    // Upload to R2 under a stable per-session key — re-submitting/regenerating
+    // overwrites the same object instead of leaving orphans.
+    const { url: reportPdfUrl } = await uploadPdf(
+      `reports/phase1/${sessionId}.pdf`,
+      pdfBuffer
+    );
+
+    // Persist the public URL so subsequent downloads can stream from R2
+    // instead of regenerating the PDF on every request.
+    await prisma.sessionResult.update({
+      where: { sessionId },
+      data: {
+        reportPdfUrl,
+        generatedAt: new Date(),
+      },
+    });
 
     if (!transactionResult.session.leadEmail) {
       throw new Error('Lead email is missing');
@@ -588,5 +617,406 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
   return {
     message: 'Phase 2A session started successfully',
     sessionId: session.id,
+  };
+}
+
+/**
+ * Claims a Phase 2B unlock and creates a per-pillar deep-dive session.
+ *
+ * Preconditions (raised as AppError otherwise):
+ *   - Pillar must exist and be active.
+ *   - User must hold an open (consumedAt: null, sessionId: null) Phase2BPillarUnlock
+ *     for the pillar — granted by a previous successful PHASE2B_PILLAR payment.
+ *   - At least one active PHASE2B question must exist for the pillar.
+ *
+ * Behaviour:
+ *   - Snapshots all active PHASE2B question IDs for the pillar onto
+ *     selectedQuestionIds so admin edits mid-session don't change the user's set.
+ *   - Sets unlock.sessionId atomically with session creation — the unlock is
+ *     now "claimed" against this session and cannot be re-used to start another.
+ *   - Idempotent: a subsequent call with the same already-claimed unlock returns
+ *     the existing IN_PROGRESS session instead of erroring.
+ */
+export async function startPhase2BService(
+  userId: string,
+  pillarId: string
+): Promise<StartPhase2BResponse> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      businessSize: true,
+      staffSize: true,
+      industry: true,
+      location: true,
+      operatingYears: true,
+      annualRevenue: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  const pillar = await prisma.pillar.findUnique({
+    where: { id: pillarId },
+    select: { id: true, isActive: true, name: true },
+  });
+  if (!pillar || !pillar.isActive) {
+    throw new AppError('Pillar not found', NOT_FOUND);
+  }
+
+  // Resume path: an open unlock with sessionId set means the user already
+  // started this 2B run and we should just return the existing session.
+  const existingUnlock = await prisma.phase2BPillarUnlock.findFirst({
+    where: {
+      userId: user.id,
+      pillarId: pillar.id,
+      consumedAt: null,
+    },
+    select: {
+      id: true,
+      sessionId: true,
+      session: {
+        select: { id: true, status: true, selectedQuestionIds: true },
+      },
+    },
+  });
+
+  if (!existingUnlock) {
+    throw new AppError(
+      'No active Phase 2B unlock for this pillar — purchase the pillar first.',
+      FORBIDDEN
+    );
+  }
+
+  if (
+    existingUnlock.session &&
+    existingUnlock.session.status === SessionStatus.IN_PROGRESS
+  ) {
+    const snapshot = (existingUnlock.session.selectedQuestionIds ?? []) as string[];
+    return {
+      message: 'Resuming existing Phase 2B session.',
+      sessionId: existingUnlock.session.id,
+      pillarId: pillar.id,
+      questionCount: snapshot.length,
+    };
+  }
+
+  // Snapshot every active PHASE2B question for this pillar, ordered for
+  // deterministic display. No per-pillar count enforced — whatever the admin
+  // has seeded is what the user gets.
+  const questions = await prisma.question.findMany({
+    where: {
+      pillarId: pillar.id,
+      phase: Phase.PHASE2B,
+      isActive: true,
+    },
+    select: { id: true },
+    orderBy: { displayOrder: 'asc' },
+  });
+
+  if (questions.length === 0) {
+    throw new AppError(
+      `No active Phase 2B questions configured for pillar ${pillar.name}.`,
+      UNPROCESSABLE_CONTENT
+    );
+  }
+
+  const selectedQuestionIds = questions.map((q) => q.id);
+
+  const created = await prisma.$transaction(async (tx) => {
+    const session = await tx.assessmentSession.create({
+      data: {
+        userId: user.id,
+        phase: Phase.PHASE2B,
+        pillarId: pillar.id,
+        status: SessionStatus.IN_PROGRESS,
+        // leadEmail intentionally null (auth path, not lead-capture).
+        staffSize: user.staffSize,
+        businessName: user.businessName ?? '',
+        industry: user.industry ?? '',
+        location: user.location ?? '',
+        operatingYears: user.operatingYears ?? '',
+        annualRevenue: user.annualRevenue ?? '',
+        businessSize: user.businessSize,
+        selectedQuestionIds: selectedQuestionIds as unknown as Prisma.InputJsonValue,
+      },
+      select: { id: true },
+    });
+
+    // Claim the unlock — the @unique on sessionId guarantees one unlock per session.
+    await tx.phase2BPillarUnlock.update({
+      where: { id: existingUnlock.id },
+      data: { sessionId: session.id },
+    });
+
+    return session;
+  });
+
+  return {
+    message: 'Phase 2B session started successfully',
+    sessionId: created.id,
+    pillarId: pillar.id,
+    questionCount: selectedQuestionIds.length,
+  };
+}
+
+/**
+ * Submits a Phase 2B session. Mirrors submitPhase2AService with three
+ * differences:
+ *   - Uses the session's snapshot as questionIdScope (single-pillar set).
+ *   - Writes SessionResult with isPaid: true immediately — the Phase 2B
+ *     unlock IS the payment artifact, so the result is paid the moment
+ *     the user submits (per schema:413-432 lifecycle comment).
+ *   - Marks the matching Phase2BPillarUnlock.consumedAt inside the same tx.
+ * After the transaction: generate the PDF, upload to R2, send the report
+ * email — identical to Phase 1's post-submit flow.
+ */
+async function submitPhase2BService(sessionId: string): Promise<SubmitAssessmentResponse> {
+  const transactionResult = await prisma.$transaction(
+    async (tx) => {
+      const session = await tx.assessmentSession.findUnique({
+        where: { id: sessionId },
+        select: {
+          id: true,
+          status: true,
+          phase: true,
+          userId: true,
+          pillarId: true,
+          businessName: true,
+          businessSize: true,
+          selectedQuestionIds: true,
+          user: { select: { email: true } },
+        },
+      });
+
+      if (!session) {
+        throw new AppError('Assessment session not found', NOT_FOUND);
+      }
+
+      if (session.status !== SessionStatus.IN_PROGRESS) {
+        throw new AppError('Assessment session has already been submitted', CONFLICT);
+      }
+
+      if (!session.pillarId) {
+        throw new AppError(
+          'Phase 2B session is missing its pillar — cannot submit',
+          UNPROCESSABLE_CONTENT
+        );
+      }
+
+      const snapshot = (session.selectedQuestionIds ?? []) as string[];
+      if (!Array.isArray(snapshot) || snapshot.length === 0) {
+        throw new AppError(
+          'Phase 2B session has no question snapshot — cannot submit',
+          UNPROCESSABLE_CONTENT
+        );
+      }
+
+      const answered = await tx.sessionResponse.findMany({
+        where: { sessionId, questionId: { in: snapshot } },
+        select: { questionId: true },
+      });
+
+      if (answered.length !== snapshot.length) {
+        throw new AppError(
+          `Assessment is incomplete. Answer all ${snapshot.length} questions before submitting.`,
+          UNPROCESSABLE_CONTENT
+        );
+      }
+
+      await tx.assessmentSession.update({
+        where: { id: sessionId },
+        data: {
+          status: SessionStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+
+      const result = await computeScoring(tx, sessionId, {
+        phase: Phase.PHASE2B,
+        questionIdScope: snapshot,
+      });
+
+      // The Phase 2B unlock IS the payment receipt — flip isPaid immediately
+      // so getResult/download share the same auth path as paid Phase 2A.
+      const now = new Date();
+      await tx.sessionResult.create({
+        data: {
+          sessionId,
+          totalScore: new Prisma.Decimal(result.totalScore),
+          colorBand: result.colorBand,
+          hasAnyKnockout: result.hasAnyKnockout,
+          knockoutQuestionIds: JSON.parse(JSON.stringify(result.knockoutQuestionIds)),
+          insightPayload: JSON.parse(JSON.stringify(result)),
+          isPaid: true,
+          paidAt: now,
+        },
+        select: { id: true },
+      });
+
+      await tx.sessionPillarScore.createMany({
+        data: result.pillarScores.map((pillarScore) => ({
+          sessionId,
+          pillarId: pillarScore.pillarId,
+          rawScore: pillarScore.rawScore,
+          maxPossibleScore: pillarScore.maxPossibleScore,
+          weightedScore: new Prisma.Decimal(pillarScore.weightedScore),
+          hasKnockout: pillarScore.hasKnockout,
+          colorBand: pillarScore.colorBand,
+          insightRuleApplied: pillarScore.insightRuleApplied,
+          findings: JSON.parse(JSON.stringify(pillarScore.findings)),
+        })),
+      });
+
+      // Consume the unlock. Unique on sessionId, so this exactly identifies
+      // the row claimed by startPhase2BService.
+      await tx.phase2BPillarUnlock.update({
+        where: { sessionId },
+        data: { consumedAt: now },
+      });
+
+      return {
+        sessionId,
+        result,
+        businessName: session.businessName,
+        recipientEmail: session.user?.email ?? null,
+      };
+    },
+    {
+      timeout: 30000,
+    }
+  );
+
+  // After scoring resolves, generate PDF, persist to R2, and email it —
+  // best-effort; failures here don't roll back the submission.
+  try {
+    const pdfBuffer = await generatePhase1PDF(
+      transactionResult.result,
+      transactionResult.businessName
+    );
+
+    const { url: reportPdfUrl } = await uploadPdf(
+      `reports/phase2b/${sessionId}.pdf`,
+      pdfBuffer
+    );
+
+    await prisma.sessionResult.update({
+      where: { sessionId },
+      data: {
+        reportPdfUrl,
+        generatedAt: new Date(),
+      },
+    });
+
+    if (transactionResult.recipientEmail) {
+      await sendReportEmail({
+        toEmail: transactionResult.recipientEmail,
+        businessName: transactionResult.businessName,
+        pdfBuffer,
+        reportPdfUrl,
+      });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error generating PDF or sending Phase 2B report email:', message);
+  }
+
+  return {
+    message: 'Phase 2B assessment submitted successfully',
+    sessionId: transactionResult.sessionId,
+    redirectTo: '/result-gate',
+  };
+}
+
+/**
+ * Returns every Phase 2B pillar this user has interacted with — paid, in-progress,
+ * or completed. Joins Phase2BPillarUnlock with its pillar + session in one query
+ * so the deep-dive page can render the full sidebar from a single response.
+ *
+ * Status derivation:
+ *   - consumedAt set      → COMPLETED (report exists)
+ *   - sessionId set, not consumed → IN_PROGRESS (started, not submitted)
+ *   - neither set         → OPEN (paid, unstarted)
+ *
+ * Ordered most-recent-unlock first.
+ */
+export async function getMyPhase2BPillarsService(
+  userId: string
+): Promise<MyPhase2BPillarsResponse> {
+  const unlocks = await prisma.phase2BPillarUnlock.findMany({
+    where: { userId },
+    select: {
+      sessionId: true,
+      consumedAt: true,
+      unlockedAt: true,
+      pillar: {
+        select: { id: true, code: true, name: true },
+      },
+    },
+    orderBy: { unlockedAt: 'desc' },
+  });
+
+  const pillars: Phase2BPillarEntry[] = unlocks.map((unlock) => {
+    let status: Phase2BPillarStatus;
+    if (unlock.consumedAt) {
+      status = 'COMPLETED';
+    } else if (unlock.sessionId) {
+      status = 'IN_PROGRESS';
+    } else {
+      status = 'OPEN';
+    }
+
+    return {
+      pillarId: unlock.pillar.id,
+      pillarCode: unlock.pillar.code,
+      pillarName: unlock.pillar.name,
+      sessionId: unlock.sessionId,
+      status,
+      unlockedAt: unlock.unlockedAt,
+    };
+  });
+
+  return {
+    message: 'Phase 2B pillars fetched successfully',
+    pillars,
+  };
+}
+
+export async function getSessionResponsesService(
+  sessionId: string,
+  authenticatedUserId: string
+): Promise<SessionResponsesResponse> {
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      userId: true,
+      selectedQuestionIds: true,
+    },
+  });
+
+  if (!session) {
+    throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+
+  if (session.userId !== authenticatedUserId) {
+    throw new AppError('You are not authorized to access this session', FORBIDDEN);
+  }
+
+  const snapshot = (session.selectedQuestionIds ?? []) as string[];
+  
+  const responses = await prisma.sessionResponse.findMany({
+    where: { sessionId },
+    select: { questionId: true, selectedOptionId: true },
+  });
+
+  return {
+    message: 'Session responses fetched successfully',
+    answeredCount: responses.length,
+    totalCount: snapshot.length,
+    responses,
   };
 }

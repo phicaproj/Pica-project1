@@ -76,6 +76,7 @@ const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 // Phase 2A price in NGN major units. Backend accepts whatever the FE sends
 // (validated <= 10_000_000); align this with admin pricing once that ships.
 const PHASE2A_PRICE_NGN = 50000;
+const PHASE2B_PRICE_NGN = 50000;
 
 type PlanCard = {
   tier: string;
@@ -85,7 +86,7 @@ type PlanCard = {
   buttonLabel: string;
   buttonVariant: "filled" | "outlined";
   recommended?: boolean;
-  backendPlan?: "PHASE2A";
+  backendPlan?: "PHASE2A" | "PHASE2B_PILLAR";
 };
 
 const SMALL_PLANS: PlanCard[] = [
@@ -114,6 +115,19 @@ const SMALL_PLANS: PlanCard[] = [
     buttonVariant: "filled",
     recommended: true,
     backendPlan: "PHASE2A",
+  },
+  {
+    tier: "DEEP DIVE",
+    name: "Plan 2B Module",
+    price: `N${PHASE2B_PRICE_NGN.toLocaleString()}`,
+    features: [
+      "Targeted Pillar Analysis",
+      "Granular scoring",
+      "Actionable insights per pillar",
+    ],
+    buttonLabel: "Buy a Module",
+    buttonVariant: "filled",
+    backendPlan: "PHASE2B_PILLAR",
   },
 ];
 
@@ -144,6 +158,19 @@ const MEDIUM_PLANS: PlanCard[] = [
     recommended: true,
     backendPlan: "PHASE2A",
   },
+  {
+    tier: "DEEP DIVE",
+    name: "Plan 2B Module",
+    price: `N${PHASE2B_PRICE_NGN.toLocaleString()}`,
+    features: [
+      "Targeted Pillar Analysis",
+      "Granular scoring",
+      "Actionable insights per pillar",
+    ],
+    buttonLabel: "Buy a Module",
+    buttonVariant: "filled",
+    backendPlan: "PHASE2B_PILLAR",
+  },
 ];
 
 export default function SubscriptionPage() {
@@ -163,6 +190,8 @@ export default function SubscriptionPage() {
 function SubscriptionPageInner() {
   const searchParams = useSearchParams();
   const urlSessionId = searchParams?.get("sessionId") ?? null;
+  const urlPillarId = searchParams?.get("pillarId") ?? null;
+  const urlPlan = searchParams?.get("plan") ?? null;
   const urlAutoCheckout = searchParams?.get("autoCheckout") === "1";
 
   const [view, setView] = useState<View>("plans");
@@ -171,6 +200,7 @@ function SubscriptionPageInner() {
   const [meLoading, setMeLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
+  const [checkoutPillarId, setCheckoutPillarId] = useState<string | null>(null);
   const [verifyResult, setVerifyResult] =
     useState<VerifyPaymentResponse | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -269,16 +299,31 @@ function SubscriptionPageInner() {
 
   useEffect(() => {
     if (meLoading || !me || verifyResult) return;
-    if (!urlSessionId || !urlAutoCheckout) return;
-    const phase2aPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
-      (p) => p.backendPlan === "PHASE2A",
-    );
-    if (!phase2aPlan) return;
-    setPaymentError(null);
-    setSelectedPlan(phase2aPlan);
-    setCheckoutSessionId(urlSessionId);
-    setView("checkout");
-  }, [me, meLoading, verifyResult, urlSessionId, urlAutoCheckout]);
+    if (!urlAutoCheckout) return;
+
+    if (urlPlan === "PHASE2B_PILLAR" && urlPillarId) {
+      const phase2bPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
+        (p) => p.backendPlan === "PHASE2B_PILLAR",
+      );
+      if (!phase2bPlan) return;
+      setPaymentError(null);
+      setSelectedPlan(phase2bPlan);
+      setCheckoutPillarId(urlPillarId);
+      setView("checkout");
+      return;
+    }
+
+    if (urlSessionId) {
+      const phase2aPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
+        (p) => p.backendPlan === "PHASE2A",
+      );
+      if (!phase2aPlan) return;
+      setPaymentError(null);
+      setSelectedPlan(phase2aPlan);
+      setCheckoutSessionId(urlSessionId);
+      setView("checkout");
+    }
+  }, [me, meLoading, verifyResult, urlSessionId, urlPillarId, urlPlan, urlAutoCheckout]);
 
   const fetchLockedScans = async (): Promise<LockedScan[]> => {
     const token = getAccessToken();
@@ -354,6 +399,7 @@ function SubscriptionPageInner() {
 
     setSelectedPlan(plan);
     setCheckoutSessionId(null);
+    setCheckoutPillarId(null);
     setView("checkout");
   };
 
@@ -420,6 +466,7 @@ function SubscriptionPageInner() {
           plan={selectedPlan}
           me={me}
           sessionId={checkoutSessionId}
+          pillarId={checkoutPillarId}
           onChangePlan={() => setView("plans")}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -762,12 +809,14 @@ function CheckoutView({
   plan,
   me,
   sessionId: explicitSessionId,
+  pillarId: explicitPillarId,
   onChangePlan,
   onPaymentSuccess,
 }: {
   plan: PlanCard;
   me: MeUser;
   sessionId: string | null;
+  pillarId: string | null;
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse) => void;
 }) {
@@ -833,17 +882,27 @@ function CheckoutView({
       }
 
       const sessionId = explicitSessionId ?? getLastSessionId() ?? undefined;
-      if (!sessionId) {
+      const pillarId = explicitPillarId ?? undefined;
+
+      if (plan.backendPlan === "PHASE2A" && !sessionId) {
         setError(
           "No scan selected. Please pick a locked Phase 2A scan to unlock, or take a Strategic Scan first.",
         );
         setBusy(false);
         return;
       }
+      
+      if (plan.backendPlan === "PHASE2B_PILLAR" && !pillarId) {
+        setError("No pillar selected. Please select a Deep Dive module to unlock.");
+        setBusy(false);
+        return;
+      }
+
       const init = await initPayment({
-        plan: "PHASE2A",
-        amount: PHASE2A_PRICE_NGN,
+        plan: plan.backendPlan!,
+        amount: plan.backendPlan === "PHASE2B_PILLAR" ? PHASE2B_PRICE_NGN : PHASE2A_PRICE_NGN,
         sessionId,
+        pillarId,
       });
 
       if (init.error || !init.data) {

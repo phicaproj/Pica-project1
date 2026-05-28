@@ -211,11 +211,11 @@ model AssessmentSession {
   completedAt DateTime? @map("completed_at")
 
   // Relations
-  user         User?                @relation(fields: [userId], references: [id])
-  pillar       Pillar?              @relation(fields: [pillarId], references: [id])
-  responses    SessionResponse[]
-  pillarScores SessionPillarScore[]
-  result       SessionResult?
+  user          User?                @relation(fields: [userId], references: [id])
+  pillar        Pillar?              @relation(fields: [pillarId], references: [id])
+  responses     SessionResponse[]
+  pillarScores  SessionPillarScore[]
+  result        SessionResult?
   phase2bUnlock Phase2BPillarUnlock?
 
   createdAt DateTime @default(now()) @map("created_at")

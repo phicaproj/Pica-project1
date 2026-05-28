@@ -13,8 +13,15 @@ export const phase2aQuerySchema = z.object({
 		.uuid('sessionId must be a valid UUID'),
 })
 
+export const phase2bQuerySchema = z.object({
+	pillarId: z
+		.string({ error: 'pillarId is required' })
+		.uuid('pillarId must be a valid UUID'),
+})
+
 export type BusinessSizeQuery = z.infer<typeof businessSizeQuerySchema>
 export type Phase2AQuery = z.infer<typeof phase2aQuerySchema>
+export type Phase2BQuery = z.infer<typeof phase2bQuerySchema>
 
 export type QuestionOptionResponse = {
 	id: string
@@ -65,4 +72,23 @@ export type Phase2AQuestionsResponse = {
 	answeredCount: number
 	totalCount: number
 	pillars: Phase2APillarResponse[]
+}
+
+export type Phase2BPillarMeta = {
+	id: string
+	code: string
+	name: string
+	description: string | null
+	displayOrder: number
+}
+
+export type Phase2BQuestionsResponse = {
+	message: string
+	pillar: Phase2BPillarMeta
+	questions: QuestionResponse[]
+}
+
+export type AllPillarsResponse = {
+	message: string
+	pillars: Phase2BPillarMeta[]
 }
