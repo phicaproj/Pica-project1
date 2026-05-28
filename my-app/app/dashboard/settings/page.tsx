@@ -536,7 +536,7 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
     const fetchCountries = async () => {
       setLoadingCountries(true);
       try {
-        const res = await fetch("https://countriesnow.space/api/v0.1/countries");
+        const res = await fetch("https://countriesnow.space/api/v0.1/countries/states");
         const json = await res.json();
         if (json && !json.error && Array.isArray(json.data)) {
           const sorted = [...json.data].sort((a: any, b: any) => a.name.localeCompare(b.name));
@@ -593,7 +593,7 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
     }
   };
 
-  // Find selected country states
+  // Find selected country states/cities
   const selectedCountryObj = countriesData.find((c: any) => c.name === country);
   const statesList = selectedCountryObj?.states || [];
 
