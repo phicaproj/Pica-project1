@@ -31,6 +31,9 @@ import type {
   ListPaymentsQuery,
   ListPaymentsResponse,
   VerifyPaymentResponse,
+  UserPaymentHistoryQuery,
+  UserPaymentHistoryResponse,
+  UserPaymentRow,
 } from './payment.types';
 
 // Maps Paystack `data.status` strings onto our PaymentStatus enum.
@@ -561,4 +564,53 @@ async function applyVerificationResult(
   }
 
   return { paymentId: payment.id, flippedToSuccess: flippingToSuccess };
+}
+
+export async function myPaymentsHistoryService(
+  userId: string,
+  query: UserPaymentHistoryQuery
+): Promise<UserPaymentHistoryResponse> {
+  const skip = (query.page - 1) * query.limit;
+
+  const [total, rows] = await Promise.all([
+    prisma.payment.count({ where: { userId } }),
+    prisma.payment.findMany({
+      where: { userId },
+      skip,
+      take: query.limit,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        providerReference: true,
+        plan: true,
+        amount: true,
+        currency: true,
+        status: true,
+        paidAt: true,
+        createdAt: true,
+      },
+    }),
+  ]);
+
+  const payments: UserPaymentRow[] = rows.map((row) => ({
+    id: row.id,
+    reference: row.providerReference,
+    plan: row.plan,
+    amount: Number(row.amount),
+    currency: row.currency,
+    status: row.status,
+    paidAt: row.paidAt,
+    createdAt: row.createdAt,
+  }));
+
+  const totalPages = Math.ceil(total / query.limit);
+
+  return {
+    message: 'Billing history fetched successfully',
+    page: query.page,
+    limit: query.limit,
+    total,
+    totalPages,
+    payments,
+  };
 }

@@ -103,6 +103,7 @@ export async function sendPaymentSuccessEmail({
   currency,
   reference,
   reportDownloadUrl,
+  plan,
 }: {
   toEmail: string;
   businessName: string | null;

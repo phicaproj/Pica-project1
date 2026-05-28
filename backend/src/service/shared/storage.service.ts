@@ -92,6 +92,19 @@ export const uploadPdf = async (
     cacheControl: 'private, max-age=300',
   });
 
+/** Convenience wrapper for Avatar uploads — sets the right content type. */
+export const uploadAvatar = async (
+  key: string,
+  body: Buffer,
+  contentType: string
+): Promise<UploadResult> =>
+  uploadObject({
+    key,
+    body,
+    contentType,
+    cacheControl: 'public, max-age=86400', // Cache for 24 hours
+  });
+
 /** Delete an object by key. Safe to call for keys that don't exist (R2 returns 204). */
 export const deleteObject = async (key: string): Promise<void> => {
   try {

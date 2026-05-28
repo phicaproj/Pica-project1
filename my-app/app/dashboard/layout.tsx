@@ -120,9 +120,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User avatar */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-teal-400/30">
-              {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
-            </div>
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="User Avatar"
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-teal-400/30"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-teal-400/30">
+                {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
+              </div>
+            )}
             <span className="text-sm text-gray-300 hidden sm:block">
               {user?.businessName || "User"}
             </span>

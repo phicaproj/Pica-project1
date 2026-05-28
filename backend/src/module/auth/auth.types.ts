@@ -60,6 +60,7 @@ export type AuthUser = {
   email: string;
   businessName: string | null;
   phone: string | null;
+  avatarUrl: string | null;
   isVerified: boolean;
 };
 
@@ -91,10 +92,12 @@ export type ResetPasswordResponse = {
 
 export type MeUser = AuthUser & {
   businessSize: 'SMALL' | 'MEDIUM' | null;
-  // True iff the user owns at least one paid Phase 2A SessionResult.
-  // Coarse-grained — for per-result paywall UX, read isPaid off the result
-  // itself from /api/result/:sessionId.
   hasAnyPaidPhase2AResult: boolean;
+  staffSize: string | null;
+  industry: string | null;
+  location: string | null;
+  operatingYears: string | null;
+  annualRevenue: string | null;
 };
 
 export type MeResponse = {

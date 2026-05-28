@@ -95,6 +95,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
       email: true,
       businessName: true,
       phone: true,
+      avatarUrl: true,
       isVerified: true,
     },
   });
@@ -113,7 +114,14 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
 
   return {
     message: 'Registration successful',
-    user,
+    user: {
+      id: user.id,
+      email: user.email,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: user.isVerified,
+    },
   };
 }
 
@@ -128,6 +136,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       passwordHash: true,
       businessName: true,
       phone: true,
+      avatarUrl: true,
       isVerified: true,
     },
   });
@@ -153,6 +162,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       email: user.email,
       businessName: user.businessName,
       phone: user.phone,
+      avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
     },
     accessToken,
@@ -254,8 +264,14 @@ export async function meService(userId: string): Promise<MeResponse> {
       email: true,
       businessName: true,
       phone: true,
+      avatarUrl: true,
       isVerified: true,
       businessSize: true,
+      staffSize: true,
+      industry: true,
+      location: true,
+      operatingYears: true,
+      annualRevenue: true,
     },
   });
 
@@ -279,9 +295,15 @@ export async function meService(userId: string): Promise<MeResponse> {
       email: user.email,
       businessName: user.businessName,
       phone: user.phone,
+      avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
       businessSize: user.businessSize,
       hasAnyPaidPhase2AResult: paidResultCount > 0,
+      staffSize: user.staffSize,
+      industry: user.industry,
+      location: user.location,
+      operatingYears: user.operatingYears,
+      annualRevenue: user.annualRevenue,
     },
   };
 }

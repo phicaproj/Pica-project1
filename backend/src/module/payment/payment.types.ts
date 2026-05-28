@@ -72,3 +72,30 @@ export type ListPaymentsResponse = {
   total: number;
   payments: AdminPaymentRow[];
 };
+
+export const userPaymentHistoryQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+
+export type UserPaymentHistoryQuery = z.infer<typeof userPaymentHistoryQuery>;
+
+export type UserPaymentRow = {
+  id: string;
+  reference: string;
+  plan: Plan;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  paidAt: Date | null;
+  createdAt: Date;
+};
+
+export type UserPaymentHistoryResponse = {
+  message: string;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  payments: UserPaymentRow[];
+};

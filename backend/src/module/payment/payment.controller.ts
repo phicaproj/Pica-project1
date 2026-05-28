@@ -7,12 +7,14 @@ import {
   initPaymentSchema,
   listPaymentsQuery,
   verifyPaymentParams,
+  userPaymentHistoryQuery,
 } from './payment.types';
 import {
   handleWebhookService,
   initPaymentService,
   listPaymentsService,
   verifyPaymentService,
+  myPaymentsHistoryService,
 } from './payment.service';
 
 export const initPayment = asyncHandler(async (req: Request, res: Response) => {
@@ -63,5 +65,14 @@ export const handlePaymentWebhook = asyncHandler(async (req: Request, res: Respo
 export const listPayments = asyncHandler(async (req: Request, res: Response) => {
   const query = listPaymentsQuery.parse(req.query);
   const result = await listPaymentsService(query);
+  return res.status(OK).json(result);
+});
+
+export const myPaymentsHistory = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const query = userPaymentHistoryQuery.parse(req.query);
+  const result = await myPaymentsHistoryService(req.user.id, query);
   return res.status(OK).json(result);
 });

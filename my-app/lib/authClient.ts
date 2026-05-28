@@ -26,6 +26,7 @@ export interface AuthUser {
 	email: string
 	businessName: string | null
 	phone: string | null
+	avatarUrl: string | null
 	isVerified: boolean
 }
 
@@ -33,7 +34,13 @@ export type BusinessSize = 'SMALL' | 'MEDIUM'
 
 export interface MeUser extends AuthUser {
 	businessSize: BusinessSize | null
+	hasAnyPaidPhase2AResult: boolean
 	hasPaidPhase2A: boolean
+	staffSize: string | null
+	industry: string | null
+	location: string | null
+	operatingYears: string | null
+	annualRevenue: string | null
 }
 
 interface ApiError {
@@ -160,12 +167,21 @@ export const getMe = async () => {
 	if (res.data && typeof window !== 'undefined') {
 		// Mirror the canonical user fields back into local storage so the
 		// rest of the app stays in sync.
-		const stored: AuthUser = {
+		const stored: any = {
 			id: res.data.user.id,
 			email: res.data.user.email,
 			businessName: res.data.user.businessName,
 			phone: res.data.user.phone,
+			avatarUrl: res.data.user.avatarUrl,
 			isVerified: res.data.user.isVerified,
+			staffSize: res.data.user.staffSize,
+			industry: res.data.user.industry,
+			location: res.data.user.location,
+			operatingYears: res.data.user.operatingYears,
+			annualRevenue: res.data.user.annualRevenue,
+			businessSize: res.data.user.businessSize,
+			hasAnyPaidPhase2AResult: res.data.user.hasAnyPaidPhase2AResult,
+			hasPaidPhase2A: res.data.user.hasAnyPaidPhase2AResult || res.data.user.hasPaidPhase2A,
 		}
 		localStorage.setItem(USER_KEY, JSON.stringify(stored))
 	}
@@ -358,5 +374,78 @@ export const getSessionResponses = async (sessionId: string) => {
 		totalCount: number;
 		responses: { questionId: string; selectedOptionId: string }[];
 	}>(`/assessment/${sessionId}/responses`, { method: 'GET' })
+}
+
+export const updateUserProfile = async (payload: {
+	businessName?: string
+	phone?: string
+	email?: string
+}) => {
+	return authedFetch<{ message: string; user: AuthUser }>('/user/profile', {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const updateUserBusiness = async (payload: {
+	businessName?: string
+	industry?: string
+	location?: string
+	operatingYears?: string
+	staffSize?: string
+	annualRevenue?: string
+}) => {
+	return authedFetch<{ message: string; user: MeUser }>('/user/business', {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const verifyUserEmail = async () => {
+	return authedFetch<{ message: string; user: AuthUser }>('/user/verify-email', {
+		method: 'POST',
+	})
+}
+
+export const uploadAvatar = async (file: File) => {
+	const token = getAccessToken()
+	if (!token) {
+		return { data: null, error: { message: 'Not authenticated' } }
+	}
+
+	try {
+		const formData = new FormData()
+		formData.append('avatar', file)
+
+		const res = await fetch(`${API_BASE_URL}/user/avatar`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+			body: formData,
+		})
+
+		const json = (await res.json().catch(() => ({}))) as Record<string, any>
+		if (!res.ok) {
+			const message = json.message || `Upload failed with status ${res.status}`
+			return { data: null, error: { message } }
+		}
+
+		return { data: json as { message: string; avatarUrl: string; user: AuthUser }, error: null }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Network error'
+		return { data: null, error: { message } }
+	}
+}
+
+export const getMyBillingHistory = async (page = 1, limit = 10) => {
+	return authedFetch<{
+		message: string
+		page: number
+		limit: number
+		total: number
+		totalPages: number
+		payments: any[]
+	}>(`/payment/history?page=${page}&limit=${limit}`, { method: 'GET' })
 }
 

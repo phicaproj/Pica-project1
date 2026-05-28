@@ -1,0 +1,152 @@
+import prisma from '../../Config/db';
+import AppError from '../../service/shared/appError';
+import { NOT_FOUND, CONFLICT } from '../../service/shared/http';
+import type { UpdateProfileInput, UpdateBusinessInfoInput } from './user.types';
+import type { AuthUser } from '../auth/auth.types';
+
+export async function updateProfileService(
+  userId: string,
+  data: UpdateProfileInput
+): Promise<AuthUser> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  // Handle email changes (check for uniqueness and reset verification)
+  let isVerifiedUpdate = undefined;
+  if (data.email) {
+    const normalizedEmail = data.email.trim().toLowerCase();
+    if (normalizedEmail !== user.email) {
+      const emailTaken = await prisma.user.findUnique({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+      if (emailTaken) {
+        throw new AppError('An account with this email already exists', CONFLICT);
+      }
+      isVerifiedUpdate = false; // Reset verification status
+    }
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      businessName: data.businessName,
+      phone: data.phone,
+      email: data.email ? data.email.trim().toLowerCase() : undefined,
+      isVerified: isVerifiedUpdate,
+    },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+    },
+  });
+
+  return updated;
+}
+
+export async function updateBusinessInfoService(
+  userId: string,
+  data: UpdateBusinessInfoInput
+): Promise<any> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      businessName: data.businessName,
+      industry: data.industry,
+      location: data.location,
+      operatingYears: data.operatingYears,
+      staffSize: data.staffSize,
+      annualRevenue: data.annualRevenue,
+    },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+      businessSize: true,
+      staffSize: true,
+      industry: true,
+      location: true,
+      operatingYears: true,
+      annualRevenue: true,
+    },
+  });
+
+  return updated;
+}
+
+export async function verifyUserEmailService(userId: string): Promise<AuthUser> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isVerified: true },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+    },
+  });
+
+  return updated;
+}
+
+export async function updateAvatarUrlService(
+  userId: string,
+  avatarUrl: string
+): Promise<AuthUser> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarUrl },
+    select: {
+      id: true,
+      email: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+    },
+  });
+
+  return updated;
+}

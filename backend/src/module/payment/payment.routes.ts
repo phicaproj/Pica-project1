@@ -5,6 +5,7 @@ import {
   initPayment,
   listPayments,
   verifyPayment,
+  myPaymentsHistory,
 } from './payment.controller';
 
 const paymentRouter = Router();
@@ -14,6 +15,7 @@ paymentRouter.post('/webhook', raw({ type: 'application/json' }), handlePaymentW
 // Auth-protected user endpoints
 paymentRouter.post('/init', authenticate, initPayment);
 paymentRouter.get('/verify/:reference', authenticate, verifyPayment);
+paymentRouter.get('/history', authenticate, myPaymentsHistory);
 
 // Admin transactions list
 paymentRouter.get('/admin', authenticate, isAdmin, listPayments);

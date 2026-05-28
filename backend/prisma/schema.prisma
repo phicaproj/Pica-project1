@@ -158,6 +158,7 @@ model User {
   lastName     String? @map("last_name")
   businessName String? @map("business_name")
   phone        String?
+  avatarUrl    String? @map("avatar_url")
   isVerified   Boolean @default(false) @map("is_verified")
 
   // Snapshotted from the originating Phase 1 AssessmentSession at registration.

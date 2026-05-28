@@ -11,6 +11,7 @@ import questionRouter from './module/question/question.routes'
 import resultRouter from './module/result/result.routes'
 import authRouter from './module/auth/auth.route'
 import paymentRouter from './module/payment/payment.routes'
+import userRouter from './module/user/user.routes'
 import { buildOpenApiDocument } from './docs/openapi'
 
 const app = express()
@@ -36,6 +37,7 @@ app.use((req, res, next) => {
 })
 // Routes
 app.use('/api/auth', authRouter)
+app.use('/api/user', userRouter)
 app.use('/api/assessment', assessmentRouter)
 app.use('/api/questions', questionRouter)
 app.use('/api/result', resultRouter)
