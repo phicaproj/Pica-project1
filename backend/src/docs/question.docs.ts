@@ -62,6 +62,19 @@ const Phase2APillarSchema = registry.register(
 		.openapi('Phase2APillar'),
 )
 
+const Phase2BPillarMetaSchema = registry.register(
+	'Phase2BPillarMeta',
+	z
+		.object({
+			id: z.string().uuid(),
+			code: z.string(),
+			name: z.string(),
+			description: z.string().nullable(),
+			displayOrder: z.number().int(),
+		})
+		.openapi('Phase2BPillarMeta'),
+)
+
 // ----- GET /api/questions/phase1 --------------------------------------------
 
 registry.registerPath({
@@ -136,5 +149,70 @@ registry.registerPath({
 		401: errorResponse('Missing or invalid token'),
 		403: errorResponse('Not the owner of this session'),
 		404: errorResponse('Session not found'),
+	},
+})
+
+// ----- GET /api/questions/phase2b -------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/questions/phase2b',
+	tags: ['Questions'],
+	summary: 'Get Phase 2B questions for a specific pillar',
+	description:
+		'Authenticated. Returns the question set for a specific pillar in Phase 2B.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		query: z.object({
+			pillarId: z
+				.string()
+				.uuid()
+				.openapi({
+					param: { name: 'pillarId', in: 'query' },
+					description: 'Pillar UUID',
+				}),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'Phase 2B questions list',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						pillar: Phase2BPillarMetaSchema,
+						questions: z.array(QuestionSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		404: errorResponse('Pillar not found'),
+	},
+})
+
+// ----- GET /api/questions/pillars -------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/questions/pillars',
+	tags: ['Questions'],
+	summary: 'Get all assessment pillars metadata',
+	description:
+		'Authenticated. Returns metadata for all available pillars on the platform.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'Pillars metadata list',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						pillars: z.array(Phase2BPillarMetaSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
 	},
 })

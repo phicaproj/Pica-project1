@@ -38,6 +38,8 @@ export async function updateProfileService(
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
+      firstName: data.firstName,
+      lastName: data.lastName,
       businessName: data.businessName,
       phone: data.phone,
       email: data.email ? data.email.trim().toLowerCase() : undefined,
@@ -46,6 +48,8 @@ export async function updateProfileService(
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,
@@ -118,6 +122,8 @@ export async function verifyUserEmailService(userId: string): Promise<AuthUser> 
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,
@@ -161,6 +167,8 @@ export async function updateAvatarUrlService(
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,

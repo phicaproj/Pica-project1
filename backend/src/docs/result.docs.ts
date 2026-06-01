@@ -110,6 +110,31 @@ registry.registerPath({
 	},
 })
 
+// ----- GET /api/result/me ---------------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/result/me',
+	tags: ['Result'],
+	summary: 'Get all completed results for the authenticated user',
+	description:
+		'Returns a list of all completed results for the user, with the same paywall semantics per result as GET /api/result/:sessionId.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'All completed results for the user',
+			content: {
+				'application/json': {
+					schema: z.object({
+						results: z.array(GetResultResponseSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+	},
+})
+
 // ----- GET /api/result/:sessionId -------------------------------------------
 
 registry.registerPath({

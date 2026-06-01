@@ -7,15 +7,18 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyAdminOTPSchema,
   verifyResetOtpSchema,
 } from './auth.types';
 import {
+  adminLoginService,
   forgotPasswordService,
   loginService,
   meService,
   registerService,
   resetPasswordService,
   verifyResetOtpService,
+  verifyAdminOTPService,
 } from './auth.service';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
@@ -28,6 +31,20 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const request = loginSchema.parse(req.body);
   const result = await loginService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const loginAdmin = asyncHandler(async (req: Request, res: Response) => {
+  const request = loginSchema.parse(req.body);
+  const result = await adminLoginService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const verifyAdminOTP = asyncHandler(async (req: Request, res: Response) => {
+  const request = verifyAdminOTPSchema.parse(req.body);
+  const result = await verifyAdminOTPService(request);
 
   return res.status(OK).json(result);
 });

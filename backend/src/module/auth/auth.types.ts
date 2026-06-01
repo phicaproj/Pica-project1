@@ -15,10 +15,7 @@ export const registerSchema = z.object({
     .max(100, 'Business name must be at most 100 characters long'),
   phone: z
     .string()
-    .regex(
-      /^\+?\d{10,15}$/,
-      'Phone number must be 10–15 digits, optionally starting with +'
-    ),
+    .regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits, optionally starting with +'),
 });
 
 export const loginSchema = z.object({
@@ -32,9 +29,7 @@ export const forgotPasswordSchema = z.object({
 
 export const verifyResetOtpSchema = z.object({
   email: z.email('Invalid email address'),
-  code: z
-    .string()
-    .regex(/^\d{5}$/, 'Code must be a 5-digit number'),
+  code: z.string().regex(/^\d{5}$/, 'Code must be a 5-digit number'),
   otpToken: z.string().min(1, 'OTP token is required'),
 });
 
@@ -49,15 +44,22 @@ export const resetPasswordSchema = z.object({
     ),
 });
 
+export const verifyAdminOTPSchema = z.object({
+  loginToken: z.string().min(1, 'Login token is required'),
+  code: z.string().regex(/^\d{5}$/, 'Code must be a 5-digit number'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
-
+export type VerifyAdminOTPInput = z.infer<typeof verifyAdminOTPSchema>;
 export type AuthUser = {
   id: string;
   email: string;
+  firstName: string | null;
+  lastName: string | null;
   businessName: string | null;
   phone: string | null;
   avatarUrl: string | null;
@@ -89,6 +91,18 @@ export type VerifyResetOtpResponse = {
 
 export type ResetPasswordResponse = {
   message: string;
+};
+
+export type AdminLoginResponse = {
+  message: string;
+  otpToken: string;
+  role: 'ADMIN';
+};
+
+export type VerifyAdminOTPResponse = {
+  message: string;
+  accessToken: string;
+  refreshToken: string;
 };
 
 export type MeUser = AuthUser & {

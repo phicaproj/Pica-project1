@@ -14,6 +14,8 @@ import './assessment.docs'
 import './question.docs'
 import './result.docs'
 import './payment.docs'
+import './user.docs'
+import './admin.docs'
 
 export function buildOpenApiDocument() {
 	const generator = new OpenApiGeneratorV31(registry.definitions)
@@ -36,6 +38,8 @@ export function buildOpenApiDocument() {
 		],
 		tags: [
 			{ name: 'Auth', description: 'Registration, login, password reset, /me' },
+			{ name: 'User', description: 'Manage user profiles, business profiles, verify email and upload avatars' },
+			{ name: 'Admin', description: 'Administrative operations including listing and viewing user details' },
 			{
 				name: 'Assessment',
 				description:

@@ -24,6 +24,8 @@ interface LoginPayload {
 export interface AuthUser {
 	id: string
 	email: string
+	firstName: string | null
+	lastName: string | null
 	businessName: string | null
 	phone: string | null
 	avatarUrl: string | null
@@ -172,6 +174,8 @@ export const getMe = async () => {
 		const stored: any = {
 			id: res.data.user.id,
 			email: res.data.user.email,
+			firstName: res.data.user.firstName,
+			lastName: res.data.user.lastName,
 			businessName: res.data.user.businessName,
 			phone: res.data.user.phone,
 			avatarUrl: res.data.user.avatarUrl,
@@ -381,6 +385,8 @@ export const getSessionResponses = async (sessionId: string) => {
 }
 
 export const updateUserProfile = async (payload: {
+	firstName?: string
+	lastName?: string
 	businessName?: string
 	phone?: string
 	email?: string
@@ -452,5 +458,53 @@ export const getMyBillingHistory = async (page = 1, limit = 10) => {
 		totalPages: number
 		payments: any[]
 	}>(`/payment/history?page=${page}&limit=${limit}`, { method: 'GET' })
+}
+
+// ─── Admin: list all users ────────────────────────────────────
+export type AdminUserRow = {
+	id: string
+	firstName: string | null
+	lastName: string | null
+	email: string
+	phone: string | null
+	avatarUrl: string | null
+	businessName: string | null
+	businessSize: BusinessSize | null
+	industry: string | null
+	subscriptionPlan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
+	isActive: boolean
+	lastSeenAt: string | null
+	createdAt: string
+}
+
+export type ListUsersResponse = {
+	message: string
+	page: number
+	pageSize: number
+	total: number
+	users: AdminUserRow[]
+}
+
+export const getAllUsers = async (params: {
+	page?: number
+	pageSize?: number
+	search?: string
+	businessSize?: BusinessSize
+	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'FREE'
+	active?: boolean
+} = {}) => {
+	const qs = new URLSearchParams()
+	if (params.page) qs.set('page', String(params.page))
+	if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+	if (params.search) qs.set('search', params.search)
+	if (params.businessSize) qs.set('businessSize', params.businessSize)
+	if (params.plan) qs.set('plan', params.plan)
+	if (params.active !== undefined) qs.set('active', String(params.active))
+
+	const query = qs.toString()
+	return authedFetch<ListUsersResponse>(
+		`/admin/users${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
 }
 

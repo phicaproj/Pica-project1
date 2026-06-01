@@ -1,11 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Users,
-  Activity,
-  ShieldCheck,
-  AlertTriangle,
   Search,
   ChevronDown,
   SlidersHorizontal,
@@ -17,94 +13,125 @@ import {
   Download,
   LayoutGrid,
   Table2,
+  Loader,
 } from "lucide-react";
+import { getAllUsers, type AdminUserRow } from "@/lib/authClient";
 
-const USERS = [
-  {
-    id: 1,
-    name: "Alexander Thorne",
-    email: "alex.t@nexuscorp.io",
-    avatar: "https://i.pravatar.cc/150?u=alexthorne",
-    segment: "MEDIUM ENTERPRISE",
-    segmentColor: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-    subscription: "Enterprise Plus",
-    subNote: "BILLED ANNUALLY",
-    active: true,
-    lastSeen: "2 mins ago",
-  },
-  {
-    id: 2,
-    name: "Elena Rodriguez",
-    email: "elena.rod@growthlabs.com",
-    avatar: "https://i.pravatar.cc/150?u=elenarodriguez",
-    segment: "SMALL BUSINESS",
-    segmentColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    subscription: "Professional",
-    subNote: "MONTHLY TIER",
-    active: true,
-    lastSeen: "1 hour ago",
-  },
-  {
-    id: 3,
-    name: "Julian Marsh",
-    email: "j.marsh@legacyholdings.net",
-    avatar: "https://i.pravatar.cc/150?u=julianmarsh",
-    segment: "MEDIUM ENTERPRISE",
-    segmentColor: "text-teal-400 bg-teal-500/10 border-teal-500/20",
-    subscription: "Enterprise",
-    subNote: "INACTIVE",
-    active: false,
-    lastSeen: "14 days ago",
-    canActivate: true,
-  },
-  {
-    id: 4,
-    name: "Sarah Jenkins",
-    email: "sarah@creativeflow.studio",
-    avatar: "https://i.pravatar.cc/150?u=sarahjenkins",
-    segment: "SMALL BUSINESS",
-    segmentColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    subscription: "Basic",
-    subNote: "TRIAL ENDING",
-    active: true,
-    lastSeen: "Just now",
-  },
-  {
-    id: 5,
-    name: "Marcus Webb",
-    email: "m.webb@pinnaclegroup.com",
-    avatar: "https://i.pravatar.cc/150?u=marcuswebb",
-    segment: "LARGE ENTERPRISE",
-    segmentColor: "text-purple-400 bg-purple-500/10 border-purple-500/20",
-    subscription: "Enterprise Plus",
-    subNote: "BILLED ANNUALLY",
-    active: true,
-    lastSeen: "30 mins ago",
-  },
-  {
-    id: 6,
-    name: "Priya Nair",
-    email: "p.nair@techbridge.in",
-    avatar: "https://i.pravatar.cc/150?u=priyanair",
-    segment: "SMALL BUSINESS",
-    segmentColor: "text-blue-400 bg-blue-500/10 border-blue-500/20",
-    subscription: "Professional",
-    subNote: "MONTHLY TIER",
-    active: false,
-    lastSeen: "3 days ago",
-    canActivate: true,
-  },
-];
+const PAGE_SIZE = 10;
+
+// ── Display helpers ───────────────────────────────────────────
+const fullName = (u: AdminUserRow) => {
+  const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
+  return name || u.businessName || u.email;
+};
+
+const initials = (u: AdminUserRow) => {
+  const name = fullName(u);
+  return name.substring(0, 2).toUpperCase();
+};
+
+const businessSegment = (u: AdminUserRow) => {
+  if (u.businessSize === "MEDIUM") return "MEDIUM BUSINESS";
+  if (u.businessSize === "SMALL") return "SMALL BUSINESS";
+  return u.industry?.toUpperCase() || "UNSPECIFIED";
+};
+
+const segmentColor = (u: AdminUserRow) => {
+  if (u.businessSize === "MEDIUM") return "text-teal-400 bg-teal-500/10 border-teal-500/20";
+  if (u.businessSize === "SMALL") return "text-blue-400 bg-blue-500/10 border-blue-500/20";
+  return "text-gray-400 bg-white/5 border-white/10";
+};
+
+const subscriptionLabel = (u: AdminUserRow) => {
+  if (u.subscriptionPlan === "PHASE2A") return "Phase 2A";
+  if (u.subscriptionPlan === "PHASE2B_PILLAR") return "Phase 2B";
+  return "Free";
+};
+
+const subscriptionNote = (u: AdminUserRow) => {
+  if (u.subscriptionPlan === "PHASE2A") return "STRATEGIC SCAN";
+  if (u.subscriptionPlan === "PHASE2B_PILLAR") return "DEEP DIVE";
+  return "NO PURCHASE";
+};
+
+// Relative "time ago" from an ISO date string.
+const lastSeenLabel = (iso: string | null) => {
+  if (!iso) return "Never";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "Never";
+  const diff = Date.now() - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.floor(days / 30);
+  return `${months} month${months === 1 ? "" : "s"} ago`;
+};
 
 export default function UsersPage() {
   const [view, setView] = useState<"table" | "grid">("table");
   const [search, setSearch] = useState("");
 
-  const filtered = USERS.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
+  const [users, setUsers] = useState<AdminUserRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const fetchUsers = useCallback(
+    async (pageIndex: number, searchTerm: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getAllUsers({
+          page: pageIndex,
+          pageSize: PAGE_SIZE,
+          search: searchTerm || undefined,
+        });
+        if (res.error) {
+          setError(res.error.message);
+          setUsers([]);
+        } else if (res.data) {
+          setUsers(res.data.users);
+          setTotal(res.data.total);
+          setPage(res.data.page);
+        }
+      } catch {
+        setError("Failed to load users. Please try again.");
+        setUsers([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
   );
+
+  // Initial load.
+  useEffect(() => {
+    fetchUsers(1, "");
+  }, [fetchUsers]);
+
+  // Debounced search — reset to page 1 whenever the term changes.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetchUsers(1, search.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, fetchUsers]);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    fetchUsers(p, search.trim());
+  };
+
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
@@ -149,55 +176,38 @@ export default function UsersPage() {
 
       {/* Stat Banner with dashboard background image */}
       <div className="relative rounded-2xl overflow-hidden">
-        {/* Background image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/images/dashboard img')" }}
         />
-        {/* Dark overlay so text stays readable */}
         <div className="absolute inset-0 bg-[#111318]/60" />
 
         <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4">
           {[
             {
               label: "TOTAL USERS",
-              value: "14,208",
-              badge: "+12%",
-              badgeColor: "text-emerald-400",
-              sub: null,
-              bar: true,
-              barColor: "bg-blue-500",
-              barPct: "75%",
+              value: total.toLocaleString(),
+              sub: "Across all tenants",
               border: "border-r border-white/10",
             },
             {
               label: "ACTIVE NOW",
-              value: "3,892",
-              badge: null,
+              value: users.filter((u) => u.isActive).length.toLocaleString(),
               dot: true,
               dotColor: "bg-emerald-500",
-              sub: "Real-time session count",
-              bar: false,
+              sub: "Active on this page",
               border: "border-r border-white/10",
             },
             {
-              label: "PREMIUM SUBS",
-              value: "4,510",
-              badge: "Tier 3",
-              badgeColor: "text-orange-400 text-[10px] font-bold bg-orange-500/10 px-2 py-0.5 rounded",
-              sub: null,
-              bar: true,
-              barColor: "bg-orange-400",
-              barPct: "55%",
+              label: "PAID SUBS",
+              value: users.filter((u) => u.subscriptionPlan).length.toLocaleString(),
+              sub: "Paid on this page",
               border: "border-r border-white/10",
             },
             {
-              label: "FLAGGED ACCOUNTS",
-              value: "24",
-              badge: "Critical",
-              badgeColor: "text-red-400 text-[10px] font-bold bg-red-500/10 px-2 py-0.5 rounded",
-              sub: "Requiring review",
-              bar: false,
+              label: "CURRENT PAGE",
+              value: `${page} / ${totalPages}`,
+              sub: "Pagination",
               border: "",
             },
           ].map((stat, i) => (
@@ -212,16 +222,8 @@ export default function UsersPage() {
                   <span className="text-xs text-gray-300">{stat.sub}</span>
                 </div>
               )}
-              {stat.badge && (
-                <span className={`text-xs font-semibold ${stat.badgeColor}`}>{stat.badge}</span>
-              )}
               {stat.sub && !stat.dot && (
                 <div className="text-[10px] text-gray-400 mt-1">{stat.sub}</div>
-              )}
-              {stat.bar && (
-                <div className="mt-3 h-1 w-full bg-white/10 rounded-full">
-                  <div className={`h-full rounded-full ${stat.barColor}`} style={{ width: stat.barPct }} />
-                </div>
               )}
             </div>
           ))}
@@ -252,133 +254,192 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {/* Table View */}
-      {view === "table" && (
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/5">
-                  {["NAME & CONTACT", "BUSINESS SEGMENT", "SUBSCRIPTION", "ACTIVE STATUS", "LAST SEEN", "ACTIONS"].map((h) => (
-                    <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((user) => (
-                  <tr key={user.id} className={`border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${!user.active ? "opacity-70" : ""}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                        <div>
-                          <div className={`text-sm font-semibold ${user.active ? "text-white" : "text-gray-400"}`}>{user.name}</div>
-                          <div className="text-xs text-gray-500">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded border ${user.segmentColor}`}>{user.segment}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-white">{user.subscription}</div>
-                      <div className="text-[10px] text-gray-500 font-semibold mt-0.5">{user.subNote}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${user.active ? "bg-emerald-500" : "bg-red-500"}`} />
-                        <span className={`text-xs font-medium ${user.active ? "text-emerald-400" : "text-red-400"}`}>
-                          {user.active ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{user.lastSeen}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1">
-                        <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {user.canActivate ? (
-                          <button className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors">
-                            ACTIVATE
-                          </button>
-                        ) : (
-                          <>
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading ? (
+        <div className="py-20 flex items-center justify-center">
+          <Loader className="w-6 h-6 animate-spin text-blue-400" />
+        </div>
+      ) : users.length === 0 ? (
+        <div className="rounded-2xl border border-white/5 bg-[#1C1F2E] p-12 text-center text-gray-500">
+          No users found{search ? ` for "${search}"` : ""}.
+        </div>
+      ) : (
+        <>
+          {/* Table View */}
+          {view === "table" && (
+            <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-white/5">
+                      {["NAME & CONTACT", "BUSINESS TYPE", "SUBSCRIPTION", "ACTIVE STATUS", "LAST SEEN", "ACTIONS"].map((h) => (
+                        <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((user) => (
+                      <tr key={user.id} className={`border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors ${!user.isActive ? "opacity-70" : ""}`}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt={fullName(user)} className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                                {initials(user)}
+                              </div>
+                            )}
+                            <div>
+                              <div className={`text-sm font-semibold ${user.isActive ? "text-white" : "text-gray-400"}`}>{fullName(user)}</div>
+                              <div className="text-xs text-gray-500">{user.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded border ${segmentColor(user)}`}>{businessSegment(user)}</span>
+                          {user.businessName && (
+                            <div className="text-[10px] text-gray-500 mt-1">{user.businessName}</div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-white">{subscriptionLabel(user)}</div>
+                          <div className="text-[10px] text-gray-500 font-semibold mt-0.5">{subscriptionNote(user)}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
+                            <span className={`text-xs font-medium ${user.isActive ? "text-emerald-400" : "text-red-400"}`}>
+                              {user.isActive ? "Active" : "Inactive"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-400">{lastSeenLabel(user.lastSeenAt)}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1">
+                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                              <Eye className="w-4 h-4" />
+                            </button>
                             <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
                               <FileText className="w-4 h-4" />
                             </button>
                             <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors">
                               <Ban className="w-4 h-4" />
                             </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
-            <span className="text-sm text-gray-500">Showing 1-10 of 14,208 users</span>
-            <div className="flex items-center gap-1">
-              <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {[1, 2, 3, "...", 142].map((p, i) => (
-                <button key={i} className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${p === 1 ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>
-                  {p}
-                </button>
-              ))}
-              <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
+                <span className="text-sm text-gray-500">
+                  Showing {rangeStart}-{rangeEnd} of {total.toLocaleString()} users
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page <= 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="px-3 text-sm text-gray-400">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page >= totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Grid View */}
-      {view === "grid" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((user) => (
-            <div key={user.id} className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-5 hover:border-white/10 transition-colors">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <img src={user.avatar} alt={user.name} className="w-11 h-11 rounded-full object-cover" />
-                  <div>
-                    <div className="text-sm font-semibold text-white">{user.name}</div>
-                    <div className="text-xs text-gray-500">{user.email}</div>
+          {/* Grid View */}
+          {view === "grid" && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {users.map((user) => (
+                  <div key={user.id} className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-5 hover:border-white/10 transition-colors">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={fullName(user)} className="w-11 h-11 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-sm font-bold text-white">
+                            {initials(user)}
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-sm font-semibold text-white">{fullName(user)}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </div>
+                      </div>
+                      <span className={`w-2 h-2 rounded-full mt-2 ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Segment</span>
+                        <span className={`font-semibold text-[10px] px-2 py-0.5 rounded border ${segmentColor(user)}`}>{businessSegment(user)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Plan</span>
+                        <span className="text-white font-medium">{subscriptionLabel(user)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Last Seen</span>
+                        <span className="text-gray-300">{lastSeenLabel(user.lastSeenAt)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
+                      <button className="flex-1 py-1.5 text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">View</button>
+                      <button className="flex-1 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors">Suspend</button>
+                    </div>
                   </div>
-                </div>
-                <span className={`w-2 h-2 rounded-full mt-2 ${user.active ? "bg-emerald-500" : "bg-red-500"}`} />
+                ))}
               </div>
-              <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Segment</span>
-                  <span className={`font-semibold text-[10px] px-2 py-0.5 rounded border ${user.segmentColor}`}>{user.segment}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Plan</span>
-                  <span className="text-white font-medium">{user.subscription}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Last Seen</span>
-                  <span className="text-gray-300">{user.lastSeen}</span>
+
+              {/* Grid pagination */}
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-gray-500">
+                  Showing {rangeStart}-{rangeEnd} of {total.toLocaleString()} users
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page <= 1}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="px-3 text-sm text-gray-400">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page >= totalPages}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-white/5 flex gap-2">
-                <button className="flex-1 py-1.5 text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors">View</button>
-                {user.canActivate ? (
-                  <button className="flex-1 py-1.5 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors">Activate</button>
-                ) : (
-                  <button className="flex-1 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors">Suspend</button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );

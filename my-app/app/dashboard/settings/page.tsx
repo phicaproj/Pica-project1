@@ -165,15 +165,20 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form Fields State
-  const [fullName, setFullName] = useState(initialUser?.businessName || "Alex James");
+  const [firstName, setFirstName] = useState(initialUser?.firstName || "");
+  const [lastName, setLastName] = useState(initialUser?.lastName || "");
   const [phone, setPhone] = useState(initialUser?.phone || "");
   const [email, setEmail] = useState(initialUser?.email || "");
   const [isVerified, setIsVerified] = useState(initialUser?.isVerified || false);
   const [avatarUrl, setAvatarUrl] = useState(initialUser?.avatarUrl || "");
 
+  // Combined name used for the header display and avatar initials.
+  const displayName = `${firstName} ${lastName}`.trim();
+
   useEffect(() => {
     if (initialUser) {
-      setFullName(initialUser.businessName || "Alex James");
+      setFirstName(initialUser.firstName || "");
+      setLastName(initialUser.lastName || "");
       setPhone(initialUser.phone || "");
       setEmail(initialUser.email || "");
       setIsVerified(initialUser.isVerified || false);
@@ -188,7 +193,8 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
   const handleCancel = () => {
     setIsEditing(false);
     if (initialUser) {
-      setFullName(initialUser.businessName || "Alex James");
+      setFirstName(initialUser.firstName || "");
+      setLastName(initialUser.lastName || "");
       setPhone(initialUser.phone || "");
       setEmail(initialUser.email || "");
       setIsVerified(initialUser.isVerified || false);
@@ -199,7 +205,8 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
     setSaving(true);
     try {
       const res = await updateUserProfile({
-        businessName: fullName,
+        firstName,
+        lastName,
         phone,
         email,
       });
@@ -375,7 +382,7 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
                 className={`w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-[#0d1117] relative overflow-hidden group ${isEditing ? 'cursor-pointer' : ''}`}
               >
                 <span className={`transition duration-300 ${isEditing ? 'group-hover:opacity-0' : ''}`}>
-                  {fullName ? fullName.substring(0, 2).toUpperCase() : "AJ"}
+                  {displayName ? displayName.substring(0, 2).toUpperCase() : "AJ"}
                 </span>
                 {isEditing && (
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider">
@@ -401,7 +408,7 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
           {/* Name, role badge, email, verification */}
           <div className="flex flex-col items-center sm:items-start gap-2 flex-1 min-w-0">
             <h3 className="text-xl font-bold text-white truncate max-w-full">
-              {fullName || "Alex James"}
+              {displayName || "Alex James"}
             </h3>
             <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass}`}>
               {roleLabel}
@@ -434,17 +441,31 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 relative z-10">
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
-              FULL NAME
+              FIRST NAME
             </label>
             <input
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               disabled={!isEditing}
+              placeholder="First name"
               className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
           <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              LAST NAME
+            </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              disabled={!isEditing}
+              placeholder="Last name"
+              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            />
+          </div>
+          <div className="md:col-span-2">
             <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
               PHONE NUMBER
             </label>

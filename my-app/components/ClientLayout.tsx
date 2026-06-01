@@ -120,12 +120,13 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const mainRef = useRef<HTMLElement | null>(null);
   const isDashboard = pathname.startsWith("/dashboard");
+  const isAdmin = pathname.startsWith("/admin");
   const isAuth = pathname.startsWith("/Auth");
 
   useScrollAnimations(mainRef);
 
-  // Dashboard has its own layout — skip the site Navbar
-  if (isDashboard) {
+  // Dashboard and Admin each have their own layout — skip the site Navbar
+  if (isDashboard || isAdmin) {
     return (
       <div className="min-h-screen">
         {children}

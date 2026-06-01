@@ -98,11 +98,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin" className="text-white font-bold text-xl tracking-wide hidden sm:block">
               PICA
             </Link>
-            <div className="hidden md:flex gap-6 ml-4">
-              <Link href="/admin" className="text-blue-500 font-medium text-sm border-b-2 border-blue-500 pb-1">
-                Home
-              </Link>
-            </div>
           </div>
         </div>
 

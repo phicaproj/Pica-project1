@@ -95,6 +95,46 @@ export async function sendPasswordResetEmail(
     return { success: false, error: message };
   }
 }
+export async function adminCodeEmail(toEmail: string, code: string): Promise<SendEmailResponse> {
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY as string,
+      },
+      body: JSON.stringify({
+        sender: {
+          email: process.env.EMAIL_FROM as string,
+          name: 'PICA by Beauvision',
+        },
+        to: [{ email: toEmail }],
+        subject: 'Your PICA password reset code',
+        htmlContent: `
+          <h2>Reset your PICA password</h2>
+          <p>Use the code below to reset your password. It expires in 10 minutes.</p>
+          <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
+          <p>If you didn't request a password reset, you can safely ignore this email.</p>
+          <br/>
+          <p>— The Beauvision Team</p>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: unknown = await response.json();
+      throw new AppError(JSON.stringify(errorData), 500);
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    console.error('Error sending password reset email:', message);
+
+    return { success: false, error: message };
+  }
+}
 
 export async function sendPaymentSuccessEmail({
   toEmail,
@@ -115,10 +155,10 @@ export async function sendPaymentSuccessEmail({
 }): Promise<SendEmailResponse> {
   try {
     const greetingName = businessName ?? 'there';
-    
+
     const isPhase2B = plan === 'PHASE2B_PILLAR';
     const planName = isPhase2B ? 'Phase 2B Module' : 'Phase 2A report';
-    const description = isPhase2B 
+    const description = isPhase2B
       ? 'Your Phase 2B Deep Dive module is now unlocked. You can start your session any time from your dashboard.'
       : 'Your full Phase 2A diagnostic report is now unlocked. You can download it any time from your dashboard.';
     const actionText = isPhase2B ? 'Start your Deep Dive' : 'Download your report';

@@ -3,6 +3,8 @@ import { registry, errorResponse } from './registry'
 import {
 	initPaymentSchema,
 	verifyPaymentParams,
+	listPaymentsQuery,
+	userPaymentHistoryQuery,
 } from '../module/payment/payment.types'
 
 const PaymentStatus = z.enum([
@@ -12,6 +14,42 @@ const PaymentStatus = z.enum([
 	'ABANDONED',
 	'REVERSED',
 ])
+
+const UserPaymentRowSchema = registry.register(
+	'UserPaymentRow',
+	z
+		.object({
+			id: z.string().uuid(),
+			reference: z.string(),
+			plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR']),
+			amount: z.number(),
+			currency: z.string(),
+			status: PaymentStatus,
+			paidAt: z.string().datetime().nullable(),
+			createdAt: z.string().datetime(),
+		})
+		.openapi('UserPaymentRow'),
+)
+
+const AdminPaymentRowSchema = registry.register(
+	'AdminPaymentRow',
+	z
+		.object({
+			id: z.string().uuid(),
+			reference: z.string(),
+			businessName: z.string().nullable(),
+			email: z.string().email(),
+			plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR']),
+			provider: z.string(),
+			amount: z.number(),
+			currency: z.string(),
+			paymentMethod: z.string().nullable(),
+			status: PaymentStatus,
+			paidAt: z.string().datetime().nullable(),
+			createdAt: z.string().datetime(),
+		})
+		.openapi('AdminPaymentRow'),
+)
 
 // ----- POST /api/payment/init -----------------------------------------------
 
@@ -97,5 +135,79 @@ registry.registerPath({
 		401: errorResponse('Missing or invalid token'),
 		403: errorResponse('You are not the owner of this payment'),
 		404: errorResponse('Payment reference not found'),
+	},
+})
+
+// ----- GET /api/payment/history ---------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/payment/history',
+	tags: ['Payment'],
+	summary: 'Get authenticated user payment transaction history',
+	description:
+		'Authenticated. Returns paginated list of all payment transactions made by the authenticated user.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		query: z.object({
+			page: z.coerce.number().int().min(1).default(1).openapi({ param: { name: 'page', in: 'query' } }),
+			limit: z.coerce.number().int().min(1).max(100).default(10).openapi({ param: { name: 'limit', in: 'query' } }),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'User payment history retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						page: z.number(),
+						limit: z.number(),
+						total: z.number(),
+						totalPages: z.number(),
+						payments: z.array(UserPaymentRowSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+	},
+})
+
+// ----- GET /api/payment/admin -----------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/payment/admin',
+	tags: ['Payment'],
+	summary: 'List all platform payment transactions',
+	description:
+		'Admin-only. Returns paginated list of all payments across the entire platform, with query filters for status and plan.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		query: z.object({
+			page: z.coerce.number().int().min(1).default(1).openapi({ param: { name: 'page', in: 'query' } }),
+			pageSize: z.coerce.number().int().min(1).max(100).default(20).openapi({ param: { name: 'pageSize', in: 'query' } }),
+			status: PaymentStatus.optional().openapi({ param: { name: 'status', in: 'query' } }),
+			plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR']).optional().openapi({ param: { name: 'plan', in: 'query' } }),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'All payments retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						page: z.number(),
+						pageSize: z.number(),
+						total: z.number(),
+						payments: z.array(AdminPaymentRowSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
 	},
 })

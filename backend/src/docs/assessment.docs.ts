@@ -3,6 +3,7 @@ import { registry, errorResponse } from './registry'
 import {
 	answerAssessmentInput,
 	startAssessmentInput,
+	startPhase2BInput,
 } from '../module/assessment/assessment.types'
 
 const SessionIdParam = z
@@ -12,6 +13,30 @@ const SessionIdParam = z
 		param: { name: 'sessionId', in: 'path' },
 		description: 'AssessmentSession UUID',
 	})
+
+const Phase2BPillarEntrySchema = registry.register(
+	'Phase2BPillarEntry',
+	z
+		.object({
+			pillarId: z.string().uuid(),
+			pillarCode: z.string(),
+			pillarName: z.string(),
+			sessionId: z.string().uuid().nullable(),
+			status: z.enum(['OPEN', 'IN_PROGRESS', 'COMPLETED']),
+			unlockedAt: z.string().datetime(),
+		})
+		.openapi('Phase2BPillarEntry'),
+)
+
+const SessionResponseEntrySchema = registry.register(
+	'SessionResponseEntry',
+	z
+		.object({
+			questionId: z.string().uuid(),
+			selectedOptionId: z.string().uuid(),
+		})
+		.openapi('SessionResponseEntry'),
+)
 
 // ----- POST /api/assessment/start -------------------------------------------
 
@@ -68,6 +93,101 @@ registry.registerPath({
 			},
 		},
 		401: errorResponse('Missing or invalid token'),
+	},
+})
+
+// ----- POST /api/assessment/phase2b/start -----------------------------------
+
+registry.registerPath({
+	method: 'post',
+	path: '/api/assessment/phase2b/start',
+	tags: ['Assessment'],
+	summary: 'Start a Phase 2B assessment session for a specific pillar',
+	description:
+		'Authenticated. Creates a new PHASE2B assessment session for the given unlocked pillar.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		body: {
+			required: true,
+			content: { 'application/json': { schema: startPhase2BInput } },
+		},
+	},
+	responses: {
+		201: {
+			description: 'Phase 2B session created',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						sessionId: z.string().uuid(),
+						pillarId: z.string().uuid(),
+						questionCount: z.number().int(),
+					}),
+				},
+			},
+		},
+		400: errorResponse('Validation error'),
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Pillar not unlocked yet'),
+	},
+})
+
+// ----- GET /api/assessment/phase2b/me ---------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/assessment/phase2b/me',
+	tags: ['Assessment'],
+	summary: 'Get all unlocked Phase 2B pillars and their session status',
+	description:
+		'Authenticated. Returns a list of all Phase 2B pillars that the user has unlocked, along with the status of their associated assessment sessions.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'Unlocked Phase 2B pillars list',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						pillars: z.array(Phase2BPillarEntrySchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+	},
+})
+
+// ----- GET /api/assessment/:sessionId/responses -----------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/assessment/{sessionId}/responses',
+	tags: ['Assessment'],
+	summary: 'Get user responses for a specific session',
+	description:
+		'Authenticated. Returns all answers given so far in the specified assessment session.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({ sessionId: SessionIdParam }),
+	},
+	responses: {
+		200: {
+			description: 'Session responses list',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						answeredCount: z.number().int(),
+						totalCount: z.number().int(),
+						responses: z.array(SessionResponseEntrySchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: You do not own this session'),
+		404: errorResponse('Session not found'),
 	},
 })
 

@@ -19,6 +19,7 @@ import {
 } from '../../service/shared/generateToken';
 import { sendPasswordResetEmail, sendWelcomeEmail } from '../../service/shared/email.service';
 import type {
+  AdminLoginResponse,
   ForgotPasswordInput,
   ForgotPasswordResponse,
   LoginInput,
@@ -28,6 +29,8 @@ import type {
   RegisterResponse,
   ResetPasswordInput,
   ResetPasswordResponse,
+  VerifyAdminOTPInput,
+  VerifyAdminOTPResponse,
   VerifyResetOtpInput,
   VerifyResetOtpResponse,
 } from './auth.types';
@@ -80,7 +83,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
   let country: string | null = null;
   let state: string | null = null;
   if (phase1Session.location) {
-    const parts = phase1Session.location.split(',').map(p => p.trim());
+    const parts = phase1Session.location.split(',').map((p) => p.trim());
     if (parts.length > 1) {
       country = parts[parts.length - 1];
       state = parts.slice(0, parts.length - 1).join(', ');
@@ -106,6 +109,8 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,
@@ -131,6 +136,8 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     user: {
       id: user.id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       businessName: user.businessName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
@@ -149,6 +156,8 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       id: true,
       email: true,
       passwordHash: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,
@@ -176,6 +185,8 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
     user: {
       id: user.id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       businessName: user.businessName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
@@ -273,12 +284,91 @@ export async function resetPasswordService(
   };
 }
 
+export async function adminLoginService(data: LoginInput): Promise<AdminLoginResponse> {
+  const normalizedEmail = data.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+    },
+  });
+
+  if (!user || !user.passwordHash) {
+    throw new AppError('Invalid email or password', UNAUTHORIZED);
+  }
+
+  if (user.role !== 'ADMIN') {
+    throw new AppError('Access denied: not an admin account', FORBIDDEN);
+  }
+
+  const passwordMatches = await bcrypt.compare(data.password, user.passwordHash);
+
+  if (!passwordMatches) {
+    throw new AppError('Invalid email or password', UNAUTHORIZED);
+  }
+
+  const code = generateOtpCode();
+  const otpToken = generateOtpToken({ email: user.email, code });
+
+  try {
+    await sendPasswordResetEmail(user.email, code);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error sending password reset email:', message);
+  }
+
+  return {
+    message: 'Admin login successful. Please verify OTP to receive access token.',
+    otpToken,
+    role: user.role,
+  };
+}
+
+export async function verifyAdminOTPService(
+  data: VerifyAdminOTPInput
+): Promise<VerifyAdminOTPResponse> {
+  const payload = verifyOtpToken(data.loginToken);
+
+  if (payload.email !== data.loginToken) {
+    throw new AppError('OTP does not match the provided email', BAD_REQUEST);
+  }
+
+  if (payload.code !== data.code) {
+    throw new AppError('Invalid or expired OTP code', BAD_REQUEST);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: payload.email },
+    select: { id: true, role: true },
+  });
+
+  if (!user) {
+    throw new AppError('Account no longer exists', NOT_FOUND);
+  }
+
+  const tokenPayload = { id: user.id, role: user.role as 'Admin' };
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  return {
+    message: 'OTP verified. Admin access granted.',
+    accessToken,
+    refreshToken,
+  };
+}
+
 export async function meService(userId: string): Promise<MeResponse> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
       businessName: true,
       phone: true,
       avatarUrl: true,
@@ -312,6 +402,8 @@ export async function meService(userId: string): Promise<MeResponse> {
     user: {
       id: user.id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       businessName: user.businessName,
       phone: user.phone,
       avatarUrl: user.avatarUrl,
