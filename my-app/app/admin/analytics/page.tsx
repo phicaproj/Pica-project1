@@ -1,328 +1,392 @@
 "use client";
 
+import { useState } from "react";
 import {
   TrendingUp,
-  BarChart3,
-  Clock,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  SlidersHorizontal,
-  CreditCard,
-  Building2,
-  Eye,
-  Download,
-  Shield,
-  CircleDot,
+  MoreHorizontal,
+  Monitor,
+  Stethoscope,
+  ShoppingBag,
+  Landmark,
 } from "lucide-react";
 
-const TRANSACTIONS = [
-  {
-    id: "#TX-94021",
-    initials: "JD",
-    color: "bg-blue-500",
-    name: "Julianne Devis",
-    email: "j.devis@enterprise.com",
-    date: "Oct 24, 2024",
-    amount: "$1,450.00",
-    method: "Visa •• 4242",
-    methodIcon: "card",
-    status: "SUCCESS",
-    statusColor: "text-emerald-400 bg-emerald-400/10",
-  },
-  {
-    id: "#TX-94018",
-    initials: "MK",
-    color: "bg-purple-500",
-    name: "Marcus Knight",
-    email: "m.knight@techflow.io",
-    date: "Oct 24, 2024",
-    amount: "$2,900.00",
-    method: "Bank Transfer",
-    methodIcon: "bank",
-    status: "PENDING",
-    statusColor: "text-amber-400 bg-amber-400/10",
-  },
-  {
-    id: "#TX-93992",
-    initials: "SA",
-    color: "bg-teal-500",
-    name: "Sarah Al-Farsi",
-    email: "sarah.a@global.net",
-    date: "Oct 23, 2024",
-    amount: "$12,400.00",
-    method: "Mastercard •• 8812",
-    methodIcon: "card",
-    status: "SUCCESS",
-    statusColor: "text-emerald-400 bg-emerald-400/10",
-  },
-  {
-    id: "#TX-93988",
-    initials: "ER",
-    color: "bg-orange-500",
-    name: "Erik Rosen",
-    email: "e.rosen@nordic.se",
-    date: "Oct 23, 2024",
-    amount: "$550.00",
-    method: "Visa •• 1009",
-    methodIcon: "card",
-    status: "FAILED",
-    statusColor: "text-red-400 bg-red-400/10",
-  },
+const PILLAR_MATRIX = [
+  { label: "Strategy",     pct: 92, color: "bg-blue-500" },
+  { label: "Operations",   pct: 74, color: "bg-emerald-500" },
+  { label: "Finance",      pct: 61, color: "bg-amber-500" },
+  { label: "Marketing",    pct: 88, color: "bg-blue-400" },
+  { label: "HR & Culture", pct: 54, color: "bg-amber-400" },
+  { label: "Technology",   pct: 96, color: "bg-emerald-400" },
 ];
 
-// Simple SVG line chart data points for Revenue Velocity
-const chartPoints = [
-  { x: 0, y: 80 }, { x: 60, y: 120 }, { x: 130, y: 90 },
-  { x: 200, y: 60 }, { x: 290, y: 40 }, { x: 380, y: 30 },
-  { x: 450, y: 50 }, { x: 520, y: 20 },
+const PAIN_POINTS = [
+  { label: "Data Redundancy Fatigue",   pillar: "TECHNOLOGY PILLAR", count: "422 Instances", severity: "critical" },
+  { label: "Governance Bottlenecks",    pillar: "LEGAL & STRATEGY",  count: "389 Instances", severity: "critical" },
+  { label: "Shadow IT Spending",        pillar: "FINANCE",           count: "215 Instances", severity: "moderate" },
+  { label: "Cross-Dept. Knowledge Gaps",pillar: "HR & CULTURE",      count: "198 Instances", severity: "moderate" },
 ];
-const toPath = (pts: { x: number; y: number }[]) =>
-  pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
-export default function PaymentsPage() {
+const SECTORS = [
+  { label: "Tech & Software", sub: "842 ORGANIZATIONS", pct: "32.4%", icon: Monitor,     color: "bg-blue-500/20 text-blue-400",    border: "border-blue-500/10" },
+  { label: "Healthcare",      sub: "512 ORGANIZATIONS", pct: "19.7%", icon: Stethoscope, color: "bg-emerald-500/20 text-emerald-400", border: "border-emerald-500/10" },
+  { label: "Retail & E-comm", sub: "394 ORGANIZATIONS", pct: "15.1%", icon: ShoppingBag, color: "bg-amber-500/20 text-amber-400",   border: "border-amber-500/10" },
+  { label: "Finance",         sub: "288 ORGANIZATIONS", pct: "11.2%", icon: Landmark,    color: "bg-purple-500/20 text-purple-400", border: "border-purple-500/10" },
+];
+
+export default function AnalyticsPage() {
+  const [activeRange, setActiveRange] = useState("30D");
+
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div className="space-y-0 max-w-[1400px] mx-auto">
 
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Payment Management</h1>
-        <p className="text-gray-400 text-sm max-w-xl">
-          Central hub for transaction monitoring, automated settlement handling, and
-          real-time revenue analytics across global regions.
-        </p>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Intelligence Dashboard</h1>
+          <p className="text-gray-400 text-sm">Global platform diagnostics and kinetic growth metrics.</p>
+        </div>
+        <div className="flex bg-[#1C1F2E] border border-white/5 rounded-xl p-1 self-start">
+          {["24H", "7D", "30D", "90D"].map((r) => (
+            <button
+              key={r}
+              onClick={() => setActiveRange(r)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                activeRange === r ? "bg-blue-500 text-white shadow" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Stat Banner with background image */}
-      <div className="relative rounded-2xl overflow-hidden">
+      {/* ── Stat Banner (with dashboard bg image) ──────────────── */}
+      <div className="relative rounded-2xl overflow-hidden mb-6">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/images/dashboard img')" }}
         />
-        <div className="absolute inset-0 bg-[#111318]/65" />
+        <div className="absolute inset-0 bg-[#0f1117]/70" />
 
-        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/5">
-          {/* Total Revenue */}
-          <div className="p-6">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Total Revenue</div>
-            <div className="text-3xl font-bold text-white mb-2">$1.42M</div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold">
-              <TrendingUp className="w-3.5 h-3.5" /> +12.4%
+        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4">
+
+          {/* Platform Growth */}
+          <div className="p-6 border-r border-white/10">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Platform Growth</div>
+            <div className="text-4xl font-bold text-white mb-1">2,842</div>
+            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-semibold mb-4">
+              <TrendingUp className="w-3.5 h-3.5" />
+              +12.4%
             </div>
-            <div className="mt-3 flex items-end gap-0.5 h-8">
-              {[3,5,4,7,6,8,7,9].map((h, i) => (
-                <div key={i} className="flex-1 bg-blue-500/40 rounded-sm" style={{ height: `${h * 10}%` }} />
+            {/* mini bar chart */}
+            <div className="flex items-end gap-[3px] h-8">
+              {[30, 45, 35, 55, 42, 62, 50, 72, 60, 85].map((h, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-sm transition-all ${
+                    i >= 7 ? "bg-emerald-400" : "bg-emerald-400/25"
+                  }`}
+                  style={{ height: `${h}%` }}
+                />
               ))}
             </div>
           </div>
 
-          {/* ARR Estimate */}
-          <div className="p-6">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">ARR Estimate</div>
-            <div className="text-3xl font-bold text-white mb-2">$4.85M</div>
-            <div className="text-xs text-gray-400">Projected end of FY24</div>
-            <div className="mt-3">
-              <svg viewBox="0 0 100 30" className="w-full h-8">
-                <polyline
-                  points="0,25 15,20 30,22 45,15 60,18 75,10 90,12 100,5"
-                  fill="none" stroke="#3b82f6" strokeWidth="1.5"
+          {/* User Retention */}
+          <div className="p-6 border-r border-white/10">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">User Retention</div>
+            <div className="flex items-baseline gap-1 mb-1">
+              <span className="text-4xl font-bold text-white">94.2</span>
+              <span className="text-2xl font-bold text-white">%</span>
+            </div>
+            <div className="text-xs text-gray-400 mb-4">Stable</div>
+            {/* circle gauge */}
+            <div className="relative w-10 h-10">
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r="15" fill="transparent" stroke="#ffffff10" strokeWidth="3" />
+                <circle
+                  cx="18" cy="18" r="15" fill="transparent"
+                  stroke="#6366f1" strokeWidth="3"
+                  strokeDasharray={`${94.2 * 0.9425} 100`}
+                  strokeLinecap="round"
                 />
               </svg>
             </div>
           </div>
 
-          {/* Pending Payouts */}
-          <div className="p-6">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pending Payouts</div>
-            <div className="text-3xl font-bold text-orange-400 mb-2">$142.2k</div>
-            <div className="text-xs text-gray-400">Scheduled for Fri, Oct 24</div>
-            <div className="mt-3 relative w-16 h-8 flex items-center justify-center">
-              <svg viewBox="0 0 60 34" className="w-full h-full">
-                <path d="M 5 30 A 25 25 0 0 1 55 30" fill="none" stroke="#374151" strokeWidth="6" />
-                <path d="M 5 30 A 25 25 0 0 1 55 30" fill="none" stroke="#f97316" strokeWidth="6" strokeDasharray="78.5" strokeDashoffset="25" />
-              </svg>
+          {/* Avg Assessment */}
+          <div className="p-6 border-r border-white/10">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Avg. Assessment</div>
+            <div className="flex items-baseline gap-1 mb-1">
+              <span className="text-4xl font-bold text-white">78.5</span>
+              <span className="text-base font-semibold text-gray-400">/100</span>
+            </div>
+            <div className="text-xs font-bold text-amber-400 mb-4">Benchmark</div>
+            {/* dot progress indicator */}
+            <div className="flex gap-1.5">
+              {[...Array(10)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-2 h-2 rounded-full ${i < 8 ? "bg-amber-400" : "bg-white/10"}`}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Success Rate */}
+          {/* Active Sessions */}
           <div className="p-6">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Success Rate</div>
-            <div className="flex items-center gap-4">
-              <div className="relative w-16 h-16 flex-shrink-0">
-                <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                  <circle cx="18" cy="18" r="15" fill="transparent" stroke="#1f2937" strokeWidth="3" />
-                  <circle cx="18" cy="18" r="15" fill="transparent" stroke="#10b981" strokeWidth="3"
-                    strokeDasharray="94.25" strokeDashoffset="5.66" />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">99%</span>
-                </div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Active Sessions</div>
+            <div className="text-4xl font-bold text-white mb-1">142</div>
+            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              LIVE
+            </div>
+            {/* radar icon rings */}
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" style={{ animationDuration: "2s" }} />
+              <div className="absolute inset-1 rounded-full border-2 border-emerald-500/30" />
+              <div className="w-3 h-3 rounded-full border-2 border-emerald-500/60 flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-emerald-400" />
               </div>
-              <div className="text-sm text-gray-400">Optimization in progress</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Revenue Velocity + Fraud Prevention */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Chart */}
+      {/* ── Row 2: Engagement Chart + Pillar Matrix ─────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+        {/* Line chart — 2/3 width */}
         <div className="lg:col-span-2 bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between mb-8">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-1">Revenue Velocity</h2>
-              <p className="text-sm text-gray-400">Monthly earnings trajectory over the last 6 months</p>
+              <h2 className="text-lg font-semibold text-white mb-1">User Engagement Trends</h2>
+              <p className="text-sm text-gray-400">Daily active users vs. Assessment starts</p>
             </div>
-            <div className="flex bg-[#111318] rounded-lg p-1 border border-white/5">
-              {["6M", "1Y", "MAX"].map((t) => (
-                <button key={t} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${t === "6M" ? "bg-[#2A2E3D] text-white" : "text-gray-400 hover:text-white"}`}>{t}</button>
-              ))}
+            <div className="flex items-center gap-5 text-xs font-semibold">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                <span className="text-gray-400">DAU</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                <span className="text-gray-400">Starts</span>
+              </div>
             </div>
           </div>
 
-          {/* SVG area chart */}
-          <div className="relative h-48">
-            <svg viewBox="0 0 520 140" className="w-full h-full" preserveAspectRatio="none">
+          {/* SVG smooth curves */}
+          <div className="relative h-56">
+            <svg
+              viewBox="0 0 740 180"
+              className="w-full h-full"
+              preserveAspectRatio="none"
+            >
               <defs>
-                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+                <linearGradient id="dauFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="startFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#34d399" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#34d399" stopOpacity="0" />
                 </linearGradient>
               </defs>
-              {/* Grid lines */}
-              {[0,35,70,105,140].map((y) => (
-                <line key={y} x1="0" y1={y} x2="520" y2={y} stroke="#ffffff08" strokeWidth="1" />
+
+              {/* Subtle grid lines */}
+              {[0, 45, 90, 135, 180].map((y) => (
+                <line key={y} x1="0" y1={y} x2="740" y2={y} stroke="#ffffff07" strokeWidth="1" />
               ))}
-              {/* Area fill */}
-              <path d="M 0 120 L 80 100 L 160 110 L 240 80 L 320 55 L 400 40 L 520 30 L 520 140 L 0 140 Z"
-                fill="url(#revGrad)" />
-              {/* Line */}
-              <path d="M 0 120 L 80 100 L 160 110 L 240 80 L 320 55 L 400 40 L 520 30"
-                fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+
+              {/* DAU area — big smooth wave peaking around 21 OCT */}
+              <path
+                d="M 0 165
+                   C 60 158, 100 140, 150 115
+                   C 200 88, 230 50, 280 35
+                   C 330 20, 380 18, 430 28
+                   C 480 38, 520 65, 570 85
+                   C 620 105, 680 130, 740 148
+                   L 740 180 L 0 180 Z"
+                fill="url(#dauFill)"
+              />
+              <path
+                d="M 0 165
+                   C 60 158, 100 140, 150 115
+                   C 200 88, 230 50, 280 35
+                   C 330 20, 380 18, 430 28
+                   C 480 38, 520 65, 570 85
+                   C 620 105, 680 130, 740 148"
+                fill="none"
+                stroke="#93c5fd"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Starts area — lower, flatter dashed wave */}
+              <path
+                d="M 0 172
+                   C 80 168, 140 158, 200 145
+                   C 260 132, 310 118, 370 112
+                   C 430 106, 480 110, 540 118
+                   C 600 126, 670 138, 740 142
+                   L 740 180 L 0 180 Z"
+                fill="url(#startFill)"
+              />
+              <path
+                d="M 0 172
+                   C 80 168, 140 158, 200 145
+                   C 260 132, 310 118, 370 112
+                   C 430 106, 480 110, 540 118
+                   C 600 126, 670 138, 740 142"
+                fill="none"
+                stroke="#6ee7b7"
+                strokeWidth="2"
+                strokeDasharray="6 4"
+                strokeLinecap="round"
+              />
             </svg>
-            {/* X labels */}
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-1">
-              {["MAY","JUN","JUL","AUG","SEP","OCT"].map((m) => <span key={m}>{m}</span>)}
+
+            {/* X-axis labels */}
+            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+              <span>01 OCT</span>
+              <span>07 OCT</span>
+              <span>14 OCT</span>
+              <span>21 OCT</span>
+              <span>28 OCT</span>
             </div>
           </div>
         </div>
 
-        {/* Fraud Prevention */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-          {/* mini preview image */}
-          <div className="relative h-44 bg-[#161925] overflow-hidden flex-shrink-0">
-            <div
-              className="absolute inset-0 bg-cover bg-center opacity-30"
-              style={{ backgroundImage: "url('/images/dashboard img')" }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#1C1F2E]" />
-            {/* Live badge */}
-            <div className="absolute top-4 left-4 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Global Operations Live</span>
-            </div>
+        {/* Pillar Matrix — 1/3 width */}
+        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 flex flex-col">
+          <h2 className="text-lg font-semibold text-white mb-6">Pillar Matrix</h2>
+
+          <div className="space-y-[18px] flex-1">
+            {PILLAR_MATRIX.map((p) => (
+              <div key={p.label}>
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-sm text-gray-300">{p.label}</span>
+                  <span className="text-sm font-bold text-white">{p.pct}%</span>
+                </div>
+                <div className="h-[5px] w-full bg-white/[0.07] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${p.color}`}
+                    style={{ width: `${p.pct}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="p-5 flex flex-col flex-1">
-            <h3 className="text-xl font-bold text-white mb-3">Intelligent Fraud Prevention</h3>
-            <p className="text-sm text-gray-400 mb-5 flex-1">
-              PICA Kinetic AI is currently monitoring 1,204 active sessions for anomalous transaction patterns.
+
+          {/* Insight quote */}
+          <div className="mt-6 p-4 bg-[#111318] rounded-xl border border-white/5">
+            <p className="text-xs text-gray-400 italic leading-relaxed">
+              "PICA Architecture shows 12% higher efficiency in organizations focusing on 'Technology' and 'Strategy' pillars simultaneously."
             </p>
-            <button className="w-full py-3 bg-white/10 hover:bg-white/15 border border-white/10 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2">
-              <Shield className="w-4 h-4" /> Review Audit Log
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Transaction History */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden pb-12">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 border-b border-white/5">
-          <h2 className="text-lg font-semibold text-white">Transaction History</h2>
-          <div className="flex gap-2 flex-wrap">
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 hover:text-white transition-colors">
-              <Calendar className="w-3.5 h-3.5" /> Last 30 Days
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 hover:text-white transition-colors">
-              <SlidersHorizontal className="w-3.5 h-3.5" /> Status
-            </button>
-            <button className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300 hover:text-white transition-colors">
-              <CreditCard className="w-3.5 h-3.5" /> Method
-            </button>
-          </div>
-        </div>
+      {/* ── Row 3: Pain Points + Top Sectors (bg image) ─────────── */}
+      <div className="relative rounded-2xl overflow-hidden mb-6">
+        {/* dashboard bg image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/dashboard img')" }}
+        />
+        <div className="absolute inset-0 bg-[#0f1117]/82" />
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["TRANSACTION ID","CUSTOMER","DATE","AMOUNT","METHOD","STATUS","ACTIONS"].map((h) => (
-                  <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {TRANSACTIONS.map((tx) => (
-                <tr key={tx.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 py-1 rounded">{tx.id}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full ${tx.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                        {tx.initials}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-white">{tx.name}</div>
-                        <div className="text-xs text-gray-500">{tx.email}</div>
-                      </div>
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2">
+
+          {/* Critical Pain Points */}
+          <div className="p-7 border-b lg:border-b-0 lg:border-r border-white/5">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-white mb-1">Critical Pain Points</h2>
+                <p className="text-sm text-gray-400">Most frequent issues across assessments</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/20 uppercase tracking-wider">
+                  Critical
+                </span>
+                <span className="text-[10px] font-bold px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/20 uppercase tracking-wider">
+                  Moderate
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {PAIN_POINTS.map((pt, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+                    pt.severity === "critical"
+                      ? "border-red-500/15 bg-red-500/[0.04] hover:bg-red-500/[0.07]"
+                      : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                  }`}
+                >
+                  {/* Left severity bar */}
+                  <div
+                    className={`w-[3px] h-10 rounded-full flex-shrink-0 ${
+                      pt.severity === "critical" ? "bg-red-500" : "bg-amber-500"
+                    }`}
+                  />
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white">{pt.label}</div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
+                      {pt.pillar}
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{tx.date}</td>
-                  <td className="px-6 py-4 text-sm font-semibold text-white">{tx.amount}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      {tx.methodIcon === "card"
-                        ? <CreditCard className="w-4 h-4 text-gray-500" />
-                        : <Building2 className="w-4 h-4 text-gray-500" />
-                      }
-                      {tx.method}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${tx.statusColor}`}>
-                      • {tx.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1">
-                      <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+                  {/* Count + menu */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="text-sm font-bold text-white">{pt.count}</span>
+                    <button className="text-gray-600 hover:text-gray-300 transition-colors">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
-          <span className="text-sm text-gray-500">Showing 1-4 of 1,248 transactions</span>
-          <div className="flex items-center gap-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[1, 2, 3].map((p) => (
-              <button key={p} className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${p === 1 ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>{p}</button>
-            ))}
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            </div>
           </div>
+
+          {/* Top Activity Sectors */}
+          <div className="p-7">
+            <h2 className="text-xl font-bold text-white mb-6">Top Activity Sectors</h2>
+
+            <div className="space-y-3">
+              {SECTORS.map((sec, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-4 p-4 rounded-xl border bg-white/[0.02] hover:bg-white/[0.04] transition-colors ${sec.border}`}
+                >
+                  <div
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${sec.color}`}
+                  >
+                    <sec.icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white">{sec.label}</div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
+                      {sec.sub}
+                    </div>
+                  </div>
+                  <span className="text-lg font-bold text-white flex-shrink-0">{sec.pct}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Footer ──────────────────────────────────────────────── */}
+      <div className="text-center py-8 border-t border-white/5">
+        <div className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.2em]">
+          PICA Kinetic Architecture © 2024
+        </div>
+        <div className="text-[10px] text-gray-700 mt-1.5 tracking-wide">
+          v4.8.2-stable // Internal Administrative Control Hub
         </div>
       </div>
 
