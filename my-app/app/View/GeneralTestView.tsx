@@ -169,7 +169,7 @@ function ProfileStep({
 }: {
 	dark: boolean
 	profile: ProfileData
-	setProfile: (p: ProfileData) => void
+	setProfile: (p: ProfileData | ((prev: ProfileData) => ProfileData)) => void
 	onContinue: () => void
 	onBack: () => void
 	loading: boolean
@@ -196,7 +196,7 @@ function ProfileStep({
 
 	useEffect(() => {
 		if (selectedCountry && selectedCity) {
-			setProfile({ ...profile, location: `${selectedCity}, ${selectedCountry}` })
+			setProfile((prev: ProfileData) => ({ ...prev, location: `${selectedCity}, ${selectedCountry}` }))
 		}
 	}, [selectedCountry, selectedCity])
 
