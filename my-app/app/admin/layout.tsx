@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearSession, getStoredUser } from "@/lib/authClient";
+import { clearSession, getAccessToken, getStoredUser } from "@/lib/authClient";
 import {
   LayoutDashboard,
   Users,
@@ -14,16 +14,20 @@ import {
   Settings,
   Database,
   Activity,
-  PenTool,
+  TicketPercent,
   Search,
-  Bell,
   Menu,
   X,
   LogOut,
-  ChevronRight
 } from "lucide-react";
 
-const NAV_MAIN = [
+type NavItemConfig = {
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+};
+
+const NAV_MAIN: NavItemConfig[] = [
   { label: "Home", icon: LayoutDashboard, href: "/admin" },
   { label: "Users", icon: Users, href: "/admin/users" },
   { label: "Reports", icon: FileText, href: "/admin/reports" },
@@ -32,8 +36,8 @@ const NAV_MAIN = [
   { label: "Analytics", icon: BarChart2, href: "/admin/analytics" },
 ];
 
-const NAV_ASSESSMENT = [
-  { label: "Assessment Builder", icon: PenTool, href: "/admin/assessment-builder" },
+const NAV_ASSESSMENT: NavItemConfig[] = [
+  { label: "Coupons", icon: TicketPercent, href: "/admin/coupons" },
   { label: "Question Bank", icon: Database, href: "/admin/question-bank" },
   { label: "Scoring", icon: Activity, href: "/admin/scoring" },
   { label: "Settings", icon: Settings, href: "/admin/settings" },
@@ -48,7 +52,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const user = getStoredUser();
-    if (!user || user.role !== "ADMIN") {
+    const token = getAccessToken();
+
+    if (!token || !user || user.role !== "ADMIN") {
+      clearSession();
       router.replace("/Auth/login");
       return;
     }
@@ -70,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push("/");
   };
 
-  const NavItem = ({ item }: { item: (typeof NAV_MAIN)[0] }) => {
+  const NavItem = ({ item }: { item: NavItemConfig }) => {
     const active = isActive(item.href);
     return (
       <Link

@@ -43,7 +43,7 @@ export const getPhase2BQuestions = asyncHandler(async (req: Request, res: Respon
 });
 
 export const getAllPillars = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id || req.user?.role !== 'USER') {
+  if (!req.user?.id) {
     throw new AppError('Authentication required', UNAUTHORIZED);
   }
 

@@ -165,6 +165,7 @@ async function authedFetch<T>(
 			const message =
 				(typeof json.message === 'string' && json.message) ||
 				`Request failed with status ${res.status}`
+			if (res.status === 401) clearSession()
 			return { data: null, error: { message } }
 		}
 		return { data: json as T, error: null }
@@ -384,6 +385,224 @@ export const deleteAdminPricing = async (id: string) => {
 export const getAdminPillars = async () => {
 	return authedFetch<AllPillarsResponse>('/admin/pillars', {
 		method: 'GET',
+	})
+}
+
+export type AdminQuestionPhase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
+export type AdminRiskType = 'NORMAL' | 'RISK' | 'KNOCKOUT'
+
+export type AdminQuestionOption = {
+	id: string
+	optionLabel: string
+	optionText: string
+	score: number
+	riskType: AdminRiskType
+	observation: string
+	recommendation: string
+	displayOrder: number
+}
+
+export type AdminQuestion = {
+	id: string
+	pillarId: string
+	pillarCode: string
+	questionCode: string
+	questionText: string
+	phase: AdminQuestionPhase
+	businessSize: BusinessSize
+	isPhase1Featured: boolean
+	hasKnockoutOption: boolean
+	isActive: boolean
+	displayOrder: number
+	options: AdminQuestionOption[]
+}
+
+export type AdminQuestionListResponse = {
+	message: string
+	total: number
+	questions: AdminQuestion[]
+}
+
+export type AdminQuestionDetailResponse = {
+	message: string
+	question: AdminQuestion
+}
+
+export type AdminQuestionOptionPayload = {
+	optionText: string
+	score: number
+	observation: string
+	recommendation: string
+}
+
+export type CreateAdminQuestionPayload = {
+	pillarId: string
+	phase: AdminQuestionPhase
+	businessSize: BusinessSize
+	isPhase1Featured: boolean
+	questionText: string
+	options: AdminQuestionOptionPayload[]
+}
+
+export type UpdateAdminQuestionPayload = {
+	questionText?: string
+	phase?: AdminQuestionPhase
+	businessSize?: BusinessSize
+	isPhase1Featured?: boolean
+	isActive?: boolean
+}
+
+export type UpdateAdminQuestionOptionPayload = Partial<AdminQuestionOptionPayload>
+
+export const getAdminQuestions = async (params: {
+	pillarId?: string
+	phase?: AdminQuestionPhase
+	businessSize?: BusinessSize
+	search?: string
+	includeInactive?: boolean
+} = {}) => {
+	const qs = new URLSearchParams()
+	if (params.pillarId) qs.set('pillarId', params.pillarId)
+	if (params.phase) qs.set('phase', params.phase)
+	if (params.businessSize) qs.set('businessSize', params.businessSize)
+	if (params.search) qs.set('search', params.search)
+	if (params.includeInactive !== undefined) {
+		qs.set('includeInactive', String(params.includeInactive))
+	}
+	const query = qs.toString()
+
+	return authedFetch<AdminQuestionListResponse>(
+		`/admin/questions${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
+}
+
+export const createAdminQuestion = async (
+	payload: CreateAdminQuestionPayload,
+) => {
+	return authedFetch<AdminQuestionDetailResponse>('/admin/questions', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const updateAdminQuestion = async (
+	id: string,
+	payload: UpdateAdminQuestionPayload,
+) => {
+	return authedFetch<AdminQuestionDetailResponse>(`/admin/questions/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const deleteAdminQuestion = async (id: string) => {
+	return authedFetch<AdminQuestionDetailResponse>(`/admin/questions/${id}`, {
+		method: 'DELETE',
+	})
+}
+
+export const addAdminQuestionOption = async (
+	questionId: string,
+	payload: AdminQuestionOptionPayload,
+) => {
+	return authedFetch<AdminQuestionDetailResponse>(
+		`/admin/questions/${questionId}/options`,
+		{
+			method: 'POST',
+			body: JSON.stringify(payload),
+		},
+	)
+}
+
+export const updateAdminQuestionOption = async (
+	optionId: string,
+	payload: UpdateAdminQuestionOptionPayload,
+) => {
+	return authedFetch<AdminQuestionDetailResponse>(`/admin/options/${optionId}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const deleteAdminQuestionOption = async (optionId: string) => {
+	return authedFetch<AdminQuestionDetailResponse>(`/admin/options/${optionId}`, {
+		method: 'DELETE',
+	})
+}
+
+export type AdminCoupon = {
+	id: string
+	code: string
+	description: string | null
+	amountOff: number
+	percentOff: number
+	isActive: boolean
+	userId: string | null
+	userEmail: string | null
+	createdAt: string
+}
+
+export type AdminCouponListResponse = {
+	message: string
+	total: number
+	coupons: AdminCoupon[]
+}
+
+export type AdminCouponDetailResponse = {
+	message: string
+	coupon: AdminCoupon
+}
+
+export type CreateAdminCouponPayload = {
+	code?: string
+	description?: string
+	amountOff?: number
+	percentOff?: number
+	isActive: boolean
+	userId?: string
+}
+
+export type UpdateAdminCouponPayload = {
+	description?: string
+	isActive?: boolean
+}
+
+export const getAdminCoupons = async (params: {
+	userId?: string
+	isActive?: boolean
+} = {}) => {
+	const qs = new URLSearchParams()
+	if (params.userId) qs.set('userId', params.userId)
+	if (params.isActive !== undefined) qs.set('isActive', String(params.isActive))
+	const query = qs.toString()
+
+	return authedFetch<AdminCouponListResponse>(
+		`/admin/coupons${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
+}
+
+export const createAdminCoupon = async (payload: CreateAdminCouponPayload) => {
+	return authedFetch<AdminCouponDetailResponse>('/admin/coupons', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const updateAdminCoupon = async (
+	id: string,
+	payload: UpdateAdminCouponPayload,
+) => {
+	return authedFetch<AdminCouponDetailResponse>(`/admin/coupons/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const deleteAdminCoupon = async (id: string) => {
+	return authedFetch<{ message: string }>(`/admin/coupons/${id}`, {
+		method: 'DELETE',
 	})
 }
 
