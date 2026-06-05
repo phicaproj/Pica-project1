@@ -4,7 +4,11 @@ import type { Plan } from '@prisma/client';
 const planSchema = z.enum(['PHASE2A', 'PHASE2B_PILLAR']);
 
 export const pricingIdParamSchema = z.object({
-  id: z.string({ error: 'id is required' }).uuid('id must be a valid UUID'),
+  // plan_prices.id is a TEXT primary key. New rows default to UUIDs, but the
+  // seed migration generated deterministic text IDs for existing rows, so the
+  // route param must not reject non-RFC UUID row IDs before Prisma can look
+  // them up.
+  id: z.string({ error: 'id is required' }).trim().min(1, 'id is required').max(120),
 });
 
 export const listPricingQuerySchema = z.object({

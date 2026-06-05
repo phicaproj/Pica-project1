@@ -1,9 +1,10 @@
 import z from 'zod';
-import type { AssessmentSession, BusinessSize, Payment, Plan } from '@prisma/client';
+import type { AssessmentSession, BusinessSize, Payment, PaymentStatus, Plan } from '@prisma/client';
 
 export const listUsersQuery = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
   search: z.string().trim().min(1).max(100).optional(),
   businessSize: z.enum(['SMALL', 'MEDIUM']).optional(),
   plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'FREE']).optional(),
@@ -43,23 +44,33 @@ export type AdminUserDetails = AdminUserRow & {
     status: AssessmentSession['status'];
     updatedAt: Date;
     phase: AssessmentSession['phase'];
+    pillarId: string | null;
+    pillarName: string | null;
+    reportPdfUrl: string | null;
   }[];
   recentPayments: {
     id: string;
     amount: number;
     plan: Payment['plan'];
+    status: PaymentStatus;
+    currency: string;
+    reference: string;
+    paidAt: Date | null;
     updatedAt: Payment['updatedAt'];
   }[];
   totalSpent: number;
   totalSessions: number;
   completedSessions: number;
+  totalSuccessfulPayments: number;
 };
 
 export type ListUsersResponse = {
   message: string;
   page: number;
   pageSize: number;
+  limit: number;
   total: number;
+  totalPages: number;
   users: AdminUserRow[];
 };
 

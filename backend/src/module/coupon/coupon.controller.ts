@@ -51,6 +51,9 @@ export const validateCoupon = asyncHandler(async (req: Request, res: Response) =
     throw new AppError('Authentication required', UNAUTHORIZED);
   }
   const input = validateCouponSchema.parse(req.body);
-  const pricing = await validateAndPriceCoupon(input.code, req.user.id, input.basePrice);
+  const pricing = await validateAndPriceCoupon(input.code, req.user.id, input.basePrice, {
+    plan: input.plan,
+    pillarId: input.pillarId,
+  });
   return res.status(OK).json({ message: 'Coupon applied', pricing });
 });

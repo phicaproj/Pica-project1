@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { Prisma } from '@prisma/client';
+import { Plan, Prisma, UserRole } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
@@ -36,9 +36,12 @@ type RawCoupon = Prisma.DiscountGetPayload<{
     amountOff: true;
     percentOff: true;
     isActive: true;
+    plan: true;
+    pillarId: true;
     userId: true;
     createdAt: true;
     user: { select: { email: true } };
+    pillar: { select: { code: true; name: true } };
   };
 }>;
 
@@ -49,9 +52,12 @@ const couponSelect = {
   amountOff: true,
   percentOff: true,
   isActive: true,
+  plan: true,
+  pillarId: true,
   userId: true,
   createdAt: true,
   user: { select: { email: true } },
+  pillar: { select: { code: true, name: true } },
 } as const;
 
 const toCoupon = (coupon: RawCoupon): CouponResponse => ({
@@ -61,18 +67,33 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   amountOff: coupon.amountOff.toNumber(),
   percentOff: coupon.percentOff.toNumber(),
   isActive: coupon.isActive,
+  plan: coupon.plan,
+  pillarId: coupon.pillarId,
+  pillarCode: coupon.pillar?.code ?? null,
+  pillarName: coupon.pillar?.name ?? null,
   userId: coupon.userId,
   userEmail: coupon.user?.email ?? null,
   createdAt: coupon.createdAt,
 });
 
 export async function createCouponService(input: CreateCouponInput): Promise<CouponDetailResponse> {
+  const plan = input.plan ?? null;
+  const pillarId = plan === Plan.PHASE2B_PILLAR ? input.pillarId ?? null : null;
+
   if (input.userId) {
     const user = await prisma.user.findUnique({
       where: { id: input.userId },
-      select: { id: true },
+      select: { id: true, role: true },
     });
-    if (!user) throw new AppError('User not found', NOT_FOUND);
+    if (!user || user.role !== UserRole.USER) throw new AppError('User not found', NOT_FOUND);
+  }
+
+  if (pillarId) {
+    const pillar = await prisma.pillar.findUnique({
+      where: { id: pillarId },
+      select: { id: true, isActive: true },
+    });
+    if (!pillar || !pillar.isActive) throw new AppError('Pillar not found', NOT_FOUND);
   }
 
   // Both columns are always stored (schema requires both). The admin supplies
@@ -94,6 +115,8 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           percentOff,
           isActive: input.isActive,
           userId: input.userId ?? null,
+          plan,
+          pillarId,
         },
         select: couponSelect,
       });
@@ -116,6 +139,8 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           percentOff,
           isActive: input.isActive,
           userId: input.userId ?? null,
+          plan,
+          pillarId,
         },
         select: couponSelect,
       });
@@ -135,6 +160,8 @@ export async function listCouponsService(query: ListCouponsQuery): Promise<Coupo
   const where: Prisma.DiscountWhereInput = {
     ...(query.userId ? { userId: query.userId } : {}),
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
+    ...(query.plan ? { plan: query.plan } : {}),
+    ...(query.pillarId ? { pillarId: query.pillarId } : {}),
   };
 
   const [total, coupons] = await Promise.all([
@@ -200,7 +227,8 @@ export async function deleteCouponService(couponId: string): Promise<{ message: 
 export async function validateAndPriceCoupon(
   code: string,
   userId: string,
-  basePrice: number
+  basePrice: number,
+  target: { plan: Plan; pillarId?: string | null }
 ): Promise<CouponPricing> {
   const coupon = await prisma.discount.findUnique({
     where: { code: code.trim().toUpperCase() },
@@ -210,6 +238,8 @@ export async function validateAndPriceCoupon(
       percentOff: true,
       isActive: true,
       userId: true,
+      plan: true,
+      pillarId: true,
     },
   });
 
@@ -219,6 +249,14 @@ export async function validateAndPriceCoupon(
 
   if (coupon.userId && coupon.userId !== userId) {
     throw new AppError('This coupon is not valid for your account', UNPROCESSABLE_CONTENT);
+  }
+
+  if (coupon.plan && coupon.plan !== target.plan) {
+    throw new AppError('This coupon is not valid for the selected plan', UNPROCESSABLE_CONTENT);
+  }
+
+  if (coupon.pillarId && coupon.pillarId !== target.pillarId) {
+    throw new AppError('This coupon is not valid for the selected pillar', UNPROCESSABLE_CONTENT);
   }
 
   const percentOff = coupon.percentOff.toNumber();

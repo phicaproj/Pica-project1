@@ -168,7 +168,10 @@ export async function initPaymentService(
   let discountAmount: Prisma.Decimal | null = null;
 
   if (input.couponCode) {
-    const pricing = await validateAndPriceCoupon(input.couponCode, user.id, basePrice);
+    const pricing = await validateAndPriceCoupon(input.couponCode, user.id, basePrice, {
+      plan: input.plan,
+      pillarId: paymentPillarId,
+    });
     chargeAmount = pricing.finalAmount;
     appliedCouponCode = pricing.code;
     discountAmount = new Prisma.Decimal(pricing.discountAmount);

@@ -67,8 +67,8 @@ const initialCreateDraft = (): CreateDraft => ({
 
 const phaseLabel = (phase: AdminQuestionPhase) => {
   if (phase === "PHASE1") return "Phase 1";
-  if (phase === "PHASE2A") return "Plan 2A";
-  return "Plan 2B";
+  if (phase === "PHASE2A") return "Phase 2A";
+  return "Phase 2B";
 };
 
 const riskStyle = (riskType: AdminQuestionOption["riskType"]) => {
@@ -107,6 +107,7 @@ export default function QuestionBankPage() {
   const [pillars, setPillars] = useState<PillarMeta[]>([]);
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const [search, setSearch] = useState("");
   const [pillarFilter, setPillarFilter] = useState("");
@@ -178,7 +179,7 @@ export default function QuestionBankPage() {
         if (current && nextQuestions.some((question) => question.id === current)) {
           return current;
         }
-        return nextQuestions[0]?.id ?? null;
+        return null;
       });
     }
 
@@ -411,6 +412,11 @@ export default function QuestionBankPage() {
     }));
   };
 
+  const closeEditModal = () => {
+    setEditOpen(false);
+    setActiveId(null);
+  };
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -476,433 +482,132 @@ export default function QuestionBankPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <section className="space-y-4 lg:col-span-2">
-          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="relative sm:col-span-2">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by code or question text"
-                  className={`${fieldClass} pl-9`}
-                />
-              </div>
-
-              <select
-                value={pillarFilter}
-                onChange={(event) => setPillarFilter(event.target.value)}
-                className={fieldClass}
-              >
-                <option value="">All pillars</option>
-                {pillars.map((pillar) => (
-                  <option key={pillar.id} value={pillar.id}>
-                    {pillar.name}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={phaseFilter}
-                onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
-                className={fieldClass}
-              >
-                <option value="">All phases</option>
-                {PHASES.map((phase) => (
-                  <option key={phase} value={phase}>
-                    {phaseLabel(phase)}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={businessFilter}
-                onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
-                className={fieldClass}
-              >
-                <option value="">All business sizes</option>
-                {BUSINESS_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-
-              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={includeInactive}
-                  onChange={(event) => setIncludeInactive(event.target.checked)}
-                  className="h-4 w-4 accent-blue-500"
-                />
-                Include archived
-              </label>
+      <div className="w-full space-y-4">
+        {/* Search & Filters */}
+        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="relative lg:col-span-2">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by code or question text"
+                className={`${fieldClass} pl-9`}
+              />
             </div>
-          </div>
 
-          <div className="space-y-3">
-            {loading ? (
-              <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
-                <Loader className="h-6 w-6 animate-spin text-blue-300" />
-              </div>
-            ) : questions.length === 0 ? (
-              <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-8 text-center text-sm text-gray-500">
-                No questions match the current filters.
-              </div>
-            ) : (
-              questions.map((question) => (
-                <button
-                  type="button"
-                  key={question.id}
-                  onClick={() => setActiveId(question.id)}
-                  className={`w-full rounded-xl border p-4 text-left transition ${
-                    activeId === question.id
-                      ? "border-blue-500/40 bg-blue-500/10"
-                      : "border-white/5 bg-[#1C1F2E] hover:border-white/10"
-                  } ${question.isActive ? "" : "opacity-60"}`}
-                >
+            <select
+              value={pillarFilter}
+              onChange={(event) => setPillarFilter(event.target.value)}
+              className={fieldClass}
+            >
+              <option value="">All pillars</option>
+              {pillars.map((pillar) => (
+                <option key={pillar.id} value={pillar.id}>
+                  {pillar.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={phaseFilter}
+              onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
+              className={fieldClass}
+            >
+              <option value="">All phases</option>
+              {PHASES.map((phase) => (
+                <option key={phase} value={phase}>
+                  {phaseLabel(phase)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={businessFilter}
+              onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
+              className={fieldClass}
+            >
+              <option value="">All business sizes</option>
+              {BUSINESS_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+
+            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 lg:col-span-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeInactive}
+                onChange={(event) => setIncludeInactive(event.target.checked)}
+                className="h-4 w-4 accent-blue-500"
+              />
+              Include archived
+            </label>
+          </div>
+        </div>
+
+        {/* Question cards list */}
+        {loading ? (
+          <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
+            <Loader className="h-6 w-6 animate-spin text-blue-300" />
+          </div>
+        ) : questions.length === 0 ? (
+          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-8 text-center text-sm text-gray-500">
+            No questions match the current filters.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {questions.map((question) => (
+              <button
+                type="button"
+                key={question.id}
+                onClick={() => {
+                  setActiveId(question.id);
+                  setEditOpen(true);
+                }}
+                className={`rounded-xl border p-5 text-left transition border-white/5 bg-[#1C1F2E] hover:border-white/15 hover:bg-white/[0.01] flex flex-col justify-between ${
+                  question.isActive ? "" : "opacity-60"
+                }`}
+              >
+                <div className="w-full">
                   <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-md bg-white/5 px-2 py-1 text-xs font-semibold text-gray-300">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
                         {question.questionCode}
                       </span>
-                      <span className="rounded-md bg-blue-500/10 px-2 py-1 text-xs font-semibold text-blue-300">
+                      <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
                         {phaseLabel(question.phase)}
                       </span>
-                      <span className="rounded-md bg-white/5 px-2 py-1 text-xs font-semibold text-gray-300">
+                      <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
                         {question.businessSize}
                       </span>
                     </div>
                     {!question.isActive && (
-                      <span className="rounded-md bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-300">
+                      <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
                         Archived
                       </span>
                     )}
                   </div>
-                  <p className="line-clamp-3 text-sm leading-relaxed text-gray-200">
+                  <p className="line-clamp-3 text-sm leading-relaxed text-gray-200 min-h-[60px]">
                     {question.questionText}
                   </p>
-                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                    <Database className="h-3.5 w-3.5" />
-                    {question.pillarCode} / {question.options.length} options
-                  </div>
-                </button>
-              ))
-            )}
+                </div>
+                <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-gray-500 w-full">
+                  <Database className="h-3.5 w-3.5" />
+                  {question.pillarCode} / {question.options.length} options
+                </div>
+              </button>
+            ))}
           </div>
-        </section>
-
-        <section className="overflow-hidden rounded-xl border border-white/5 bg-[#1C1F2E] lg:col-span-3">
-          {!activeQuestion || !questionDraft ? (
-            <div className="flex min-h-[520px] items-center justify-center p-8 text-center text-sm text-gray-500">
-              Select a question to edit it, or create a new one.
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-col gap-4 border-b border-white/5 px-6 py-5 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">{activeQuestion.questionCode}</h2>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {activePillar?.name || activeQuestion.pillarCode} / Display order {activeQuestion.displayOrder}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void archiveQuestion()}
-                    disabled={saving || !activeQuestion.isActive}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/20 px-3 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Archive className="h-4 w-4" />
-                    Archive
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void saveQuestion()}
-                    disabled={saving}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
-                  >
-                    {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save Question
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-6 p-6">
-                <div>
-                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                    Question Text
-                  </label>
-                  <textarea
-                    value={questionDraft.questionText}
-                    onChange={(event) =>
-                      setQuestionDraft({ ...questionDraft, questionText: event.target.value })
-                    }
-                    rows={4}
-                    className={textareaClass}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                      Phase
-                    </label>
-                    <select
-                      value={questionDraft.phase}
-                      onChange={(event) =>
-                        setQuestionDraft({
-                          ...questionDraft,
-                          phase: event.target.value as AdminQuestionPhase,
-                        })
-                      }
-                      className={fieldClass}
-                    >
-                      {PHASES.map((phase) => (
-                        <option key={phase} value={phase}>
-                          {phaseLabel(phase)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                      Business Size
-                    </label>
-                    <select
-                      value={questionDraft.businessSize}
-                      onChange={(event) =>
-                        setQuestionDraft({
-                          ...questionDraft,
-                          businessSize: event.target.value as BusinessSize,
-                        })
-                      }
-                      className={fieldClass}
-                    >
-                      {BUSINESS_SIZES.map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6">
-                    <input
-                      type="checkbox"
-                      checked={questionDraft.isPhase1Featured}
-                      onChange={(event) =>
-                        setQuestionDraft({
-                          ...questionDraft,
-                          isPhase1Featured: event.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 accent-blue-500"
-                    />
-                    Phase 1 featured
-                  </label>
-                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6">
-                    <input
-                      type="checkbox"
-                      checked={questionDraft.isActive}
-                      onChange={(event) =>
-                        setQuestionDraft({
-                          ...questionDraft,
-                          isActive: event.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 accent-blue-500"
-                    />
-                    Active
-                  </label>
-                </div>
-
-                <div>
-                  <div className="mb-4 flex items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">Options</h3>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Risk type is recalculated by the backend from option scores.
-                      </p>
-                    </div>
-                    {activeQuestion.hasKnockoutOption && (
-                      <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-300">
-                        Knockout present
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    {activeQuestion.options.map((option) => {
-                      const draft = optionDrafts[option.id] ?? optionPayload(option);
-                      return (
-                        <div key={option.id} className="rounded-xl border border-white/5 bg-[#111318] p-4">
-                          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white">
-                                {option.optionLabel}
-                              </span>
-                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${riskStyle(option.riskType)}`}>
-                                {option.riskType}
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => void saveOption(option.id)}
-                                disabled={saving}
-                                className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-gray-950 transition hover:bg-gray-100 disabled:opacity-60"
-                              >
-                                <Save className="h-3.5 w-3.5" />
-                                Save
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void removeOption(option.id)}
-                                disabled={saving || activeQuestion.options.length <= 2}
-                                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-                            <div className="md:col-span-5">
-                              <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                                Option Text
-                              </label>
-                              <input
-                                value={draft.optionText}
-                                onChange={(event) =>
-                                  setOptionDrafts((current) => ({
-                                    ...current,
-                                    [option.id]: { ...draft, optionText: event.target.value },
-                                  }))
-                                }
-                                className={fieldClass}
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                                Score
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                max="10"
-                                value={draft.score}
-                                onChange={(event) =>
-                                  setOptionDrafts((current) => ({
-                                    ...current,
-                                    [option.id]: { ...draft, score: Number(event.target.value) },
-                                  }))
-                                }
-                                className={fieldClass}
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                                Observation
-                              </label>
-                              <textarea
-                                value={draft.observation}
-                                onChange={(event) =>
-                                  setOptionDrafts((current) => ({
-                                    ...current,
-                                    [option.id]: { ...draft, observation: event.target.value },
-                                  }))
-                                }
-                                rows={3}
-                                className={textareaClass}
-                              />
-                            </div>
-                            <div className="md:col-span-3">
-                              <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                                Recommendation
-                              </label>
-                              <textarea
-                                value={draft.recommendation}
-                                onChange={(event) =>
-                                  setOptionDrafts((current) => ({
-                                    ...current,
-                                    [option.id]: { ...draft, recommendation: event.target.value },
-                                  }))
-                                }
-                                rows={3}
-                                className={textareaClass}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    <div className="rounded-xl border border-dashed border-white/10 bg-[#111318] p-4">
-                      <div className="mb-4 flex items-center justify-between gap-3">
-                        <h4 className="font-semibold text-white">Add Option</h4>
-                        <button
-                          type="button"
-                          onClick={() => void addOption()}
-                          disabled={saving || activeQuestion.options.length >= 6}
-                          className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-gray-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-                        <input
-                          value={newOption.optionText}
-                          onChange={(event) =>
-                            setNewOption({ ...newOption, optionText: event.target.value })
-                          }
-                          placeholder="Option text"
-                          className={`${fieldClass} md:col-span-5`}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          value={newOption.score}
-                          onChange={(event) =>
-                            setNewOption({ ...newOption, score: Number(event.target.value) })
-                          }
-                          className={fieldClass}
-                        />
-                        <textarea
-                          value={newOption.observation}
-                          onChange={(event) =>
-                            setNewOption({ ...newOption, observation: event.target.value })
-                          }
-                          rows={2}
-                          placeholder="Observation"
-                          className={`${textareaClass} md:col-span-3`}
-                        />
-                        <textarea
-                          value={newOption.recommendation}
-                          onChange={(event) =>
-                            setNewOption({ ...newOption, recommendation: event.target.value })
-                          }
-                          rows={2}
-                          placeholder="Recommendation"
-                          className={`${textareaClass} md:col-span-3`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
+        )}
       </div>
 
+      {/* New Question Modal */}
       {createOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
           <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
               <div>
                 <h2 className="text-xl font-bold text-white">New Question</h2>
                 <p className="mt-1 text-sm text-gray-500">
@@ -1003,7 +708,7 @@ export default function QuestionBankPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-300">
+                <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={createDraft.isPhase1Featured}
@@ -1096,7 +801,7 @@ export default function QuestionBankPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5">
+            <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5 bg-[#171923]">
               <button
                 type="button"
                 onClick={() => setCreateOpen(false)}
@@ -1114,6 +819,335 @@ export default function QuestionBankPage() {
                 {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Create Question
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Question Modal */}
+      {editOpen && activeQuestion && questionDraft && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">Edit Question: {activeQuestion.questionCode}</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  {activePillar?.name || activeQuestion.pillarCode} / Display order {activeQuestion.displayOrder}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(92vh-150px)] overflow-y-auto px-6 py-5 space-y-6">
+              {/* Question Text */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Question Text
+                </label>
+                <textarea
+                  value={questionDraft.questionText}
+                  onChange={(event) =>
+                    setQuestionDraft({ ...questionDraft, questionText: event.target.value })
+                  }
+                  rows={4}
+                  className={textareaClass}
+                />
+              </div>
+
+              {/* Attributes */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Phase
+                  </label>
+                  <select
+                    value={questionDraft.phase}
+                    onChange={(event) =>
+                      setQuestionDraft({
+                        ...questionDraft,
+                        phase: event.target.value as AdminQuestionPhase,
+                      })
+                    }
+                    className={fieldClass}
+                  >
+                    {PHASES.map((phase) => (
+                      <option key={phase} value={phase}>
+                        {phaseLabel(phase)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Business Size
+                  </label>
+                  <select
+                    value={questionDraft.businessSize}
+                    onChange={(event) =>
+                      setQuestionDraft({
+                        ...questionDraft,
+                        businessSize: event.target.value as BusinessSize,
+                      })
+                    }
+                    className={fieldClass}
+                  >
+                    {BUSINESS_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={questionDraft.isPhase1Featured}
+                    onChange={(event) =>
+                      setQuestionDraft({
+                        ...questionDraft,
+                        isPhase1Featured: event.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 accent-blue-500"
+                  />
+                  Phase 1 featured
+                </label>
+                <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={questionDraft.isActive}
+                    onChange={(event) =>
+                      setQuestionDraft({
+                        ...questionDraft,
+                        isActive: event.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 accent-blue-500"
+                  />
+                  Active
+                </label>
+              </div>
+
+              {/* Options */}
+              <div>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Options</h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Risk type is recalculated by the backend from option scores.
+                    </p>
+                  </div>
+                  {activeQuestion.hasKnockoutOption && (
+                    <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-300">
+                      Knockout present
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {activeQuestion.options.map((option) => {
+                    const draft = optionDrafts[option.id] ?? optionPayload(option);
+                    return (
+                      <div key={option.id} className="rounded-xl border border-white/5 bg-[#111318] p-4">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white">
+                              {option.optionLabel}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${riskStyle(option.riskType)}`}>
+                              {option.riskType}
+                            </span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void saveOption(option.id)}
+                              disabled={saving}
+                              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-950 transition hover:bg-gray-100 disabled:opacity-60"
+                            >
+                              <Save className="h-3.5 w-3.5" />
+                              Save Option
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void removeOption(option.id)}
+                              disabled={saving || activeQuestion.options.length <= 2}
+                              className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+                          <div className="md:col-span-5">
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Option Text
+                            </label>
+                            <input
+                              value={draft.optionText}
+                              onChange={(event) =>
+                                setOptionDrafts((current) => ({
+                                  ...current,
+                                  [option.id]: { ...draft, optionText: event.target.value },
+                                }))
+                              }
+                              className={fieldClass}
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Score
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="10"
+                              value={draft.score}
+                              onChange={(event) =>
+                                setOptionDrafts((current) => ({
+                                  ...current,
+                                  [option.id]: { ...draft, score: Number(event.target.value) },
+                                }))
+                              }
+                              className={fieldClass}
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Observation
+                            </label>
+                            <textarea
+                              value={draft.observation}
+                              onChange={(event) =>
+                                setOptionDrafts((current) => ({
+                                  ...current,
+                                  [option.id]: { ...draft, observation: event.target.value },
+                                }))
+                              }
+                              rows={3}
+                              className={textareaClass}
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Recommendation
+                            </label>
+                            <textarea
+                              value={draft.recommendation}
+                              onChange={(event) =>
+                                setOptionDrafts((current) => ({
+                                  ...current,
+                                  [option.id]: { ...draft, recommendation: event.target.value },
+                                }))
+                              }
+                              rows={3}
+                              className={textareaClass}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Add Option Form */}
+                  <div className="rounded-xl border border-dashed border-white/10 bg-[#111318] p-4">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <h4 className="font-semibold text-white">Add Option</h4>
+                      <button
+                        type="button"
+                        onClick={() => void addOption()}
+                        disabled={saving || activeQuestion.options.length >= 6}
+                        className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-200 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Option
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+                      <input
+                        value={newOption.optionText}
+                        onChange={(event) =>
+                          setNewOption({ ...newOption, optionText: event.target.value })
+                        }
+                        placeholder="Option text"
+                        className={`${fieldClass} md:col-span-5`}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        max="10"
+                        value={newOption.score}
+                        onChange={(event) =>
+                          setNewOption({ ...newOption, score: Number(event.target.value) })
+                        }
+                        className={fieldClass}
+                      />
+                      <textarea
+                        value={newOption.observation}
+                        onChange={(event) =>
+                          setNewOption({ ...newOption, observation: event.target.value })
+                        }
+                        rows={2}
+                        placeholder="Observation"
+                        className={`${textareaClass} md:col-span-3`}
+                      />
+                      <textarea
+                        value={newOption.recommendation}
+                        onChange={(event) =>
+                          setNewOption({ ...newOption, recommendation: event.target.value })
+                        }
+                        rows={2}
+                        placeholder="Recommendation"
+                        className={`${textareaClass} md:col-span-3`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
+              <button
+                type="button"
+                onClick={async () => {
+                  await archiveQuestion();
+                  closeEditModal();
+                }}
+                disabled={saving || !activeQuestion.isActive}
+                className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Archive className="h-4 w-4" />
+                Archive Question
+              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await saveQuestion();
+                    closeEditModal();
+                  }}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
+                >
+                  {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save Question
+                </button>
+              </div>
             </div>
           </div>
         </div>

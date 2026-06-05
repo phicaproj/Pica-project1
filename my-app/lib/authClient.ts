@@ -538,6 +538,10 @@ export type AdminCoupon = {
 	amountOff: number
 	percentOff: number
 	isActive: boolean
+	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
+	pillarId: string | null
+	pillarCode: string | null
+	pillarName: string | null
 	userId: string | null
 	userEmail: string | null
 	createdAt: string
@@ -561,6 +565,8 @@ export type CreateAdminCouponPayload = {
 	percentOff?: number
 	isActive: boolean
 	userId?: string
+	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | null
+	pillarId?: string | null
 }
 
 export type UpdateAdminCouponPayload = {
@@ -571,10 +577,14 @@ export type UpdateAdminCouponPayload = {
 export const getAdminCoupons = async (params: {
 	userId?: string
 	isActive?: boolean
+	plan?: 'PHASE2A' | 'PHASE2B_PILLAR'
+	pillarId?: string
 } = {}) => {
 	const qs = new URLSearchParams()
 	if (params.userId) qs.set('userId', params.userId)
 	if (params.isActive !== undefined) qs.set('isActive', String(params.isActive))
+	if (params.plan) qs.set('plan', params.plan)
+	if (params.pillarId) qs.set('pillarId', params.pillarId)
 	const query = qs.toString()
 
 	return authedFetch<AdminCouponListResponse>(
@@ -932,3 +942,39 @@ export const getAllUsers = async (params: {
 	)
 }
 
+export type AdminUserDetails = AdminUserRow & {
+	recentSessions: {
+		id: string
+		status: 'IN_PROGRESS' | 'COMPLETED' | 'PAID' | 'REPORT_GENERATED'
+		updatedAt: string
+		phase: 'PHASE1' | 'PHASE2A' | 'PHASE2B'
+		pillarId: string | null
+		pillarName: string | null
+		reportPdfUrl: string | null
+	}[]
+	recentPayments: {
+		id: string
+		amount: number
+		plan: 'PHASE2A' | 'PHASE2B_PILLAR'
+		status: 'PENDING' | 'SUCCESS' | 'FAILED' | 'ABANDONED' | 'REVERSED'
+		currency: string
+		reference: string
+		paidAt: string | null
+		updatedAt: string
+	}[]
+	totalSpent: number
+	totalSessions: number
+	completedSessions: number
+	totalSuccessfulPayments: number
+}
+
+export type ShowUserResponse = {
+	message: string
+	user: AdminUserDetails
+}
+
+export const getAdminUserDetails = async (id: string) => {
+	return authedFetch<ShowUserResponse>(`/admin/users/${id}`, {
+		method: 'GET',
+	})
+}

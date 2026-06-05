@@ -106,6 +106,7 @@ model Pillar {
   sessions            AssessmentSession[]
   phase2bUnlocks      Phase2BPillarUnlock[]
   planPrices          PlanPrice[]
+  discounts           Discount[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -510,12 +511,16 @@ model Discount {
   percentOff  Decimal @db.Decimal(5, 2)  @map("percent_off") // percentage discount (0–100)
   isActive    Boolean @default(true) @map("is_active")
   userId      String? @map("user_id") // optional link to a User for user-specific discounts
+  plan        Plan? // optional target plan; null = usable on any paid plan
+  pillarId    String? @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons
 
   user User? @relation(fields: [userId], references: [id])
+  pillar Pillar? @relation(fields: [pillarId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
+  @@index([plan, pillarId])
   @@map("discounts")
 }

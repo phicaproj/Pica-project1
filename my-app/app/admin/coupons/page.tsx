@@ -19,7 +19,11 @@ import {
   deleteAdminCoupon,
   getAdminCoupons,
   updateAdminCoupon,
+  getAdminPillars,
+  getAllUsers,
   type AdminCoupon,
+  type PillarMeta,
+  type AdminUserRow,
 } from "@/lib/authClient";
 
 type DiscountMode = "AMOUNT" | "PERCENT";
@@ -31,6 +35,8 @@ type CouponDraft = {
   discountMode: DiscountMode;
   discountValue: string;
   isActive: boolean;
+  plan: "PHASE2A" | "PHASE2B_PILLAR" | "";
+  pillarId: string;
 };
 
 const initialDraft: CouponDraft = {
@@ -40,6 +46,8 @@ const initialDraft: CouponDraft = {
   discountMode: "PERCENT",
   discountValue: "",
   isActive: true,
+  plan: "",
+  pillarId: "",
 };
 
 const fieldClass =
@@ -75,6 +83,12 @@ export default function CouponsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [draft, setDraft] = useState<CouponDraft>(initialDraft);
 
+  const [pillars, setPillars] = useState<PillarMeta[]>([]);
+  const [usersSearch, setUsersSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<AdminUserRow[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
+
   const loadCoupons = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -95,6 +109,7 @@ export default function CouponsPage() {
     setLoading(false);
   }, [activeFilter, userFilter]);
 
+  // Load coupons on mount/filter change
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void loadCoupons();
@@ -102,6 +117,43 @@ export default function CouponsPage() {
 
     return () => window.clearTimeout(timer);
   }, [loadCoupons]);
+
+  // Load pillars on mount
+  useEffect(() => {
+    async function loadPillars() {
+      try {
+        const res = await getAdminPillars();
+        if (res.data) {
+          setPillars(res.data.pillars);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    void loadPillars();
+  }, []);
+
+  // Search users effect
+  useEffect(() => {
+    if (!usersSearch.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSearchingUsers(true);
+      try {
+        const res = await getAllUsers({ search: usersSearch.trim(), pageSize: 10 });
+        if (res.data) {
+          setSearchResults(res.data.users);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setSearchingUsers(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [usersSearch]);
 
   const filteredCoupons = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -113,6 +165,8 @@ export default function CouponsPage() {
         coupon.description ?? "",
         coupon.userId ?? "",
         coupon.userEmail ?? "",
+        coupon.plan ?? "",
+        coupon.pillarName ?? "",
       ]
         .join(" ")
         .toLowerCase();
@@ -128,6 +182,15 @@ export default function CouponsPage() {
     window.setTimeout(() => setNotice(null), 2500);
   };
 
+  const generateRandomCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let generated = "";
+    for (let i = 0; i < 8; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setDraft((prev) => ({ ...prev, code: generated }));
+  };
+
   const createCoupon = async () => {
     const value = Number(draft.discountValue);
     if (!Number.isFinite(value) || value <= 0) {
@@ -140,17 +203,24 @@ export default function CouponsPage() {
       return;
     }
 
+    if (draft.plan === "PHASE2B_PILLAR" && !draft.pillarId) {
+      setError("Please select a target pillar for Phase 2B coupons.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     const res = await createAdminCoupon({
-      ...(draft.code.trim() ? { code: draft.code.trim() } : {}),
+      ...(draft.code.trim() ? { code: draft.code.trim().toUpperCase() } : {}),
       ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
       ...(draft.userId.trim() ? { userId: draft.userId.trim() } : {}),
       isActive: draft.isActive,
       ...(draft.discountMode === "PERCENT"
         ? { percentOff: value }
         : { amountOff: value }),
+      plan: draft.plan || null,
+      pillarId: draft.plan === "PHASE2B_PILLAR" ? draft.pillarId : null,
     });
 
     if (res.error) {
@@ -159,6 +229,8 @@ export default function CouponsPage() {
       const createdCoupon = res.data.coupon;
       setCoupons((current) => [createdCoupon, ...current]);
       setDraft(initialDraft);
+      setSelectedUser(null);
+      setUsersSearch("");
       setModalOpen(false);
       showNotice("Coupon created.");
     }
@@ -256,7 +328,12 @@ export default function CouponsPage() {
           </button>
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setDraft(initialDraft);
+              setSelectedUser(null);
+              setUsersSearch("");
+              setModalOpen(true);
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             <Plus className="h-4 w-4" />
@@ -307,7 +384,7 @@ export default function CouponsPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search code, description, user ID, or email"
+              placeholder="Search code, description, user ID, email, or plan..."
               className={`${fieldClass} pl-9`}
             />
           </div>
@@ -336,7 +413,7 @@ export default function CouponsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["Code", "Discount", "Scope", "Description", "Status", "Created", "Actions"].map(
+                {["Code", "Discount", "Scope / Target", "Description", "Status", "Created", "Actions"].map(
                   (heading) => (
                     <th
                       key={heading}
@@ -385,18 +462,26 @@ export default function CouponsPage() {
                       {formatDiscount(coupon)}
                     </td>
                     <td className="px-6 py-4">
-                      {coupon.userId ? (
-                        <div>
-                          <div className="text-sm font-medium text-white">User</div>
-                          <div className="max-w-[180px] truncate text-xs text-gray-500">
-                            {coupon.userEmail || coupon.userId}
+                      <div className="space-y-1">
+                        {coupon.plan ? (
+                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                            coupon.plan === "PHASE2A" ? "bg-blue-500/10 text-blue-300 border border-blue-500/20" : "bg-purple-500/10 text-purple-300 border border-purple-500/20"
+                          }`}>
+                            {coupon.plan === "PHASE2A" ? "Phase 2A" : `Phase 2B (${coupon.pillarCode || "Pillar"})`}
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded bg-white/5 px-2 py-0.5 text-[10px] font-bold text-gray-400">
+                            Any Plan
+                          </span>
+                        )}
+                        {coupon.userId ? (
+                          <div className="text-xs text-gray-400">
+                            User: <span className="font-mono text-gray-500 truncate block max-w-[150px]" title={coupon.userEmail || coupon.userId}>{coupon.userEmail || coupon.userId}</span>
                           </div>
-                        </div>
-                      ) : (
-                        <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300">
-                          Global
-                        </span>
-                      )}
+                        ) : (
+                          <div className="text-xs text-emerald-400 font-semibold">Global User Access</div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <EditableDescription
@@ -442,7 +527,7 @@ export default function CouponsPage() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+          <div className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden">
             <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
               <div className="flex items-start gap-3">
                 <span className="rounded-lg bg-blue-500/10 p-2 text-blue-300">
@@ -451,7 +536,7 @@ export default function CouponsPage() {
                 <div>
                   <h2 className="text-xl font-bold text-white">New Coupon</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Leave code blank to let the backend generate one.
+                    Provide rules and codes. Leave code blank to let the backend generate one.
                   </p>
                 </div>
               </div>
@@ -464,30 +549,129 @@ export default function CouponsPage() {
               </button>
             </div>
 
-            <div className="space-y-5 px-6 py-5">
+            <div className="space-y-5 px-6 py-5 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
                     Code
                   </label>
-                  <input
-                    value={draft.code}
-                    onChange={(event) => setDraft({ ...draft, code: event.target.value })}
-                    placeholder="Optional"
-                    className={fieldClass}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={draft.code}
+                      onChange={(event) => setDraft({ ...draft, code: event.target.value })}
+                      placeholder="Optional"
+                      className={fieldClass}
+                    />
+                    <button
+                      type="button"
+                      onClick={generateRandomCode}
+                      className="px-3 py-2 text-xs font-semibold bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      Generate
+                    </button>
+                  </div>
                 </div>
+
+                <div className="relative">
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Target User (Optional)
+                  </label>
+                  {selectedUser ? (
+                    <div className="flex items-center justify-between rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2.5 text-sm text-white">
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{selectedUser.firstName} {selectedUser.lastName}</span>
+                        <span className="text-[10px] text-gray-400">{selectedUser.email}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedUser(null);
+                          setDraft((prev) => ({ ...prev, userId: "" }));
+                        }}
+                        className="rounded-full p-1 text-gray-400 hover:text-white hover:bg-white/5"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                        <input
+                          value={usersSearch}
+                          onChange={(e) => setUsersSearch(e.target.value)}
+                          placeholder="Search user by name/email..."
+                          className={`${fieldClass} pl-9`}
+                        />
+                        {searchingUsers && (
+                          <Loader className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-500" />
+                        )}
+                      </div>
+                      {searchResults.length > 0 && (
+                        <div className="absolute z-[110] mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-white/10 bg-[#1C1F2E] p-1 shadow-xl">
+                          {searchResults.map((user) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setDraft((prev) => ({ ...prev, userId: user.id }));
+                                setUsersSearch("");
+                                setSearchResults([]);
+                              }}
+                              className="w-full rounded-md px-3 py-2 text-left text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                            >
+                              <div className="font-semibold">{user.firstName} {user.lastName}</div>
+                              <div className="text-[10px] text-gray-500">{user.email}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                    User ID
+                    Target Phase (Optional)
                   </label>
-                  <input
-                    value={draft.userId}
-                    onChange={(event) => setDraft({ ...draft, userId: event.target.value })}
-                    placeholder="Optional exact user UUID"
+                  <select
+                    value={draft.plan}
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        plan: e.target.value as "PHASE2A" | "PHASE2B_PILLAR" | "",
+                        pillarId: "", // reset pillar
+                      })
+                    }
                     className={fieldClass}
-                  />
+                  >
+                    <option value="">Any Phase (Global)</option>
+                    <option value="PHASE2A">Phase 2A (Strategic Scan)</option>
+                    <option value="PHASE2B_PILLAR">Phase 2B (Deep Dive Pillar)</option>
+                  </select>
                 </div>
+                {draft.plan === "PHASE2B_PILLAR" && (
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                      Target Pillar
+                    </label>
+                    <select
+                      value={draft.pillarId}
+                      onChange={(e) => setDraft({ ...draft, pillarId: e.target.value })}
+                      className={fieldClass}
+                    >
+                      <option value="" disabled>Select target pillar</option>
+                      {pillars.map((pillar) => (
+                        <option key={pillar.id} value={pillar.id}>
+                          {pillar.name} ({pillar.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -557,7 +741,7 @@ export default function CouponsPage() {
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5">
+            <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5 bg-[#171923]">
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}

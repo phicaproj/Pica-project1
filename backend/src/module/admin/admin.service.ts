@@ -1,4 +1,4 @@
-import { Prisma, PaymentStatus } from '@prisma/client';
+import { PaymentStatus, Prisma, UserRole } from '@prisma/client';
 import prisma from '../../Config/db';
 import type {
   ListUsersQuery,
@@ -12,9 +12,11 @@ import { NOT_FOUND } from '../../service/shared/http';
 const ACTIVE_WINDOW_DAYS = 30;
 
 export async function getAllUsersService(query: ListUsersQuery): Promise<ListUsersResponse> {
-  const { page, pageSize, search, businessSize, plan, active } = query;
+  const { page, search, businessSize, plan, active } = query;
+  const pageSize = query.limit ?? query.pageSize;
 
   const where: Prisma.UserWhereInput = {
+    role: UserRole.USER,
     ...(businessSize ? { businessSize } : {}),
     ...(search
       ? {
@@ -104,7 +106,9 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
     message: 'Users fetched successfully',
     page,
     pageSize,
+    limit: pageSize,
     total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
     users,
   };
 }
@@ -124,25 +128,43 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       industry: true,
       createdAt: true,
       payments: {
-        orderBy: { paidAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
         take: 5,
-        select: { id: true, plan: true, amount: true, updatedAt: true },
+        select: {
+          id: true,
+          plan: true,
+          amount: true,
+          currency: true,
+          status: true,
+          providerReference: true,
+          paidAt: true,
+          updatedAt: true,
+        },
       },
       sessions: {
         orderBy: { updatedAt: 'desc' },
         take: 5,
-        select: { id: true, updatedAt: true, status: true, phase: true },
+        select: {
+          id: true,
+          updatedAt: true,
+          status: true,
+          phase: true,
+          pillarId: true,
+          pillar: { select: { name: true } },
+          result: { select: { reportPdfUrl: true } },
+        },
       },
     },
   });
 
   if (!user) throw new AppError('User not found', NOT_FOUND);
 
-  const [totalSessions, completedSessions, spend, lastPaid] = await Promise.all([
+  const [totalSessions, completedSessions, totalSuccessfulPayments, spend, lastPaid] = await Promise.all([
     prisma.assessmentSession.count({ where: { userId } }),
     prisma.assessmentSession.count({
       where: { userId, status: { in: ['COMPLETED', 'PAID', 'REPORT_GENERATED'] } },
     }),
+    prisma.payment.count({ where: { userId, status: PaymentStatus.SUCCESS } }),
     prisma.payment.aggregate({ _sum: { amount: true }, where: { userId, status: 'SUCCESS' } }),
     prisma.payment.findFirst({
       where: { userId, status: 'SUCCESS' },
@@ -180,16 +202,24 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
         updatedAt: session.updatedAt,
         status: session.status,
         phase: session.phase,
+        pillarId: session.pillarId,
+        pillarName: session.pillar?.name ?? null,
+        reportPdfUrl: session.result?.reportPdfUrl ?? null,
       })),
       recentPayments: user.payments.map((payment) => ({
         id: payment.id,
         plan: payment.plan,
         amount: payment.amount.toNumber(),
+        status: payment.status,
+        currency: payment.currency,
+        reference: payment.providerReference,
+        paidAt: payment.paidAt,
         updatedAt: payment.updatedAt,
       })),
       totalSpent,
       totalSessions,
       completedSessions,
+      totalSuccessfulPayments,
     },
   };
 }
