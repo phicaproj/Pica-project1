@@ -31,10 +31,12 @@ import {
   getMe,
   getPublicPricing,
   initPayment,
+  validateCoupon,
   verifyPayment,
   getAllPillars,
   getMyPhase2BPillars,
   type BusinessSize,
+  type CouponPricing,
   type MeUser,
   type PricingRow,
   type PublicPricingResponse,
@@ -929,7 +931,18 @@ function CheckoutView({
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponPricing, setCouponPricing] = useState<CouponPricing | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
   const paidRef = useRef(false);
+
+  const baseAmount = plan.amount;
+  const displayTotal =
+    couponPricing && baseAmount !== null
+      ? formatPrice(couponPricing.finalAmount, plan.currency)
+      : plan.price;
+  const hasAppliedCoupon = couponPricing !== null;
 
   const tabs = [
     { label: "Card", icon: <CreditCard className="w-4 h-4" /> },
@@ -962,6 +975,44 @@ function CheckoutView({
       message:
         "Payment confirmation is taking longer than expected. Please refresh in a moment.",
     };
+  };
+
+  const handleCouponChange = (value: string) => {
+    setCouponCode(value.toUpperCase());
+    setCouponPricing(null);
+    setCouponError(null);
+  };
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponError("Enter a coupon code.");
+      return;
+    }
+    if (baseAmount === null || plan.priceMissing) {
+      setCouponError("Pricing is not configured for this plan yet.");
+      return;
+    }
+
+    setCouponBusy(true);
+    setCouponError(null);
+    const response = await validateCoupon({ code, basePrice: baseAmount });
+    setCouponBusy(false);
+
+    if (response.error || !response.data) {
+      setCouponPricing(null);
+      setCouponError(response.error?.message ?? "Could not apply coupon.");
+      return;
+    }
+
+    setCouponCode(response.data.pricing.code);
+    setCouponPricing(response.data.pricing);
+  };
+
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponPricing(null);
+    setCouponError(null);
   };
 
   const handlePay = async () => {
@@ -1013,6 +1064,7 @@ function CheckoutView({
         plan: plan.backendPlan!,
         sessionId,
         pillarId,
+        ...(couponPricing ? { couponCode: couponPricing.code } : {}),
       });
 
       if (init.error || !init.data) {
@@ -1103,10 +1155,26 @@ function CheckoutView({
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-gray-500 mb-1">Total due now</p>
-            <p className="text-3xl font-extrabold text-white mb-3">
-              {plan.price}
-            </p>
+            <div className="mb-3">
+              <p className="text-xs text-gray-500 mb-1">Total due now</p>
+              <p className="text-3xl font-extrabold text-white">
+                {displayTotal}
+              </p>
+              {couponPricing && (
+                <div className="mt-3 space-y-1 text-xs text-gray-400">
+                  <div className="flex justify-between gap-4">
+                    <span>Base price</span>
+                    <span>{formatPrice(couponPricing.basePrice, plan.currency)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 text-teal-300">
+                    <span>Coupon {couponPricing.code}</span>
+                    <span>
+                      -{formatPrice(couponPricing.discountAmount, plan.currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={onChangePlan}
               className="text-teal-400 text-sm font-semibold hover:underline"
@@ -1165,6 +1233,57 @@ function CheckoutView({
             </div>
           </div>
 
+          <div className="rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <p className="text-xs font-bold uppercase tracking-widest text-orange-400">
+                Coupon Discount
+              </p>
+              {hasAppliedCoupon && (
+                <span className="rounded-full bg-teal-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-300">
+                  Applied
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                value={couponCode}
+                onChange={(event) => handleCouponChange(event.target.value)}
+                disabled={busy || verifying || couponBusy || hasAppliedCoupon}
+                placeholder="Enter coupon code"
+                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0d1117] px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white outline-none transition placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-600 focus:border-orange-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              {hasAppliedCoupon ? (
+                <button
+                  type="button"
+                  onClick={removeCoupon}
+                  disabled={busy || verifying}
+                  className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-gray-300 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void applyCoupon()}
+                  disabled={busy || verifying || couponBusy || !couponCode.trim()}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-500 px-4 py-3 text-sm font-semibold text-gray-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {couponBusy && <Loader className="h-4 w-4 animate-spin" />}
+                  Apply
+                </button>
+              )}
+            </div>
+            {couponError && (
+              <p className="mt-3 text-sm text-red-400">{couponError}</p>
+            )}
+            {couponPricing && (
+              <p className="mt-3 text-sm text-teal-300">
+                Coupon applied. You save{" "}
+                {formatPrice(couponPricing.discountAmount, plan.currency)}.
+              </p>
+            )}
+          </div>
+
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
               {error}
@@ -1195,7 +1314,7 @@ function CheckoutView({
           <p className="mt-3 text-[11px] text-gray-600 leading-relaxed flex items-start gap-2">
             <HelpCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
             By clicking Complete Payment, you authorize PICA, via Paystack, to
-            charge {plan.price} for one-time access to this plan.
+            charge {displayTotal} for one-time access to this plan.
           </p>
         </div>
       </div>

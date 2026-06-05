@@ -220,8 +220,31 @@ export const initPayment = async (payload: {
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
 	sessionId?: string
 	pillarId?: string
+	couponCode?: string
 }) => {
 	return authedFetch<InitPaymentResponse>('/payment/init', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export type CouponPricing = {
+	code: string
+	basePrice: number
+	discountAmount: number
+	finalAmount: number
+}
+
+export type ValidateCouponResponse = {
+	message: string
+	pricing: CouponPricing
+}
+
+export const validateCoupon = async (payload: {
+	code: string
+	basePrice: number
+}) => {
+	return authedFetch<ValidateCouponResponse>('/coupon/validate', {
 		method: 'POST',
 		body: JSON.stringify(payload),
 	})
@@ -253,6 +276,42 @@ export type PublicPricingResponse = {
 	phase2B: PricingRow[]
 }
 
+export type AdminPricingResponse = {
+	message: string
+	prices: PricingRow[]
+}
+
+export type AdminPricingDetailResponse = {
+	message: string
+	price: PricingRow
+}
+
+export type PricingPlan = PricingRow['plan']
+
+export type AdminPricingPayload = {
+	plan: PricingPlan
+	price: number
+	pillarId?: string | null
+}
+
+export type AdminPricingUpdatePayload = {
+	price?: number
+	pillarId?: string | null
+}
+
+export type PillarMeta = {
+	id: string
+	code: string
+	name: string
+	description: string | null
+	displayOrder: number
+}
+
+export type AllPillarsResponse = {
+	message: string
+	pillars: PillarMeta[]
+}
+
 export const getPublicPricing = async () => {
 	try {
 		const res = await fetch(`${API_BASE_URL}/payment/pricing`, {
@@ -271,6 +330,50 @@ export const getPublicPricing = async () => {
 		const message = err instanceof Error ? err.message : 'Network error'
 		return { data: null, error: { message } }
 	}
+}
+
+export const getAdminPricing = async (params: {
+	plan?: PricingPlan
+	pillarId?: string
+} = {}) => {
+	const qs = new URLSearchParams()
+	if (params.plan) qs.set('plan', params.plan)
+	if (params.pillarId) qs.set('pillarId', params.pillarId)
+	const query = qs.toString()
+
+	return authedFetch<AdminPricingResponse>(
+		`/admin/pricing${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
+}
+
+export const createAdminPricing = async (payload: AdminPricingPayload) => {
+	return authedFetch<AdminPricingDetailResponse>('/admin/pricing', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const updateAdminPricing = async (
+	id: string,
+	payload: AdminPricingUpdatePayload,
+) => {
+	return authedFetch<AdminPricingDetailResponse>(`/admin/pricing/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const deleteAdminPricing = async (id: string) => {
+	return authedFetch<{ message: string }>(`/admin/pricing/${id}`, {
+		method: 'DELETE',
+	})
+}
+
+export const getAdminPillars = async () => {
+	return authedFetch<AllPillarsResponse>('/admin/pillars', {
+		method: 'GET',
+	})
 }
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {

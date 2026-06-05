@@ -1,322 +1,685 @@
 "use client";
 
+import { useCallback, useMemo, useState, useEffect } from "react";
 import {
-  MoreHorizontal,
+  AlertCircle,
   CheckCircle2,
-  Clock,
-  Zap,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  SlidersHorizontal,
   CreditCard,
-  Building2,
-  ShoppingCart,
-  ArrowRight,
+  Edit3,
+  Layers3,
+  Loader,
+  RefreshCw,
+  Save,
+  Trash2,
+  X,
 } from "lucide-react";
+import {
+  createAdminPricing,
+  deleteAdminPricing,
+  getAdminPillars,
+  getAdminPricing,
+  updateAdminPricing,
+  type PillarMeta,
+  type PricingPlan,
+  type PricingRow,
+} from "@/lib/authClient";
 
-const SUBSCRIBERS = [
-  {
-    initials: "NL",
-    color: "bg-blue-500",
-    name: "Nova Labs Inc.",
-    email: "billing@novalabs.io",
-    plan: "Plan 2A (Professional)",
-    planDot: "bg-emerald-500",
-    method: "Visa ending in 4429",
-    methodIcon: "card",
-    amount: "$79.00",
-    amountSub: "Oct 12, 2023",
-    amountColor: "text-white",
-  },
-  {
-    initials: "AS",
-    color: "bg-indigo-500",
-    name: "Apex Systems",
-    email: "finance@apex.com",
-    plan: "Plan 2B (Enterprise)",
-    planDot: "bg-amber-500",
-    method: "Bank Transfer (ACH)",
-    methodIcon: "bank",
-    amount: "$1,250.00",
-    amountSub: "Oct 09, 2023",
-    amountColor: "text-white",
-  },
-  {
-    initials: "QC",
-    color: "bg-orange-500",
-    name: "Quantum Core",
-    email: "admin@qcore.tech",
-    plan: "Plan 1A (Past Due)",
-    planDot: "bg-red-500",
-    method: "Mastercard ending in 1102",
-    methodIcon: "card",
-    amount: "$29.00",
-    amountSub: "Failed Oct 01",
-    amountColor: "text-red-400",
-  },
-];
+const FEATURE_STORAGE_KEY = "pica.admin.subscriptionFeatures";
+
+const DEFAULT_FEATURES: Record<PricingPlan, string[]> = {
+  PHASE2A: [
+    "Full Phase 2A strategic diagnostic",
+    "Scored report and recommendations",
+    "Downloadable PDF report",
+  ],
+  PHASE2B_PILLAR: [
+    "One paid pillar deep dive",
+    "Pillar-specific findings",
+    "Downloadable PDF report",
+  ],
+};
+
+function formatPrice(amount: number | null | undefined) {
+  if (amount === null || amount === undefined) return "Not configured";
+  return `N${new Intl.NumberFormat("en-NG", {
+    maximumFractionDigits: 0,
+  }).format(amount)}`;
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "Not saved";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not saved";
+  return new Intl.DateTimeFormat("en-NG", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function parseFeatureDraft(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function sortPrices(rows: PricingRow[]) {
+  return [...rows].sort((a, b) => {
+    if (a.plan !== b.plan) return a.plan.localeCompare(b.plan);
+    return (a.pillarName ?? "").localeCompare(b.pillarName ?? "");
+  });
+}
+
+function readStoredFeatures(): Record<PricingPlan, string[]> {
+  if (typeof window === "undefined") return DEFAULT_FEATURES;
+
+  try {
+    const raw = window.localStorage.getItem(FEATURE_STORAGE_KEY);
+    if (!raw) return DEFAULT_FEATURES;
+    const parsed = JSON.parse(raw) as Partial<Record<PricingPlan, string[]>>;
+
+    return {
+      PHASE2A:
+        Array.isArray(parsed.PHASE2A) && parsed.PHASE2A.length > 0
+          ? parsed.PHASE2A
+          : DEFAULT_FEATURES.PHASE2A,
+      PHASE2B_PILLAR:
+        Array.isArray(parsed.PHASE2B_PILLAR) && parsed.PHASE2B_PILLAR.length > 0
+          ? parsed.PHASE2B_PILLAR
+          : DEFAULT_FEATURES.PHASE2B_PILLAR,
+    };
+  } catch {
+    return DEFAULT_FEATURES;
+  }
+}
 
 export default function SubscriptionPage() {
-  return (
-    <div className="space-y-8 max-w-[1400px] mx-auto">
+  const [prices, setPrices] = useState<PricingRow[]>([]);
+  const [pillars, setPillars] = useState<PillarMeta[]>([]);
+  const [features, setFeatures] = useState<Record<PricingPlan, string[]>>(
+    DEFAULT_FEATURES,
+  );
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activePlan, setActivePlan] = useState<PricingPlan>("PHASE2A");
+  const [priceDraft, setPriceDraft] = useState("");
+  const [featureDraft, setFeatureDraft] = useState("");
+  const [selectedPillarId, setSelectedPillarId] = useState("");
 
-      {/* Header row */}
-      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+  const phase2APrice = useMemo(
+    () => prices.find((row) => row.plan === "PHASE2A") ?? null,
+    [prices],
+  );
+
+  const phase2BPrices = useMemo(
+    () => prices.filter((row) => row.plan === "PHASE2B_PILLAR"),
+    [prices],
+  );
+
+  const phase2BByPillarId = useMemo(() => {
+    const map = new Map<string, PricingRow>();
+    for (const row of phase2BPrices) {
+      if (row.pillarId) map.set(row.pillarId, row);
+    }
+    return map;
+  }, [phase2BPrices]);
+
+  const selectedPillarPrice = selectedPillarId
+    ? phase2BByPillarId.get(selectedPillarId) ?? null
+    : null;
+
+  const configured2BCount = phase2BPrices.length;
+  const lowest2BPrice =
+    phase2BPrices.length > 0
+      ? Math.min(...phase2BPrices.map((row) => row.price))
+      : null;
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    const [pricingRes, pillarsRes] = await Promise.all([
+      getAdminPricing(),
+      getAdminPillars(),
+    ]);
+
+    if (pricingRes.error || pillarsRes.error) {
+      setError(
+        pricingRes.error?.message ||
+          pillarsRes.error?.message ||
+          "Unable to load subscription pricing",
+      );
+    }
+
+    if (pricingRes.data) setPrices(sortPrices(pricingRes.data.prices));
+    if (pillarsRes.data) setPillars(pillarsRes.data.pillars);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    setFeatures(readStoredFeatures());
+    void loadData();
+  }, [loadData]);
+
+  const openEditor = (plan: PricingPlan, pillarId?: string | null) => {
+    setActivePlan(plan);
+    setError(null);
+    setFeatureDraft(features[plan].join("\n"));
+
+    if (plan === "PHASE2A") {
+      setSelectedPillarId("");
+      setPriceDraft(phase2APrice ? String(phase2APrice.price) : "");
+    } else {
+      const nextPillarId = pillarId || phase2BPrices[0]?.pillarId || pillars[0]?.id || "";
+      const existing = nextPillarId ? phase2BByPillarId.get(nextPillarId) : null;
+      setSelectedPillarId(nextPillarId);
+      setPriceDraft(existing ? String(existing.price) : "");
+    }
+
+    setModalOpen(true);
+  };
+
+  const handlePillarChange = (pillarId: string) => {
+    const existing = phase2BByPillarId.get(pillarId);
+    setSelectedPillarId(pillarId);
+    setPriceDraft(existing ? String(existing.price) : "");
+  };
+
+  const closeModal = () => {
+    if (saving || deleting) return;
+    setModalOpen(false);
+    setError(null);
+  };
+
+  const upsertPrice = (row: PricingRow) => {
+    setPrices((current) => {
+      const next = current.some((price) => price.id === row.id)
+        ? current.map((price) => (price.id === row.id ? row : price))
+        : [...current, row];
+      return sortPrices(next);
+    });
+  };
+
+  const savePlan = async () => {
+    const amount = Number(priceDraft);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError("Enter a valid price greater than 0.");
+      return;
+    }
+
+    if (activePlan === "PHASE2B_PILLAR" && !selectedPillarId) {
+      setError("Select the pillar type for this Plan 2B price.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const nextFeatures = {
+      ...features,
+      [activePlan]: parseFeatureDraft(featureDraft),
+    };
+
+    const existing =
+      activePlan === "PHASE2A" ? phase2APrice : selectedPillarPrice;
+
+    const response = existing
+      ? await updateAdminPricing(existing.id, {
+          price: amount,
+          ...(activePlan === "PHASE2B_PILLAR"
+            ? { pillarId: selectedPillarId }
+            : {}),
+        })
+      : await createAdminPricing({
+          plan: activePlan,
+          price: amount,
+          ...(activePlan === "PHASE2B_PILLAR"
+            ? { pillarId: selectedPillarId }
+            : { pillarId: null }),
+        });
+
+    if (response.error) {
+      setError(response.error.message);
+      setSaving(false);
+      return;
+    }
+
+    if (response.data) {
+      upsertPrice(response.data.price);
+      setFeatures(nextFeatures);
+      window.localStorage.setItem(
+        FEATURE_STORAGE_KEY,
+        JSON.stringify(nextFeatures),
+      );
+    }
+
+    setSaving(false);
+    setModalOpen(false);
+  };
+
+  const removeSelectedPillarPrice = async () => {
+    if (!selectedPillarPrice) return;
+    const confirmed = window.confirm(
+      "Remove the configured price for this pillar?",
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError(null);
+    const response = await deleteAdminPricing(selectedPillarPrice.id);
+
+    if (response.error) {
+      setError(response.error.message);
+      setDeleting(false);
+      return;
+    }
+
+    setPrices((current) =>
+      current.filter((price) => price.id !== selectedPillarPrice.id),
+    );
+    setPriceDraft("");
+    setDeleting(false);
+  };
+
+  const PlanCard = ({
+    plan,
+    title,
+    subtitle,
+    priceLabel,
+    meta,
+    featured,
+  }: {
+    plan: PricingPlan;
+    title: string;
+    subtitle: string;
+    priceLabel: string;
+    meta: string;
+    featured?: boolean;
+  }) => (
+    <section
+      className={`rounded-xl border p-6 bg-[#1C1F2E] ${
+        featured ? "border-blue-500/40" : "border-white/5"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Monetization Control</h1>
-          <p className="text-gray-400 text-sm max-w-lg">
-            Configure core billing structures, plan feature sets, and manage global subscriber
-            lifecycle events from the Obsidian command deck.
+          <span
+            className={`inline-flex rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${
+              featured
+                ? "bg-blue-500/10 text-blue-300"
+                : "bg-white/5 text-gray-400"
+            }`}
+          >
+            {plan === "PHASE2A" ? "Plan 2A" : "Plan 2B"}
+          </span>
+          <h2 className="mt-3 text-2xl font-bold text-white">{title}</h2>
+          <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
+        </div>
+        {plan === "PHASE2A" ? (
+          <CreditCard className="h-6 w-6 text-blue-300" />
+        ) : (
+          <Layers3 className="h-6 w-6 text-emerald-300" />
+        )}
+      </div>
+
+      <div className="mb-6">
+        <div className="text-3xl font-bold text-white">{priceLabel}</div>
+        <div className="mt-1 text-xs font-semibold uppercase tracking-widest text-gray-500">
+          {meta}
+        </div>
+      </div>
+
+      <ul className="mb-6 space-y-2">
+        {features[plan].map((feature) => (
+          <li key={feature} className="flex items-start gap-2 text-sm text-gray-300">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-400" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+
+      <button
+        type="button"
+        onClick={() => openEditor(plan)}
+        className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+          featured
+            ? "bg-white text-gray-950 hover:bg-gray-100"
+            : "border border-white/10 text-gray-200 hover:bg-white/5"
+        }`}
+      >
+        <Edit3 className="h-4 w-4" />
+        Edit Features
+      </button>
+    </section>
+  );
+
+  return (
+    <div className="mx-auto max-w-[1400px] space-y-8">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Subscription Pricing</h1>
+          <p className="mt-2 max-w-2xl text-sm text-gray-400">
+            Manage the two paid diagnostics. Plan 2A has one global price, while
+            Plan 2B is priced per pillar.
           </p>
         </div>
-        <div className="flex gap-8 flex-shrink-0">
-          <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">ARR Estimate</div>
-            <div className="text-2xl font-bold text-emerald-400">$2.4M</div>
+        <button
+          type="button"
+          onClick={() => void loadData()}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      {error && !modalOpen && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Plan 2A Price
           </div>
-          <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Active Users</div>
-            <div className="text-2xl font-bold text-white">12.8k</div>
+          <div className="mt-2 text-2xl font-bold text-white">
+            {formatPrice(phase2APrice?.price)}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            Updated {formatDate(phase2APrice?.updatedAt)}
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Plan 2B Pillars
+          </div>
+          <div className="mt-2 text-2xl font-bold text-white">
+            {configured2BCount}/{pillars.length || 0}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            Active pillars with configured pricing
+          </div>
+        </div>
+        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Plan 2B Starting Price
+          </div>
+          <div className="mt-2 text-2xl font-bold text-white">
+            {formatPrice(lowest2BPrice)}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            Lowest configured pillar price
           </div>
         </div>
       </div>
 
-      {/* Plans + System Health — background image section */}
-      <div className="relative rounded-2xl overflow-hidden">
-        {/* Dashboard background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/images/dashboard img')" }}
-        />
-        <div className="absolute inset-0 bg-[#111318]/70" />
+      {loading ? (
+        <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
+          <div className="flex items-center gap-3 text-sm text-gray-400">
+            <Loader className="h-5 w-5 animate-spin text-blue-300" />
+            Loading pricing
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <PlanCard
+              plan="PHASE2A"
+              title="Strategic Scan"
+              subtitle="One backend-owned price for the paid Phase 2A assessment."
+              priceLabel={formatPrice(phase2APrice?.price)}
+              meta="One-time payment"
+              featured
+            />
+            <PlanCard
+              plan="PHASE2B_PILLAR"
+              title="Pillar Deep Dive"
+              subtitle="Plan 2B charges users for the pillar they choose."
+              priceLabel={
+                lowest2BPrice === null
+                  ? "Not configured"
+                  : `From ${formatPrice(lowest2BPrice)}`
+              }
+              meta="Per pillar"
+            />
+          </div>
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-0">
-          {/* Plan Cards — col-span-3 */}
-          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 p-6">
-            {/* Standard */}
-            <div className="bg-[#1C1F2E]/80 backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">Plan 1A</span>
-                <button className="text-gray-500 hover:text-white"><MoreHorizontal className="w-4 h-4" /></button>
+          <section className="overflow-hidden rounded-xl border border-white/5 bg-[#1C1F2E]">
+            <div className="flex flex-col gap-4 border-b border-white/5 px-6 py-5 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">
+                  Plan 2B Pillar Pricing
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Set the price that checkout and the landing page receive from
+                  the backend.
+                </p>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-1">Standard</h3>
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-3xl font-bold text-white">$29</span>
-                <span className="text-gray-400 text-sm">/mo</span>
-              </div>
-              <ul className="space-y-2 flex-1 mb-6">
-                {["10 Team Members", "50 Assessments/mo"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />{f}
-                  </li>
-                ))}
-                <li className="flex items-center gap-2 text-sm text-gray-500">
-                  <Clock className="w-4 h-4 flex-shrink-0" />Advanced Scoring
-                </li>
-              </ul>
-              <button className="w-full py-2.5 border border-white/20 rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors uppercase tracking-wider">
-                Edit Features
+              <button
+                type="button"
+                onClick={() => openEditor("PHASE2B_PILLAR")}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+              >
+                <Edit3 className="h-4 w-4" />
+                Edit Pillar Price
               </button>
             </div>
 
-            {/* Professional — featured */}
-            <div className="relative bg-[#1e2235] border border-blue-500/40 rounded-2xl p-5 flex flex-col shadow-lg shadow-blue-500/10">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                Best Seller
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    {["Pillar Type", "Current Price", "Status", "Updated", "Action"].map(
+                      (heading) => (
+                        <th
+                          key={heading}
+                          className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-gray-500"
+                        >
+                          {heading}
+                        </th>
+                      ),
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pillars.map((pillar) => {
+                    const row = phase2BByPillarId.get(pillar.id);
+                    return (
+                      <tr
+                        key={pillar.id}
+                        className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-semibold text-white">
+                            {pillar.name}
+                          </div>
+                          <div className="mt-0.5 text-xs text-gray-500">
+                            {pillar.code}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-semibold text-white">
+                          {formatPrice(row?.price)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              row
+                                ? "bg-emerald-500/10 text-emerald-300"
+                                : "bg-amber-500/10 text-amber-300"
+                            }`}
+                          >
+                            {row ? "Configured" : "Missing"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-400">
+                          {formatDate(row?.updatedAt)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            type="button"
+                            onClick={() => openEditor("PHASE2B_PILLAR", pillar.id)}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-blue-300 transition hover:text-blue-200"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {pillars.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-12 text-center text-sm text-gray-500"
+                      >
+                        No active pillars were returned by the backend.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </>
+      )}
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  Edit {activePlan === "PHASE2A" ? "Plan 2A" : "Plan 2B"}
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  {activePlan === "PHASE2A"
+                    ? "Set the global Strategic Scan price."
+                    : "Choose the pillar type and set its Deep Dive price."}
+                </p>
               </div>
-              <div className="flex justify-between items-center mb-4 mt-2">
-                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest bg-blue-500/10 px-2 py-1 rounded">Plan 2A</span>
-                <button className="text-gray-500 hover:text-white"><MoreHorizontal className="w-4 h-4" /></button>
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-1">Professional</h3>
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-3xl font-bold text-blue-400">$79</span>
-                <span className="text-gray-400 text-sm">/mo</span>
-              </div>
-              <ul className="space-y-2 flex-1 mb-6">
-                {["Unlimited Teams", "500 Assessments/mo", "Advanced Scoring"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />{f}
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-2.5 bg-white text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-100 transition-colors uppercase tracking-wider">
-                Edit Features
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* Enterprise */}
-            <div className="bg-[#1C1F2E]/80 backdrop-blur border border-white/10 rounded-2xl p-5 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">Plan 2B</span>
-                <button className="text-gray-500 hover:text-white"><MoreHorizontal className="w-4 h-4" /></button>
+            <div className="space-y-5 px-6 py-5">
+              {activePlan === "PHASE2B_PILLAR" && (
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    Pillar Type
+                  </label>
+                  <select
+                    value={selectedPillarId}
+                    onChange={(event) => handlePillarChange(event.target.value)}
+                    className="w-full appearance-none rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
+                  >
+                    <option value="" disabled>
+                      Select pillar
+                    </option>
+                    {pillars.map((pillar) => (
+                      <option key={pillar.id} value={pillar.id}>
+                        {pillar.name} ({pillar.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  Price (NGN)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={priceDraft}
+                  onChange={(event) => setPriceDraft(event.target.value)}
+                  placeholder="50000"
+                  className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-blue-500/50"
+                />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-1">Enterprise</h3>
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-3xl font-bold text-white">Custom</span>
+
+              <div>
+                <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  Feature Bullets
+                </label>
+                <textarea
+                  value={featureDraft}
+                  onChange={(event) => setFeatureDraft(event.target.value)}
+                  rows={5}
+                  placeholder="One feature per line"
+                  className="w-full resize-none rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm leading-relaxed text-white outline-none transition placeholder:text-gray-700 focus:border-blue-500/50"
+                />
               </div>
-              <ul className="space-y-2 flex-1 mb-6">
-                {["White-labeling", "Priority Support", "API Access"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />{f}
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full py-2.5 border border-white/20 rounded-xl text-sm font-semibold text-gray-300 hover:bg-white/5 hover:text-white transition-colors uppercase tracking-wider">
-                Manage Quotes
-              </button>
+
+              {error && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-white/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                {activePlan === "PHASE2B_PILLAR" && selectedPillarPrice && (
+                  <button
+                    type="button"
+                    onClick={() => void removeSelectedPillarPrice()}
+                    disabled={saving || deleting}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deleting ? (
+                      <Loader className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Remove Price
+                  </button>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving || deleting}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void savePlan()}
+                  disabled={saving || deleting}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? (
+                    <Loader className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* System Health — col-span-1 */}
-          <div className="border-l border-white/5 p-6 flex flex-col gap-5">
-            <h3 className="flex items-center gap-2 text-white font-semibold">
-              <Zap className="w-4 h-4 text-yellow-400" /> System Health
-            </h3>
-
-            <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Churn Rate</div>
-              <div className="text-2xl font-bold text-red-400 mb-2">2.4%</div>
-              <div className="h-1.5 w-full bg-white/10 rounded-full">
-                <div className="h-full bg-red-400 rounded-full" style={{ width: "24%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Trial Conversion</div>
-              <div className="text-2xl font-bold text-emerald-400 mb-2">64%</div>
-              <div className="h-1.5 w-full bg-white/10 rounded-full">
-                <div className="h-full bg-emerald-400 rounded-full" style={{ width: "64%" }} />
-              </div>
-            </div>
-
-            <div className="mt-auto bg-[#1C1F2E]/80 border border-white/10 rounded-xl p-4">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Next Payout Cycle</div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-semibold text-white">Oct 24, 2023</span>
-                <span className="text-sm font-bold text-emerald-400">$182,400.00</span>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-
-      {/* Active Subscribers Table */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <h2 className="text-lg font-semibold text-white">Active Subscribers & Billing History</h2>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
-              <Download className="w-4 h-4" /> Export CSV
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
-              <SlidersHorizontal className="w-4 h-4" /> Filters
-            </button>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/5">
-                {["CUSTOMER", "PLAN STATUS", "PAYMENT METHOD", "LAST AMOUNT", "ACTION"].map((h) => (
-                  <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SUBSCRIBERS.map((sub, i) => (
-                <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full ${sub.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
-                        {sub.initials}
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold text-white">{sub.name}</div>
-                        <div className="text-xs text-gray-500">{sub.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${sub.planDot}`} />
-                      <span className="text-sm text-gray-300">{sub.plan}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      {sub.methodIcon === "card"
-                        ? <CreditCard className="w-4 h-4 text-gray-500" />
-                        : <Building2 className="w-4 h-4 text-gray-500" />
-                      }
-                      {sub.method}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className={`text-sm font-semibold ${sub.amountColor}`}>{sub.amount}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{sub.amountSub}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors">
-                      Manage →
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
-          <span className="text-sm text-gray-500">Showing 1-10 of 1,240 subscribers</span>
-          <div className="flex items-center gap-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            {[1, 2, 3].map((p) => (
-              <button key={p} className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${p === 1 ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white hover:bg-white/5"}`}>{p}</button>
-            ))}
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom CTA row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12">
-        {/* MRR card */}
-        <div className="relative rounded-2xl overflow-hidden bg-[#1C1F2E] border border-white/5 p-8 flex flex-col justify-end min-h-[200px]">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-            style={{ backgroundImage: "url('/images/dashboard img')" }}
-          />
-          <div className="relative z-10">
-            <h3 className="text-2xl font-bold text-white mb-1">Monthly Recurring Revenue</h3>
-            <p className="text-gray-400 text-sm mb-4">Steady 12% increase week-over-week.</p>
-            <button className="flex items-center gap-2 text-sm font-semibold text-white border-b border-white/30 pb-0.5 hover:border-white transition-colors uppercase tracking-wider">
-              View Report <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Create New Tier CTA */}
-        <div className="bg-[#1C1F2E] border border-white/5 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-            <ShoppingCart className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white mb-2">Create New Tier?</h3>
-            <p className="text-gray-400 text-sm max-w-xs">
-              Expand your monetization strategy by adding a specific tier for non-profit organizations.
-            </p>
-          </div>
-          <button className="px-6 py-2.5 bg-white text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-100 transition-colors">
-            Launch Plan Wizard
-          </button>
-        </div>
-      </div>
-
+      )}
     </div>
   );
 }
