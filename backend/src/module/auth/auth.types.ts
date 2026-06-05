@@ -74,10 +74,20 @@ export type RegisterResponse = {
 
 export type LoginResponse = {
   message: string;
-  user: AuthUser;
-  accessToken: string;
-  refreshToken: string;
-};
+} & (
+  | {
+      requiresOtp: false;
+      user: AuthUser;
+      accessToken: string;
+      refreshToken: string;
+    }
+  | {
+      requiresOtp: true;
+      otpToken: string;
+      role: 'ADMIN';
+      email: string;
+    }
+);
 
 export type ForgotPasswordResponse = {
   message: string;
@@ -95,12 +105,15 @@ export type ResetPasswordResponse = {
 
 export type AdminLoginResponse = {
   message: string;
+  requiresOtp: true;
   otpToken: string;
   role: 'ADMIN';
+  email: string;
 };
 
 export type VerifyAdminOTPResponse = {
   message: string;
+  user: AuthUser;
   accessToken: string;
   refreshToken: string;
 };

@@ -3,12 +3,18 @@
 import { Suspense, useState, useRef, KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { forgotPassword, verifyResetOtp } from "@/lib/authClient";
+import {
+  forgotPassword,
+  verifyAdminOtp,
+  verifyResetOtp,
+} from "@/lib/authClient";
 
 function VerifyCodeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
+  const type = searchParams.get("type") || "forget-password";
+  const isAdminLogin = type === "admin-login";
 
   const [otp, setOtp] = useState<string[]>(["", "", "", "", ""]);
   const [codeError, setCodeError] = useState("");
@@ -59,12 +65,19 @@ function VerifyCodeContent() {
     setCodeError("");
 
     try {
-      const res = await verifyResetOtp({ code, email });
+      const res = isAdminLogin
+        ? await verifyAdminOtp({ code })
+        : await verifyResetOtp({ code, email });
 
       if (res.error) {
         setCodeError(
           res.error.message ?? "Incorrect code. Please try again.",
         );
+        return;
+      }
+
+      if (isAdminLogin) {
+        router.push("/admin");
         return;
       }
 
@@ -84,6 +97,11 @@ function VerifyCodeContent() {
     setIsResending(true);
     inputRefs.current[0]?.focus();
 
+    if (isAdminLogin) {
+      router.push("/Auth/login");
+      return;
+    }
+
     try {
       const res = await forgotPassword({ email });
       if (res.error) {
@@ -96,8 +114,10 @@ function VerifyCodeContent() {
     }
   };
 
-  const heading = "Reset Password";
-  const subtext = "We have sent a code to your email";
+  const heading = isAdminLogin ? "Admin Verification" : "Reset Password";
+  const subtext = isAdminLogin
+    ? "Enter the admin login code sent to your email"
+    : "We have sent a code to your email";
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
@@ -153,14 +173,14 @@ function VerifyCodeContent() {
 
             {/* Resend */}
             <p className="text-sm text-gray-400 text-center mb-6">
-              Didn&apos;t receive the email yet?{" "}
+              {isAdminLogin ? "Need a new admin code?" : "Didn't receive the email yet?"}{" "}
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={isResending || isLoading}
                 className="text-white font-bold hover:text-[#f97316] transition disabled:opacity-50"
               >
-                {isResending ? "Resending..." : "Resend"}
+                {isAdminLogin ? "Log in again" : isResending ? "Resending..." : "Resend"}
               </button>
             </p>
 

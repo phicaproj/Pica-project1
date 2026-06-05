@@ -28,6 +28,13 @@ export default function LoginPage() {
         return;
       }
 
+      if (res.data?.requiresOtp) {
+        router.push(
+          `/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=admin-login`,
+        );
+        return;
+      }
+
       router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");

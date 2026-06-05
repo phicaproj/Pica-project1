@@ -69,12 +69,12 @@ export async function sendPasswordResetEmail(
           name: 'PICA by Beauvision',
         },
         to: [{ email: toEmail }],
-        subject: 'Your PICA password reset code',
+        subject: 'Your PICA admin login code',
         htmlContent: `
-          <h2>Reset your PICA password</h2>
-          <p>Use the code below to reset your password. It expires in 10 minutes.</p>
+          <h2>Verify your PICA admin login</h2>
+          <p>Use the code below to complete your admin sign-in. It expires shortly.</p>
           <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px;">${code}</p>
-          <p>If you didn't request a password reset, you can safely ignore this email.</p>
+          <p>If you didn't try to sign in as an admin, reset your password and contact support.</p>
           <br/>
           <p>— The Beauvision Team</p>
         `,
@@ -90,7 +90,7 @@ export async function sendPasswordResetEmail(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
 
-    console.error('Error sending password reset email:', message);
+    console.error('Error sending admin login code email:', message);
 
     return { success: false, error: message };
   }

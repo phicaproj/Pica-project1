@@ -6,6 +6,7 @@ const ACCESS_TOKEN_KEY = 'pica.accessToken'
 const REFRESH_TOKEN_KEY = 'pica.refreshToken'
 const USER_KEY = 'pica.user'
 const RESET_OTP_TOKEN_KEY = 'pica.resetOtpToken'
+const ADMIN_LOGIN_OTP_TOKEN_KEY = 'pica.adminLoginOtpToken'
 const RESET_PASSWORD_TOKEN_KEY = 'pica.resetPasswordToken'
 const LAST_SESSION_ID_KEY = 'pica.lastSessionId'
 
@@ -127,6 +128,16 @@ export function getLastSessionId(): string | null {
 export function clearLastSessionId() {
 	if (typeof window === 'undefined') return
 	localStorage.removeItem(LAST_SESSION_ID_KEY)
+}
+
+export function getAdminLoginOtpToken(): string | null {
+	if (typeof window === 'undefined') return null
+	return sessionStorage.getItem(ADMIN_LOGIN_OTP_TOKEN_KEY)
+}
+
+export function clearAdminLoginOtpToken() {
+	if (typeof window === 'undefined') return
+	sessionStorage.removeItem(ADMIN_LOGIN_OTP_TOKEN_KEY)
 }
 
 async function authedFetch<T>(
@@ -385,16 +396,64 @@ export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
 	})
 }
 
-export const Login = async ({ payload }: { payload: LoginPayload }) => {
-	const res = await apiFetch<{
-		message: string
-		user: AuthUser
-		accessToken: string
-		refreshToken: string
-	}>('/auth/login', payload)
+export type LoginResponse =
+	| {
+			message: string
+			requiresOtp: false
+			user: AuthUser
+			accessToken: string
+			refreshToken: string
+	  }
+	| {
+			message: string
+			requiresOtp: true
+			otpToken: string
+			role: 'ADMIN'
+			email: string
+	  }
 
-	if (res.data) {
+export type VerifyAdminOtpResponse = {
+	message: string
+	user: AuthUser
+	accessToken: string
+	refreshToken: string
+}
+
+export const Login = async ({ payload }: { payload: LoginPayload }) => {
+	const res = await apiFetch<LoginResponse>('/auth/login', payload)
+
+	if (res.data?.requiresOtp) {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(ADMIN_LOGIN_OTP_TOKEN_KEY, res.data.otpToken)
+		}
+	} else if (res.data) {
 		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+	}
+
+	return res
+}
+
+export const verifyAdminOtp = async ({ code }: { code: string }) => {
+	const loginToken =
+		typeof window !== 'undefined'
+			? sessionStorage.getItem(ADMIN_LOGIN_OTP_TOKEN_KEY)
+			: null
+
+	if (!loginToken) {
+		return {
+			data: null,
+			error: { message: 'Admin login session expired. Please log in again.' },
+		}
+	}
+
+	const res = await apiFetch<VerifyAdminOtpResponse>('/auth/admin/verify-otp', {
+		loginToken,
+		code,
+	})
+
+	if (res.data && typeof window !== 'undefined') {
+		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+		sessionStorage.removeItem(ADMIN_LOGIN_OTP_TOKEN_KEY)
 	}
 
 	return res

@@ -6,6 +6,7 @@ import {
   BAD_REQUEST,
   CONFLICT,
   FORBIDDEN,
+  INTERNAL_SERVER_ERROR,
   NOT_FOUND,
   UNAUTHORIZED,
 } from '../../service/shared/http';
@@ -14,10 +15,16 @@ import {
   generateOtpToken,
   generatePasswordResetToken,
   generateRefreshToken,
+  hashOtpCode,
+  otpCodeMatches,
   verifyOtpToken,
   verifyPasswordResetToken,
 } from '../../service/shared/generateToken';
-import { sendPasswordResetEmail, sendWelcomeEmail } from '../../service/shared/email.service';
+import {
+  adminCodeEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+} from '../../service/shared/email.service';
 import type {
   AdminLoginResponse,
   ForgotPasswordInput,
@@ -176,12 +183,42 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
+  if (user.role === 'ADMIN') {
+    const code = generateOtpCode();
+    const purpose = 'admin-login';
+    const otpToken = generateOtpToken({
+      email: user.email,
+      codeHash: hashOtpCode({ email: user.email, code, purpose }),
+      purpose,
+    });
+
+    try {
+      const sent = await adminCodeEmail(user.email, code);
+      if (!sent.success) {
+        throw new Error(sent.error ?? 'Admin login code email failed');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error sending admin login code:', message);
+      throw new AppError('Could not send admin login code. Please try again.', INTERNAL_SERVER_ERROR);
+    }
+
+    return {
+      message: 'Admin login requires OTP verification',
+      requiresOtp: true,
+      otpToken,
+      role: 'ADMIN',
+      email: user.email,
+    };
+  }
+
   const tokenPayload = { id: user.id, role: user.role };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 
   return {
     message: 'Login successful',
+    requiresOtp: false,
     user: {
       id: user.id,
       email: user.email,
@@ -215,7 +252,12 @@ export async function forgotPasswordService(
   }
 
   const code = generateOtpCode();
-  const otpToken = generateOtpToken({ email: user.email, code });
+  const purpose = 'password-reset';
+  const otpToken = generateOtpToken({
+    email: user.email,
+    codeHash: hashOtpCode({ email: user.email, code, purpose }),
+    purpose,
+  });
 
   try {
     await sendPasswordResetEmail(user.email, code);
@@ -235,11 +277,15 @@ export async function verifyResetOtpService(
 ): Promise<VerifyResetOtpResponse> {
   const payload = verifyOtpToken(data.otpToken);
 
-  if (payload.email !== data.email) {
+  if (payload.purpose !== 'password-reset') {
+    throw new AppError('Invalid reset OTP token', BAD_REQUEST);
+  }
+
+  if (payload.email !== data.email.trim().toLowerCase()) {
     throw new AppError('OTP does not match the provided email', BAD_REQUEST);
   }
 
-  if (payload.code !== data.code) {
+  if (!otpCodeMatches(payload, data.code)) {
     throw new AppError('Invalid or expired reset code', BAD_REQUEST);
   }
 
@@ -312,19 +358,30 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
   }
 
   const code = generateOtpCode();
-  const otpToken = generateOtpToken({ email: user.email, code });
+  const purpose = 'admin-login';
+  const otpToken = generateOtpToken({
+    email: user.email,
+    codeHash: hashOtpCode({ email: user.email, code, purpose }),
+    purpose,
+  });
 
   try {
-    await sendPasswordResetEmail(user.email, code);
+    const sent = await adminCodeEmail(user.email, code);
+    if (!sent.success) {
+      throw new Error(sent.error ?? 'Admin login code email failed');
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Error sending password reset email:', message);
+    console.error('Error sending admin login code:', message);
+    throw new AppError('Could not send admin login code. Please try again.', INTERNAL_SERVER_ERROR);
   }
 
   return {
     message: 'Admin login successful. Please verify OTP to receive access token.',
+    requiresOtp: true,
     otpToken,
     role: user.role,
+    email: user.email,
   };
 }
 
@@ -333,21 +390,35 @@ export async function verifyAdminOTPService(
 ): Promise<VerifyAdminOTPResponse> {
   const payload = verifyOtpToken(data.loginToken);
 
-  if (payload.email !== data.loginToken) {
-    throw new AppError('OTP does not match the provided email', BAD_REQUEST);
+  if (payload.purpose !== 'admin-login') {
+    throw new AppError('Invalid admin login OTP token', BAD_REQUEST);
   }
 
-  if (payload.code !== data.code) {
+  if (!otpCodeMatches(payload, data.code)) {
     throw new AppError('Invalid or expired OTP code', BAD_REQUEST);
   }
 
   const user = await prisma.user.findUnique({
     where: { email: payload.email },
-    select: { id: true, role: true },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+      role: true,
+    },
   });
 
   if (!user) {
     throw new AppError('Account no longer exists', NOT_FOUND);
+  }
+
+  if (user.role !== 'ADMIN') {
+    throw new AppError('Access denied: not an admin account', FORBIDDEN);
   }
 
   const tokenPayload = { id: user.id, role: user.role };
@@ -356,6 +427,17 @@ export async function verifyAdminOTPService(
 
   return {
     message: 'OTP verified. Admin access granted.',
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: user.isVerified,
+      role: user.role,
+    },
     accessToken,
     refreshToken,
   };

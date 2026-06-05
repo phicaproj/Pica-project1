@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { createHmac, timingSafeEqual } from 'crypto';
 import {
   JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET,
@@ -18,7 +19,8 @@ export interface TokenPayload {
 }
 export interface OtpTokenPayload {
   email: string;
-  code: string;
+  codeHash: string;
+  purpose: 'password-reset' | 'admin-login';
 }
 
 export interface PasswordResetTokenPayload {
@@ -35,6 +37,30 @@ export function generateOtpToken(payload: OtpTokenPayload) {
   return jwt.sign(payload, JWT_OTP_SECRET as jwt.Secret, {
     expiresIn: JWT_OTP_EXPIRE as jwt.SignOptions['expiresIn'],
   });
+}
+
+export function hashOtpCode(params: {
+  email: string;
+  code: string;
+  purpose: OtpTokenPayload['purpose'];
+}): string {
+  return createHmac('sha256', JWT_OTP_SECRET)
+    .update(`${params.purpose}:${params.email.trim().toLowerCase()}:${params.code}`)
+    .digest('hex');
+}
+
+export function otpCodeMatches(payload: OtpTokenPayload, code: string): boolean {
+  const expected = hashOtpCode({
+    email: payload.email,
+    code,
+    purpose: payload.purpose,
+  });
+  const actualBuffer = Buffer.from(payload.codeHash, 'hex');
+  const expectedBuffer = Buffer.from(expected, 'hex');
+  return (
+    actualBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(actualBuffer, expectedBuffer)
+  );
 }
 
 export function generateRefreshToken(payload: TokenPayload) {

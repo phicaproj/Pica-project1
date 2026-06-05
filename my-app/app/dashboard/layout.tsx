@@ -50,10 +50,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { dark, setDark } = useTheme();
   const pageTitle = getPageTitle(pathname);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    setUser(getStoredUser());
-  }, []);
+    const stored = getStoredUser();
+    if (!stored) {
+      router.replace("/Auth/login");
+      return;
+    }
+    if (stored.role === "ADMIN") {
+      router.replace("/admin");
+      return;
+    }
+    setUser(stored);
+    setAuthChecked(true);
+  }, [router]);
 
   const handleLogout = () => {
     clearSession();
@@ -85,6 +96,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </Link>
     );
   };
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center">
+        <div className="text-sm text-gray-400">Checking dashboard session...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white flex flex-col overflow-x-hidden">

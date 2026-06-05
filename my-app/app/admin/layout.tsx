@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { clearSession, getStoredUser } from "@/lib/authClient";
 import {
   LayoutDashboard,
   Users,
@@ -43,6 +44,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [logoutModal, setLogoutModal] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (!user || user.role !== "ADMIN") {
+      router.replace("/Auth/login");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
@@ -54,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const confirmLogout = () => {
+    clearSession();
     setLogoutModal(false);
     router.push("/");
   };
@@ -78,6 +90,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </Link>
     );
   };
+
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-[#111318] text-white flex items-center justify-center">
+        <div className="text-sm text-gray-400">Checking admin session...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#111318] text-white flex flex-col font-sans">

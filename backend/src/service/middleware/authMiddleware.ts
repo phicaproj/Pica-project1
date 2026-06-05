@@ -2,18 +2,14 @@ import { Request, Response, NextFunction } from 'express'
 import {
 	verifyAccessToken,
 	verifyOtpToken,
+	type OtpTokenPayload,
 	type TokenPayload,
 } from '../shared/generateToken'
-
-export interface OtpPayload {
-	email: string
-	code: string
-}
 
 declare module 'express-serve-static-core' {
 	interface Request {
 		user?: TokenPayload
-		token?: OtpPayload
+		token?: OtpTokenPayload
 	}
 }
 
@@ -75,7 +71,7 @@ export const otpAuth = (req: Request, res: Response, next: NextFunction) => {
 	const token = authHeader.split(' ')[1]
 
 	try {
-		const payload = verifyOtpToken(token) as OtpPayload
+		const payload = verifyOtpToken(token)
 
 		req.token = payload
 
