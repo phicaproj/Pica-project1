@@ -146,10 +146,11 @@ export default function QuestionBankPage() {
       return;
     }
     if (res.data) {
-      setPillars(res.data.pillars);
+      const pillarsData = res.data.pillars;
+      setPillars(pillarsData);
       setCreateDraft((current) => ({
         ...current,
-        pillarId: current.pillarId || res.data.pillars[0]?.id || "",
+        pillarId: current.pillarId || pillarsData[0]?.id || "",
       }));
     }
   }, []);
@@ -171,12 +172,13 @@ export default function QuestionBankPage() {
       setQuestions([]);
       setActiveId(null);
     } else if (res.data) {
-      setQuestions(res.data.questions);
+      const nextQuestions = res.data.questions;
+      setQuestions(nextQuestions);
       setActiveId((current) => {
-        if (current && res.data.questions.some((question) => question.id === current)) {
+        if (current && nextQuestions.some((question) => question.id === current)) {
           return current;
         }
-        return res.data.questions[0]?.id ?? null;
+        return nextQuestions[0]?.id ?? null;
       });
     }
 

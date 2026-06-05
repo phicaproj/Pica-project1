@@ -156,7 +156,8 @@ export default function CouponsPage() {
     if (res.error) {
       setError(res.error.message);
     } else if (res.data) {
-      setCoupons((current) => [res.data.coupon, ...current]);
+      const createdCoupon = res.data.coupon;
+      setCoupons((current) => [createdCoupon, ...current]);
       setDraft(initialDraft);
       setModalOpen(false);
       showNotice("Coupon created.");
@@ -176,10 +177,11 @@ export default function CouponsPage() {
     if (res.error) {
       setError(res.error.message);
     } else if (res.data) {
+      const updatedCoupon = res.data.coupon;
       setCoupons((current) =>
-        current.map((row) => (row.id === coupon.id ? res.data.coupon : row)),
+        current.map((row) => (row.id === coupon.id ? updatedCoupon : row)),
       );
-      showNotice(res.data.coupon.isActive ? "Coupon activated." : "Coupon disabled.");
+      showNotice(updatedCoupon.isActive ? "Coupon activated." : "Coupon disabled.");
     }
 
     setSaving(false);
@@ -196,8 +198,9 @@ export default function CouponsPage() {
     if (res.error) {
       setError(res.error.message);
     } else if (res.data) {
+      const updatedCoupon = res.data.coupon;
       setCoupons((current) =>
-        current.map((row) => (row.id === coupon.id ? res.data.coupon : row)),
+        current.map((row) => (row.id === coupon.id ? updatedCoupon : row)),
       );
       showNotice("Description updated.");
     }
