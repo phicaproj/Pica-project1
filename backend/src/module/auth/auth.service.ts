@@ -176,7 +176,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
-  const tokenPayload = { id: user.id, role: user.role as 'User' | 'Admin' };
+  const tokenPayload = { id: user.id, role: user.role };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 
@@ -350,7 +350,7 @@ export async function verifyAdminOTPService(
     throw new AppError('Account no longer exists', NOT_FOUND);
   }
 
-  const tokenPayload = { id: user.id, role: user.role as 'Admin' };
+  const tokenPayload = { id: user.id, role: user.role };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 

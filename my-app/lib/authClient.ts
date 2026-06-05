@@ -202,6 +202,11 @@ export type InitPaymentResponse = {
 	accessCode: string
 	reference: string
 	paymentId: string
+	amount: number
+	baseAmount: number
+	discountAmount: number
+	currency: string
+	couponCode: string | null
 }
 
 export type VerifyPaymentResponse = {
@@ -213,7 +218,6 @@ export type VerifyPaymentResponse = {
 
 export const initPayment = async (payload: {
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
-	amount: number
 	sessionId?: string
 	pillarId?: string
 }) => {
@@ -228,6 +232,45 @@ export const verifyPayment = async (reference: string) => {
 		`/payment/verify/${encodeURIComponent(reference)}`,
 		{ method: 'GET' },
 	)
+}
+
+export type PricingRow = {
+	id: string
+	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
+	pillarId: string | null
+	pillarCode: string | null
+	pillarName: string | null
+	price: number
+	currency: 'NGN'
+	createdAt: string
+	updatedAt: string
+}
+
+export type PublicPricingResponse = {
+	message: string
+	currency: 'NGN'
+	phase2A: PricingRow | null
+	phase2B: PricingRow[]
+}
+
+export const getPublicPricing = async () => {
+	try {
+		const res = await fetch(`${API_BASE_URL}/payment/pricing`, {
+			method: 'GET',
+			headers: { 'Content-Type': 'application/json' },
+		})
+		const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+		if (!res.ok) {
+			const message =
+				(typeof json.message === 'string' && json.message) ||
+				`Request failed with status ${res.status}`
+			return { data: null, error: { message } }
+		}
+		return { data: json as PublicPricingResponse, error: null }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Network error'
+		return { data: null, error: { message } }
+	}
 }
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {

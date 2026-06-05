@@ -21,7 +21,9 @@ import {
   getMyPhase2BPillars,
   getMyCompletedResults,
   getAllPillars,
+  getPublicPricing,
   Phase2BPillarSession,
+  PricingRow,
   getSessionResponses,
   startPhase2B,
 } from "@/lib/authClient";
@@ -57,10 +59,23 @@ export default function DeepDivePage() {
     async function loadData() {
       try {
         setLoading(true);
-        // Load pillars metadata
-        const pillarsRes = await getAllPillars();
+        // Load pillars metadata and public pricing.
+        const [pillarsRes, pricingRes] = await Promise.all([
+          getAllPillars(),
+          getPublicPricing(),
+        ]);
+        const priceMap = new Map<string, PricingRow>();
+        if (pricingRes.data) {
+          for (const row of pricingRes.data.phase2B) {
+            if (row.pillarId) priceMap.set(row.pillarId, row);
+          }
+        }
         if (pillarsRes.data) {
-          setAllPillars(pillarsRes.data.pillars || []);
+          setAllPillars((pillarsRes.data.pillars || []).map((pillar: any) => ({
+            ...pillar,
+            price: priceMap.get(pillar.id)?.price ?? null,
+            currency: priceMap.get(pillar.id)?.currency ?? "NGN",
+          })));
         }
 
         // Load user's unlocked pillars (Phase2B sessions)

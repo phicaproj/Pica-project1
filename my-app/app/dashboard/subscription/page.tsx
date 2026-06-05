@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
@@ -29,12 +29,15 @@ import {
   getAccessToken,
   getLastSessionId,
   getMe,
+  getPublicPricing,
   initPayment,
   verifyPayment,
   getAllPillars,
   getMyPhase2BPillars,
   type BusinessSize,
   type MeUser,
+  type PricingRow,
+  type PublicPricingResponse,
   type VerifyPaymentResponse,
 } from "@/lib/authClient";
 
@@ -76,105 +79,90 @@ declare global {
 
 const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
-// Phase 2A price in NGN major units. Backend accepts whatever the FE sends
-// (validated <= 10_000_000); align this with admin pricing once that ships.
-const PHASE2A_PRICE_NGN = 50000;
-const PHASE2B_PRICE_NGN = 50000;
-
 type PlanCard = {
   tier: string;
   name: string;
   price: string;
+  amount: number | null;
+  currency: string;
   features: string[];
   buttonLabel: string;
   buttonVariant: "filled" | "outlined";
   recommended?: boolean;
   backendPlan?: "PHASE2A" | "PHASE2B_PILLAR";
+  priceMissing?: boolean;
 };
 
-const SMALL_PLANS: PlanCard[] = [
-  {
-    tier: "FOUNDATION",
-    name: "Free",
-    price: "N0",
-    features: [
-      "Phase 1 quick scan",
-      "Standard insights summary",
-      "Email-delivered report",
-    ],
-    buttonLabel: "Included",
-    buttonVariant: "outlined",
-  },
-  {
-    tier: "ACCELERATOR",
-    name: "Plan 2A",
-    price: `N${PHASE2A_PRICE_NGN.toLocaleString()}`,
-    features: [
-      "Full Phase 2A diagnostic",
-      "Pillar-by-pillar findings",
-      "Downloadable PDF report",
-    ],
-    buttonLabel: "Unlock Plan 2A",
-    buttonVariant: "filled",
-    recommended: true,
-    backendPlan: "PHASE2A",
-  },
-  {
-    tier: "DEEP DIVE",
-    name: "Plan 2B Module",
-    price: `N${PHASE2B_PRICE_NGN.toLocaleString()}`,
-    features: [
-      "Targeted Pillar Analysis",
-      "Granular scoring",
-      "Actionable insights per pillar",
-    ],
-    buttonLabel: "Buy a Module",
-    buttonVariant: "filled",
-    backendPlan: "PHASE2B_PILLAR",
-  },
-];
+function formatPrice(amount: number | null | undefined, currency = "NGN") {
+  if (amount === null || amount === undefined) return "Not configured";
+  const prefix = currency === "NGN" ? "N" : `${currency} `;
+  return `${prefix}${amount.toLocaleString()}`;
+}
 
-const MEDIUM_PLANS: PlanCard[] = [
-  {
-    tier: "FOUNDATION",
-    name: "Free",
-    price: "N0",
-    features: [
-      "Phase 1 quick scan",
-      "Standard insights summary",
-      "Email-delivered report",
-    ],
-    buttonLabel: "Included",
-    buttonVariant: "outlined",
-  },
-  {
-    tier: "ACCELERATOR",
-    name: "Plan 2A",
-    price: `N${PHASE2A_PRICE_NGN.toLocaleString()}`,
-    features: [
-      "Full Phase 2A diagnostic",
-      "Medium-business question set",
-      "Downloadable PDF report",
-    ],
-    buttonLabel: "Unlock Plan 2A",
-    buttonVariant: "filled",
-    recommended: true,
-    backendPlan: "PHASE2A",
-  },
-  {
-    tier: "DEEP DIVE",
-    name: "Plan 2B Module",
-    price: `N${PHASE2B_PRICE_NGN.toLocaleString()}`,
-    features: [
-      "Targeted Pillar Analysis",
-      "Granular scoring",
-      "Actionable insights per pillar",
-    ],
-    buttonLabel: "Buy a Module",
-    buttonVariant: "filled",
-    backendPlan: "PHASE2B_PILLAR",
-  },
-];
+function buildPlans(
+  businessSize: BusinessSize | null,
+  pricing: PublicPricingResponse | null,
+): PlanCard[] {
+  const phase2APrice = pricing?.phase2A?.price ?? null;
+  const phase2BPrices = pricing?.phase2B ?? [];
+  const phase2BStartPrice =
+    phase2BPrices.length > 0
+      ? Math.min(...phase2BPrices.map((price) => price.price))
+      : null;
+
+  const phase2BLabel =
+    phase2BStartPrice === null ? "Not configured" : `From ${formatPrice(phase2BStartPrice)}`;
+
+  return [
+    {
+      tier: "FOUNDATION",
+      name: "Free",
+      price: "N0",
+      amount: 0,
+      currency: "NGN",
+      features: [
+        "Phase 1 quick scan",
+        "Standard insights summary",
+        "Email-delivered report",
+      ],
+      buttonLabel: "Included",
+      buttonVariant: "outlined",
+    },
+    {
+      tier: "ACCELERATOR",
+      name: "Plan 2A",
+      price: formatPrice(phase2APrice),
+      amount: phase2APrice,
+      currency: pricing?.phase2A?.currency ?? "NGN",
+      features: [
+        "Full Phase 2A diagnostic",
+        businessSize === "MEDIUM" ? "Medium-business question set" : "Pillar-by-pillar findings",
+        "Downloadable PDF report",
+      ],
+      buttonLabel: "Unlock Plan 2A",
+      buttonVariant: "filled",
+      recommended: true,
+      backendPlan: "PHASE2A",
+      priceMissing: phase2APrice === null,
+    },
+    {
+      tier: "DEEP DIVE",
+      name: "Plan 2B Module",
+      price: phase2BLabel,
+      amount: phase2BStartPrice,
+      currency: "NGN",
+      features: [
+        "Targeted Pillar Analysis",
+        "Granular scoring",
+        "Actionable insights per pillar",
+      ],
+      buttonLabel: "Buy a Module",
+      buttonVariant: "filled",
+      backendPlan: "PHASE2B_PILLAR",
+      priceMissing: phase2BStartPrice === null,
+    },
+  ];
+}
 
 export default function SubscriptionPage() {
   return (
@@ -216,6 +204,19 @@ function SubscriptionPageInner() {
   const [allPillars, setAllPillars] = useState<any[]>([]);
   const [ownedPillarIds, setOwnedPillarIds] = useState<Set<string>>(new Set());
   const [loadingPillars, setLoadingPillars] = useState(false);
+  const [pricing, setPricing] = useState<PublicPricingResponse | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(true);
+  const [chargedAmount, setChargedAmount] = useState<number | null>(null);
+
+  const plans = useMemo(
+    () => buildPlans(me?.businessSize ?? null, pricing),
+    [me?.businessSize, pricing],
+  );
+
+  const pricingByPillarId = useMemo(() => {
+    const entries = pricing?.phase2B ?? [];
+    return new Map(entries.filter((row) => row.pillarId).map((row) => [row.pillarId!, row]));
+  }, [pricing]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,6 +232,23 @@ function SubscriptionPageInner() {
         setMe(res.data.user);
       }
       setMeLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await getPublicPricing();
+      if (cancelled) return;
+      if (res.error || !res.data) {
+        setPaymentError(res.error?.message ?? "Could not load pricing.");
+      } else {
+        setPricing(res.data);
+      }
+      setPricingLoading(false);
     })();
     return () => {
       cancelled = true;
@@ -305,23 +323,30 @@ function SubscriptionPageInner() {
   }, [me, meLoading, verifyResult]);
 
   useEffect(() => {
-    if (meLoading || !me || verifyResult) return;
+    if (meLoading || pricingLoading || !me || verifyResult) return;
     if (!urlAutoCheckout) return;
 
     if (urlPlan === "PHASE2B_PILLAR" && urlPillarId) {
-      const phase2bPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
+      const phase2bPlan = plans.find(
         (p) => p.backendPlan === "PHASE2B_PILLAR",
       );
       if (!phase2bPlan) return;
+      const pillarPrice = pricingByPillarId.get(urlPillarId);
       setPaymentError(null);
-      setSelectedPlan(phase2bPlan);
+      setSelectedPlan({
+        ...phase2bPlan,
+        price: formatPrice(pillarPrice?.price ?? phase2bPlan.amount),
+        amount: pillarPrice?.price ?? phase2bPlan.amount,
+        currency: pillarPrice?.currency ?? phase2bPlan.currency,
+        priceMissing: !pillarPrice,
+      });
       setCheckoutPillarId(urlPillarId);
       setView("checkout");
       return;
     }
 
     if (urlSessionId) {
-      const phase2aPlan = (me.businessSize === "MEDIUM" ? MEDIUM_PLANS : SMALL_PLANS).find(
+      const phase2aPlan = plans.find(
         (p) => p.backendPlan === "PHASE2A",
       );
       if (!phase2aPlan) return;
@@ -330,7 +355,18 @@ function SubscriptionPageInner() {
       setCheckoutSessionId(urlSessionId);
       setView("checkout");
     }
-  }, [me, meLoading, verifyResult, urlSessionId, urlPillarId, urlPlan, urlAutoCheckout]);
+  }, [
+    me,
+    meLoading,
+    plans,
+    pricingByPillarId,
+    pricingLoading,
+    verifyResult,
+    urlSessionId,
+    urlPillarId,
+    urlPlan,
+    urlAutoCheckout,
+  ]);
 
   const fetchLockedScans = async (): Promise<LockedScan[]> => {
     const token = getAccessToken();
@@ -414,7 +450,12 @@ function SubscriptionPageInner() {
           getMyPhase2BPillars()
         ]);
         if (pillarsRes.data) {
-          setAllPillars(pillarsRes.data.pillars || []);
+          const enrichedPillars = (pillarsRes.data.pillars || []).map((pillar: any) => ({
+            ...pillar,
+            price: pricingByPillarId.get(pillar.id)?.price ?? null,
+            currency: pricingByPillarId.get(pillar.id)?.currency ?? "NGN",
+          }));
+          setAllPillars(enrichedPillars);
         }
         if (myPillarsRes.data) {
           const owned = new Set((myPillarsRes.data.pillars || [])
@@ -438,8 +479,15 @@ function SubscriptionPageInner() {
 
   const handlePickPillar = (pillarId: string) => {
     if (!pendingPlan) return;
+    const pillarPrice = pricingByPillarId.get(pillarId);
     setShowPillarPicker(false);
-    setSelectedPlan(pendingPlan);
+    setSelectedPlan({
+      ...pendingPlan,
+      price: formatPrice(pillarPrice?.price ?? pendingPlan.amount),
+      amount: pillarPrice?.price ?? pendingPlan.amount,
+      currency: pillarPrice?.currency ?? pendingPlan.currency,
+      priceMissing: !pillarPrice,
+    });
     setCheckoutSessionId(null);
     setCheckoutPillarId(pillarId);
     setView("checkout");
@@ -458,13 +506,14 @@ function SubscriptionPageInner() {
     setPendingPlan(null);
   };
 
-  const handlePaymentSuccess = (result: VerifyPaymentResponse) => {
+  const handlePaymentSuccess = (result: VerifyPaymentResponse, amount: number | null) => {
     setPaymentError(null);
+    setChargedAmount(amount);
     setVerifyResult(result);
     setView("success");
   };
 
-  if (meLoading || verifyingReturn) {
+  if (meLoading || pricingLoading || verifyingReturn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
         <div className="flex flex-col items-center gap-3 text-center px-6">
@@ -499,6 +548,7 @@ function SubscriptionPageInner() {
       {view === "plans" && (
         <ChoosePlanView
           me={me}
+          plans={plans}
           onSelectPlan={handleSelectPlan}
           paymentError={paymentError}
         />
@@ -518,6 +568,7 @@ function SubscriptionPageInner() {
           me={me}
           plan={selectedPlan}
           verifyResult={verifyResult}
+          chargedAmount={chargedAmount}
         />
       )}
 
@@ -668,20 +719,16 @@ function LockedScanPickerModal({
 
 function ChoosePlanView({
   me,
+  plans,
   onSelectPlan,
   paymentError,
 }: {
   me: MeUser;
+  plans: PlanCard[];
   onSelectPlan: (plan: PlanCard) => void;
   paymentError: string | null;
 }) {
   const businessSize: BusinessSize | null = me.businessSize;
-  const plans =
-    businessSize === "MEDIUM"
-      ? MEDIUM_PLANS
-      : businessSize === "SMALL"
-        ? SMALL_PLANS
-        : [];
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white pb-20">
@@ -757,6 +804,7 @@ function ChoosePlanView({
               plan={plan}
               disabled={
                 !plan.backendPlan ||
+                plan.priceMissing ||
                 (plan.backendPlan === "PHASE2A" && me.hasPaidPhase2A)
               }
               onSelect={() => onSelectPlan(plan)}
@@ -830,7 +878,8 @@ function PricingCard({
         </p>
         <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
         <p className="text-gray-400 text-sm mb-6">
-          {plan.price} <span className="text-gray-600">/one-time</span>
+          {plan.price}{" "}
+          {!plan.priceMissing && <span className="text-gray-600">/one-time</span>}
         </p>
         <ul className="space-y-3 mb-8">
           {plan.features.map((feature) => (
@@ -874,7 +923,7 @@ function CheckoutView({
   sessionId: string | null;
   pillarId: string | null;
   onChangePlan: () => void;
-  onPaymentSuccess: (result: VerifyPaymentResponse) => void;
+  onPaymentSuccess: (result: VerifyPaymentResponse, amount: number | null) => void;
 }) {
   const [activeTab, setActiveTab] = useState<string>("Card");
   const [busy, setBusy] = useState(false);
@@ -954,9 +1003,14 @@ function CheckoutView({
         return;
       }
 
+      if (plan.priceMissing) {
+        setError("Pricing is not configured for this plan yet. Please contact support.");
+        setBusy(false);
+        return;
+      }
+
       const init = await initPayment({
         plan: plan.backendPlan!,
-        amount: plan.backendPlan === "PHASE2B_PILLAR" ? PHASE2B_PRICE_NGN : PHASE2A_PRICE_NGN,
         sessionId,
         pillarId,
       });
@@ -967,7 +1021,7 @@ function CheckoutView({
         return;
       }
 
-      const { reference } = init.data;
+      const { reference, amount, currency } = init.data;
       if (!reference) {
         setError("Payment reference is unavailable. Please try again.");
         setBusy(false);
@@ -979,9 +1033,9 @@ function CheckoutView({
       const handler = window.PaystackPop.setup({
         key: PAYSTACK_PUBLIC_KEY,
         email: me.email,
-        amount: PHASE2A_PRICE_NGN * 100,
+        amount: Math.round(amount * 100),
         ref: reference,
-        currency: "NGN",
+        currency,
         callback: (response) => {
           paidRef.current = true;
           setVerifying(true);
@@ -991,7 +1045,7 @@ function CheckoutView({
             setVerifying(false);
             setBusy(false);
             if (result.ok) {
-              onPaymentSuccess(result.data);
+              onPaymentSuccess(result.data, amount);
             } else {
               setError(result.message);
             }
@@ -1141,7 +1195,7 @@ function CheckoutView({
           <p className="mt-3 text-[11px] text-gray-600 leading-relaxed flex items-start gap-2">
             <HelpCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
             By clicking Complete Payment, you authorize PICA, via Paystack, to
-            charge {plan.price} for one-time access to Plan 2A.
+            charge {plan.price} for one-time access to this plan.
           </p>
         </div>
       </div>
@@ -1169,11 +1223,14 @@ function SuccessView({
   me,
   plan,
   verifyResult,
+  chargedAmount,
 }: {
   me: MeUser;
   plan: PlanCard | null;
   verifyResult: VerifyPaymentResponse;
+  chargedAmount: number | null;
 }) {
+  const displayAmount = chargedAmount !== null ? formatPrice(chargedAmount) : (plan?.price ?? "Paid");
   const capabilities = [
     {
       icon: <BarChart2 className="w-5 h-5 text-[#f97316]" />,
@@ -1247,7 +1304,7 @@ function SuccessView({
               </p>
               <p className="text-xs mb-1 text-gray-400">Total amount</p>
               <p className="text-3xl font-extrabold text-[#00ffaa]">
-                {plan?.price ?? `N${PHASE2A_PRICE_NGN.toLocaleString()}`}
+                {displayAmount}
               </p>
             </div>
 

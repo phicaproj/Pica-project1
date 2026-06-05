@@ -14,7 +14,7 @@ import prisma from '../../Config/db';
 import { R2_PUBLIC_BASE_URL } from '../../Config/env';
 
 export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const input = updateProfileSchema.parse(req.body);
@@ -26,7 +26,7 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateBusinessInfo = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const input = updateBusinessInfoSchema.parse(req.body);
@@ -38,7 +38,7 @@ export const updateBusinessInfo = asyncHandler(async (req: Request, res: Respons
 });
 
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const result = await verifyUserEmailService(req.user.id);
@@ -49,7 +49,7 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   if (!req.file) {

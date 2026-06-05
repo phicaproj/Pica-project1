@@ -14,7 +14,7 @@ import { BAD_REQUEST } from './http';
 
 export interface TokenPayload {
   id: string;
-  role: 'User' | 'Admin';
+  role: 'USER' | 'ADMIN';
 }
 export interface OtpTokenPayload {
   email: string;

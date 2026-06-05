@@ -72,18 +72,31 @@ enum UserRole {
   ADMIN
 }
 
+// The seven fixed pillar codes. Used as the canonical identifier for a Pillar
+// and as the prefix of every questionCode (e.g. "FL-001"). Keeping it an enum
+// guarantees consistent naming across pillars and admin-created questions.
+enum PillarCode {
+  FL
+  FR
+  BM
+  OP
+  MS
+  GC
+  SS
+}
+
 // ============================================================
 // LAYER A — CONTENT (Static / Admin-Managed)
 // ============================================================
 
 model Pillar {
-  id           String  @id @default(uuid())
-  code         String  @unique // e.g. "FL", "FR", "BM", "OP", "MS", "GC", "SS"
+  id           String     @id @default(uuid())
+  code         PillarCode @unique // e.g. "FL", "FR", "BM", "OP", "MS", "GC", "SS"
   name         String // e.g. "Founder & Leadership"
   description  String?
-  weight       Decimal @db.Decimal(5, 2) // e.g. 14.28 for equal 7-pillar weighting
-  displayOrder Int     @map("display_order")
-  isActive     Boolean @default(true) @map("is_active")
+  weight       Decimal    @db.Decimal(5, 2) // e.g. 14.28 for equal 7-pillar weighting
+  displayOrder Int        @map("display_order")
+  isActive     Boolean    @default(true) @map("is_active")
 
   // Relations
   questions           Question[]
@@ -353,10 +366,16 @@ model Payment {
   accessCode        String? @map("access_code") // Paystack init response
   authorizationUrl  String? @map("authorization_url") // Paystack init response
 
-  // Amount in MAJOR units (NGN) for readability.
-  // Paystack works in kobo; convert at the boundary.
+  // Amount in MAJOR units (NGN) for readability — this is the FINAL charged
+  // amount after any coupon discount. Paystack works in kobo; convert at the boundary.
   amount   Decimal @db.Decimal(12, 2)
   currency String  @default("NGN")
+
+  // Coupon applied at init time (if any). discountAmount is the major-unit NGN
+  // value subtracted from the base price to reach `amount`. Both null when no
+  // coupon was used. Kept for the admin transactions view / audit.
+  appliedCouponCode String?  @map("applied_coupon_code")
+  discountAmount    Decimal? @map("discount_amount") @db.Decimal(12, 2)
 
   status        PaymentStatus @default(PENDING)
   paymentMethod String?       @map("payment_method") // "card" | "bank" | "ussd" | "qr" | "transfer" | etc.
@@ -462,7 +481,7 @@ model Phase2BPillarUnlock {
   @@map("phase2b_pillar_unlocks")
 }
 
-// PLAN PRICES (stored in DB for easy reference in admin panel; not authoritative like the Question/Option content)
+// PLAN PRICES (authoritative payment pricing; admin-managed and read by checkout)
 
 model PlanPrice {
   id       String  @id @default(uuid())

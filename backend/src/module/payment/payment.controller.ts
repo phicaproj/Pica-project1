@@ -18,7 +18,7 @@ import {
 } from './payment.service';
 
 export const initPayment = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const input = initPaymentSchema.parse(req.body);
@@ -27,7 +27,7 @@ export const initPayment = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const verifyPayment = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const { reference } = verifyPaymentParams.parse(req.params);
@@ -69,7 +69,7 @@ export const listPayments = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const myPaymentsHistory = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const query = userPaymentHistoryQuery.parse(req.query);

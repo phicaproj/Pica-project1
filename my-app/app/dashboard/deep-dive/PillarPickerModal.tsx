@@ -2,16 +2,33 @@
 
 import { X, ArrowRight, Lock } from "lucide-react";
 
-export const PHASE2B_PILLAR_PRICE_NGN = 50000;
+type PillarForPicker = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  currency?: string;
+};
 
 interface PillarPickerModalProps {
   onClose: () => void;
-  pillars: any[];
+  pillars: PillarForPicker[];
   ownedPillarIds: Set<string>;
   onSelect: (pillarId: string) => void;
 }
 
-export function PillarPickerModal({ onClose, pillars, ownedPillarIds, onSelect }: PillarPickerModalProps) {
+function formatPrice(amount: number | null | undefined, currency = "NGN") {
+  if (amount === null || amount === undefined) return "Not configured";
+  const prefix = currency === "NGN" ? "N" : `${currency} `;
+  return `${prefix}${amount.toLocaleString()}`;
+}
+
+export function PillarPickerModal({
+  onClose,
+  pillars,
+  ownedPillarIds,
+  onSelect,
+}: PillarPickerModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-3xl rounded-2xl bg-[#0d1117] border border-white/10 shadow-2xl flex flex-col max-h-[90vh]">
@@ -31,11 +48,14 @@ export function PillarPickerModal({ onClose, pillars, ownedPillarIds, onSelect }
         <div className="p-6 overflow-y-auto space-y-4">
           {pillars.map((pillar) => {
             const isOwned = ownedPillarIds.has(pillar.id);
+            const hasPrice = pillar.price !== null && pillar.price !== undefined;
+            const disabled = isOwned || !hasPrice;
+
             return (
               <div
                 key={pillar.id}
                 className={`relative rounded-xl border p-5 flex flex-col sm:flex-row gap-4 transition-all ${
-                  isOwned
+                  disabled
                     ? "bg-white/5 border-white/5 opacity-60"
                     : "bg-[#111827] border-white/10 hover:border-orange-500/50 hover:bg-[#151e2e]"
                 }`}
@@ -51,25 +71,25 @@ export function PillarPickerModal({ onClose, pillars, ownedPillarIds, onSelect }
                   </div>
                   <p className="text-sm text-gray-400">{pillar.description}</p>
                 </div>
-                
+
                 <div className="flex items-center sm:flex-col sm:justify-center sm:items-end gap-3 flex-shrink-0">
                   <div className="text-right">
                     <p className="text-xs text-gray-500 uppercase font-bold">Fixed Price</p>
                     <p className="text-lg font-bold text-orange-400">
-                      ₦{PHASE2B_PILLAR_PRICE_NGN.toLocaleString()}
+                      {formatPrice(pillar.price, pillar.currency)}
                     </p>
                   </div>
                   <button
                     onClick={() => onSelect(pillar.id)}
-                    disabled={isOwned}
+                    disabled={disabled}
                     className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${
-                      isOwned
+                      disabled
                         ? "bg-white/5 text-gray-500 cursor-not-allowed"
                         : "bg-orange-500 text-white hover:bg-orange-600"
                     }`}
                   >
-                    {isOwned ? "Already Owned" : "Select Module"}
-                    {!isOwned && <ArrowRight className="w-4 h-4" />}
+                    {isOwned ? "Already Owned" : hasPrice ? "Select Module" : "Unavailable"}
+                    {!disabled && <ArrowRight className="w-4 h-4" />}
                   </button>
                 </div>
               </div>

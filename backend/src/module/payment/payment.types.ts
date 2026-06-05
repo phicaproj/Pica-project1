@@ -1,22 +1,18 @@
 import { z } from 'zod';
 import type { Plan, PaymentStatus, PaymentProvider } from '@prisma/client';
 
-// Discriminated union on `plan`. Each plan has its own required target:
-//   PHASE2A         → sessionId (the SessionResult being unlocked)
-//   PHASE2B_PILLAR  → pillarId  (no session exists yet; one is created later
-//                                  via /assessment/phase2b/start once payment
-//                                  succeeds and the unlock row is granted).
-// Major units (NGN); until the admin pricing module ships the FE supplies the amount.
+// Prices are resolved from the PlanPrice table by pricing.service.ts.
+// The frontend must not send an amount; if an older client does, Zod strips it.
 export const initPaymentSchema = z.discriminatedUnion('plan', [
   z.object({
     plan: z.literal('PHASE2A'),
     sessionId: z.string().uuid(),
-    amount: z.number().positive().max(10_000_000),
+    couponCode: z.string().trim().min(1).optional(),
   }),
   z.object({
     plan: z.literal('PHASE2B_PILLAR'),
     pillarId: z.string().uuid(),
-    amount: z.number().positive().max(10_000_000),
+    couponCode: z.string().trim().min(1).optional(),
   }),
 ]);
 
@@ -41,6 +37,11 @@ export type InitPaymentResponse = {
   accessCode: string;
   reference: string;
   paymentId: string;
+  amount: number;
+  baseAmount: number;
+  discountAmount: number;
+  currency: string;
+  couponCode: string | null;
 };
 
 export type VerifyPaymentResponse = {

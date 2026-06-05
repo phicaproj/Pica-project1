@@ -71,7 +71,7 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const me = asyncHandler(async (req: Request, res: Response) => {
-  if (!req.user?.id) {
+  if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
   }
   const result = await meService(req.user.id);

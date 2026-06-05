@@ -35,6 +35,8 @@ import type {
   UserPaymentHistoryResponse,
   UserPaymentRow,
 } from './payment.types';
+import { resolvePlanPrice } from './pricing.service';
+import { validateAndPriceCoupon } from '../coupon/coupon.service';
 
 // Maps Paystack `data.status` strings onto our PaymentStatus enum.
 const mapPaystackStatus = (status: string): PaymentStatus => {
@@ -78,6 +80,9 @@ export async function initPaymentService(
   // (Phase2BPillarUnlock) which is later redeemed via /assessment/phase2b/start.
   let paymentSessionId: string | null = null;
   let paymentPillarId: string | null = null;
+  // Backend-owned base price (major NGN units), resolved per plan below. The FE
+  // no longer supplies an amount.
+  let basePrice: number;
 
   if (input.plan === Plan.PHASE2A) {
     const session = await prisma.assessmentSession.findUnique({
@@ -121,6 +126,7 @@ export async function initPaymentService(
       );
     }
     paymentSessionId = session.id;
+    basePrice = await resolvePlanPrice({ plan: Plan.PHASE2A });
   } else {
     // PHASE2B_PILLAR — validate the pillar and reject if an open (unconsumed)
     // unlock already exists. "One open unlock per (user, pillar)" is enforced
@@ -128,7 +134,7 @@ export async function initPaymentService(
     // can hold many historical CONSUMED unlocks for the same pillar over time.
     const pillar = await prisma.pillar.findUnique({
       where: { id: input.pillarId },
-      select: { id: true, isActive: true },
+      select: { id: true, code: true, isActive: true },
     });
     if (!pillar || !pillar.isActive) {
       throw new AppError('Pillar not found', NOT_FOUND);
@@ -146,9 +152,27 @@ export async function initPaymentService(
       );
     }
     paymentPillarId = pillar.id;
+    basePrice = await resolvePlanPrice({
+      plan: Plan.PHASE2B_PILLAR,
+      pillarId: pillar.id,
+    });
   }
 
   const reference = newPaymentReference();
+
+  // Apply a coupon if one was supplied. validateAndPriceCoupon enforces that the
+  // coupon is active and (if user-scoped) belongs to this user, and returns the
+  // discounted total. We charge `chargeAmount` and snapshot the discount.
+  let chargeAmount = basePrice;
+  let appliedCouponCode: string | null = null;
+  let discountAmount: Prisma.Decimal | null = null;
+
+  if (input.couponCode) {
+    const pricing = await validateAndPriceCoupon(input.couponCode, user.id, basePrice);
+    chargeAmount = pricing.finalAmount;
+    appliedCouponCode = pricing.code;
+    discountAmount = new Prisma.Decimal(pricing.discountAmount);
+  }
 
   // Create the Payment row in PENDING state BEFORE calling Paystack so we have
   // an audit trail even if the network call fails. If Paystack fails, the row
@@ -161,7 +185,9 @@ export async function initPaymentService(
       plan: input.plan,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
-      amount: new Prisma.Decimal(input.amount),
+      amount: new Prisma.Decimal(chargeAmount),
+      appliedCouponCode,
+      discountAmount,
       currency: 'NGN',
       status: PaymentStatus.PENDING,
       customerEmail: user.email,
@@ -172,7 +198,7 @@ export async function initPaymentService(
 
   const paystackData = await initializeTransaction({
     email: user.email,
-    amount: input.amount,
+    amount: chargeAmount,
     reference,
     metadata: {
       paymentId: payment.id,
@@ -198,6 +224,11 @@ export async function initPaymentService(
     accessCode: paystackData.access_code,
     reference,
     paymentId: payment.id,
+    amount: chargeAmount,
+    baseAmount: basePrice,
+    discountAmount: discountAmount?.toNumber() ?? 0,
+    currency: 'NGN',
+    couponCode: appliedCouponCode,
   };
 }
 

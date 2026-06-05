@@ -85,7 +85,7 @@ export const otpAuth = (req: Request, res: Response, next: NextFunction) => {
 	}
 }
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-	if (req.user?.role !== 'Admin') {
+	if (req.user?.role !== 'ADMIN') {
 		return res.status(403).json({ message: 'Admin privileges required' })
 	}
 	next()
