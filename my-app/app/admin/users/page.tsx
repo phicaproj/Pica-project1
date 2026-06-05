@@ -575,7 +575,7 @@ function UserDetailModal({ userId, onClose }: UserModalProps) {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
         <div className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] p-12 text-center shadow-2xl">
           <Loader className="mx-auto h-8 w-8 animate-spin text-blue-400" />
           <p className="mt-4 text-sm text-gray-400">Loading user details...</p>
@@ -586,7 +586,7 @@ function UserDetailModal({ userId, onClose }: UserModalProps) {
 
   if (error || !details) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
         <div className="w-full max-w-md rounded-xl border border-red-500/20 bg-[#1C1F2E] p-6 text-center shadow-2xl">
           <h3 className="text-lg font-bold text-white mb-2">Error</h3>
           <p className="text-sm text-red-400 mb-6">{error || "Failed to load user"}</p>
@@ -604,8 +604,8 @@ function UserDetailModal({ userId, onClose }: UserModalProps) {
   const name = `${details.firstName ?? ""} ${details.lastName ?? ""}`.trim() || details.email;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4 overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden my-8">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-4 overflow-y-auto">
+      <div className="flex flex-col max-h-[90vh] w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden my-8">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
           <div className="flex items-center gap-4">
@@ -632,7 +632,7 @@ function UserDetailModal({ userId, onClose }: UserModalProps) {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
           {/* Business Profile */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4">
             <div>

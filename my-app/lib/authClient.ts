@@ -255,6 +255,8 @@ export type ValidateCouponResponse = {
 export const validateCoupon = async (payload: {
 	code: string
 	basePrice: number
+	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
+	pillarId?: string
 }) => {
 	return authedFetch<ValidateCouponResponse>('/coupon/validate', {
 		method: 'POST',

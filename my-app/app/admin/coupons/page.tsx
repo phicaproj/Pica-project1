@@ -203,6 +203,17 @@ export default function CouponsPage() {
       return;
     }
 
+    if (!draft.description.trim()) {
+      setError("Description is required.");
+      return;
+    }
+
+    const wordCount = draft.description.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount > 15) {
+      setError("Description must be 15 words or less.");
+      return;
+    }
+
     if (draft.plan === "PHASE2B_PILLAR" && !draft.pillarId) {
       setError("Please select a target pillar for Phase 2B coupons.");
       return;
@@ -213,7 +224,7 @@ export default function CouponsPage() {
 
     const res = await createAdminCoupon({
       ...(draft.code.trim() ? { code: draft.code.trim().toUpperCase() } : {}),
-      ...(draft.description.trim() ? { description: draft.description.trim() } : {}),
+      description: draft.description.trim(),
       ...(draft.userId.trim() ? { userId: draft.userId.trim() } : {}),
       isActive: draft.isActive,
       ...(draft.discountMode === "PERCENT"
@@ -232,7 +243,7 @@ export default function CouponsPage() {
       setSelectedUser(null);
       setUsersSearch("");
       setModalOpen(false);
-      showNotice("Coupon created.");
+      showNotice("Coupon created and email notification dispatched.");
     }
 
     setSaving(false);
@@ -254,27 +265,6 @@ export default function CouponsPage() {
         current.map((row) => (row.id === coupon.id ? updatedCoupon : row)),
       );
       showNotice(updatedCoupon.isActive ? "Coupon activated." : "Coupon disabled.");
-    }
-
-    setSaving(false);
-  };
-
-  const updateDescription = async (coupon: AdminCoupon, description: string) => {
-    setSaving(true);
-    setError(null);
-
-    const res = await updateAdminCoupon(coupon.id, {
-      description: description.trim(),
-    });
-
-    if (res.error) {
-      setError(res.error.message);
-    } else if (res.data) {
-      const updatedCoupon = res.data.coupon;
-      setCoupons((current) =>
-        current.map((row) => (row.id === coupon.id ? updatedCoupon : row)),
-      );
-      showNotice("Description updated.");
     }
 
     setSaving(false);
@@ -321,7 +311,7 @@ export default function CouponsPage() {
             type="button"
             onClick={() => void loadCoupons()}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-60 cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -334,7 +324,7 @@ export default function CouponsPage() {
               setUsersSearch("");
               setModalOpen(true);
             }}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             New Coupon
@@ -452,7 +442,7 @@ export default function CouponsPage() {
                         <button
                           type="button"
                           onClick={() => void copyCode(coupon.code)}
-                          className="rounded-lg p-1.5 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                          className="rounded-lg p-1.5 text-gray-500 transition hover:bg-white/5 hover:text-white cursor-pointer"
                         >
                           <Copy className="h-4 w-4" />
                         </button>
@@ -483,22 +473,18 @@ export default function CouponsPage() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <EditableDescription
-                        coupon={coupon}
-                        disabled={saving}
-                        onSave={(description) => void updateDescription(coupon, description)}
-                      />
+                    <td className="px-6 py-4 text-sm text-gray-300">
+                      {coupon.description || <span className="text-gray-600 italic">No description</span>}
                     </td>
                     <td className="px-6 py-4">
                       <button
                         type="button"
                         onClick={() => void toggleCoupon(coupon)}
                         disabled={saving}
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold transition disabled:opacity-60 ${
+                        className={`font-bold rounded-lg px-3.5 py-1.5 text-xs shadow-md border cursor-pointer hover:scale-105 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed ${
                           coupon.isActive
-                            ? "bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
-                            : "bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                            ? "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30"
+                            : "bg-red-600 hover:bg-red-500 text-white border-red-500/30"
                         }`}
                       >
                         {coupon.isActive ? "Active" : "Disabled"}
@@ -512,7 +498,7 @@ export default function CouponsPage() {
                         type="button"
                         onClick={() => void removeCoupon(coupon)}
                         disabled={saving}
-                        className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-60"
+                        className="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-60 cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -526,8 +512,8 @@ export default function CouponsPage() {
       </section>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[90vh] w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden">
             <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
               <div className="flex items-start gap-3">
                 <span className="rounded-lg bg-blue-500/10 p-2 text-blue-300">
@@ -543,13 +529,13 @@ export default function CouponsPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(false)}
-                className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white"
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-5 px-6 py-5 max-h-[70vh] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
@@ -565,7 +551,7 @@ export default function CouponsPage() {
                     <button
                       type="button"
                       onClick={generateRandomCode}
-                      className="px-3 py-2 text-xs font-semibold bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                      className="px-3 py-2 text-xs font-semibold bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                     >
                       Generate
                     </button>
@@ -588,7 +574,7 @@ export default function CouponsPage() {
                           setSelectedUser(null);
                           setDraft((prev) => ({ ...prev, userId: "" }));
                         }}
-                        className="rounded-full p-1 text-gray-400 hover:text-white hover:bg-white/5"
+                        className="rounded-full p-1 text-gray-400 hover:text-white hover:bg-white/5 cursor-pointer"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -619,7 +605,7 @@ export default function CouponsPage() {
                                 setUsersSearch("");
                                 setSearchResults([]);
                               }}
-                              className="w-full rounded-md px-3 py-2 text-left text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                              className="w-full rounded-md px-3 py-2 text-left text-xs text-gray-300 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
                             >
                               <div className="font-semibold">{user.firstName} {user.lastName}</div>
                               <div className="text-[10px] text-gray-500">{user.email}</div>
@@ -675,15 +661,20 @@ export default function CouponsPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                  Description
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase text-gray-500">
+                    Description (Required)
+                  </label>
+                  <span className="text-[10px] text-gray-500">
+                    {draft.description.trim().split(/\s+/).filter(Boolean).length} / 15 words
+                  </span>
+                </div>
                 <input
                   value={draft.description}
                   onChange={(event) =>
                     setDraft({ ...draft, description: event.target.value })
                   }
-                  placeholder="Internal note"
+                  placeholder="e.g. 20% discount on Founder Leadership scan"
                   className={fieldClass}
                 />
               </div>
@@ -699,7 +690,7 @@ export default function CouponsPage() {
                         key={mode}
                         type="button"
                         onClick={() => setDraft({ ...draft, discountMode: mode })}
-                        className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
+                        className={`rounded-md px-3 py-2 text-sm font-semibold transition cursor-pointer ${
                           draft.discountMode === mode
                             ? "bg-white text-gray-950"
                             : "text-gray-400 hover:text-white"
@@ -728,12 +719,12 @@ export default function CouponsPage() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-gray-300">
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={draft.isActive}
                   onChange={(event) =>
-                    setDraft({ ...draft, isActive: event.target.checked })
+                    setDraft((prev) => ({ ...prev, isActive: event.target.checked }))
                   }
                   className="h-4 w-4 accent-blue-500"
                 />
@@ -746,7 +737,7 @@ export default function CouponsPage() {
                 type="button"
                 onClick={() => setModalOpen(false)}
                 disabled={saving}
-                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 transition hover:bg-white/5 hover:text-white disabled:opacity-60"
+                className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 transition hover:bg-white/5 hover:text-white disabled:opacity-60 cursor-pointer"
               >
                 Cancel
               </button>
@@ -754,7 +745,7 @@ export default function CouponsPage() {
                 type="button"
                 onClick={() => void createCoupon()}
                 disabled={saving}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60 cursor-pointer"
               >
                 {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Create Coupon
@@ -763,43 +754,6 @@ export default function CouponsPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function EditableDescription({
-  coupon,
-  disabled,
-  onSave,
-}: {
-  coupon: AdminCoupon;
-  disabled: boolean;
-  onSave: (description: string) => void;
-}) {
-  const [value, setValue] = useState(coupon.description ?? "");
-
-  useEffect(() => {
-    setValue(coupon.description ?? "");
-  }, [coupon.description]);
-
-  const dirty = value.trim() !== (coupon.description ?? "").trim();
-
-  return (
-    <div className="flex min-w-[260px] items-center gap-2">
-      <input
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder="No description"
-        className="w-full rounded-lg border border-white/10 bg-[#111318] px-3 py-2 text-sm text-white outline-none transition placeholder:text-gray-700 focus:border-blue-500/50"
-      />
-      <button
-        type="button"
-        onClick={() => onSave(value)}
-        disabled={disabled || !dirty}
-        className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        <Save className="h-4 w-4" />
-      </button>
     </div>
   );
 }

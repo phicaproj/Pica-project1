@@ -605,8 +605,8 @@ export default function QuestionBankPage() {
 
       {/* New Question Modal */}
       {createOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
               <div>
                 <h2 className="text-xl font-bold text-white">New Question</h2>
@@ -623,7 +623,7 @@ export default function QuestionBankPage() {
               </button>
             </div>
 
-            <div className="max-h-[calc(92vh-150px)] overflow-y-auto px-6 py-5">
+            <div className="flex-1 overflow-y-auto px-6 py-5">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
@@ -826,8 +826,8 @@ export default function QuestionBankPage() {
 
       {/* Edit Question Modal */}
       {editOpen && activeQuestion && questionDraft && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
               <div>
                 <h2 className="text-xl font-bold text-white">Edit Question: {activeQuestion.questionCode}</h2>
@@ -844,7 +844,7 @@ export default function QuestionBankPage() {
               </button>
             </div>
 
-            <div className="max-h-[calc(92vh-150px)] overflow-y-auto px-6 py-5 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               {/* Question Text */}
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">

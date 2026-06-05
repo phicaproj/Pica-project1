@@ -258,3 +258,78 @@ export async function sendReportEmail({
     return { success: false, error: message };
   }
 }
+
+export async function sendCouponEmail({
+  toEmail,
+  couponCode,
+  description,
+  amountOff,
+  percentOff,
+  plan,
+  pillarName,
+}: {
+  toEmail: string;
+  couponCode: string;
+  description: string | null;
+  amountOff: number;
+  percentOff: number;
+  plan: string | null;
+  pillarName: string | null;
+}): Promise<SendEmailResponse> {
+  try {
+    let discountStr = '';
+    if (percentOff > 0) {
+      discountStr = `${percentOff}% off`;
+    } else {
+      discountStr = `N${new Intl.NumberFormat('en-NG').format(amountOff)} off`;
+    }
+
+    let targetPlanStr = 'any diagnostic package';
+    if (plan === 'PHASE2A') {
+      targetPlanStr = 'the Phase 2A Strategic Scan';
+    } else if (plan === 'PHASE2B_PILLAR') {
+      targetPlanStr = `the Phase 2B Deep Dive module (${pillarName || 'selected pillar'})`;
+    }
+
+    const htmlContent = `
+      <h2>You've Received a Discount Coupon on PICA!</h2>
+      <p>Hello,</p>
+      <p>We are pleased to inform you that a discount coupon has been created for your account on PICA by Beauvision.</p>
+      <p>Use the coupon code below at checkout to get <strong>${discountStr}</strong> on <strong>${targetPlanStr}</strong>:</p>
+      <p style="font-size: 24px; font-weight: bold; color: #2563EB; letter-spacing: 2px; background-color: #F3F4F6; padding: 10px 20px; display: inline-block; border-radius: 8px; margin: 15px 0;">${couponCode}</p>
+      ${description ? `<p><strong>Note:</strong> ${description}</p>` : ''}
+      <p>To use it, simply copy the code and apply it in the coupon field during checkout on your dashboard.</p>
+      <br/>
+      <p>Best regards,</p>
+      <p>— The Beauvision Team</p>
+    `;
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY as string,
+      },
+      body: JSON.stringify({
+        sender: {
+          email: process.env.EMAIL_FROM as string,
+          name: 'PICA by Beauvision',
+        },
+        to: [{ email: toEmail }],
+        subject: `PICA Discount Code: Get ${discountStr} on your next assessment`,
+        htmlContent,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: unknown = await response.json();
+      throw new AppError(JSON.stringify(errorData), 500);
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error sending coupon email:', message);
+    return { success: false, error: message };
+  }
+}

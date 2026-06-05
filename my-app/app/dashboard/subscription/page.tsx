@@ -996,7 +996,16 @@ function CheckoutView({
 
     setCouponBusy(true);
     setCouponError(null);
-    const response = await validateCoupon({ code, basePrice: baseAmount });
+    if (!plan.backendPlan) {
+      setCouponError("Invalid plan selection.");
+      return;
+    }
+    const response = await validateCoupon({
+      code,
+      basePrice: baseAmount,
+      plan: plan.backendPlan,
+      pillarId: explicitPillarId ?? undefined,
+    });
     setCouponBusy(false);
 
     if (response.error || !response.data) {

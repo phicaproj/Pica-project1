@@ -107,7 +107,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#111318] text-white flex flex-col font-sans">
+    <div className="h-screen bg-[#111318] text-white flex flex-col font-sans overflow-hidden">
       {/* Top Nav */}
       <header className="flex items-center justify-between px-6 py-4 bg-[#111318] border-b border-white/5 sticky top-0 z-50">
         <div className="flex items-center gap-8">
@@ -214,7 +214,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Subtle gradient background element */}
           <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-blue-900/10 to-transparent pointer-events-none" />
-          <div className="relative z-10 p-4 md:p-6 lg:p-8">
+          <div className="relative p-4 md:p-6 lg:p-8">
             {children}
           </div>
         </main>

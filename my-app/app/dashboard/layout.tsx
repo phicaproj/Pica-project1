@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white flex flex-col overflow-x-hidden">
+    <div className="h-screen bg-[#0d1117] text-white flex flex-col overflow-hidden">
       {/* ── Top Nav ── */}
       <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-[#0d1117] border-b border-white/5 sticky top-0 z-50">
         <div className="flex items-center gap-4">
@@ -200,8 +200,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
 
         {/* ── Main content (Offset for fixed sidebar) ── */}
-        <main className="flex-1 lg:ml-56 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
-          {children}
+        <main className="flex-1 lg:ml-56 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 flex flex-col justify-between min-h-0">
+          <div>
+            {children}
+          </div>
+          
+          {/* ── Footer ── */}
+          <footer className="text-center py-6 mt-8 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117]">
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
+              <span className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</span>
+              <span className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</span>
+              <span className="hover:text-gray-300 cursor-pointer">SUPPORT</span>
+            </div>
+            <p>&copy; 2026 PICA</p>
+          </footer>
         </main>
       </div>
 
@@ -212,16 +224,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
-
-      {/* ── Footer (Offset for fixed sidebar) ── */}
-      <footer className="text-center py-6 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117] lg:ml-56">
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
-          <span className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</span>
-          <span className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</span>
-          <span className="hover:text-gray-300 cursor-pointer">SUPPORT</span>
-        </div>
-        <p>&copy; 2026 PICA</p>
-      </footer>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Plan, Prisma, UserRole } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
+import { sendCouponEmail } from '../../service/shared/email.service';
 import type {
   CouponDetailResponse,
   CouponListResponse,
@@ -80,12 +81,14 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
   const plan = input.plan ?? null;
   const pillarId = plan === Plan.PHASE2B_PILLAR ? input.pillarId ?? null : null;
 
+  let userEmail: string | null = null;
   if (input.userId) {
     const user = await prisma.user.findUnique({
       where: { id: input.userId },
-      select: { id: true, role: true },
+      select: { id: true, email: true, role: true },
     });
     if (!user || user.role !== UserRole.USER) throw new AppError('User not found', NOT_FOUND);
+    userEmail = user.email;
   }
 
   if (pillarId) {
@@ -101,9 +104,22 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
   const amountOff = new Prisma.Decimal(input.amountOff ?? 0);
   const percentOff = new Prisma.Decimal(input.percentOff ?? 0);
 
-  // Explicit code: insert once and surface
-  //  a clean conflict. Auto code: retry a
-  // few times against the unique constraint before giving up.
+  // Helper to send email asynchronously without blocking the client response
+  const triggerEmail = (result: CouponResponse) => {
+    if (userEmail) {
+      sendCouponEmail({
+        toEmail: userEmail,
+        couponCode: result.code,
+        description: result.description,
+        amountOff: result.amountOff,
+        percentOff: result.percentOff,
+        plan: result.plan,
+        pillarName: result.pillarName,
+      }).catch((err) => console.error('Error sending coupon email:', err));
+    }
+  };
+
+  // Explicit code: insert once and surface a clean conflict.
   if (input.code) {
     const normalized = input.code.toUpperCase();
     try {
@@ -120,7 +136,9 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
         },
         select: couponSelect,
       });
-      return { message: 'Coupon created successfully', coupon: toCoupon(created) };
+      const couponRes = toCoupon(created);
+      triggerEmail(couponRes);
+      return { message: 'Coupon created successfully', coupon: couponRes };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new AppError('A coupon with this code already exists', CONFLICT);
@@ -144,7 +162,9 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
         },
         select: couponSelect,
       });
-      return { message: 'Coupon created successfully', coupon: toCoupon(created) };
+      const couponRes = toCoupon(created);
+      triggerEmail(couponRes);
+      return { message: 'Coupon created successfully', coupon: couponRes };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         continue; // collision — try a fresh code
