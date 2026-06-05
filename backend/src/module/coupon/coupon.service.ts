@@ -37,6 +37,7 @@ type RawCoupon = Prisma.DiscountGetPayload<{
     amountOff: true;
     percentOff: true;
     isActive: true;
+    status: true;
     plan: true;
     pillarId: true;
     userId: true;
@@ -53,6 +54,7 @@ const couponSelect = {
   amountOff: true,
   percentOff: true,
   isActive: true,
+  status: true,
   plan: true,
   pillarId: true,
   userId: true,
@@ -68,6 +70,7 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   amountOff: coupon.amountOff.toNumber(),
   percentOff: coupon.percentOff.toNumber(),
   isActive: coupon.isActive,
+  status: coupon.status,
   plan: coupon.plan,
   pillarId: coupon.pillarId,
   pillarCode: coupon.pillar?.code ?? null,
@@ -257,6 +260,7 @@ export async function validateAndPriceCoupon(
       amountOff: true,
       percentOff: true,
       isActive: true,
+      status: true,
       userId: true,
       plan: true,
       pillarId: true,
@@ -265,6 +269,10 @@ export async function validateAndPriceCoupon(
 
   if (!coupon || !coupon.isActive) {
     throw new AppError('Invalid or inactive coupon code', UNPROCESSABLE_CONTENT);
+  }
+
+  if (coupon.status === 'USED') {
+    throw new AppError('This coupon has already been used', UNPROCESSABLE_CONTENT);
   }
 
   if (coupon.userId && coupon.userId !== userId) {

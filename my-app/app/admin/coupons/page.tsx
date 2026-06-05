@@ -436,16 +436,20 @@ export default function CouponsPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-blue-500/10 px-2.5 py-1 text-sm font-bold text-blue-300">
+                        <span className={`rounded-md bg-blue-500/10 px-2.5 py-1 text-sm font-bold text-blue-300 ${
+                          coupon.status === "USED" ? "line-through opacity-50" : ""
+                        }`}>
                           {coupon.code}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => void copyCode(coupon.code)}
-                          className="rounded-lg p-1.5 text-gray-500 transition hover:bg-white/5 hover:text-white cursor-pointer"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
+                        {coupon.status !== "USED" && (
+                          <button
+                            type="button"
+                            onClick={() => void copyCode(coupon.code)}
+                            className="rounded-lg p-1.5 text-gray-500 transition hover:bg-white/5 hover:text-white cursor-pointer"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-white">
@@ -477,18 +481,24 @@ export default function CouponsPage() {
                       {coupon.description || <span className="text-gray-600 italic">No description</span>}
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        type="button"
-                        onClick={() => void toggleCoupon(coupon)}
-                        disabled={saving}
-                        className={`font-bold rounded-lg px-3.5 py-1.5 text-xs shadow-md border cursor-pointer hover:scale-105 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed ${
-                          coupon.isActive
-                            ? "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30"
-                            : "bg-red-600 hover:bg-red-500 text-white border-red-500/30"
-                        }`}
-                      >
-                        {coupon.isActive ? "Active" : "Disabled"}
-                      </button>
+                      {coupon.status === "USED" ? (
+                        <span className="inline-block font-bold rounded-lg px-3.5 py-1.5 text-xs bg-gray-700/50 text-gray-400 border border-white/5 shadow-md">
+                          Used
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => void toggleCoupon(coupon)}
+                          disabled={saving}
+                          className={`font-bold rounded-lg px-3.5 py-1.5 text-xs shadow-md border cursor-pointer hover:scale-105 active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed ${
+                            coupon.isActive
+                              ? "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500/30"
+                              : "bg-red-600 hover:bg-red-500 text-white border-red-500/30"
+                          }`}
+                        >
+                          {coupon.isActive ? "Active" : "Disabled"}
+                        </button>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">
                       {formatDate(coupon.createdAt)}

@@ -510,6 +510,7 @@ model Discount {
   amountOff   Decimal @db.Decimal(12, 2) @map("amount_off") // absolute discount in MAJOR units (NGN)
   percentOff  Decimal @db.Decimal(5, 2)  @map("percent_off") // percentage discount (0–100)
   isActive    Boolean @default(true) @map("is_active")
+  status      String  @default("ACTIVE")
   userId      String? @map("user_id") // optional link to a User for user-specific discounts
   plan        Plan? // optional target plan; null = usable on any paid plan
   pillarId    String? @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons

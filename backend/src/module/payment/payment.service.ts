@@ -503,6 +503,7 @@ async function applyVerificationResult(
       currency: true,
       customerEmail: true,
       customerBusinessName: true,
+      appliedCouponCode: true,
     },
   });
 
@@ -529,6 +530,16 @@ async function applyVerificationResult(
     });
 
     if (flippingToSuccess) {
+      if (payment.appliedCouponCode) {
+        await tx.discount.update({
+          where: { code: payment.appliedCouponCode },
+          data: {
+            status: 'USED',
+            isActive: false,
+          },
+        });
+      }
+
       // Per-result paywall: on first successful Phase 2A payment, mark the
       // SessionResult as paid. The Payment row carries the sessionId set at
       // init time; legacy rows without a sessionId are skipped and logged.

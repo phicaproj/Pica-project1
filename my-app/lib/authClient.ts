@@ -540,6 +540,7 @@ export type AdminCoupon = {
 	amountOff: number
 	percentOff: number
 	isActive: boolean
+	status: string
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
 	pillarId: string | null
 	pillarCode: string | null
