@@ -385,12 +385,18 @@ export default function UsersPage() {
                           <div className="text-[10px] text-gray-500 font-semibold mt-0.5">{subscriptionNote(user)}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
-                            <span className={`text-xs font-medium ${user.isActive ? "text-emerald-400" : "text-red-400"}`}>
-                              {user.isActive ? "Active" : "Inactive"}
+                          {user.status === "DISABLED" ? (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded border text-red-400 bg-red-500/10 border-red-500/20">
+                              SUSPENDED
                             </span>
-                          </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${user.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
+                              <span className={`text-xs font-medium ${user.isActive ? "text-emerald-400" : "text-red-400"}`}>
+                                {user.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-400">{lastSeenLabel(user.lastSeenAt)}</td>
                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -407,8 +413,21 @@ export default function UsersPage() {
                             >
                               <FileText className="w-4 h-4" />
                             </button>
-                            <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors">
-                              <Ban className="w-4 h-4" />
+                            <button
+                              onClick={() => void toggleSuspend(user)}
+                              disabled={togglingId === user.id}
+                              title={user.status === "ACTIVE" ? "Suspend user" : "Reactivate user"}
+                              className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
+                                user.status === "DISABLED"
+                                  ? "bg-red-500/10 text-red-400 hover:bg-emerald-500/10 hover:text-emerald-400"
+                                  : "hover:bg-red-500/10 text-gray-400 hover:text-red-400"
+                              }`}
+                            >
+                              {togglingId === user.id ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Ban className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </td>
@@ -511,7 +530,21 @@ export default function UsersPage() {
                       >
                         View
                       </button>
-                      <button className="flex-1 py-1.5 text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors">Suspend</button>
+                      <button
+                        onClick={() => void toggleSuspend(user)}
+                        disabled={togglingId === user.id}
+                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 ${
+                          user.status === "DISABLED"
+                            ? "text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20"
+                            : "text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20"
+                        }`}
+                      >
+                        {togglingId === user.id
+                          ? "Saving..."
+                          : user.status === "DISABLED"
+                            ? "Reactivate"
+                            : "Suspend"}
+                      </button>
                     </div>
                   </div>
                 ))}
