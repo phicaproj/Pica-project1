@@ -1004,7 +1004,6 @@ export type ListUsersResponse = {
 	total: number
 	users: AdminUserRow[]
 }
-
 export const getAllUsers = async (params: {
 	page?: number
 	pageSize?: number
@@ -1012,6 +1011,7 @@ export const getAllUsers = async (params: {
 	businessSize?: BusinessSize
 	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'FREE'
 	active?: boolean
+	role?: 'USER' | 'ADMIN'
 } = {}) => {
 	const qs = new URLSearchParams()
 	if (params.page) qs.set('page', String(params.page))
@@ -1020,6 +1020,7 @@ export const getAllUsers = async (params: {
 	if (params.businessSize) qs.set('businessSize', params.businessSize)
 	if (params.plan) qs.set('plan', params.plan)
 	if (params.active !== undefined) qs.set('active', String(params.active))
+	if (params.role) qs.set('role', params.role)
 
 	const query = qs.toString()
 	return authedFetch<ListUsersResponse>(
@@ -1027,7 +1028,6 @@ export const getAllUsers = async (params: {
 		{ method: 'GET' },
 	)
 }
-
 export type AdminUserDetails = AdminUserRow & {
 	recentSessions: {
 		id: string

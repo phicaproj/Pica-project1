@@ -110,12 +110,21 @@ function PillarTab() {
         getScoringSettings(),
       ]);
 
-      setPillars(pillarsRes.pillars || []);
-      setSettings(settingsRes.settings || null);
+      if (pillarsRes.error) {
+        setError(pillarsRes.error.message);
+        return;
+      }
+      if (settingsRes.error) {
+        setError(settingsRes.error.message);
+        return;
+      }
 
-      if (settingsRes.settings) {
-        setP2aLimit(settingsRes.settings.phase2aQuestionLimit ?? 40);
-        setP2bLimit(settingsRes.settings.phase2bQuestionLimit ?? 30);
+      setPillars(pillarsRes.data?.pillars || []);
+      setSettings(settingsRes.data?.settings || null);
+
+      if (settingsRes.data?.settings) {
+        setP2aLimit(settingsRes.data.settings.phase2aQuestionLimit ?? 40);
+        setP2bLimit(settingsRes.data.settings.phase2bQuestionLimit ?? 30);
       }
     } catch (err: any) {
       console.error(err);
@@ -140,7 +149,12 @@ function PillarTab() {
         phase2bQuestionLimit: p2bLimit,
       });
 
-      setSettings(res.settings);
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      setSettings(res.data?.settings || null);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -465,12 +479,24 @@ function RolesTabWithExternalTrigger({
         listAdminRoles(),
       ]);
 
-      setAdmins(adminsRes.users || []);
-      setRoles(rolesRes.roles || []);
+      if (adminsRes.error) {
+        setError(adminsRes.error.message);
+        return;
+      }
+      if (rolesRes.error) {
+        setError(rolesRes.error.message);
+        return;
+      }
 
-      if (rolesRes.roles && rolesRes.roles.length > 0) {
-        const superAdmin = rolesRes.roles.find((r: any) => r.name === "SUPER ADMIN");
-        const defaultRole = superAdmin || rolesRes.roles[0];
+      const adminsData = adminsRes.data?.users || [];
+      const rolesData = rolesRes.data?.roles || [];
+
+      setAdmins(adminsData);
+      setRoles(rolesData);
+
+      if (rolesData.length > 0) {
+        const superAdmin = rolesData.find((r: any) => r.name === "SUPER ADMIN");
+        const defaultRole = superAdmin || rolesData[0];
         setSelectedRole(defaultRole);
         setRolePermissions(defaultRole.permissions || []);
       }
@@ -520,9 +546,17 @@ function RolesTabWithExternalTrigger({
         permissions: rolePermissions,
       });
 
-      setRoles((prev) => prev.map((r) => (r.id === res.role.id ? res.role : r)));
-      setSelectedRole(res.role);
-      setSuccessMessage(`Authority mapping for "${res.role.name}" updated successfully.`);
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      if (res.data) {
+        const updatedRole = res.data.role;
+        setRoles((prev) => prev.map((r) => (r.id === updatedRole.id ? updatedRole : r)));
+        setSelectedRole(updatedRole);
+        setSuccessMessage(`Authority mapping for "${updatedRole.name}" updated successfully.`);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to update role permissions.");
@@ -545,14 +579,22 @@ function RolesTabWithExternalTrigger({
         permissions: newRolePerms,
       });
 
-      setRoles((prev) => [...prev, res.role]);
-      setShowCreateModal(false);
-      setNewRoleName("");
-      setNewRoleDesc("");
-      setNewRolePerms([]);
-      setSuccessMessage(`Role "${res.role.name}" created successfully.`);
-      setSelectedRole(res.role);
-      setRolePermissions(res.role.permissions);
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      if (res.data) {
+        const newRole = res.data.role;
+        setRoles((prev) => [...prev, newRole]);
+        setShowCreateModal(false);
+        setNewRoleName("");
+        setNewRoleDesc("");
+        setNewRolePerms([]);
+        setSuccessMessage(`Role "${newRole.name}" created successfully.`);
+        setSelectedRole(newRole);
+        setRolePermissions(newRole.permissions);
+      }
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to create new role.");
@@ -568,8 +610,13 @@ function RolesTabWithExternalTrigger({
     try {
       setError(null);
       setSuccessMessage(null);
-      await deleteAdminRole(role.id);
+      const res = await deleteAdminRole(role.id);
       
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
       setRoles((prev) => prev.filter((r) => r.id !== role.id));
       setSuccessMessage(`Role "${role.name}" deleted successfully.`);
       
@@ -590,8 +637,13 @@ function RolesTabWithExternalTrigger({
       setError(null);
       setSuccessMessage(null);
 
-      await assignAdminRole(userId, roleId);
+      const res = await assignAdminRole(userId, roleId);
       
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
       setAdmins((prev) =>
         prev.map((adm) => {
           if (adm.id === userId) {
