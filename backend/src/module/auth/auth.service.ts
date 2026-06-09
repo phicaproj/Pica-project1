@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import { Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
+import { parseLocation } from '../../service/shared/location';
 import {
   BAD_REQUEST,
   CONFLICT,
@@ -87,17 +88,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
 
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
-  let country: string | null = null;
-  let state: string | null = null;
-  if (phase1Session.location) {
-    const parts = phase1Session.location.split(',').map((p) => p.trim());
-    if (parts.length > 1) {
-      country = parts[parts.length - 1];
-      state = parts.slice(0, parts.length - 1).join(', ');
-    } else {
-      country = parts[0];
-    }
-  }
+  const { country, state } = parseLocation(phase1Session.location);
 
   const user = await prisma.user.create({
     data: {

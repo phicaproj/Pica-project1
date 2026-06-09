@@ -24,6 +24,14 @@ import {
   listPricing,
   updatePricing,
 } from '../payment/pricing.controller';
+import {
+  exportReportExcel,
+  getReportBreakdowns,
+  getReportFunnel,
+  getReportKpis,
+  getReportProblemAreas,
+  getReportSessions,
+} from '../report/report.controller';
 
 const adminRouter = express.Router();
 
@@ -51,6 +59,16 @@ adminRouter.get('/coupons', listCoupons);
 adminRouter.post('/coupons', createCoupon);
 adminRouter.patch('/coupons/:id', updateCoupon);
 adminRouter.delete('/coupons/:id', deleteCoupon);
+
+// Reports & Analytics. The report module owns the services; mounted here so
+// every /reports/* endpoint inherits the admin JWT + role guard. All endpoints
+// share the same optional filter query set (see report.types.ts).
+adminRouter.get('/reports/kpis', getReportKpis);
+adminRouter.get('/reports/funnel', getReportFunnel);
+adminRouter.get('/reports/problem-areas', getReportProblemAreas);
+adminRouter.get('/reports/breakdowns', getReportBreakdowns);
+adminRouter.get('/reports/sessions', getReportSessions);
+adminRouter.get('/reports/export', exportReportExcel);
 
 // Plan pricing. The payment module owns the service; admin routes own access.
 adminRouter.get('/pricing', listPricing);

@@ -16,6 +16,7 @@ import './result.docs'
 import './payment.docs'
 import './user.docs'
 import './admin.docs'
+import './report.docs'
 
 export function buildOpenApiDocument() {
 	const generator = new OpenApiGeneratorV31(registry.definitions)

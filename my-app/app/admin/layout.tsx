@@ -7,7 +7,6 @@ import { clearSession, getAccessToken, getStoredUser } from "@/lib/authClient";
 import {
   LayoutDashboard,
   Users,
-  FileText,
   CreditCard,
   DollarSign,
   BarChart2,
@@ -30,10 +29,9 @@ type NavItemConfig = {
 const NAV_MAIN: NavItemConfig[] = [
   { label: "Home", icon: LayoutDashboard, href: "/admin" },
   { label: "Users", icon: Users, href: "/admin/users" },
-  { label: "Reports", icon: FileText, href: "/admin/reports" },
+  { label: "Reports & Analytics", icon: BarChart2, href: "/admin/reports" },
   { label: "Subscription", icon: CreditCard, href: "/admin/subscription" },
   { label: "Payments", icon: DollarSign, href: "/admin/payments" },
-  { label: "Analytics", icon: BarChart2, href: "/admin/analytics" },
 ];
 
 const NAV_ASSESSMENT: NavItemConfig[] = [
