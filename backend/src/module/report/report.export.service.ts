@@ -149,7 +149,11 @@ export async function streamReportExcelService(
 
   const overview = workbook.addWorksheet('Overview');
   overview.columns = [{ width: 42 }, { width: 24 }, { width: 18 }];
-  overview.addRow(['PICA — Reports & Analytics export']).commit();
+  // Style BEFORE committing — streamed rows are flushed and can't be touched
+  // afterwards (getRow on a committed row throws and truncates the download).
+  const titleRow = overview.addRow(['PICA — Reports & Analytics export']);
+  titleRow.font = { bold: true, size: 14 };
+  titleRow.commit();
   overview.addRow([describeFilters(filters)]).commit();
   overview.addRow([]).commit();
 
@@ -171,7 +175,6 @@ export async function streamReportExcelService(
       .addRow([step.label, step.count, step.pctOfPrevious !== null ? `${step.pctOfPrevious}%` : '—'])
       .commit();
   }
-  overview.getRow(1).font = { bold: true, size: 14 };
   overview.commit();
 
   // ---- Sheet 2: Assessments ----------------------------------------------
