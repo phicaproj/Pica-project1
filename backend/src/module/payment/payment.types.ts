@@ -58,8 +58,12 @@ export type AdminUpdateStatusInput = z.infer<typeof adminUpdateStatusSchema>;
 
 export type InitPaymentResponse = {
   message: string;
-  authorizationUrl: string;
-  accessCode: string;
+  // True when a 100%-off coupon covered the full amount: the payment is
+  // already SUCCESS, entitlements are granted, and there is no Paystack
+  // checkout to open (authorizationUrl/accessCode are null).
+  free: boolean;
+  authorizationUrl: string | null;
+  accessCode: string | null;
   reference: string;
   paymentId: string;
   amount: number;

@@ -26,12 +26,25 @@ export const createCouponSchema = z
     userId: z.string().uuid('userId must be a valid UUID').optional(),
     plan: couponPlanSchema.optional().nullable(),
     pillarId: z.string().uuid('pillarId must be a valid UUID').optional().nullable(),
+    // How many distinct users may redeem this code. Defaults to 1 so a
+    // forgotten field can never produce an unlimited promo. User-scoped
+    // coupons are forced to 1 (enforced below + in the service).
+    maxUses: z.coerce
+      .number()
+      .int('maxUses must be a whole number')
+      .min(1, 'maxUses must be at least 1')
+      .max(100000, 'maxUses is too large')
+      .default(1),
   })
   .refine((data) => data.amountOff !== undefined || data.percentOff !== undefined, {
     message: 'provide either amountOff or percentOff',
   })
   .refine((data) => !(data.amountOff && data.percentOff), {
     message: 'provide only one of amountOff or percentOff, not both',
+  })
+  .refine((data) => !data.userId || data.maxUses === 1, {
+    path: ['maxUses'],
+    message: 'a user-specific coupon can only have 1 use — remove the user to allow more',
   })
   .refine((data) => data.plan !== 'PHASE2B_PILLAR' || !!data.pillarId, {
     path: ['pillarId'],
@@ -46,6 +59,14 @@ export const updateCouponSchema = z
   .object({
     description: z.string().trim().max(200).optional(),
     isActive: z.boolean().optional(),
+    // Raising/lowering the cap after creation. Service-level rules: cannot be
+    // set below usedCount, and stays locked to 1 on user-scoped coupons.
+    maxUses: z.coerce
+      .number()
+      .int('maxUses must be a whole number')
+      .min(1, 'maxUses must be at least 1')
+      .max(100000, 'maxUses is too large')
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -93,6 +114,8 @@ export type CouponResponse = {
   percentOff: number;
   isActive: boolean;
   status: string;
+  maxUses: number;
+  usedCount: number;
   plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null;
   pillarId: string | null;
   pillarCode: string | null;

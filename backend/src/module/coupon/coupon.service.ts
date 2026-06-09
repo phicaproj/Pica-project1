@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { Plan, Prisma, UserRole } from '@prisma/client';
+import { PaymentStatus, Plan, Prisma, UserRole } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
@@ -29,24 +29,6 @@ function generateCode(): string {
   return code;
 }
 
-type RawCoupon = Prisma.DiscountGetPayload<{
-  select: {
-    id: true;
-    code: true;
-    description: true;
-    amountOff: true;
-    percentOff: true;
-    isActive: true;
-    status: true;
-    plan: true;
-    pillarId: true;
-    userId: true;
-    createdAt: true;
-    user: { select: { email: true } };
-    pillar: { select: { code: true; name: true } };
-  };
-}>;
-
 const couponSelect = {
   id: true,
   code: true,
@@ -55,13 +37,17 @@ const couponSelect = {
   percentOff: true,
   isActive: true,
   status: true,
+  maxUses: true,
+  usedCount: true,
   plan: true,
   pillarId: true,
   userId: true,
   createdAt: true,
   user: { select: { email: true } },
   pillar: { select: { code: true, name: true } },
-} as const;
+} satisfies Prisma.DiscountSelect;
+
+type RawCoupon = Prisma.DiscountGetPayload<{ select: typeof couponSelect }>;
 
 const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   id: coupon.id,
@@ -71,6 +57,8 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   percentOff: coupon.percentOff.toNumber(),
   isActive: coupon.isActive,
   status: coupon.status,
+  maxUses: coupon.maxUses,
+  usedCount: coupon.usedCount,
   plan: coupon.plan,
   pillarId: coupon.pillarId,
   pillarCode: coupon.pillar?.code ?? null,
@@ -83,6 +71,9 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
 export async function createCouponService(input: CreateCouponInput): Promise<CouponDetailResponse> {
   const plan = input.plan ?? null;
   const pillarId = plan === Plan.PHASE2B_PILLAR ? input.pillarId ?? null : null;
+  // User-scoped coupons are single-use by definition; otherwise honour the
+  // admin's cap (Zod already defaulted it to 1 when omitted).
+  const maxUses = input.userId ? 1 : input.maxUses;
 
   let userEmail: string | null = null;
   if (input.userId) {
@@ -136,6 +127,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           userId: input.userId ?? null,
           plan,
           pillarId,
+          maxUses,
         },
         select: couponSelect,
       });
@@ -162,6 +154,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           userId: input.userId ?? null,
           plan,
           pillarId,
+          maxUses,
         },
         select: couponSelect,
       });
@@ -209,15 +202,43 @@ export async function updateCouponService(
 ): Promise<CouponDetailResponse> {
   const existing = await prisma.discount.findUnique({
     where: { id: couponId },
-    select: { id: true },
+    select: { id: true, userId: true, usedCount: true, maxUses: true },
   });
   if (!existing) throw new AppError('Coupon not found', NOT_FOUND);
+
+  if (input.maxUses !== undefined) {
+    if (existing.userId && input.maxUses !== 1) {
+      throw new AppError(
+        'A user-specific coupon can only have 1 use — remove the user to allow more',
+        UNPROCESSABLE_CONTENT
+      );
+    }
+    if (input.maxUses < existing.usedCount) {
+      throw new AppError(
+        `maxUses cannot be lower than the ${existing.usedCount} use(s) already recorded`,
+        UNPROCESSABLE_CONTENT
+      );
+    }
+  }
+
+  // Raising the cap on an exhausted coupon re-opens it; status (and isActive,
+  // which redemption turns off at exhaustion) recompute from the counts so
+  // admins don't have to manage three fields. An explicit isActive wins.
+  const nextMaxUses = input.maxUses ?? existing.maxUses;
+  const reopened = existing.usedCount < nextMaxUses;
 
   const updated = await prisma.discount.update({
     where: { id: couponId },
     data: {
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      ...(input.maxUses !== undefined
+        ? {
+            maxUses: input.maxUses,
+            status: reopened ? 'ACTIVE' : 'USED',
+            ...(input.isActive === undefined && reopened ? { isActive: true } : {}),
+          }
+        : {}),
     },
     select: couponSelect,
   });
@@ -244,6 +265,9 @@ export async function deleteCouponService(couponId: string): Promise<{ message: 
  * Rules:
  *   - coupon must exist and be active
  *   - a user-scoped coupon (userId set) is only usable by that user
+ *   - the code must have uses left (usedCount < maxUses)
+ *   - one user can never redeem the same code twice — checked against their
+ *     SUCCESS payments carrying this coupon code
  *   - percentOff takes precedence when set; otherwise amountOff applies
  *   - the discount is clamped so finalAmount never goes below 0
  */
@@ -253,14 +277,17 @@ export async function validateAndPriceCoupon(
   basePrice: number,
   target: { plan: Plan; pillarId?: string | null }
 ): Promise<CouponPricing> {
+  const normalizedCode = code.trim().toUpperCase();
   const coupon = await prisma.discount.findUnique({
-    where: { code: code.trim().toUpperCase() },
+    where: { code: normalizedCode },
     select: {
       code: true,
       amountOff: true,
       percentOff: true,
       isActive: true,
       status: true,
+      maxUses: true,
+      usedCount: true,
       userId: true,
       plan: true,
       pillarId: true,
@@ -271,12 +298,26 @@ export async function validateAndPriceCoupon(
     throw new AppError('Invalid or inactive coupon code', UNPROCESSABLE_CONTENT);
   }
 
-  if (coupon.status === 'USED') {
-    throw new AppError('This coupon has already been used', UNPROCESSABLE_CONTENT);
+  if (coupon.status === 'USED' || coupon.usedCount >= coupon.maxUses) {
+    throw new AppError('This coupon has been fully used up', UNPROCESSABLE_CONTENT);
   }
 
   if (coupon.userId && coupon.userId !== userId) {
     throw new AppError('This coupon is not valid for your account', UNPROCESSABLE_CONTENT);
+  }
+
+  // One redemption per user per code — a prior SUCCESS payment with this
+  // coupon means this user already benefited once.
+  const priorUse = await prisma.payment.findFirst({
+    where: {
+      userId,
+      appliedCouponCode: coupon.code,
+      status: PaymentStatus.SUCCESS,
+    },
+    select: { id: true },
+  });
+  if (priorUse) {
+    throw new AppError('You have already used this coupon', UNPROCESSABLE_CONTENT);
   }
 
   if (coupon.plan && coupon.plan !== target.plan) {

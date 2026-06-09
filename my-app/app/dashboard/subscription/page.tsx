@@ -1089,6 +1089,23 @@ function CheckoutView({
         return;
       }
 
+      // 100%-off coupon: the backend already settled the payment and granted
+      // access — no Paystack checkout to open. Confirm via verify (returns
+      // "already verified" for settled payments) and jump to success.
+      if (init.data.free) {
+        paidRef.current = true;
+        setVerifying(true);
+        const result = await verifyWithRetry(reference);
+        setVerifying(false);
+        setBusy(false);
+        if (result.ok) {
+          onPaymentSuccess(result.data, amount);
+        } else {
+          setError(result.message);
+        }
+        return;
+      }
+
       sessionStorage.setItem(PENDING_PAYMENT_REFERENCE_KEY, reference);
 
       const handler = window.PaystackPop.setup({

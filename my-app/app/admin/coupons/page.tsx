@@ -37,6 +37,9 @@ type CouponDraft = {
   isActive: boolean;
   plan: "PHASE2A" | "PHASE2B_PILLAR" | "";
   pillarId: string;
+  // How many people can use the code. Defaults to 1 so a forgotten field
+  // can't create an unlimited promo; locked to 1 while a user is selected.
+  maxUses: string;
 };
 
 const initialDraft: CouponDraft = {
@@ -48,6 +51,7 @@ const initialDraft: CouponDraft = {
   isActive: true,
   plan: "",
   pillarId: "",
+  maxUses: "1",
 };
 
 const fieldClass =
@@ -219,6 +223,14 @@ export default function CouponsPage() {
       return;
     }
 
+    // User-scoped coupons are always single-use; otherwise default a blank
+    // field back to 1 so a forgotten value can't create an unlimited promo.
+    const maxUses = draft.userId.trim() ? 1 : Math.floor(Number(draft.maxUses) || 1);
+    if (maxUses < 1) {
+      setError("Number of uses must be at least 1.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -232,6 +244,7 @@ export default function CouponsPage() {
         : { amountOff: value }),
       plan: draft.plan || null,
       pillarId: draft.plan === "PHASE2B_PILLAR" ? draft.pillarId : null,
+      maxUses,
     });
 
     if (res.error) {
@@ -403,7 +416,7 @@ export default function CouponsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/5">
-                {["Code", "Discount", "Scope / Target", "Description", "Status", "Created", "Actions"].map(
+                {["Code", "Discount", "Scope / Target", "Usage", "Description", "Status", "Created", "Actions"].map(
                   (heading) => (
                     <th
                       key={heading}
@@ -418,13 +431,13 @@ export default function CouponsPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
+                  <td colSpan={8} className="px-6 py-16 text-center">
                     <Loader className="mx-auto h-6 w-6 animate-spin text-blue-300" />
                   </td>
                 </tr>
               ) : filteredCoupons.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-6 py-16 text-center text-sm text-gray-500">
                     No coupons match the current filters.
                   </td>
                 </tr>
@@ -475,6 +488,26 @@ export default function CouponsPage() {
                         ) : (
                           <div className="text-xs text-emerald-400 font-semibold">Global User Access</div>
                         )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-semibold text-white whitespace-nowrap">
+                        {coupon.usedCount} / {coupon.maxUses}
+                      </div>
+                      <div className="mt-1 h-1.5 w-20 rounded-full bg-white/5">
+                        <div
+                          className={`h-full rounded-full ${
+                            coupon.usedCount >= coupon.maxUses ? "bg-gray-500" : "bg-blue-500"
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (coupon.usedCount / Math.max(1, coupon.maxUses)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="mt-1 text-[10px] text-gray-500">
+                        {coupon.usedCount >= coupon.maxUses
+                          ? "Fully used"
+                          : `${coupon.maxUses - coupon.usedCount} left`}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-300">
@@ -611,7 +644,8 @@ export default function CouponsPage() {
                               type="button"
                               onClick={() => {
                                 setSelectedUser(user);
-                                setDraft((prev) => ({ ...prev, userId: user.id }));
+                                // User-scoped coupons are single-use.
+                                setDraft((prev) => ({ ...prev, userId: user.id, maxUses: "1" }));
                                 setUsersSearch("");
                                 setSearchResults([]);
                               }}
@@ -729,17 +763,49 @@ export default function CouponsPage() {
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={draft.isActive}
-                  onChange={(event) =>
-                    setDraft((prev) => ({ ...prev, isActive: event.target.checked }))
-                  }
-                  className="h-4 w-4 accent-blue-500"
-                />
-                Active immediately
-              </label>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Number of Uses
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={selectedUser ? "1" : draft.maxUses}
+                    disabled={Boolean(selectedUser)}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, maxUses: event.target.value }))
+                    }
+                    onBlur={() =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        // Snap blank/invalid input back to the safe default.
+                        maxUses: String(Math.max(1, Math.floor(Number(prev.maxUses) || 1))),
+                      }))
+                    }
+                    className={`${fieldClass} ${selectedUser ? "opacity-60 cursor-not-allowed" : ""}`}
+                  />
+                  <p className="mt-1.5 text-[11px] text-gray-500">
+                    {selectedUser
+                      ? "Locked to 1 — remove the selected user to allow more people."
+                      : "How many different people can redeem this code (each person once)."}
+                  </p>
+                </div>
+                <div className="flex items-end pb-7">
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={draft.isActive}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, isActive: event.target.checked }))
+                      }
+                      className="h-4 w-4 accent-blue-500"
+                    />
+                    Active immediately
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5 bg-[#171923]">

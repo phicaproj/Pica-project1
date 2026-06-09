@@ -177,6 +177,65 @@ export async function initPaymentService(
     discountAmount = new Prisma.Decimal(pricing.discountAmount);
   }
 
+  // 100% waiver: a full-discount coupon leaves nothing to charge. Paystack
+  // rejects zero-amount transactions, so skip the provider entirely — record
+  // the payment as SUCCESS immediately and grant entitlements through the
+  // same transactional path a verified Paystack success uses.
+  if (chargeAmount <= 0) {
+    const paidAt = new Date();
+    const freePayment = await prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          userId: user.id,
+          sessionId: paymentSessionId,
+          pillarId: paymentPillarId,
+          plan: input.plan,
+          provider: PaymentProvider.PAYSTACK,
+          providerReference: reference,
+          amount: new Prisma.Decimal(0),
+          appliedCouponCode,
+          discountAmount,
+          currency: 'NGN',
+          status: PaymentStatus.SUCCESS,
+          paymentMethod: 'coupon',
+          paidAt,
+          customerEmail: user.email,
+          customerBusinessName: user.businessName,
+        },
+        select: {
+          id: true,
+          userId: true,
+          sessionId: true,
+          pillarId: true,
+          plan: true,
+          amount: true,
+          currency: true,
+          customerEmail: true,
+          customerBusinessName: true,
+          appliedCouponCode: true,
+        },
+      });
+      await grantSuccessEntitlements(tx, created, paidAt, 'free-coupon');
+      return created;
+    });
+
+    sendSuccessEmailBestEffort(freePayment, reference, 'free-coupon');
+
+    return {
+      message: 'Payment completed — coupon covered the full amount',
+      free: true,
+      authorizationUrl: null,
+      accessCode: null,
+      reference,
+      paymentId: freePayment.id,
+      amount: 0,
+      baseAmount: basePrice,
+      discountAmount: discountAmount?.toNumber() ?? basePrice,
+      currency: 'NGN',
+      couponCode: appliedCouponCode,
+    };
+  }
+
   // Create the Payment row in PENDING state BEFORE calling Paystack so we have
   // an audit trail even if the network call fails. If Paystack fails, the row
   // stays PENDING and is reaped by the admin or by a future cleanup job.
@@ -223,6 +282,7 @@ export async function initPaymentService(
 
   return {
     message: 'Payment initialized',
+    free: false,
     authorizationUrl: paystackData.authorization_url,
     accessCode: paystackData.access_code,
     reference,
@@ -588,13 +648,19 @@ export async function grantSuccessEntitlements(
   source: string
 ): Promise<void> {
   if (payment.appliedCouponCode) {
-    await tx.discount.update({
+    // Count this redemption. Atomic increment, then retire the code only once
+    // the cap is reached — multi-use promo codes stay live until exhausted.
+    const coupon = await tx.discount.update({
       where: { code: payment.appliedCouponCode },
-      data: {
-        status: 'USED',
-        isActive: false,
-      },
+      data: { usedCount: { increment: 1 } },
+      select: { usedCount: true, maxUses: true },
     });
+    if (coupon.usedCount >= coupon.maxUses) {
+      await tx.discount.update({
+        where: { code: payment.appliedCouponCode },
+        data: { status: 'USED', isActive: false },
+      });
+    }
   }
 
   // Per-result paywall: on first successful Phase 2A payment, mark the

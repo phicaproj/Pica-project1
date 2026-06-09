@@ -210,8 +210,11 @@ export const getMe = async () => {
 
 export type InitPaymentResponse = {
 	message: string
-	authorizationUrl: string
-	accessCode: string
+	// True when a 100%-off coupon covered the full amount — the payment is
+	// already SUCCESS and there is no Paystack checkout to open.
+	free: boolean
+	authorizationUrl: string | null
+	accessCode: string | null
 	reference: string
 	paymentId: string
 	amount: number
@@ -541,6 +544,8 @@ export type AdminCoupon = {
 	percentOff: number
 	isActive: boolean
 	status: string
+	maxUses: number
+	usedCount: number
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
 	pillarId: string | null
 	pillarCode: string | null
@@ -570,11 +575,15 @@ export type CreateAdminCouponPayload = {
 	userId?: string
 	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | null
 	pillarId?: string | null
+	// How many distinct users may redeem the code. Backend defaults to 1;
+	// forced to 1 when userId is set.
+	maxUses?: number
 }
 
 export type UpdateAdminCouponPayload = {
 	description?: string
 	isActive?: boolean
+	maxUses?: number
 }
 
 export const getAdminCoupons = async (params: {

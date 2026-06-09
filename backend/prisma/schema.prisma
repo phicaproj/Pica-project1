@@ -511,6 +511,15 @@ model Discount {
   percentOff  Decimal @db.Decimal(5, 2)  @map("percent_off") // percentage discount (0–100)
   isActive    Boolean @default(true) @map("is_active")
   status      String  @default("ACTIVE")
+
+  // Usage limits. maxUses = how many distinct redemptions the code allows
+  // (defaults to 1 so a forgotten field can't create an unlimited promo);
+  // usedCount tracks SUCCESS redemptions so far. When usedCount reaches
+  // maxUses the status flips to USED. A user-scoped coupon (userId set) is
+  // always maxUses = 1. Per-user reuse is blocked via the payments table
+  // (one SUCCESS payment per user per code), not a column here.
+  maxUses     Int     @default(1) @map("max_uses")
+  usedCount   Int     @default(0) @map("used_count")
   userId      String? @map("user_id") // optional link to a User for user-specific discounts
   plan        Plan? // optional target plan; null = usable on any paid plan
   pillarId    String? @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons

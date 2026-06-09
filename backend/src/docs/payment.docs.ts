@@ -112,6 +112,8 @@ registry.registerPath({
 		'',
 		'The FE should redirect the user to the returned `authorizationUrl`. After Paystack redirects back, the FE calls GET /api/payment/verify/:reference to confirm — the webhook is a safety net for closed-tab scenarios.',
 		'',
+		'**100% coupon waiver:** when an applied coupon covers the full amount, no Paystack transaction is created. The response has `free: true`, null `authorizationUrl`/`accessCode`, and the payment is already SUCCESS with entitlements granted — skip the checkout and treat it as paid.',
+		'',
 		'**Retake semantics:** if the user takes Phase 2A again, the new session produces a new unpaid result. They must pay again to unlock it. Calling /init for an already-paid result returns 409.',
 	].join('\n'),
 	security: [{ bearerAuth: [] }],
@@ -128,11 +130,16 @@ registry.registerPath({
 				'application/json': {
 					schema: z.object({
 						message: z.string(),
+						free: z.boolean().openapi({
+							description:
+								'True when a 100%-off coupon settled the payment — no checkout to open',
+						}),
 						authorizationUrl: z
 							.string()
 							.url()
-							.openapi({ description: 'Redirect the user here' }),
-						accessCode: z.string(),
+							.nullable()
+							.openapi({ description: 'Redirect the user here (null when free)' }),
+						accessCode: z.string().nullable(),
 						reference: z.string().openapi({
 							description: 'Pass to /verify/:reference after redirect-back',
 						}),
