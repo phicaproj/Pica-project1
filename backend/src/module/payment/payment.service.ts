@@ -39,7 +39,7 @@ import { resolvePlanPrice } from './pricing.service';
 import { validateAndPriceCoupon } from '../coupon/coupon.service';
 
 // Maps Paystack `data.status` strings onto our PaymentStatus enum.
-const mapPaystackStatus = (status: string): PaymentStatus => {
+export const mapPaystackStatus = (status: string): PaymentStatus => {
   switch (status) {
     case 'success':
       return PaymentStatus.SUCCESS;
@@ -414,13 +414,31 @@ export async function handleWebhookService(params: {
 }
 
 // ==============================================================
-// 4. ADMIN — GET /api/payment/admin  (auth + isAdmin)
+// 4. ADMIN — GET /api/admin/payments  (auth + isAdmin)
 // ==============================================================
 
 export async function listPaymentsService(query: ListPaymentsQuery): Promise<ListPaymentsResponse> {
   const where: Prisma.PaymentWhereInput = {
     ...(query.status ? { status: query.status } : {}),
     ...(query.plan ? { plan: query.plan } : {}),
+    ...(query.method ? { paymentMethod: { equals: query.method, mode: 'insensitive' } } : {}),
+    ...(query.search
+      ? {
+          OR: [
+            { providerReference: { contains: query.search, mode: 'insensitive' } },
+            { customerEmail: { contains: query.search, mode: 'insensitive' } },
+            { customerBusinessName: { contains: query.search, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+    ...(query.dateFrom || query.dateTo
+      ? {
+          createdAt: {
+            ...(query.dateFrom ? { gte: new Date(`${query.dateFrom}T00:00:00.000Z`) } : {}),
+            ...(query.dateTo ? { lte: new Date(`${query.dateTo}T23:59:59.999Z`) } : {}),
+          },
+        }
+      : {}),
   };
 
   const skip = (query.page - 1) * query.pageSize;
@@ -469,6 +487,7 @@ export async function listPaymentsService(query: ListPaymentsQuery): Promise<Lis
     page: query.page,
     pageSize: query.pageSize,
     total,
+    totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
     payments,
   };
 }
@@ -485,10 +504,10 @@ export async function listPaymentsService(query: ListPaymentsQuery): Promise<Lis
  * Called by both the verify endpoint and the webhook. Either path produces
  * the same end state; whichever runs first wins, the other is a no-op.
  */
-async function applyVerificationResult(
+export async function applyVerificationResult(
   reference: string,
   verifyData: PaystackVerifyData,
-  opts: { source: 'verify-endpoint' | 'webhook' }
+  opts: { source: 'verify-endpoint' | 'webhook' | 'admin-check' }
 ): Promise<{ paymentId: string; flippedToSuccess: boolean }> {
   const payment = await prisma.payment.findUnique({
     where: { providerReference: reference },
@@ -530,85 +549,125 @@ async function applyVerificationResult(
     });
 
     if (flippingToSuccess) {
-      if (payment.appliedCouponCode) {
-        await tx.discount.update({
-          where: { code: payment.appliedCouponCode },
-          data: {
-            status: 'USED',
-            isActive: false,
-          },
-        });
-      }
-
-      // Per-result paywall: on first successful Phase 2A payment, mark the
-      // SessionResult as paid. The Payment row carries the sessionId set at
-      // init time; legacy rows without a sessionId are skipped and logged.
-      if (payment.plan === Plan.PHASE2A) {
-        if (!payment.sessionId) {
-          console.warn(
-            `[payment:${opts.source}] SUCCESS Phase 2A payment ${payment.id} has no sessionId — cannot mark result paid`
-          );
-        } else {
-          await tx.sessionResult.update({
-            where: { sessionId: payment.sessionId },
-            data: {
-              isPaid: true,
-              paidAt: paidAt ?? new Date(),
-              paidByPaymentId: payment.id,
-            },
-          });
-        }
-      }
-
-      // Phase 2B unlock: grant a redeemable credit for the pillar. The user
-      // claims it later via POST /api/assessment/phase2b/start. Idempotent via
-      // the paymentId @unique constraint — a webhook+verify race can't double-grant.
-      if (payment.plan === Plan.PHASE2B_PILLAR) {
-        if (!payment.pillarId) {
-          console.warn(
-            `[payment:${opts.source}] SUCCESS Phase 2B payment ${payment.id} has no pillarId — cannot grant unlock`
-          );
-        } else {
-          await tx.phase2BPillarUnlock.upsert({
-            where: { paymentId: payment.id },
-            create: {
-              userId: payment.userId,
-              pillarId: payment.pillarId,
-              paymentId: payment.id,
-              sessionId: null,
-            },
-            update: {}, // no-op on race — first writer wins
-          });
-        }
-      }
+      await grantSuccessEntitlements(tx, payment, paidAt, opts.source);
     }
   });
 
   if (flippingToSuccess) {
-    // Best-effort. Source is logged so duplicate sends from verify+webhook
-    // races can be diagnosed if they ever happen (the email is idempotent
-    // from the user's perspective — they'd just see the same mail twice).
-    //
-    // For Phase 2B we point the user at the dashboard where they'll find the
-    // newly-granted pillar credit. The email helper is plan-agnostic.
-    const reportDownloadUrl =
-      payment.plan === Plan.PHASE2B_PILLAR
-        ? `${APP_URL}/dashboard/deep-dive`
-        : `${APP_URL}/dashboard/reports`;
-    void sendPaymentSuccessEmail({
-      toEmail: payment.customerEmail,
-      businessName: payment.customerBusinessName,
-      amount: Number(payment.amount),
-      currency: payment.currency,
-      reference,
-      reportDownloadUrl,
-      plan: payment.plan,
-    }).catch((error) => {
-      console.error(`[payment:${opts.source}] unlock email failed:`, error);
-    });
+    sendSuccessEmailBestEffort(payment, reference, opts.source);
   }
 
   return { paymentId: payment.id, flippedToSuccess: flippingToSuccess };
+}
+
+// Narrow payment shape the success side-effects need. Both the Paystack
+// verify path and the admin manual-override path select at least these fields.
+export type SuccessPaymentSnapshot = {
+  id: string;
+  userId: string;
+  sessionId: string | null;
+  pillarId: string | null;
+  plan: Plan;
+  amount: Prisma.Decimal;
+  currency: string;
+  customerEmail: string;
+  customerBusinessName: string | null;
+  appliedCouponCode: string | null;
+};
+
+/**
+ * Runs the "payment became SUCCESS" side-effects inside the caller's
+ * transaction: consume the coupon, flip SessionResult.isPaid (Phase 2A) or
+ * grant the pillar unlock (Phase 2B). Idempotent — safe under verify/webhook
+ * races and repeat admin clicks.
+ */
+export async function grantSuccessEntitlements(
+  tx: Prisma.TransactionClient,
+  payment: SuccessPaymentSnapshot,
+  paidAt: Date | null,
+  source: string
+): Promise<void> {
+  if (payment.appliedCouponCode) {
+    await tx.discount.update({
+      where: { code: payment.appliedCouponCode },
+      data: {
+        status: 'USED',
+        isActive: false,
+      },
+    });
+  }
+
+  // Per-result paywall: on first successful Phase 2A payment, mark the
+  // SessionResult as paid. The Payment row carries the sessionId set at
+  // init time; legacy rows without a sessionId are skipped and logged.
+  if (payment.plan === Plan.PHASE2A) {
+    if (!payment.sessionId) {
+      console.warn(
+        `[payment:${source}] SUCCESS Phase 2A payment ${payment.id} has no sessionId — cannot mark result paid`
+      );
+    } else {
+      await tx.sessionResult.update({
+        where: { sessionId: payment.sessionId },
+        data: {
+          isPaid: true,
+          paidAt: paidAt ?? new Date(),
+          paidByPaymentId: payment.id,
+        },
+      });
+    }
+  }
+
+  // Phase 2B unlock: grant a redeemable credit for the pillar. The user
+  // claims it later via POST /api/assessment/phase2b/start. Idempotent via
+  // the paymentId @unique constraint — a webhook+verify race can't double-grant.
+  if (payment.plan === Plan.PHASE2B_PILLAR) {
+    if (!payment.pillarId) {
+      console.warn(
+        `[payment:${source}] SUCCESS Phase 2B payment ${payment.id} has no pillarId — cannot grant unlock`
+      );
+    } else {
+      await tx.phase2BPillarUnlock.upsert({
+        where: { paymentId: payment.id },
+        create: {
+          userId: payment.userId,
+          pillarId: payment.pillarId,
+          paymentId: payment.id,
+          sessionId: null,
+        },
+        update: {}, // no-op on race — first writer wins
+      });
+    }
+  }
+}
+
+/**
+ * Fire-and-forget unlock email. Source is logged so duplicate sends from
+ * verify+webhook races can be diagnosed if they ever happen (the email is
+ * idempotent from the user's perspective — they'd just see the same mail twice).
+ *
+ * For Phase 2B we point the user at the dashboard where they'll find the
+ * newly-granted pillar credit. The email helper is plan-agnostic.
+ */
+export function sendSuccessEmailBestEffort(
+  payment: SuccessPaymentSnapshot,
+  reference: string,
+  source: string
+): void {
+  const reportDownloadUrl =
+    payment.plan === Plan.PHASE2B_PILLAR
+      ? `${APP_URL}/dashboard/deep-dive`
+      : `${APP_URL}/dashboard/reports`;
+  void sendPaymentSuccessEmail({
+    toEmail: payment.customerEmail,
+    businessName: payment.customerBusinessName,
+    amount: Number(payment.amount),
+    currency: payment.currency,
+    reference,
+    reportDownloadUrl,
+    plan: payment.plan,
+  }).catch((error) => {
+    console.error(`[payment:${source}] unlock email failed:`, error);
+  });
 }
 
 export async function myPaymentsHistoryService(

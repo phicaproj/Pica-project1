@@ -32,6 +32,13 @@ import {
   getReportProblemAreas,
   getReportSessions,
 } from '../report/report.controller';
+import { listPayments } from '../payment/payment.controller';
+import {
+  adminCheckPayment,
+  adminPaymentDetail,
+  adminPaymentStats,
+  adminUpdatePaymentStatus,
+} from '../payment/payment.admin.controller';
 
 const adminRouter = express.Router();
 
@@ -69,6 +76,17 @@ adminRouter.get('/reports/problem-areas', getReportProblemAreas);
 adminRouter.get('/reports/breakdowns', getReportBreakdowns);
 adminRouter.get('/reports/sessions', getReportSessions);
 adminRouter.get('/reports/export', exportReportExcel);
+
+// Payments. The payment module owns the controllers; mounted here behind the
+// admin gate. /stats is registered before /:id so it isn't captured as an id.
+adminRouter.get('/payments', listPayments);
+adminRouter.get('/payments/stats', adminPaymentStats);
+adminRouter.get('/payments/:id', adminPaymentDetail);
+// "Check payment": settled rows answer from our records; PENDING rows are
+// re-verified against Paystack (and entitlements granted if it turns out paid).
+adminRouter.post('/payments/:id/check', adminCheckPayment);
+// Manual status override with required audit reason.
+adminRouter.patch('/payments/:id/status', adminUpdatePaymentStatus);
 
 // Plan pricing. The payment module owns the service; admin routes own access.
 adminRouter.get('/pricing', listPricing);

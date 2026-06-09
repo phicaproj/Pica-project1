@@ -347,15 +347,20 @@ registry.registerPath({
 	},
 })
 
-// ----- GET /api/payment/admin -----------------------------------------------
+// ----- GET /api/admin/payments ------------------------------------------------
+
+const adminPaymentErrors = {
+	401: errorResponse('Missing or invalid token'),
+	403: errorResponse('Forbidden: User is not an admin'),
+}
 
 registry.registerPath({
 	method: 'get',
-	path: '/api/payment/admin',
-	tags: ['Payment'],
+	path: '/api/admin/payments',
+	tags: ['Admin'],
 	summary: 'List all platform payment transactions',
 	description:
-		'Admin-only. Returns paginated list of all payments across the entire platform, with query filters for status and plan.',
+		'Admin-only. Returns paginated list of all payments across the entire platform. Filters: status, plan, payment method, free-text search (reference / customer email / business name), and a created-date range.',
 	security: [{ bearerAuth: [] }],
 	request: {
 		query: z.object({
@@ -363,6 +368,10 @@ registry.registerPath({
 			pageSize: z.coerce.number().int().min(1).max(100).default(20).openapi({ param: { name: 'pageSize', in: 'query' } }),
 			status: PaymentStatus.optional().openapi({ param: { name: 'status', in: 'query' } }),
 			plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR']).optional().openapi({ param: { name: 'plan', in: 'query' } }),
+			search: z.string().optional().openapi({ param: { name: 'search', in: 'query' }, description: 'Matches reference, customer email or business name.' }),
+			method: z.string().optional().openapi({ param: { name: 'method', in: 'query' }, example: 'card' }),
+			dateFrom: z.string().optional().openapi({ param: { name: 'dateFrom', in: 'query' }, example: '2026-01-01' }),
+			dateTo: z.string().optional().openapi({ param: { name: 'dateTo', in: 'query' }, example: '2026-06-30' }),
 		}),
 	},
 	responses: {
@@ -375,12 +384,198 @@ registry.registerPath({
 						page: z.number(),
 						pageSize: z.number(),
 						total: z.number(),
+						totalPages: z.number(),
 						payments: z.array(AdminPaymentRowSchema),
 					}),
 				},
 			},
 		},
-		401: errorResponse('Missing or invalid token'),
-		403: errorResponse('Forbidden: User is not an admin'),
+		...adminPaymentErrors,
+	},
+})
+
+// ----- GET /api/admin/payments/stats --------------------------------------------
+
+const AdminPaymentStatsSchema = registry.register(
+	'AdminPaymentStats',
+	z
+		.object({
+			totalRevenue: z.number(),
+			revenueThisMonth: z.number(),
+			revenueLastMonth: z.number(),
+			revenueGrowthPct: z.number().nullable(),
+			pendingAmount: z.number(),
+			pendingCount: z.number(),
+			successRatePct: z.number().nullable(),
+			countByStatus: z.array(z.object({ status: PaymentStatus, count: z.number() })),
+			monthlyRevenue: z.array(
+				z.object({
+					monthLabel: z.string(),
+					year: z.number(),
+					amount: z.number(),
+					count: z.number(),
+				}),
+			),
+		})
+		.openapi('AdminPaymentStats'),
+)
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/payments/stats',
+	tags: ['Admin'],
+	summary: 'Payment dashboard stats',
+	description:
+		'Admin-only. Revenue totals (SUCCESS payments), month-over-month growth, pending amount/count, success rate over settled payments, status counts, and a 6-month revenue series for the chart.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'Stats retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({ message: z.string(), stats: AdminPaymentStatsSchema }),
+				},
+			},
+		},
+		...adminPaymentErrors,
+	},
+})
+
+// ----- GET /api/admin/payments/:id ----------------------------------------------
+
+const AdminPaymentDetailSchema = registry.register(
+	'AdminPaymentDetail',
+	AdminPaymentRowSchema.extend({
+		userId: z.string().uuid(),
+		sessionId: z.string().uuid().nullable(),
+		pillarId: z.string().uuid().nullable(),
+		pillarName: z.string().nullable(),
+		baseAmount: z.number(),
+		couponCode: z.string().nullable(),
+		discountAmount: z.number().nullable(),
+		failureReason: z.string().nullable(),
+		authorizationUrl: z.string().nullable(),
+		updatedAt: z.string().datetime(),
+		resultIsPaid: z.boolean().nullable(),
+		unlock: z
+			.object({
+				id: z.string().uuid(),
+				unlockedAt: z.string().datetime(),
+				consumedAt: z.string().datetime().nullable(),
+				sessionId: z.string().uuid().nullable(),
+			})
+			.nullable(),
+		webhookEvents: z.array(
+			z.object({
+				id: z.string().uuid(),
+				eventType: z.string(),
+				processingStatus: z.string(),
+				processingError: z.string().nullable(),
+				receivedAt: z.string().datetime(),
+			}),
+		),
+	}).openapi('AdminPaymentDetail'),
+)
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/payments/{id}',
+	tags: ['Admin'],
+	summary: 'Get full details of one payment',
+	description:
+		'Admin-only. Full payment record including coupon/discount breakdown, failure reason, granted entitlement state (Phase 2A result paid / Phase 2B unlock), and recent webhook events.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'Payment details retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({ message: z.string(), payment: AdminPaymentDetailSchema }),
+				},
+			},
+		},
+		404: errorResponse('Payment not found'),
+		...adminPaymentErrors,
+	},
+})
+
+// ----- POST /api/admin/payments/:id/check ---------------------------------------
+
+registry.registerPath({
+	method: 'post',
+	path: '/api/admin/payments/{id}/check',
+	tags: ['Admin'],
+	summary: 'Check whether a payment actually went through',
+	description:
+		'Admin-only. Settled payments (SUCCESS/FAILED/ABANDONED/REVERSED) are answered from our records. PENDING payments are re-verified against the Paystack verify endpoint; a discovered SUCCESS grants the user their entitlements exactly like the normal verify/webhook path.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'Check completed',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						checkedVia: z.enum(['database', 'paystack']),
+						status: PaymentStatus,
+						paid: z.boolean(),
+						reference: z.string(),
+						gatewayResponse: z.string().nullable(),
+					}),
+				},
+			},
+		},
+		404: errorResponse('Payment not found'),
+		...adminPaymentErrors,
+	},
+})
+
+// ----- PATCH /api/admin/payments/:id/status --------------------------------------
+
+registry.registerPath({
+	method: 'patch',
+	path: '/api/admin/payments/{id}/status',
+	tags: ['Admin'],
+	summary: 'Manually override a payment status',
+	description:
+		'Admin-only. Changes the payment status with a required audit reason (stored on the row). Marking SUCCESS grants the user their entitlements (report unlock / pillar credit) and sends the confirmation email. Downgrading a SUCCESS payment is record-only — already-granted access is not revoked (refund/anti-fraud policy).',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+		body: {
+			content: {
+				'application/json': {
+					schema: z.object({
+						status: PaymentStatus,
+						reason: z.string().min(3).max(500).openapi({ example: 'Paystack dashboard shows the charge succeeded but webhook never arrived.' }),
+					}),
+				},
+			},
+		},
+	},
+	responses: {
+		200: {
+			description: 'Status updated; returns the refreshed payment detail',
+			content: {
+				'application/json': {
+					schema: z.object({ message: z.string(), payment: AdminPaymentDetailSchema }),
+				},
+			},
+		},
+		404: errorResponse('Payment not found'),
+		409: errorResponse('Payment is already in that status'),
+		...adminPaymentErrors,
 	},
 })

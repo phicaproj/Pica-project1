@@ -1,9 +1,8 @@
 import { Router, raw } from 'express';
-import { authenticate, isAdmin } from '../../service/middleware/authMiddleware';
+import { authenticate } from '../../service/middleware/authMiddleware';
 import {
   handlePaymentWebhook,
   initPayment,
-  listPayments,
   verifyPayment,
   myPaymentsHistory,
 } from './payment.controller';
@@ -21,7 +20,7 @@ paymentRouter.post('/init', authenticate, initPayment);
 paymentRouter.get('/verify/:reference', authenticate, verifyPayment);
 paymentRouter.get('/history', authenticate, myPaymentsHistory);
 
-// Admin transactions list
-paymentRouter.get('/admin', authenticate, isAdmin, listPayments);
+// Admin payment endpoints live in module/admin/admin.routes.ts under
+// /api/admin/payments/* — the payment module only owns the controllers.
 
 export default paymentRouter;
