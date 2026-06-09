@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import z from 'zod';
 import asyncHandler from '../../service/shared/catchErrors';
-import { OK, CREATED } from '../../service/shared/http';
+import AppError from '../../service/shared/appError';
+import { OK, CREATED, UNAUTHORIZED } from '../../service/shared/http';
 import {
   listUsersQuery,
   showUserQuery,
@@ -10,6 +11,8 @@ import {
   createRoleSchema,
   updateRoleSchema,
   assignRoleSchema,
+  inviteAdminSchema,
+  updateAdminProfileSchema,
 } from './admin.types';
 import {
   getAllUsersService,
@@ -23,6 +26,9 @@ import {
   updateRoleService,
   deleteRoleService,
   assignRoleToAdminService,
+  inviteAdminService,
+  getAdminProfileService,
+  updateAdminProfileService,
 } from './admin.service';
 
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
@@ -95,4 +101,31 @@ export const assignRoleToAdmin = asyncHandler(async (req: Request, res: Response
   const { adminRoleId } = assignRoleSchema.parse(req.body);
   const result = await assignRoleToAdminService(adminId, adminRoleId);
   return res.status(OK).json({ message: 'Role assigned successfully', user: result });
+});
+
+// ── Admin Onboarding (invite staff) ─────────────────────────────────────────
+
+export const inviteAdmin = asyncHandler(async (req: Request, res: Response) => {
+  const input = inviteAdminSchema.parse(req.body);
+  const result = await inviteAdminService(input);
+  return res.status(CREATED).json(result);
+});
+
+// ── Admin self-service profile (personal info) ──────────────────────────────
+
+export const getMyProfile = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('Admin not authenticated', UNAUTHORIZED);
+  }
+  const result = await getAdminProfileService(req.user.id);
+  return res.status(OK).json(result);
+});
+
+export const updateMyProfile = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('Admin not authenticated', UNAUTHORIZED);
+  }
+  const input = updateAdminProfileSchema.parse(req.body);
+  const result = await updateAdminProfileService(req.user.id, input);
+  return res.status(OK).json(result);
 });

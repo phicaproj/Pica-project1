@@ -405,6 +405,12 @@ export type AdminPillarDetailed = PillarMeta & {
 	isActive: boolean
 	activeQuestionCount: number
 	totalQuestionCount: number
+	// Active-question counts split by phase and business size — what a real
+	// session actually delivers per pillar (activeQuestionCount sums all of them).
+	counts: {
+		phase2a: { SMALL: number; MEDIUM: number }
+		phase2b: { SMALL: number; MEDIUM: number }
+	}
 }
 
 export type AdminPillarsDetailedResponse = {
@@ -1621,5 +1627,62 @@ export const assignAdminRole = async (
 	return authedFetch<{ message: string; user: any }>(
 		`/admin/users/${userId}/role`,
 		{ method: 'PATCH', body: JSON.stringify({ adminRoleId }) },
+	)
+}
+
+// ── Admin onboarding (invite staff) ────────────────────────────────────────
+
+export type InvitedAdmin = {
+	id: string
+	email: string
+	adminRole: { id: string; name: string; permissions: string[] } | null
+}
+
+export const inviteAdmin = async (payload: {
+	email: string
+	adminRoleId?: string
+}) => {
+	return authedFetch<{ message: string; admin: InvitedAdmin }>(
+		'/admin/invite',
+		{ method: 'POST', body: JSON.stringify(payload) },
+	)
+}
+
+// Public — the invitee is not yet authenticated when they accept.
+export const acceptInvite = async (payload: {
+	token: string
+	newPassword: string
+}) => {
+	return apiFetch<{ message: string }>('/auth/accept-invite', payload)
+}
+
+// ── Admin self-service profile (personal info) ─────────────────────────────
+
+export type AdminProfile = {
+	id: string
+	email: string
+	firstName: string | null
+	lastName: string | null
+	phone: string | null
+	businessName: string | null
+	avatarUrl: string | null
+}
+
+export const getMyAdminProfile = async () => {
+	return authedFetch<{ message: string; profile: AdminProfile }>(
+		'/admin/me',
+		{ method: 'GET' },
+	)
+}
+
+export const updateMyAdminProfile = async (payload: {
+	firstName?: string
+	lastName?: string
+	phone?: string
+	businessName?: string
+}) => {
+	return authedFetch<{ message: string; profile: AdminProfile }>(
+		'/admin/me',
+		{ method: 'PATCH', body: JSON.stringify(payload) },
 	)
 }

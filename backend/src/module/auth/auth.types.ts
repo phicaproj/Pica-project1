@@ -49,12 +49,24 @@ export const verifyAdminOTPSchema = z.object({
   code: z.string().regex(/^\d{5}$/, 'Code must be a 5-digit number'),
 });
 
+export const acceptInviteSchema = z.object({
+  token: z.string().min(1, 'Invite token is required'),
+  newPassword: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one special character, lowercase letter, uppercase letter, and number'
+    ),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyAdminOTPInput = z.infer<typeof verifyAdminOTPSchema>;
+export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
 export type AuthUser = {
   id: string;
   email: string;
@@ -102,6 +114,10 @@ export type VerifyResetOtpResponse = {
 };
 
 export type ResetPasswordResponse = {
+  message: string;
+};
+
+export type AcceptInviteResponse = {
   message: string;
 };
 

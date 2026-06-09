@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader,
+  Pencil,
   RefreshCw,
   Save,
   Scale,
@@ -49,6 +50,9 @@ export default function ScoringPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // Read-only until the admin explicitly clicks Edit — guards against
+  // accidental changes to scoring config.
+  const [isEditing, setIsEditing] = useState(false);
 
   // Drafts — what the admin is editing. Saved values live in pillars/settings.
   const [weightDraft, setWeightDraft] = useState<Record<string, number>>({});
@@ -211,6 +215,7 @@ export default function ScoringPage() {
     }
 
     setSaving(false);
+    setIsEditing(false);
     setSuccess("Changes saved. They apply to assessments submitted from now on.");
   };
 
@@ -227,6 +232,7 @@ export default function ScoringPage() {
     }
     setError(null);
     setSuccess(null);
+    setIsEditing(false);
   };
 
   const setWeight = (pillarId: string, value: number) => {
@@ -295,25 +301,40 @@ export default function ScoringPage() {
           </p>
         </div>
         <div className="flex gap-3 flex-shrink-0">
-          <button
-            onClick={handleReset}
-            disabled={!dirty || saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-gray-300 hover:text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className="w-4 h-4" /> Discard
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!dirty || saving || Boolean(validationError)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <Loader className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            Save changes
-          </button>
+          {!isEditing ? (
+            <button
+              onClick={() => {
+                setSuccess(null);
+                setError(null);
+                setIsEditing(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleReset}
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white/5 border border-white/10 text-gray-300 hover:text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className="w-4 h-4" /> Discard
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!dirty || saving || Boolean(validationError)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save changes
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -383,10 +404,11 @@ export default function ScoringPage() {
                         max={WEIGHT_MAX}
                         step={0.01}
                         value={weight}
+                        disabled={!isEditing}
                         onChange={(e) =>
                           setWeight(pillar.id, Number(e.target.value))
                         }
-                        className="w-20 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-right focus:outline-none focus:border-blue-500/50"
+                        className="w-20 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-sm text-white text-right focus:outline-none focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <span
                         className={`text-sm font-bold w-14 text-right ${color.text}`}
@@ -401,10 +423,11 @@ export default function ScoringPage() {
                     max={WEIGHT_MAX}
                     step={0.5}
                     value={Math.min(Math.max(weight, WEIGHT_MIN), WEIGHT_MAX)}
+                    disabled={!isEditing}
                     onChange={(e) =>
                       setWeight(pillar.id, Number(e.target.value))
                     }
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                     style={{
                       background: `linear-gradient(to right, ${color.hex} 0%, ${color.hex} ${sliderPct}%, #ffffff15 ${sliderPct}%, #ffffff15 100%)`,
                     }}
@@ -441,11 +464,12 @@ export default function ScoringPage() {
                 min={1}
                 max={100}
                 value={amberMinDraft}
+                disabled={!isEditing}
                 onChange={(e) => {
                   setSuccess(null);
                   setAmberMinDraft(e.target.value);
                 }}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50"
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>
@@ -457,11 +481,12 @@ export default function ScoringPage() {
                 min={1}
                 max={100}
                 value={greenMinDraft}
+                disabled={!isEditing}
                 onChange={(e) => {
                   setSuccess(null);
                   setGreenMinDraft(e.target.value);
                 }}
-                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -486,20 +511,22 @@ export default function ScoringPage() {
                         type="text"
                         maxLength={50}
                         value={bandDrafts[band.key].label}
+                        disabled={!isEditing}
                         onChange={(e) =>
                           setBandDraft(band.key, { label: e.target.value })
                         }
-                        className={`flex-1 min-w-0 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold uppercase focus:outline-none focus:border-white/30 ${band.labelColor}`}
+                        className={`flex-1 min-w-0 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold uppercase focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed ${band.labelColor}`}
                       />
                     </div>
                     <input
                       type="text"
                       maxLength={200}
                       value={bandDrafts[band.key].description}
+                      disabled={!isEditing}
                       onChange={(e) =>
                         setBandDraft(band.key, { description: e.target.value })
                       }
-                      className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400 focus:outline-none focus:border-white/30"
+                      className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400 focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>

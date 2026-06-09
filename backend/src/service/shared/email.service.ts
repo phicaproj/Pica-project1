@@ -136,6 +136,61 @@ export async function adminCodeEmail(toEmail: string, code: string): Promise<Sen
   }
 }
 
+export async function sendAdminInviteEmail(
+  toEmail: string,
+  inviteLink: string,
+  roleName?: string | null
+): Promise<SendEmailResponse> {
+  try {
+    const roleLine = roleName
+      ? `You've been assigned the <strong>${roleName}</strong> role.`
+      : '';
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY as string,
+      },
+      body: JSON.stringify({
+        sender: {
+          email: process.env.EMAIL_FROM as string,
+          name: 'PICA by Beauvision',
+        },
+        to: [{ email: toEmail }],
+        subject: "You've been invited to the PICA admin team",
+        htmlContent: `
+          <h2>You're invited to the PICA admin team</h2>
+          <p>An administrator has invited you to join the PICA by Beauvision admin dashboard.</p>
+          ${roleLine ? `<p>${roleLine}</p>` : ''}
+          <p>To activate your account, click the button below and set your own password:</p>
+          <p>
+            <a href="${inviteLink}" style="display:inline-block; background-color:#3B82F6; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:bold;">Accept invitation &amp; set password</a>
+          </p>
+          <p>Or paste this link into your browser:</p>
+          <p><a href="${inviteLink}">${inviteLink}</a></p>
+          <p>This link expires in 24 hours. If you weren't expecting this invitation, you can safely ignore this email.</p>
+          <br/>
+          <p>— The Beauvision Team</p>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData: unknown = await response.json();
+      throw new AppError(JSON.stringify(errorData), 500);
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+
+    console.error('Error sending admin invite email:', message);
+
+    return { success: false, error: message };
+  }
+}
+
 export async function sendPaymentSuccessEmail({
   toEmail,
   businessName,

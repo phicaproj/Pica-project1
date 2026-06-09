@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import { PaymentStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import type {
@@ -14,9 +15,16 @@ import type {
   CreateRoleInput,
   UpdateRoleInput,
   AssignRoleInput,
+  InviteAdminInput,
+  InviteAdminResponse,
+  UpdateAdminProfileInput,
+  AdminProfileResponse,
 } from './admin.types';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
+import { generateInviteToken } from '../../service/shared/generateToken';
+import { sendAdminInviteEmail } from '../../service/shared/email.service';
+import { APP_URL } from '../../Config/env';
 
 const ACTIVE_WINDOW_DAYS = 30;
 
@@ -653,4 +661,146 @@ export async function assignRoleToAdminService(adminId: string, roleId: string |
       },
     },
   });
+}
+
+// ── Admin Onboarding (invite staff) ─────────────────────────────────────────
+// Creates an ADMIN account with NO password set (passwordHash: null), so it
+// cannot be logged into until the invitee activates it by setting their own
+// password through the 24h tokenized link. The whole create + email is wrapped
+// in a transaction: if the invite email fails to send, the half-provisioned
+// account is rolled back so the email can be re-invited cleanly.
+export async function inviteAdminService(input: InviteAdminInput): Promise<InviteAdminResponse> {
+  const normalizedEmail = input.email.trim().toLowerCase();
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true },
+  });
+  if (existingUser) {
+    throw new AppError('This email already belongs to an existing account', CONFLICT);
+  }
+
+  if (input.adminRoleId) {
+    const role = await prisma.adminRole.findUnique({ where: { id: input.adminRoleId } });
+    if (!role) {
+      throw new AppError('Role not found', NOT_FOUND);
+    }
+  }
+
+  const admin = await prisma.$transaction(async (tx) => {
+    const created = await tx.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash: null,
+        role: UserRole.ADMIN,
+        status: UserStatus.ACTIVE,
+        adminRoleId: input.adminRoleId ?? null,
+      },
+      select: {
+        id: true,
+        email: true,
+        adminRole: {
+          select: { id: true, name: true, permissions: true },
+        },
+      },
+    });
+
+    const inviteToken = generateInviteToken({ email: normalizedEmail, purpose: 'admin-invite' });
+    const inviteLink = `${APP_URL}/Auth/accept-invite?token=${encodeURIComponent(inviteToken)}`;
+
+    const sent = await sendAdminInviteEmail(created.email, inviteLink, created.adminRole?.name);
+    if (!sent.success) {
+      // Throwing rolls back the transaction so no orphan account is left behind.
+      throw new AppError(
+        'Could not send the invitation email. Please verify the address and try again.',
+        CONFLICT
+      );
+    }
+
+    return created;
+  });
+
+  return {
+    message: `Invitation sent to ${admin.email}`,
+    admin: {
+      id: admin.id,
+      email: admin.email,
+      adminRole: admin.adminRole,
+    },
+  };
+}
+
+// ── Admin self-service profile (personal info) ──────────────────────────────
+
+function shapeAdminProfile(user: {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  businessName: string | null;
+  avatarUrl: string | null;
+}): AdminProfileResponse {
+  return {
+    message: 'Profile fetched successfully',
+    profile: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      businessName: user.businessName,
+      avatarUrl: user.avatarUrl,
+    },
+  };
+}
+
+export async function getAdminProfileService(userId: string): Promise<AdminProfileResponse> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      businessName: true,
+      avatarUrl: true,
+    },
+  });
+  if (!user) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+  return shapeAdminProfile(user);
+}
+
+export async function updateAdminProfileService(
+  userId: string,
+  input: UpdateAdminProfileInput
+): Promise<AdminProfileResponse> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+      ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+      ...(input.phone !== undefined ? { phone: input.phone } : {}),
+      ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      businessName: true,
+      avatarUrl: true,
+    },
+  });
+
+  return { ...shapeAdminProfile(updated), message: 'Profile updated successfully' };
 }

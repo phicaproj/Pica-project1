@@ -26,6 +26,9 @@ import {
   X,
   Lock,
   ArrowUpRight,
+  Pencil,
+  Mail,
+  UserPlus,
 } from "lucide-react";
 import {
   getAllUsers,
@@ -34,6 +37,9 @@ import {
   updateAdminRole,
   deleteAdminRole,
   assignAdminRole,
+  inviteAdmin,
+  getMyAdminProfile,
+  updateMyAdminProfile,
   getScoringSettings,
   updateScoringSettings,
   getAdminPillarsDetailed,
@@ -100,6 +106,13 @@ function PillarTab() {
   const [p2aLimit, setP2aLimit] = useState(40);
   const [p2bLimit, setP2bLimit] = useState(30);
 
+  // Read-only until Edit is clicked — guards against accidental limit changes.
+  const [isEditingLimits, setIsEditingLimits] = useState(false);
+
+  // Counts are split per business size; toggle to view the exact number a
+  // SMALL- vs MEDIUM-business session would deliver.
+  const [bizSize, setBizSize] = useState<"SMALL" | "MEDIUM">("SMALL");
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -156,6 +169,7 @@ function PillarTab() {
 
       setSettings(res.data?.settings || null);
       setSuccess(true);
+      setIsEditingLimits(false);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       console.error(err);
@@ -163,6 +177,15 @@ function PillarTab() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancelLimits = () => {
+    if (settings) {
+      setP2aLimit(settings.phase2aQuestionLimit ?? 40);
+      setP2bLimit(settings.phase2bQuestionLimit ?? 30);
+    }
+    setError(null);
+    setIsEditingLimits(false);
   };
 
   if (loading) {
@@ -177,6 +200,13 @@ function PillarTab() {
   // Calculator
   const activePillarsCount = pillars.filter((p) => p.isActive).length || 7;
   const p2aPerPillarTarget = Math.floor(p2aLimit / activePillarsCount);
+
+  // Per-pillar count of questions actually available for the selected business
+  // size, split by phase. This is what a real session delivers (the legacy
+  // activeQuestionCount summed across both phases AND both sizes — the source
+  // of the "16 per pillar" over-count).
+  const phase2aCount = (p: AdminPillarDetailed) => p.counts?.phase2a?.[bizSize] ?? 0;
+  const phase2bCount = (p: AdminPillarDetailed) => p.counts?.phase2b?.[bizSize] ?? 0;
 
   return (
     <div className="space-y-6">
@@ -222,8 +252,9 @@ function PillarTab() {
                 min={7}
                 max={150}
                 value={p2aLimit}
+                disabled={!isEditingLimits}
                 onChange={(e) => setP2aLimit(Math.max(1, Number(e.target.value)))}
-                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32"
+                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <div className="text-xs text-gray-400">
                 &asymp; <span className="font-bold text-white">{p2aPerPillarTarget}</span> questions per pillar (across {activePillarsCount} active pillars)
@@ -256,8 +287,9 @@ function PillarTab() {
                 min={1}
                 max={100}
                 value={p2bLimit}
+                disabled={!isEditingLimits}
                 onChange={(e) => setP2bLimit(Math.max(1, Number(e.target.value)))}
-                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32"
+                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <div className="text-xs text-gray-400">
                 Users will answer at most <span className="font-bold text-white">{p2bLimit}</span> questions per pillar.
@@ -267,19 +299,41 @@ function PillarTab() {
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Edit / Save Button */}
       <div className="flex items-center justify-between bg-[#1C1F2E] rounded-2xl border border-white/5 px-6 py-4">
         <span className="text-xs text-gray-500 flex items-center gap-1.5">
           <Info className="w-4 h-4 text-blue-400" /> Limits apply to newly initialized sessions only.
         </span>
-        <button
-          onClick={handleSaveConfig}
-          disabled={saving}
-          className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-        >
-          {saving && <Loader className="w-4 h-4 animate-spin" />}
-          Save Question Limits
-        </button>
+        {!isEditingLimits ? (
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setError(null);
+              setIsEditingLimits(true);
+            }}
+            className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+          >
+            <Pencil className="w-4 h-4" /> Edit Limits
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCancelLimits}
+              disabled={saving}
+              className="px-5 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveConfig}
+              disabled={saving}
+              className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+            >
+              {saving && <Loader className="w-4 h-4 animate-spin" />}
+              Save Question Limits
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Pillars Audit Table */}
@@ -288,15 +342,34 @@ function PillarTab() {
           <div>
             <h2 className="text-base font-semibold text-white">Pillar Configuration Audit</h2>
             <p className="text-xs text-gray-500 mt-0.5">
-              Live checks comparing configured target limits against actual questions available in database.
+              Live checks comparing configured target limits against actual questions available in database for{" "}
+              <span className="text-gray-300 font-semibold">{bizSize === "SMALL" ? "Small" : "Medium"}</span> businesses.
             </p>
           </div>
-          <a
-            href="/admin/scoring"
-            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-          >
-            Manage Scoring Weights <ArrowUpRight className="w-4 h-4" />
-          </a>
+          <div className="flex items-center gap-4">
+            {/* Business size toggle — counts differ per size */}
+            <div className="inline-flex rounded-lg border border-white/10 bg-[#111318] p-0.5">
+              {(["SMALL", "MEDIUM"] as const).map((size) => (
+                <button
+                  key={size}
+                  onClick={() => setBizSize(size)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                    bizSize === size
+                      ? "bg-blue-500 text-white"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  {size === "SMALL" ? "Small" : "Medium"}
+                </button>
+              ))}
+            </div>
+            <a
+              href="/admin/scoring"
+              className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+            >
+              Manage Scoring Weights <ArrowUpRight className="w-4 h-4" />
+            </a>
+          </div>
         </div>
 
         {/* Table Headers */}
@@ -310,11 +383,14 @@ function PillarTab() {
         {/* Rows */}
         <div className="divide-y divide-white/5">
           {pillars.map((pillar) => {
-            const hasP2aWarning = p2aPerPillarTarget > pillar.activeQuestionCount;
-            const p2aDelivered = Math.min(p2aPerPillarTarget, pillar.activeQuestionCount);
-            
-            const hasP2bWarning = p2bLimit > pillar.activeQuestionCount;
-            const p2bDelivered = Math.min(p2bLimit, pillar.activeQuestionCount);
+            const p2aAvailable = phase2aCount(pillar);
+            const p2bAvailable = phase2bCount(pillar);
+
+            const hasP2aWarning = p2aPerPillarTarget > p2aAvailable;
+            const p2aDelivered = Math.min(p2aPerPillarTarget, p2aAvailable);
+
+            const hasP2bWarning = p2bLimit > p2bAvailable;
+            const p2bDelivered = Math.min(p2bLimit, p2bAvailable);
 
             return (
               <div key={pillar.id} className="grid grid-cols-4 items-center px-6 py-4 hover:bg-white/[0.01] transition-colors">
@@ -329,10 +405,10 @@ function PillarTab() {
                   <div className="text-xs text-gray-500 mt-0.5">Assigned Share: {pillar.weight}%</div>
                 </div>
 
-                {/* Database count */}
+                {/* Database count for the selected business size (2A + 2B) */}
                 <div className="text-center">
                   <span className="inline-block px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-sm font-semibold text-gray-300">
-                    {pillar.activeQuestionCount} questions
+                    {p2aAvailable + p2bAvailable} questions
                   </span>
                 </div>
 
@@ -442,6 +518,14 @@ function RolesTabWithExternalTrigger({
   const [selectedRole, setSelectedRole] = useState<AdminRoleRow | null>(null);
   const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [savingPermissions, setSavingPermissions] = useState(false);
+  // Permission grid + role-assignment dropdowns are read-only until Edit clicked.
+  const [isEditingPerms, setIsEditingPerms] = useState(false);
+
+  // Invite Admin modal
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRoleId, setInviteRoleId] = useState("");
+  const [invitingAdmin, setInvitingAdmin] = useState(false);
 
   // Search filter
   const [adminSearch, setAdminSearch] = useState("");
@@ -518,10 +602,11 @@ function RolesTabWithExternalTrigger({
     setRolePermissions(role.permissions || []);
     setError(null);
     setSuccessMessage(null);
+    setIsEditingPerms(false);
   };
 
   const handleTogglePermission = (permissionKey: string) => {
-    if (!selectedRole || selectedRole.name === "SUPER ADMIN") return;
+    if (!selectedRole || selectedRole.name === "SUPER ADMIN" || !isEditingPerms) return;
 
     setRolePermissions((prev) =>
       prev.includes(permissionKey)
@@ -555,6 +640,7 @@ function RolesTabWithExternalTrigger({
         const updatedRole = res.data.role;
         setRoles((prev) => prev.map((r) => (r.id === updatedRole.id ? updatedRole : r)));
         setSelectedRole(updatedRole);
+        setIsEditingPerms(false);
         setSuccessMessage(`Authority mapping for "${updatedRole.name}" updated successfully.`);
       }
     } catch (err: any) {
@@ -562,6 +648,39 @@ function RolesTabWithExternalTrigger({
       setError(err.message || "Failed to update role permissions.");
     } finally {
       setSavingPermissions(false);
+    }
+  };
+
+  const handleInviteAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
+    try {
+      setInvitingAdmin(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const res = await inviteAdmin({
+        email: inviteEmail.trim(),
+        adminRoleId: inviteRoleId || undefined,
+      });
+
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      setShowInviteModal(false);
+      setInviteEmail("");
+      setInviteRoleId("");
+      setSuccessMessage(`Invitation sent to ${res.data?.admin.email}. They have 24 hours to activate their account.`);
+      // Refresh the admin list so the pending invitee shows up.
+      void loadData();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to send admin invitation.");
+    } finally {
+      setInvitingAdmin(false);
     }
   };
 
@@ -702,15 +821,29 @@ function RolesTabWithExternalTrigger({
           <div className="relative bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
               <h2 className="text-base font-semibold text-white">System Administrators</h2>
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Filter admins..."
-                  value={adminSearch}
-                  onChange={(e) => setAdminSearch(e.target.value)}
-                  className="bg-[#111318] border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 w-52"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Filter admins..."
+                    value={adminSearch}
+                    onChange={(e) => setAdminSearch(e.target.value)}
+                    className="bg-[#111318] border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 w-52"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setSuccessMessage(null);
+                    setInviteEmail("");
+                    setInviteRoleId("");
+                    setShowInviteModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0"
+                >
+                  <UserPlus className="w-4 h-4" /> Invite Admin
+                </button>
               </div>
             </div>
 
@@ -758,8 +891,9 @@ function RolesTabWithExternalTrigger({
                         ) : (
                           <select
                             value={admin.adminRoleId || ""}
+                            disabled={!isEditingPerms}
                             onChange={(e) => handleAssignRole(admin.id, e.target.value || null)}
-                            className="bg-[#111318] border border-white/10 hover:border-white/25 text-xs text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer w-full max-w-[140px]"
+                            className="bg-[#111318] border border-white/10 hover:border-white/25 text-xs text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer w-full max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-white/10"
                           >
                             <option value="">Viewer (No Role)</option>
                             {roles.map((r) => (
@@ -797,9 +931,20 @@ function RolesTabWithExternalTrigger({
                   <span className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 uppercase tracking-wider">
                     <Lock className="w-3.5 h-3.5" /> Immutable
                   </span>
+                ) : !isEditingPerms ? (
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setSuccessMessage(null);
+                      setIsEditingPerms(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
                 ) : (
-                  <span className="text-[10px] font-bold px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-gray-300 uppercase tracking-wider">
-                    Custom Role
+                  <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 uppercase tracking-wider">
+                    Editing
                   </span>
                 )}
               </div>
@@ -809,6 +954,7 @@ function RolesTabWithExternalTrigger({
                   const IconComponent = perm.icon;
                   const isChecked = selectedRole.name === "SUPER ADMIN" || rolePermissions.includes(perm.key);
                   const isSuperAdmin = selectedRole.name === "SUPER ADMIN";
+                  const toggleDisabled = isSuperAdmin || !isEditingPerms;
 
                   return (
                     <div key={perm.key} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.01] transition-colors">
@@ -826,7 +972,7 @@ function RolesTabWithExternalTrigger({
                       </div>
                       <Toggle
                         checked={isChecked}
-                        disabled={isSuperAdmin}
+                        disabled={toggleDisabled}
                         onChange={() => handleTogglePermission(perm.key)}
                       />
                     </div>
@@ -834,14 +980,17 @@ function RolesTabWithExternalTrigger({
                 })}
               </div>
 
-              {selectedRole.name !== "SUPER ADMIN" && (
+              {selectedRole.name !== "SUPER ADMIN" && isEditingPerms && (
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-white/[0.01]">
                   <button
-                    onClick={() => setRolePermissions(selectedRole.permissions || [])}
+                    onClick={() => {
+                      setRolePermissions(selectedRole.permissions || []);
+                      setIsEditingPerms(false);
+                    }}
                     disabled={savingPermissions}
                     className="px-5 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
                   >
-                    Reset Changes
+                    Cancel
                   </button>
                   <button
                     onClick={handleSavePermissions}
@@ -957,6 +1106,85 @@ function RolesTabWithExternalTrigger({
         </div>
       </div>
 
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+          <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+              <h3 className="text-base font-semibold text-white">Invite a New Administrator</h3>
+              <button
+                onClick={() => setShowInviteModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteAdmin} className="p-6 space-y-4">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                We&apos;ll email this person a secure link (valid for 24 hours) to set their own
+                password and activate their admin account.
+              </p>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    placeholder="staff@company.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full bg-[#111318] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+                  Assign Role
+                </label>
+                <select
+                  value={inviteRoleId}
+                  onChange={(e) => setInviteRoleId(e.target.value)}
+                  className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                >
+                  <option value="">Viewer (No Role)</option>
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-500 mt-1.5">
+                  Controls which admin modules the new staff member can access. Can be changed later.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-4 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={invitingAdmin || !inviteEmail.trim()}
+                  className="px-5 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+                >
+                  {invitingAdmin && <Loader className="w-4 h-4 animate-spin" />}
+                  Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
@@ -1065,10 +1293,224 @@ function RolesTabWithExternalTrigger({
   );
 }
 
+// ─── TAB 3: Personal Information ──────────────────────────────────
+function PersonalInfoTab() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [businessName, setBusinessName] = useState("");
+
+  const hydrate = (p: {
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    businessName: string | null;
+  }) => {
+    setEmail(p.email);
+    setFirstName(p.firstName ?? "");
+    setLastName(p.lastName ?? "");
+    setPhone(p.phone ?? "");
+    setBusinessName(p.businessName ?? "");
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getMyAdminProfile();
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+      if (res.data) hydrate(res.data.profile);
+    } catch (err: any) {
+      console.error(err);
+      setError("Failed to load your profile.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(false);
+
+      const res = await updateMyAdminProfile({
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+        phone: phone.trim() || undefined,
+        businessName: businessName.trim() || undefined,
+      });
+
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      if (res.data) hydrate(res.data.profile);
+      setIsEditing(false);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to save your profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+        <Loader className="w-8 h-8 animate-spin text-blue-500" />
+        <span>Loading your profile...</span>
+      </div>
+    );
+  }
+
+  const inputClass =
+    "w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed";
+  const labelClass =
+    "text-[10px] font-bold text-gray-400 uppercase tracking-widest block";
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      {error && (
+        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-sm text-red-400">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Error:</span> {error}
+          </div>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm text-emerald-400">
+          <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <div>Profile saved successfully.</div>
+        </div>
+      )}
+
+      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-lg">Profile Details</h3>
+              <p className="text-xs text-gray-500">Your administrator account information</p>
+            </div>
+          </div>
+          {!isEditing ? (
+            <button
+              onClick={() => {
+                setSuccess(false);
+                setError(null);
+                setIsEditing(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  loadData();
+                  setIsEditing(false);
+                  setError(null);
+                }}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {saving && <Loader className="w-4 h-4 animate-spin" />}
+                Save
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="space-y-1.5">
+            <label className={labelClass}>First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              placeholder="Jane"
+              disabled={!isEditing}
+              onChange={(e) => setFirstName(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              placeholder="Doe"
+              disabled={!isEditing}
+              onChange={(e) => setLastName(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Phone</label>
+            <input
+              type="text"
+              value={phone}
+              placeholder="+2348012345678"
+              disabled={!isEditing}
+              onChange={(e) => setPhone(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Business Name</label>
+            <input
+              type="text"
+              value={businessName}
+              placeholder="Company Ltd"
+              disabled={!isEditing}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="sm:col-span-2 space-y-1.5">
+            <label className={labelClass}>Email (read-only)</label>
+            <input type="email" value={email} disabled className={inputClass} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Settings Page ───────────────────────────────────────────
 const TABS = [
   { key: "roles", label: "Roles & Permissions" },
   { key: "pillars", label: "Pillar Management" },
+  { key: "personal", label: "Personal Information" },
 ];
 
 export default function SettingsPage() {
@@ -1128,6 +1570,15 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {activeTab === "personal" && (
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-2">Personal Information</h1>
+          <p className="text-gray-400 text-sm">
+            Your administrator profile. Keep your contact details up to date.
+          </p>
+        </div>
+      )}
+
       {/* Tab content */}
       {activeTab === "roles" && (
         <>
@@ -1143,6 +1594,7 @@ export default function SettingsPage() {
         </>
       )}
       {activeTab === "pillars" && <PillarTab />}
+      {activeTab === "personal" && <PersonalInfoTab />}
     </div>
   );
 }

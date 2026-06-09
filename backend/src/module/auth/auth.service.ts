@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { Phase, SessionStatus, UserStatus } from '@prisma/client';
+import { Phase, SessionStatus, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { parseLocation } from '../../service/shared/location';
@@ -18,6 +18,7 @@ import {
   generateRefreshToken,
   hashOtpCode,
   otpCodeMatches,
+  verifyInviteToken,
   verifyOtpToken,
   verifyPasswordResetToken,
 } from '../../service/shared/generateToken';
@@ -27,6 +28,8 @@ import {
   sendWelcomeEmail,
 } from '../../service/shared/email.service';
 import type {
+  AcceptInviteInput,
+  AcceptInviteResponse,
   AdminLoginResponse,
   ForgotPasswordInput,
   ForgotPasswordResponse,
@@ -325,6 +328,44 @@ export async function resetPasswordService(
 
   return {
     message: 'Password reset successfully',
+  };
+}
+
+// Activates an invited admin account. The account was created with
+// passwordHash: null (see inviteAdminService), so login is impossible until
+// this sets the invitee's own password. Re-using a spent invite link is
+// rejected so a leaked link can't reset an already-active account.
+export async function acceptInviteService(
+  data: AcceptInviteInput
+): Promise<AcceptInviteResponse> {
+  const payload = verifyInviteToken(data.token);
+
+  if (payload.purpose !== 'admin-invite') {
+    throw new AppError('Invalid invite link', BAD_REQUEST);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: payload.email.trim().toLowerCase() },
+    select: { id: true, role: true, passwordHash: true },
+  });
+
+  if (!user || user.role !== UserRole.ADMIN) {
+    throw new AppError('This invitation is no longer valid', BAD_REQUEST);
+  }
+
+  if (user.passwordHash) {
+    throw new AppError('This invitation has already been used. Please sign in instead.', CONFLICT);
+  }
+
+  const passwordHash = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash, isVerified: true },
+  });
+
+  return {
+    message: 'Account activated. You can now sign in.',
   };
 }
 

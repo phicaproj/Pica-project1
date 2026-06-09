@@ -14,7 +14,6 @@ import {
   Database,
   Activity,
   TicketPercent,
-  Search,
   Menu,
   X,
   LogOut,
@@ -180,20 +179,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Right controls */}
         <div className="flex items-center gap-6">
-          <div className="relative hidden md:block">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Search insights..." 
-              className="bg-white/5 border border-white/10 rounded-full pl-9 pr-4 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 w-64"
-            />
-          </div>
-          
-          <button className="bg-blue-200/90 hover:bg-blue-200 text-blue-950 px-4 py-1.5 rounded-full text-sm font-medium transition-colors hidden sm:block">
-            Create Assessment
-          </button>
-
-          <div className="flex items-center gap-3 border-l border-white/10 pl-6">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
                <img src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Admin" className="w-full h-full object-cover" />
             </div>

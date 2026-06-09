@@ -209,6 +209,13 @@ export type AdminPillarResponse = {
 	isActive: boolean
 	activeQuestionCount: number
 	totalQuestionCount: number
+	// Active-question counts split by phase and business size — what a real
+	// session actually delivers per pillar (the legacy activeQuestionCount summed
+	// across all phases and sizes).
+	counts: {
+		phase2a: { SMALL: number; MEDIUM: number }
+		phase2b: { SMALL: number; MEDIUM: number }
+	}
 }
 
 export type AdminPillarListResponse = {

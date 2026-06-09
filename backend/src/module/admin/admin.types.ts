@@ -226,3 +226,46 @@ export type CreateRoleInput = z.infer<typeof createRoleSchema>;
 export type UpdateRoleInput = z.infer<typeof updateRoleSchema>;
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
 
+// ── Admin Onboarding (invite staff) ─────────────────────────────────────────
+export const inviteAdminSchema = z.object({
+  email: z.email('Invalid email address'),
+  adminRoleId: z.string().uuid().optional(),
+});
+
+export type InviteAdminInput = z.infer<typeof inviteAdminSchema>;
+
+export type InviteAdminResponse = {
+  message: string;
+  admin: {
+    id: string;
+    email: string;
+    adminRole: { id: string; name: string; permissions: string[] } | null;
+  };
+};
+
+// ── Admin self-service profile (personal info) ──────────────────────────────
+export const updateAdminProfileSchema = z.object({
+  firstName: z.string().trim().min(1).max(60).optional(),
+  lastName: z.string().trim().min(1).max(60).optional(),
+  phone: z
+    .string()
+    .regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits, optionally starting with +')
+    .optional(),
+  businessName: z.string().trim().min(1).max(100).optional(),
+});
+
+export type UpdateAdminProfileInput = z.infer<typeof updateAdminProfileSchema>;
+
+export type AdminProfileResponse = {
+  message: string;
+  profile: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    phone: string | null;
+    businessName: string | null;
+    avatarUrl: string | null;
+  };
+};
+

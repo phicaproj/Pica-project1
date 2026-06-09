@@ -1,4 +1,4 @@
-import { Prisma, RiskType } from '@prisma/client';
+import { BusinessSize, Phase, Prisma, RiskType } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
@@ -132,24 +132,45 @@ export async function listAdminPillarsService(): Promise<AdminPillarListResponse
       weight: true,
       displayOrder: true,
       isActive: true,
-      questions: { select: { isActive: true } },
+      questions: { select: { isActive: true, phase: true, businessSize: true } },
     },
     orderBy: { displayOrder: 'asc' },
   });
 
   return {
     message: 'Pillars fetched successfully',
-    pillars: pillars.map((pillar) => ({
-      id: pillar.id,
-      code: pillar.code,
-      name: pillar.name,
-      description: pillar.description,
-      weight: Number(pillar.weight),
-      displayOrder: pillar.displayOrder,
-      isActive: pillar.isActive,
-      activeQuestionCount: pillar.questions.filter((q) => q.isActive).length,
-      totalQuestionCount: pillar.questions.length,
-    })),
+    pillars: pillars.map((pillar) => {
+      const active = pillar.questions.filter((q) => q.isActive);
+
+      // Counts split by phase AND business size — this is what a real session
+      // actually delivers per pillar. The legacy unfiltered activeQuestionCount
+      // summed every phase × every business size (e.g. 16) which over-reported
+      // both the Phase 2A and Phase 2B columns.
+      const countBy = (phase: Phase, businessSize: BusinessSize) =>
+        active.filter((q) => q.phase === phase && q.businessSize === businessSize).length;
+
+      return {
+        id: pillar.id,
+        code: pillar.code,
+        name: pillar.name,
+        description: pillar.description,
+        weight: Number(pillar.weight),
+        displayOrder: pillar.displayOrder,
+        isActive: pillar.isActive,
+        activeQuestionCount: active.length,
+        totalQuestionCount: pillar.questions.length,
+        counts: {
+          phase2a: {
+            SMALL: countBy(Phase.PHASE2A, BusinessSize.SMALL),
+            MEDIUM: countBy(Phase.PHASE2A, BusinessSize.MEDIUM),
+          },
+          phase2b: {
+            SMALL: countBy(Phase.PHASE2B, BusinessSize.SMALL),
+            MEDIUM: countBy(Phase.PHASE2B, BusinessSize.MEDIUM),
+          },
+        },
+      };
+    }),
   };
 }
 

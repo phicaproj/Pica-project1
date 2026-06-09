@@ -12,6 +12,9 @@ import {
   updateRole,
   deleteRole,
   assignRoleToAdmin,
+  inviteAdmin,
+  getMyProfile,
+  updateMyProfile,
 } from './admin.controller';
 import {
   addOption,
@@ -62,12 +65,21 @@ const adminRouter = express.Router();
 // Every admin route is gated by authenticate + isAdmin.
 adminRouter.use(authenticate, isAdmin);
 
+// Admin self-service profile (personal info). No extra permission gate beyond
+// authenticate + isAdmin — an admin always manages their own profile. Declared
+// before the parameterized /users/:id routes so "me" is never captured as an id.
+adminRouter.get('/me', getMyProfile);
+adminRouter.patch('/me', updateMyProfile);
+
 // Admin roles and permissions routes
 adminRouter.get('/roles', hasPermission('settings:read'), listRoles);
 adminRouter.post('/roles', hasPermission('settings:write'), createRole);
 adminRouter.patch('/roles/:id', hasPermission('settings:write'), updateRole);
 adminRouter.delete('/roles/:id', hasPermission('settings:write'), deleteRole);
 adminRouter.patch('/users/:id/role', hasPermission('users:write'), assignRoleToAdmin);
+// Onboard a new admin: creates an ADMIN account with no password and emails a
+// 24h tokenized activation link. Gated like other user-modifying actions.
+adminRouter.post('/invite', hasPermission('users:write'), inviteAdmin);
 
 // Admin users list — backs the admin Users table.
 adminRouter.get('/users', hasPermission('users:read'), listUsers);

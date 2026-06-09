@@ -9,6 +9,8 @@ import {
   JWT_OTP_EXPIRE,
   JWT_PASSWORD_RESET_SECRET,
   JWT_PASSWORD_RESET_EXPIRE,
+  JWT_INVITE_SECRET,
+  JWT_INVITE_EXPIRE,
 } from '../../Config/env';
 import AppError from './appError';
 import { BAD_REQUEST } from './http';
@@ -28,6 +30,11 @@ export interface OtpTokenPayload {
 export interface PasswordResetTokenPayload {
   email: string;
   purpose: 'password-reset';
+}
+
+export interface InviteTokenPayload {
+  email: string;
+  purpose: 'admin-invite';
 }
 
 export function generateAccessToken(payload: TokenPayload) {
@@ -117,5 +124,21 @@ export function verifyPasswordResetToken(token: string): PasswordResetTokenPaylo
     return decoded;
   } catch (error) {
     throw new AppError('Invalid or expired password reset token', BAD_REQUEST);
+  }
+}
+
+export function generateInviteToken(payload: InviteTokenPayload) {
+  return jwt.sign(payload, JWT_INVITE_SECRET as jwt.Secret, {
+    expiresIn: JWT_INVITE_EXPIRE as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifyInviteToken(token: string): InviteTokenPayload {
+  try {
+    const decoded = jwt.verify(token, JWT_INVITE_SECRET as jwt.Secret) as InviteTokenPayload;
+
+    return decoded;
+  } catch (error) {
+    throw new AppError('Invalid or expired invite link', BAD_REQUEST);
   }
 }

@@ -3,6 +3,7 @@ import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
 import { CREATED, OK, UNAUTHORIZED } from '../../service/shared/http';
 import {
+  acceptInviteSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -11,6 +12,7 @@ import {
   verifyResetOtpSchema,
 } from './auth.types';
 import {
+  acceptInviteService,
   adminLoginService,
   forgotPasswordService,
   loginService,
@@ -66,6 +68,13 @@ export const verifyResetOtp = asyncHandler(async (req: Request, res: Response) =
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
   const request = resetPasswordSchema.parse(req.body);
   const result = await resetPasswordService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const acceptInvite = asyncHandler(async (req: Request, res: Response) => {
+  const request = acceptInviteSchema.parse(req.body);
+  const result = await acceptInviteService(request);
 
   return res.status(OK).json(result);
 });
