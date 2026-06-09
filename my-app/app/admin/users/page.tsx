@@ -14,7 +14,11 @@ import {
   Table2,
   Loader,
 } from "lucide-react";
-import { getAllUsers, type AdminUserRow } from "@/lib/authClient";
+import {
+  getAllUsers,
+  updateAdminUserStatus,
+  type AdminUserRow,
+} from "@/lib/authClient";
 
 // â”€â”€ Display helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fullName = (u: AdminUserRow) => {
@@ -86,6 +90,37 @@ export default function UsersPage() {
   const [active, setActive] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
   const openUser = (userId: string) => router.push(`/admin/users/${userId}`);
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  // Suspend / reactivate with a confirm step. The row updates in place so the
+  // admin sees the new standing without a refetch.
+  const toggleSuspend = async (user: AdminUserRow) => {
+    const suspending = user.status === "ACTIVE";
+    const name =
+      `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email;
+    const confirmed = window.confirm(
+      suspending
+        ? `Suspend ${name}? They will be logged out and unable to sign in until reactivated.`
+        : `Reactivate ${name}? They will be able to sign in again.`,
+    );
+    if (!confirmed) return;
+
+    setTogglingId(user.id);
+    const res = await updateAdminUserStatus(
+      user.id,
+      suspending ? "DISABLED" : "ACTIVE",
+    );
+    if (res.error) {
+      setError(res.error.message);
+    } else if (res.data) {
+      const nextStatus = res.data.user.status;
+      setUsers((current) =>
+        current.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u)),
+      );
+    }
+    setTogglingId(null);
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 

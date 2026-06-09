@@ -6,6 +6,7 @@ import {
   listUserSessions,
   showSessionById,
   showUserById,
+  updateUserStatus,
 } from './admin.controller';
 import {
   addOption,
@@ -59,6 +60,9 @@ adminRouter.use(authenticate, isAdmin);
 // Admin users list — backs the admin Users table.
 adminRouter.get('/users', listUsers);
 adminRouter.get('/users/:id', showUserById);
+// Suspend / reactivate. DISABLED blocks login and kills live tokens on the
+// next request (authenticate middleware re-checks status per request).
+adminRouter.patch('/users/:id/status', updateUserStatus);
 // Per-user paginated histories (5/page) for the user detail page.
 adminRouter.get('/users/:id/sessions', listUserSessions);
 adminRouter.get('/users/:id/payments', listUserPayments);

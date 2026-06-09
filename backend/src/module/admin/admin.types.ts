@@ -1,4 +1,5 @@
 import z from 'zod';
+import { UserStatus } from '@prisma/client';
 import type {
   AssessmentSession,
   BusinessSize,
@@ -43,9 +44,21 @@ export type AdminUserRow = {
   subscriptionPlan: Plan | null;
   isActive: boolean;
   lastSeenAt: Date | null;
+  // Account standing — ACTIVE or DISABLED (suspended). Distinct from
+  // isActive, which is derived from recent session activity.
+  status: UserStatus;
 
   createdAt: Date;
 };
+
+// Suspend / reactivate payload for PATCH /api/admin/users/:id/status.
+export const updateUserStatusSchema = z.object({
+  status: z.nativeEnum(UserStatus, {
+    message: 'status must be one of: ACTIVE, DISABLED',
+  }),
+});
+
+export type UpdateUserStatusInput = z.infer<typeof updateUserStatusSchema>;
 
 export type AdminUserDetails = AdminUserRow & {
   recentSessions: {

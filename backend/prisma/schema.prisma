@@ -72,6 +72,14 @@ enum UserRole {
   ADMIN
 }
 
+// Account standing. DISABLED users cannot log in, and any live access token
+// is rejected by the auth middleware on the next request (the middleware
+// re-checks status in the DB), so suspension takes effect immediately.
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
 // The seven fixed pillar codes. Used as the canonical identifier for a Pillar
 // and as the prefix of every questionCode (e.g. "FL-001"). Keeping it an enum
 // guarantees consistent naming across pillars and admin-created questions.
@@ -208,6 +216,7 @@ model User {
   avatarUrl    String?  @map("avatar_url")
   isVerified   Boolean  @default(false) @map("is_verified")
   role         UserRole @default(USER)
+  status       UserStatus @default(ACTIVE)
 
   // Snapshotted from the originating Phase 1 AssessmentSession at registration.
   // Source of truth for Phase 2A `businessSize` filtering.

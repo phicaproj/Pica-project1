@@ -1,4 +1,4 @@
-import { PaymentStatus, Prisma, UserRole } from '@prisma/client';
+import { PaymentStatus, Prisma, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import type {
   ListUsersQuery,
@@ -9,10 +9,11 @@ import type {
   AdminSessionResponseRow,
   ShowSessionResponse,
   ShowUserResponse,
+  UpdateUserStatusInput,
   UserSubListQuery,
 } from './admin.types';
 import AppError from '../../service/shared/appError';
-import { NOT_FOUND } from '../../service/shared/http';
+import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
 
 const ACTIVE_WINDOW_DAYS = 30;
 
@@ -61,6 +62,7 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
         businessName: true,
         businessSize: true,
         industry: true,
+        status: true,
         createdAt: true,
         // SUBSCRIPTION — the user's last paid plan: most recent SUCCESS payment.
         payments: {
@@ -96,6 +98,7 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
       subscriptionPlan: row.payments[0]?.plan ?? null,
       isActive: lastSeenAt !== null && lastSeenAt >= activeThreshold,
       lastSeenAt,
+      status: row.status,
       createdAt: row.createdAt,
     };
   });
@@ -131,6 +134,7 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       businessName: true,
       businessSize: true,
       industry: true,
+      status: true,
       createdAt: true,
       payments: {
         orderBy: { updatedAt: 'desc' },
@@ -201,6 +205,7 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       subscriptionPlan: lastPaid?.plan ?? null,
       isActive,
       lastSeenAt,
+      status: user.status,
       createdAt: user.createdAt,
       recentSessions: user.sessions.map((session) => ({
         id: session.id,
@@ -226,6 +231,49 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       completedSessions,
       totalSuccessfulPayments,
     },
+  };
+}
+
+/**
+ * Suspend or reactivate a user. DISABLED takes effect immediately: the login
+ * services reject disabled accounts, and the authenticate middleware
+ * re-checks status on every request so live tokens stop working too.
+ * Admin accounts cannot be suspended through this endpoint.
+ */
+export async function updateUserStatusService(
+  userId: string,
+  input: UpdateUserStatusInput
+): Promise<{ message: string; user: { id: string; status: UserStatus } }> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, status: true },
+  });
+
+  if (!user) throw new AppError('User not found', NOT_FOUND);
+
+  if (user.role === UserRole.ADMIN) {
+    throw new AppError('Admin accounts cannot be suspended', CONFLICT);
+  }
+
+  if (user.status === input.status) {
+    return {
+      message: `User is already ${input.status}`,
+      user: { id: user.id, status: user.status },
+    };
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { status: input.status },
+    select: { id: true, status: true },
+  });
+
+  return {
+    message:
+      input.status === UserStatus.DISABLED
+        ? 'User suspended successfully'
+        : 'User reactivated successfully',
+    user: updated,
   };
 }
 

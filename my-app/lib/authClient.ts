@@ -973,6 +973,8 @@ export const getMyBillingHistory = async (page = 1, limit = 10) => {
 }
 
 // ─── Admin: list all users ────────────────────────────────────
+export type AdminUserStatus = 'ACTIVE' | 'DISABLED'
+
 export type AdminUserRow = {
 	id: string
 	firstName: string | null
@@ -986,6 +988,8 @@ export type AdminUserRow = {
 	subscriptionPlan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
 	isActive: boolean
 	lastSeenAt: string | null
+	// Account standing — DISABLED means suspended (login + tokens blocked).
+	status: AdminUserStatus
 	createdAt: string
 }
 
@@ -1054,6 +1058,19 @@ export type ShowUserResponse = {
 export const getAdminUserDetails = async (id: string) => {
 	return authedFetch<ShowUserResponse>(`/admin/users/${id}`, {
 		method: 'GET',
+	})
+}
+
+export const updateAdminUserStatus = async (
+	id: string,
+	status: AdminUserStatus,
+) => {
+	return authedFetch<{
+		message: string
+		user: { id: string; status: AdminUserStatus }
+	}>(`/admin/users/${id}/status`, {
+		method: 'PATCH',
+		body: JSON.stringify({ status }),
 	})
 }
 

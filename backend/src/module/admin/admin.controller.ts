@@ -1,13 +1,19 @@
 import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
 import { OK } from '../../service/shared/http';
-import { listUsersQuery, showUserQuery, userSubListQuery } from './admin.types';
+import {
+  listUsersQuery,
+  showUserQuery,
+  updateUserStatusSchema,
+  userSubListQuery,
+} from './admin.types';
 import {
   getAllUsersService,
   getSessionDetailsService,
   getUserDetailsService,
   listUserPaymentsService,
   listUserSessionsService,
+  updateUserStatusService,
 } from './admin.service';
 
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
@@ -19,6 +25,13 @@ export const listUsers = asyncHandler(async (req: Request, res: Response) => {
 export const showUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = showUserQuery.parse(req.params);
   const result = await getUserDetailsService(id);
+  return res.status(OK).json(result);
+});
+
+export const updateUserStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = showUserQuery.parse(req.params);
+  const input = updateUserStatusSchema.parse(req.body);
+  const result = await updateUserStatusService(id, input);
   return res.status(OK).json(result);
 });
 

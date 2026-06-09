@@ -17,6 +17,7 @@ const AdminUserRowSchema = registry.register(
 			subscriptionPlan: z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'FREE']).nullable(),
 			isActive: z.boolean(),
 			lastSeenAt: z.string().datetime().nullable(),
+			status: z.enum(['ACTIVE', 'DISABLED']),
 			createdAt: z.string().datetime(),
 		})
 		.openapi('AdminUserRow'),
@@ -117,6 +118,51 @@ registry.registerPath({
 		401: errorResponse('Missing or invalid token'),
 		403: errorResponse('Forbidden: User is not an admin'),
 		404: errorResponse('User not found'),
+	},
+})
+
+// ----- PATCH /api/admin/users/:id/status --------------------------------------
+
+registry.registerPath({
+	method: 'patch',
+	path: '/api/admin/users/{id}/status',
+	tags: ['Admin'],
+	summary: 'Suspend or reactivate a user',
+	description:
+		'Admin-only. DISABLED blocks login and revokes access immediately — the auth middleware re-checks status on every request, so live tokens stop working too. Admin accounts cannot be suspended.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+		body: {
+			content: {
+				'application/json': {
+					schema: z.object({ status: z.enum(['ACTIVE', 'DISABLED']) }),
+				},
+			},
+		},
+	},
+	responses: {
+		200: {
+			description: 'User status updated successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						user: z.object({
+							id: z.string().uuid(),
+							status: z.enum(['ACTIVE', 'DISABLED']),
+						}),
+					}),
+				},
+			},
+		},
+		400: errorResponse('Validation failed'),
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		404: errorResponse('User not found'),
+		409: errorResponse('Admin accounts cannot be suspended'),
 	},
 })
 

@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { Phase, SessionStatus } from '@prisma/client';
+import { Phase, SessionStatus, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { parseLocation } from '../../service/shared/location';
@@ -161,6 +161,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       avatarUrl: true,
       isVerified: true,
       role: true,
+      status: true,
     },
   });
 
@@ -172,6 +173,12 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
 
   if (!passwordMatches) {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
+  }
+
+  // Checked AFTER the password so account standing is only revealed to
+  // someone who actually holds the credentials.
+  if (user.status === UserStatus.DISABLED) {
+    throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
   if (user.role === 'ADMIN') {
@@ -331,6 +338,7 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
       email: true,
       passwordHash: true,
       role: true,
+      status: true,
     },
   });
 
@@ -346,6 +354,10 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
 
   if (!passwordMatches) {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
+  }
+
+  if (user.status === UserStatus.DISABLED) {
+    throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
   const code = generateOtpCode();
@@ -401,6 +413,7 @@ export async function verifyAdminOTPService(
       avatarUrl: true,
       isVerified: true,
       role: true,
+      status: true,
     },
   });
 
@@ -410,6 +423,12 @@ export async function verifyAdminOTPService(
 
   if (user.role !== 'ADMIN') {
     throw new AppError('Access denied: not an admin account', FORBIDDEN);
+  }
+
+  // Re-checked here because the account may have been suspended between
+  // requesting the OTP and verifying it.
+  if (user.status === UserStatus.DISABLED) {
+    throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
   const tokenPayload = { id: user.id, role: user.role };
