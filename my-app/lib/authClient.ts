@@ -994,6 +994,12 @@ export type AdminUserRow = {
 	lastSeenAt: string | null
 	// Account standing — DISABLED means suspended (login + tokens blocked).
 	status: AdminUserStatus
+	adminRoleId?: string | null
+	adminRole?: {
+		id: string
+		name: string
+		permissions: string[]
+	} | null
 	createdAt: string
 }
 
