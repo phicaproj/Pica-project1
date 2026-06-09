@@ -65,6 +65,8 @@ export type AuthUser = {
   avatarUrl: string | null;
   isVerified: boolean;
   role: string;
+  adminRoleName?: string | null;
+  permissions?: string[];
 };
 
 export type RegisterResponse = {
