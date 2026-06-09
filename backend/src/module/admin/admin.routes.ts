@@ -1,14 +1,15 @@
 import express from 'express';
 import { isAdmin, authenticate } from '../../service/middleware/authMiddleware';
 import { listUsers, showUserById } from './admin.controller';
-import { getAllPillars } from '../question/question.controller';
 import {
   addOption,
   createQuestion,
   deleteOption,
   deleteQuestion,
   getAdminQuestion,
+  listAdminPillars,
   listAdminQuestions,
+  savePillarWeights,
   updateOption,
   updateQuestion,
 } from '../question/question.admin.controller';
@@ -39,6 +40,10 @@ import {
   adminPaymentStats,
   adminUpdatePaymentStatus,
 } from '../payment/payment.admin.controller';
+import {
+  getScoringSettings,
+  updateScoringSettings,
+} from '../scoring/scoring.admin.controller';
 
 const adminRouter = express.Router();
 
@@ -50,8 +55,16 @@ adminRouter.get('/users', listUsers);
 adminRouter.get('/users/:id', showUserById);
 
 // Question bank — authoring lives in the question module; mounted here behind
-// the admin gate. Pillars reuse the existing question-module list service.
-adminRouter.get('/pillars', getAllPillars);
+// the admin gate. The pillar list is the admin variant (weight, isActive,
+// question counts) — a superset of the public shape, so existing consumers
+// keep working. Bulk weight save backs the scoring page's single Save button.
+adminRouter.get('/pillars', listAdminPillars);
+adminRouter.patch('/pillars/weights', savePillarWeights);
+
+// Score interpretation — the RED/AMBER/GREEN band cutoffs + display copy.
+// Singleton settings row; edits apply to future submissions only.
+adminRouter.get('/scoring-settings', getScoringSettings);
+adminRouter.patch('/scoring-settings', updateScoringSettings);
 adminRouter.get('/questions', listAdminQuestions);
 adminRouter.post('/questions', createQuestion);
 adminRouter.get('/questions/:id', getAdminQuestion);

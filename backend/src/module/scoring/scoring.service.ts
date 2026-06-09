@@ -41,15 +41,38 @@ type SessionResponseRecord = {
   };
 };
 
+type BandThresholds = {
+  amberMin: number;
+  greenMin: number;
+};
+
+// Fallbacks if the scoring_settings singleton row is missing (fresh DB before
+// seed) — the original hardcoded thresholds.
+const DEFAULT_THRESHOLDS: BandThresholds = { amberMin: 50, greenMin: 80 };
+
 /**
- * Maps a 0–100 weighted score to a colour band.
- *   >= 80  → GREEN
- *   >= 50  → AMBER
- *   <  50  → RED
+ * Loads the admin-editable color-band thresholds from the scoring_settings
+ * singleton. Fetched once per scoring run inside the caller's transaction, so
+ * a submit is banded consistently even if an admin saves mid-run.
  */
-const toColorBand = (score: number): ColorBand => {
-  if (score >= 80) return ColorBand.GREEN;
-  if (score >= 50) return ColorBand.AMBER;
+async function getBandThresholds(tx: ScoringTx): Promise<BandThresholds> {
+  const settings = await tx.scoringSettings.findFirst({
+    select: { amberMin: true, greenMin: true },
+  });
+  if (!settings) return DEFAULT_THRESHOLDS;
+  return {
+    amberMin: Number(settings.amberMin),
+    greenMin: Number(settings.greenMin),
+  };
+}
+
+/**
+ * Maps a 0–100 weighted score to a colour band using the admin-configured
+ * thresholds (defaults: >= 80 GREEN, >= 50 AMBER, else RED).
+ */
+const toColorBand = (score: number, thresholds: BandThresholds): ColorBand => {
+  if (score >= thresholds.greenMin) return ColorBand.GREEN;
+  if (score >= thresholds.amberMin) return ColorBand.AMBER;
   return ColorBand.RED;
 };
 
@@ -149,8 +172,8 @@ export async function computeScoring(
     ...(options.questionIdScope ? { id: { in: options.questionIdScope } } : {}),
   } as const;
 
-  // ── 1. Fetch questions and responses in parallel ────────
-  const [phaseQuestions, responses] = await Promise.all([
+  // ── 1. Fetch questions, responses, and band thresholds in parallel ────────
+  const [phaseQuestions, responses, thresholds] = await Promise.all([
     tx.question.findMany({
       where: phaseQuestionWhere,
       select: {
@@ -206,6 +229,7 @@ export async function computeScoring(
         },
       },
     }),
+    getBandThresholds(tx),
   ]);
 
   // ── 2. Build lookup maps from questions ─────────────────
@@ -306,7 +330,7 @@ export async function computeScoring(
     // how many findings are returned (1 or 2), not a blind slice(0,2)
     const insightRuleApplied = determineInsightRule(pillarResponses);
     const findings = pickFindings(pillarResponses, insightRuleApplied);
-    const colorBand = toColorBand(weightedScore);
+    const colorBand = toColorBand(weightedScore, thresholds);
 
     // Contribute this pillar's weighted score to the overall total.
     // Each pillar is weighted proportionally to its share of totalWeight.
@@ -333,7 +357,7 @@ export async function computeScoring(
 
   return {
     totalScore: roundedTotalScore,
-    colorBand: toColorBand(roundedTotalScore),
+    colorBand: toColorBand(roundedTotalScore, thresholds),
     hasAnyKnockout: knockoutQuestionIds.size > 0,
     knockoutQuestionIds: [...knockoutQuestionIds],
     pillarScores,

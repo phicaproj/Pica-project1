@@ -6,6 +6,7 @@ import {
 	createQuestionSchema,
 	idParamSchema,
 	listAdminQuestionsQuerySchema,
+	savedPillarWeightsSchema,
 	updateOptionSchema,
 	updateQuestionSchema,
 } from './question.types'
@@ -15,10 +16,23 @@ import {
 	deleteOptionService,
 	deleteQuestionService,
 	getAdminQuestionService,
+	listAdminPillarsService,
 	listAdminQuestionsService,
+	savePillarWeightsService,
 	updateOptionService,
 	updateQuestionService,
 } from './question.admin.service'
+
+export const listAdminPillars = asyncHandler(async (_req: Request, res: Response) => {
+	const result = await listAdminPillarsService()
+	return res.status(OK).json(result)
+})
+
+export const savePillarWeights = asyncHandler(async (req: Request, res: Response) => {
+	const input = savedPillarWeightsSchema.parse(req.body)
+	const result = await savePillarWeightsService(input)
+	return res.status(OK).json(result)
+})
 
 export const listAdminQuestions = asyncHandler(async (req: Request, res: Response) => {
 	const query = listAdminQuestionsQuerySchema.parse(req.query)

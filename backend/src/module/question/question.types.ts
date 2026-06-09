@@ -168,6 +168,54 @@ export const idParamSchema = z.object({
 	id: z.string({ error: 'id is required' }).uuid('id must be a valid UUID'),
 })
 
+// ============================================================
+// ADMIN — pillar weights (admin-only; mounted from admin routes)
+// ============================================================
+//
+// Weights are relative shares — scoring normalizes by the total — so they
+// don't have to sum to 100. The page saves all 7 in one atomic request.
+
+const pillarWeight = z
+	.number({ error: 'weight is required' })
+	.gt(0, 'weight must be greater than 0')
+	.max(999.99, 'weight cannot exceed 999.99')
+
+export const savedPillarWeightsSchema = z.object({
+	weights: z
+		.array(
+			z.object({
+				pillarId: z
+					.string({ error: 'pillarId is required' })
+					.uuid('pillarId must be a valid UUID'),
+				weight: pillarWeight,
+			}),
+		)
+		.min(1, 'at least one weight must be provided')
+		.refine(
+			(weights) => new Set(weights.map((w) => w.pillarId)).size === weights.length,
+			{ message: 'duplicate pillarId in weights' },
+		),
+})
+
+export type SavePillarWeightsInput = z.infer<typeof savedPillarWeightsSchema>
+
+export type AdminPillarResponse = {
+	id: string
+	code: string
+	name: string
+	description: string | null
+	weight: number
+	displayOrder: number
+	isActive: boolean
+	activeQuestionCount: number
+	totalQuestionCount: number
+}
+
+export type AdminPillarListResponse = {
+	message: string
+	pillars: AdminPillarResponse[]
+}
+
 export const listAdminQuestionsQuerySchema = z.object({
 	pillarId: z.string().uuid().optional(),
 	phase: z.nativeEnum(Phase).optional(),

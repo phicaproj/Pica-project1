@@ -393,6 +393,72 @@ export const getAdminPillars = async () => {
 	})
 }
 
+// ── Admin scoring page — pillar weights + score interpretation ─────────────
+
+// /admin/pillars actually returns this superset of PillarMeta; the detailed
+// shape backs the scoring page (weights, counts), while older consumers keep
+// using the narrower PillarMeta view above.
+export type AdminPillarDetailed = PillarMeta & {
+	weight: number
+	isActive: boolean
+	activeQuestionCount: number
+	totalQuestionCount: number
+}
+
+export type AdminPillarsDetailedResponse = {
+	message: string
+	pillars: AdminPillarDetailed[]
+}
+
+export type ScoringSettings = {
+	amberMin: number
+	greenMin: number
+	redLabel: string
+	redDescription: string
+	amberLabel: string
+	amberDescription: string
+	greenLabel: string
+	greenDescription: string
+	updatedAt: string
+}
+
+export type ScoringSettingsResponse = {
+	message: string
+	settings: ScoringSettings
+}
+
+export type UpdateScoringSettingsPayload = Partial<Omit<ScoringSettings, 'updatedAt'>>
+
+export const getAdminPillarsDetailed = async () => {
+	return authedFetch<AdminPillarsDetailedResponse>('/admin/pillars', {
+		method: 'GET',
+	})
+}
+
+export const saveAdminPillarWeights = async (
+	weights: Array<{ pillarId: string; weight: number }>,
+) => {
+	return authedFetch<AdminPillarsDetailedResponse>('/admin/pillars/weights', {
+		method: 'PATCH',
+		body: JSON.stringify({ weights }),
+	})
+}
+
+export const getScoringSettings = async () => {
+	return authedFetch<ScoringSettingsResponse>('/admin/scoring-settings', {
+		method: 'GET',
+	})
+}
+
+export const updateScoringSettings = async (
+	payload: UpdateScoringSettingsPayload,
+) => {
+	return authedFetch<ScoringSettingsResponse>('/admin/scoring-settings', {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
 export type AdminQuestionPhase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
 export type AdminRiskType = 'NORMAL' | 'RISK' | 'KNOCKOUT'
 

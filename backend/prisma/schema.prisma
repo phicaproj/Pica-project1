@@ -114,6 +114,33 @@ model Pillar {
   @@map("pillars")
 }
 
+/// Singleton (one row) — admin-editable RED/AMBER/GREEN color-band thresholds
+/// plus display label/description per band. Read by the scoring engine at
+/// submit time, so edits only affect future submissions: every saved result
+/// keeps the band that was computed when it was scored.
+///   score >= greenMin           → GREEN
+///   score >= amberMin           → AMBER
+///   score <  amberMin           → RED
+/// Invariant (enforced in the service): 0 < amberMin < greenMin <= 100.
+model ScoringSettings {
+  id String @id @default(uuid())
+
+  amberMin Decimal @map("amber_min") @db.Decimal(5, 2) // default 50
+  greenMin Decimal @map("green_min") @db.Decimal(5, 2) // default 80
+
+  redLabel         String @default("Urgent attention") @map("red_label")
+  redDescription   String @default("Critical gaps that need immediate action.") @map("red_description")
+  amberLabel       String @default("Needs work") @map("amber_label")
+  amberDescription String @default("Improving, but key risks remain.") @map("amber_description")
+  greenLabel       String @default("Healthy") @map("green_label")
+  greenDescription String @default("Strong performance — keep it up.") @map("green_description")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("scoring_settings")
+}
+
 model Question {
   id                String       @id @default(uuid())
   pillarId          String       @map("pillar_id")

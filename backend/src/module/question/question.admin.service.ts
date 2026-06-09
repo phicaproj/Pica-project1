@@ -5,11 +5,13 @@ import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
 import type {
   AddOptionInput,
   AdminOptionResponse,
+  AdminPillarListResponse,
   AdminQuestionDetailResponse,
   AdminQuestionListResponse,
   AdminQuestionResponse,
   CreateQuestionInput,
   ListAdminQuestionsQuery,
+  SavePillarWeightsInput,
   UpdateOptionInput,
   UpdateQuestionInput,
 } from './question.types';
@@ -112,6 +114,78 @@ async function nextQuestionCode(
   }
 
   return `${prefix}${String(maxSeq + 1).padStart(3, '0')}`;
+}
+
+/**
+ * Admin pillar list — unlike the public getAllPillarsService, this includes
+ * weight, isActive (inactive pillars too), and question counts so the
+ * scoring page can compute effective % shares and warn on pillars that
+ * have no active questions.
+ */
+export async function listAdminPillarsService(): Promise<AdminPillarListResponse> {
+  const pillars = await prisma.pillar.findMany({
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      weight: true,
+      displayOrder: true,
+      isActive: true,
+      questions: { select: { isActive: true } },
+    },
+    orderBy: { displayOrder: 'asc' },
+  });
+
+  return {
+    message: 'Pillars fetched successfully',
+    pillars: pillars.map((pillar) => ({
+      id: pillar.id,
+      code: pillar.code,
+      name: pillar.name,
+      description: pillar.description,
+      weight: Number(pillar.weight),
+      displayOrder: pillar.displayOrder,
+      isActive: pillar.isActive,
+      activeQuestionCount: pillar.questions.filter((q) => q.isActive).length,
+      totalQuestionCount: pillar.questions.length,
+    })),
+  };
+}
+
+/**
+ * Bulk weight save — the scoring page's single Save button. All weights are
+ * validated against existing pillars and written in one transaction so the
+ * save is atomic: either every pillar gets its new weight or none do.
+ * Weight changes only affect future submissions (scoring reads Pillar.weight
+ * at submit time and persists the computed result).
+ */
+export async function savePillarWeightsService(
+  input: SavePillarWeightsInput
+): Promise<AdminPillarListResponse> {
+  await prisma.$transaction(async (tx) => {
+    const pillars = await tx.pillar.findMany({
+      where: { id: { in: input.weights.map((w) => w.pillarId) } },
+      select: { id: true },
+    });
+    const knownIds = new Set(pillars.map((p) => p.id));
+    const missing = input.weights.find((w) => !knownIds.has(w.pillarId));
+    if (missing) {
+      throw new AppError(`Pillar not found: ${missing.pillarId}`, NOT_FOUND);
+    }
+
+    await Promise.all(
+      input.weights.map((w) =>
+        tx.pillar.update({
+          where: { id: w.pillarId },
+          data: { weight: new Prisma.Decimal(w.weight.toFixed(2)) },
+        })
+      )
+    );
+  });
+
+  const result = await listAdminPillarsService();
+  return { ...result, message: 'Pillar weights saved successfully' };
 }
 
 export async function listAdminQuestionsService(

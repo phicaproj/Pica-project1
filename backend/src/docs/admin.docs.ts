@@ -119,3 +119,171 @@ registry.registerPath({
 		404: errorResponse('User not found'),
 	},
 })
+
+// ============================================================
+// Scoring page — pillar weights & score interpretation
+// ============================================================
+
+const AdminPillarSchema = registry.register(
+	'AdminPillar',
+	z
+		.object({
+			id: z.string().uuid(),
+			code: z.string(),
+			name: z.string(),
+			description: z.string().nullable(),
+			weight: z.number(),
+			displayOrder: z.number().int(),
+			isActive: z.boolean(),
+			activeQuestionCount: z.number().int(),
+			totalQuestionCount: z.number().int(),
+		})
+		.openapi('AdminPillar'),
+)
+
+const AdminPillarListResponseSchema = z.object({
+	message: z.string(),
+	pillars: z.array(AdminPillarSchema),
+})
+
+const ScoringSettingsSchema = registry.register(
+	'ScoringSettings',
+	z
+		.object({
+			amberMin: z.number(),
+			greenMin: z.number(),
+			redLabel: z.string(),
+			redDescription: z.string(),
+			amberLabel: z.string(),
+			amberDescription: z.string(),
+			greenLabel: z.string(),
+			greenDescription: z.string(),
+			updatedAt: z.string().datetime(),
+		})
+		.openapi('ScoringSettings'),
+)
+
+const ScoringSettingsResponseSchema = z.object({
+	message: z.string(),
+	settings: ScoringSettingsSchema,
+})
+
+// ----- GET /api/admin/pillars --------------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/pillars',
+	tags: ['Admin'],
+	summary: 'List all pillars with weights and question counts',
+	description:
+		'Admin-only. Returns every pillar (active and inactive) with its weight, description, and active/total question counts. Backs the admin scoring page.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'Pillars retrieved successfully',
+			content: { 'application/json': { schema: AdminPillarListResponseSchema } },
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+	},
+})
+
+// ----- PATCH /api/admin/pillars/weights ----------------------------------------
+
+registry.registerPath({
+	method: 'patch',
+	path: '/api/admin/pillars/weights',
+	tags: ['Admin'],
+	summary: 'Bulk-save pillar weights',
+	description:
+		'Admin-only. Atomically updates the weight of every pillar in the payload (one transaction). Weights are relative shares — scoring normalizes by the total — and only affect assessments submitted after the save.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: z.object({
+						weights: z
+							.array(
+								z.object({
+									pillarId: z.string().uuid(),
+									weight: z.number().gt(0).max(999.99),
+								}),
+							)
+							.min(1),
+					}),
+				},
+			},
+		},
+	},
+	responses: {
+		200: {
+			description: 'Pillar weights saved successfully',
+			content: { 'application/json': { schema: AdminPillarListResponseSchema } },
+		},
+		400: errorResponse('Validation failed'),
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		404: errorResponse('Pillar not found'),
+	},
+})
+
+// ----- GET /api/admin/scoring-settings ------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/scoring-settings',
+	tags: ['Admin'],
+	summary: 'Get score interpretation settings',
+	description:
+		'Admin-only. Returns the RED/AMBER/GREEN color-band cutoffs and the label/description shown for each band. Bands: score >= greenMin is GREEN, score >= amberMin is AMBER, below amberMin is RED.',
+	security: [{ bearerAuth: [] }],
+	responses: {
+		200: {
+			description: 'Scoring settings retrieved successfully',
+			content: { 'application/json': { schema: ScoringSettingsResponseSchema } },
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+	},
+})
+
+// ----- PATCH /api/admin/scoring-settings ----------------------------------------
+
+registry.registerPath({
+	method: 'patch',
+	path: '/api/admin/scoring-settings',
+	tags: ['Admin'],
+	summary: 'Update score interpretation settings',
+	description:
+		'Admin-only. Partially updates the band cutoffs and/or labels. Cutoffs must satisfy 0 < amberMin < greenMin <= 100 (validated against stored values when only one is sent). Changes apply to assessments submitted after the save; existing results keep their stored band.',
+	security: [{ bearerAuth: [] }],
+	request: {
+		body: {
+			content: {
+				'application/json': {
+					schema: z.object({
+						amberMin: z.number().gt(0).max(100).optional(),
+						greenMin: z.number().gt(0).max(100).optional(),
+						redLabel: z.string().min(1).max(50).optional(),
+						redDescription: z.string().min(1).max(200).optional(),
+						amberLabel: z.string().min(1).max(50).optional(),
+						amberDescription: z.string().min(1).max(200).optional(),
+						greenLabel: z.string().min(1).max(50).optional(),
+						greenDescription: z.string().min(1).max(200).optional(),
+					}),
+				},
+			},
+		},
+	},
+	responses: {
+		200: {
+			description: 'Scoring settings updated successfully',
+			content: { 'application/json': { schema: ScoringSettingsResponseSchema } },
+		},
+		400: errorResponse('Validation failed'),
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		422: errorResponse('amberMin must be less than greenMin'),
+	},
+})
