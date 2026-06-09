@@ -13,6 +13,7 @@ import {
   deleteRole,
   assignRoleToAdmin,
   inviteAdmin,
+  updateAdminAccess,
   getMyProfile,
   updateMyProfile,
 } from './admin.controller';
@@ -77,6 +78,8 @@ adminRouter.post('/roles', hasPermission('settings:write'), createRole);
 adminRouter.patch('/roles/:id', hasPermission('settings:write'), updateRole);
 adminRouter.delete('/roles/:id', hasPermission('settings:write'), deleteRole);
 adminRouter.patch('/users/:id/role', hasPermission('users:write'), assignRoleToAdmin);
+// Edit an existing admin's per-person access (department + granular permissions).
+adminRouter.patch('/users/:id/access', hasPermission('users:write'), updateAdminAccess);
 // Onboard a new admin: creates an ADMIN account with no password and emails a
 // 24h tokenized activation link. Gated like other user-modifying actions.
 adminRouter.post('/invite', hasPermission('users:write'), inviteAdmin);

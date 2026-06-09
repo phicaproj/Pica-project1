@@ -2,29 +2,20 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Plus,
   Search,
-  ChevronRight,
   AlertTriangle,
   BarChart2,
   CreditCard,
   Shuffle,
-  Wrench,
   Shield,
-  RefreshCw,
-  TrendingUp,
   Users,
   Settings2,
   Megaphone,
-  Scale,
   Cpu,
-  Rocket,
   CheckCircle2,
   Info,
-  Trash2,
   Loader,
   X,
-  Lock,
   ArrowUpRight,
   Pencil,
   Mail,
@@ -32,41 +23,17 @@ import {
 } from "lucide-react";
 import {
   getAllUsers,
-  listAdminRoles,
-  createAdminRole,
-  updateAdminRole,
-  deleteAdminRole,
-  assignAdminRole,
   inviteAdmin,
+  updateAdminAccess,
   getMyAdminProfile,
   updateMyAdminProfile,
   getScoringSettings,
   updateScoringSettings,
   getAdminPillarsDetailed,
   type AdminUserRow,
-  type AdminRoleRow,
   type AdminPillarDetailed,
   type ScoringSettings,
 } from "@/lib/authClient";
-
-// ─── Shared Toggle Component ──────────────────────────────────────
-function Toggle({ checked, onChange, disabled = false }: { checked: boolean; onChange: () => void; disabled?: boolean }) {
-  return (
-    <button
-      onClick={onChange}
-      disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
-        checked ? "bg-blue-500" : "bg-white/15"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-    >
-      <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-          checked ? "translate-x-5" : "translate-x-0.5"
-        }`}
-      />
-    </button>
-  );
-}
 
 // ─── Taxonomy of Granular Permissions ──────────────────────────────
 const PERMISSIONS_LIST = [
@@ -452,144 +419,151 @@ function PillarTab() {
   );
 }
 
-// Wrapper to expose the modal click to the parent SettingsPage
-function RolesTabWrapper() {
-  const [showModal, setShowModal] = useState(false);
-  
+// ─── Departments (org labels). SUPER ADMIN grants full access. ────
+const DEPARTMENTS = [
+  "Finance",
+  "Audit",
+  "Customer Care",
+  "Operations",
+  "Marketing",
+  "SUPER ADMIN",
+] as const;
+
+const CUSTOM_DEPARTMENT = "__custom__";
+
+// Shared department + permission picker, used by both the Invite modal and the
+// Edit-access modal. Permissions are ignored when department is SUPER ADMIN
+// (super bypasses every gate).
+function AccessFields({
+  department,
+  customDepartment,
+  permissions,
+  onDepartmentChange,
+  onCustomDepartmentChange,
+  onTogglePermission,
+}: {
+  department: string;
+  customDepartment: string;
+  permissions: string[];
+  onDepartmentChange: (value: string) => void;
+  onCustomDepartmentChange: (value: string) => void;
+  onTogglePermission: (key: string) => void;
+}) {
+  const isSuper = department === "SUPER ADMIN";
+  const isCustom = department === CUSTOM_DEPARTMENT;
+
   return (
     <>
-      <button
-        id="roles-tab-modal-opener"
-        onClick={() => {
-          const modalBtn = document.getElementById("roles-tab-modal-actual-btn");
-          if (modalBtn) modalBtn.click();
-        }}
-        className="hidden"
-      />
-      <div className="relative">
-        <button
-          id="roles-tab-modal-actual-btn"
-          onClick={() => {}}
-          className="hidden"
-        />
-        <RolesTabLocalHelper />
+      <div>
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+          Department <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={department}
+          onChange={(e) => onDepartmentChange(e.target.value)}
+          className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+        >
+          <option value="" disabled>
+            Select department
+          </option>
+          {DEPARTMENTS.map((d) => (
+            <option key={d} value={d}>
+              {d === "SUPER ADMIN" ? "Super Admin" : d}
+            </option>
+          ))}
+          <option value={CUSTOM_DEPARTMENT}>Custom…</option>
+        </select>
+        {isCustom && (
+          <input
+            type="text"
+            placeholder="Enter custom department name"
+            value={customDepartment}
+            onChange={(e) => onCustomDepartmentChange(e.target.value)}
+            className="mt-2 w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+          />
+        )}
+      </div>
+
+      <div>
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+          Permissions ({isSuper ? "all" : permissions.length})
+        </label>
+        {isSuper ? (
+          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-300">
+            <Shield className="w-4 h-4 flex-shrink-0" />
+            Super Admins have full access to every module. Individual permissions don&apos;t apply.
+          </div>
+        ) : (
+          <div className="bg-[#111318] border border-white/10 rounded-xl max-h-56 overflow-y-auto divide-y divide-white/5">
+            {PERMISSIONS_LIST.map((p) => {
+              const isSelected = permissions.includes(p.key);
+              return (
+                <button
+                  type="button"
+                  key={p.key}
+                  onClick={() => onTogglePermission(p.key)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-white/[0.02] transition-colors"
+                >
+                  <div>
+                    <div className="font-semibold text-white">{p.label}</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5">{p.description}</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    readOnly
+                    className="w-4 h-4 accent-blue-500 rounded border-white/10 cursor-pointer pointer-events-none flex-shrink-0 ml-3"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </>
   );
 }
 
-// Subcomponent which holds local modal opener trigger
-function RolesTabLocalHelper() {
-  const [openModalDirectly, setOpenModalDirectly] = useState(false);
-  
-  useEffect(() => {
-    const triggerBtn = document.getElementById("roles-tab-modal-actual-btn");
-    if (triggerBtn) {
-      const handler = () => setOpenModalDirectly(true);
-      triggerBtn.addEventListener("click", handler);
-      return () => triggerBtn.removeEventListener("click", handler);
-    }
-  }, []);
-
-  return (
-    <RolesTabWithExternalTrigger
-      externalModalOpen={openModalDirectly}
-      onModalClose={() => setOpenModalDirectly(false)}
-    />
-  );
-}
-
-// Inner RolesTab which receives externalModalOpen trigger
-function RolesTabWithExternalTrigger({
-  externalModalOpen,
-  onModalClose,
-}: {
-  externalModalOpen: boolean;
-  onModalClose: () => void;
-}) {
+// ─── TAB 1: Roles & Permissions (per-person access) ───────────────
+function RolesTab() {
   const [admins, setAdmins] = useState<AdminUserRow[]>([]);
-  const [roles, setRoles] = useState<AdminRoleRow[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
-  const [loadingRoles, setLoadingRoles] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Selected Role for Permission Editing Grid
-  const [selectedRole, setSelectedRole] = useState<AdminRoleRow | null>(null);
-  const [rolePermissions, setRolePermissions] = useState<string[]>([]);
-  const [savingPermissions, setSavingPermissions] = useState(false);
-  // Permission grid + role-assignment dropdowns are read-only until Edit clicked.
-  const [isEditingPerms, setIsEditingPerms] = useState(false);
-
-  // Invite Admin modal
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRoleId, setInviteRoleId] = useState("");
-  const [invitingAdmin, setInvitingAdmin] = useState(false);
-
-  // Search filter
   const [adminSearch, setAdminSearch] = useState("");
 
-  // Role Assignment
-  const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
+  // Invite modal
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteDepartment, setInviteDepartment] = useState("");
+  const [inviteCustomDept, setInviteCustomDept] = useState("");
+  const [invitePerms, setInvitePerms] = useState<string[]>([]);
+  const [invitingAdmin, setInvitingAdmin] = useState(false);
 
-  // Modal to Create Role
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRoleName, setNewRoleName] = useState("");
-  const [newRoleDesc, setNewRoleDesc] = useState("");
-  const [newRolePerms, setNewRolePerms] = useState<string[]>([]);
-  const [creatingRole, setCreatingRole] = useState(false);
-
-  useEffect(() => {
-    if (externalModalOpen) {
-      setShowCreateModal(true);
-    }
-  }, [externalModalOpen]);
-
-  useEffect(() => {
-    if (!showCreateModal) {
-      onModalClose();
-    }
-  }, [showCreateModal, onModalClose]);
+  // Edit-access modal
+  const [editTarget, setEditTarget] = useState<AdminUserRow | null>(null);
+  const [editDepartment, setEditDepartment] = useState("");
+  const [editCustomDept, setEditCustomDept] = useState("");
+  const [editPerms, setEditPerms] = useState<string[]>([]);
+  const [savingAccess, setSavingAccess] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
       setError(null);
       setLoadingAdmins(true);
-      setLoadingRoles(true);
 
-      const [adminsRes, rolesRes] = await Promise.all([
-        getAllUsers({ role: "ADMIN", pageSize: 100 }),
-        listAdminRoles(),
-      ]);
-
+      const adminsRes = await getAllUsers({ role: "ADMIN", pageSize: 100 });
       if (adminsRes.error) {
         setError(adminsRes.error.message);
         return;
       }
-      if (rolesRes.error) {
-        setError(rolesRes.error.message);
-        return;
-      }
-
-      const adminsData = adminsRes.data?.users || [];
-      const rolesData = rolesRes.data?.roles || [];
-
-      setAdmins(adminsData);
-      setRoles(rolesData);
-
-      if (rolesData.length > 0) {
-        const superAdmin = rolesData.find((r: any) => r.name === "SUPER ADMIN");
-        const defaultRole = superAdmin || rolesData[0];
-        setSelectedRole(defaultRole);
-        setRolePermissions(defaultRole.permissions || []);
-      }
+      setAdmins(adminsRes.data?.users || []);
     } catch (err: any) {
       console.error(err);
-      setError("Failed to load settings data. Please ensure database migrations have been run.");
+      setError("Failed to load administrators. Please ensure database migrations have been run.");
     } finally {
       setLoadingAdmins(false);
-      setLoadingRoles(false);
     }
   }, []);
 
@@ -597,63 +571,14 @@ function RolesTabWithExternalTrigger({
     loadData();
   }, [loadData]);
 
-  const handleSelectRole = (role: AdminRoleRow) => {
-    setSelectedRole(role);
-    setRolePermissions(role.permissions || []);
-    setError(null);
-    setSuccessMessage(null);
-    setIsEditingPerms(false);
-  };
-
-  const handleTogglePermission = (permissionKey: string) => {
-    if (!selectedRole || selectedRole.name === "SUPER ADMIN" || !isEditingPerms) return;
-
-    setRolePermissions((prev) =>
-      prev.includes(permissionKey)
-        ? prev.filter((k) => k !== permissionKey)
-        : [...prev, permissionKey]
-    );
-  };
-
-  const handleSavePermissions = async () => {
-    if (!selectedRole) return;
-    if (selectedRole.name === "SUPER ADMIN") {
-      setError("The Super Admin role has immutable permissions.");
-      return;
-    }
-
-    try {
-      setSavingPermissions(true);
-      setError(null);
-      setSuccessMessage(null);
-
-      const res = await updateAdminRole(selectedRole.id, {
-        permissions: rolePermissions,
-      });
-
-      if (res.error) {
-        setError(res.error.message);
-        return;
-      }
-
-      if (res.data) {
-        const updatedRole = res.data.role;
-        setRoles((prev) => prev.map((r) => (r.id === updatedRole.id ? updatedRole : r)));
-        setSelectedRole(updatedRole);
-        setIsEditingPerms(false);
-        setSuccessMessage(`Authority mapping for "${updatedRole.name}" updated successfully.`);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to update role permissions.");
-    } finally {
-      setSavingPermissions(false);
-    }
-  };
+  // Resolve the department label a payload should send (custom sentinel → text).
+  const resolveDept = (selected: string, custom: string) =>
+    selected === CUSTOM_DEPARTMENT ? custom.trim() : selected;
 
   const handleInviteAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    const department = resolveDept(inviteDepartment, inviteCustomDept);
+    if (!inviteEmail.trim() || !department) return;
 
     try {
       setInvitingAdmin(true);
@@ -662,7 +587,8 @@ function RolesTabWithExternalTrigger({
 
       const res = await inviteAdmin({
         email: inviteEmail.trim(),
-        adminRoleId: inviteRoleId || undefined,
+        department,
+        permissions: department === "SUPER ADMIN" ? [] : invitePerms,
       });
 
       if (res.error) {
@@ -672,9 +598,12 @@ function RolesTabWithExternalTrigger({
 
       setShowInviteModal(false);
       setInviteEmail("");
-      setInviteRoleId("");
-      setSuccessMessage(`Invitation sent to ${res.data?.admin.email}. They have 24 hours to activate their account.`);
-      // Refresh the admin list so the pending invitee shows up.
+      setInviteDepartment("");
+      setInviteCustomDept("");
+      setInvitePerms([]);
+      setSuccessMessage(
+        `Invitation sent to ${res.data?.admin.email}. They have 24 hours to activate their account.`
+      );
       void loadData();
     } catch (err: any) {
       console.error(err);
@@ -684,18 +613,31 @@ function RolesTabWithExternalTrigger({
     }
   };
 
-  const handleCreateRole = async (e: React.FormEvent) => {
+  const openEditAccess = (admin: AdminUserRow) => {
+    setEditTarget(admin);
+    const currentDept = admin.department ?? admin.adminRole?.name ?? "";
+    const isKnown = (DEPARTMENTS as readonly string[]).includes(currentDept);
+    setEditDepartment(currentDept ? (isKnown ? currentDept : CUSTOM_DEPARTMENT) : "");
+    setEditCustomDept(isKnown ? "" : currentDept);
+    setEditPerms(admin.permissions ?? admin.adminRole?.permissions ?? []);
+    setError(null);
+    setSuccessMessage(null);
+  };
+
+  const handleSaveAccess = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRoleName.trim()) return;
+    if (!editTarget) return;
+    const department = resolveDept(editDepartment, editCustomDept);
+    if (!department) return;
 
     try {
-      setCreatingRole(true);
+      setSavingAccess(true);
       setError(null);
+      setSuccessMessage(null);
 
-      const res = await createAdminRole({
-        name: newRoleName.trim(),
-        description: newRoleDesc.trim() || undefined,
-        permissions: newRolePerms,
+      const res = await updateAdminAccess(editTarget.id, {
+        department,
+        permissions: department === "SUPER ADMIN" ? [] : editPerms,
       });
 
       if (res.error) {
@@ -703,88 +645,32 @@ function RolesTabWithExternalTrigger({
         return;
       }
 
-      if (res.data) {
-        const newRole = res.data.role;
-        setRoles((prev) => [...prev, newRole]);
-        setShowCreateModal(false);
-        setNewRoleName("");
-        setNewRoleDesc("");
-        setNewRolePerms([]);
-        setSuccessMessage(`Role "${newRole.name}" created successfully.`);
-        setSelectedRole(newRole);
-        setRolePermissions(newRole.permissions);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to create new role.");
-    } finally {
-      setCreatingRole(false);
-    }
-  };
-
-  const handleDeleteRole = async (role: AdminRoleRow) => {
-    if (role.name === "SUPER ADMIN") return;
-    if (!confirm(`Are you sure you want to delete the "${role.name}" role?`)) return;
-
-    try {
-      setError(null);
-      setSuccessMessage(null);
-      const res = await deleteAdminRole(role.id);
-      
-      if (res.error) {
-        setError(res.error.message);
-        return;
-      }
-
-      setRoles((prev) => prev.filter((r) => r.id !== role.id));
-      setSuccessMessage(`Role "${role.name}" deleted successfully.`);
-      
-      if (selectedRole?.id === role.id && roles.length > 1) {
-        const remaining = roles.filter((r) => r.id !== role.id);
-        setSelectedRole(remaining[0]);
-        setRolePermissions(remaining[0].permissions);
-      }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Failed to delete role. Ensure no users are assigned to this role.");
-    }
-  };
-
-  const handleAssignRole = async (userId: string, roleId: string | null) => {
-    try {
-      setAssigningUserId(userId);
-      setError(null);
-      setSuccessMessage(null);
-
-      const res = await assignAdminRole(userId, roleId);
-      
-      if (res.error) {
-        setError(res.error.message);
-        return;
-      }
-
       setAdmins((prev) =>
-        prev.map((adm) => {
-          if (adm.id === userId) {
-            const roleObj = roles.find((r) => r.id === roleId);
-            return {
-              ...adm,
-              adminRoleId: roleId,
-              adminRole: roleObj ? { id: roleObj.id, name: roleObj.name, permissions: roleObj.permissions } : null,
-            };
-          }
-          return adm;
-        })
+        prev.map((a) =>
+          a.id === editTarget.id
+            ? { ...a, department, permissions: department === "SUPER ADMIN" ? [] : editPerms }
+            : a
+        )
       );
-
-      setSuccessMessage("Administrator role updated successfully.");
+      setEditTarget(null);
+      setSuccessMessage(`Access updated for ${editTarget.email}.`);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Failed to update administrator role.");
+      setError(err.message || "Failed to update admin access.");
     } finally {
-      setAssigningUserId(null);
+      setSavingAccess(false);
     }
   };
+
+  const togglePerm = (
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    key: string
+  ) => {
+    setter((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
+
+  const departmentLabel = (admin: AdminUserRow) =>
+    admin.department ?? admin.adminRole?.name ?? "Viewer";
 
   const filteredAdmins = admins.filter((a) => {
     const q = adminSearch.toLowerCase();
@@ -792,13 +678,19 @@ function RolesTabWithExternalTrigger({
     return (
       name.includes(q) ||
       a.email.toLowerCase().includes(q) ||
-      (a.adminRole?.name || "Viewer").toLowerCase().includes(q)
+      departmentLabel(a).toLowerCase().includes(q)
     );
   });
 
+  const superAdminCount = admins.filter(
+    (a) => (a.department ?? a.adminRole?.name) === "SUPER ADMIN"
+  ).length;
+  const departmentCount = new Set(
+    admins.map((a) => a.department ?? a.adminRole?.name).filter(Boolean)
+  ).size;
+
   return (
     <div className="space-y-6">
-      {/* Alert Banners */}
       {error && (
         <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-sm text-red-400">
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
@@ -814,9 +706,8 @@ function RolesTabWithExternalTrigger({
         </div>
       )}
 
-      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Col */}
+        {/* Left: administrators list */}
         <div className="lg:col-span-2 space-y-6">
           <div className="relative bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
@@ -837,7 +728,9 @@ function RolesTabWithExternalTrigger({
                     setError(null);
                     setSuccessMessage(null);
                     setInviteEmail("");
-                    setInviteRoleId("");
+                    setInviteDepartment("");
+                    setInviteCustomDept("");
+                    setInvitePerms([]);
                     setShowInviteModal(true);
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0"
@@ -848,8 +741,10 @@ function RolesTabWithExternalTrigger({
             </div>
 
             <div className="grid grid-cols-3 px-6 py-3 border-b border-white/5 bg-white/[0.01]">
-              {["ADMINISTRATOR", "ASSIGNED ROLE", "STATUS"].map((h) => (
-                <span key={h} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{h}</span>
+              {["ADMINISTRATOR", "DEPARTMENT", "ACCESS"].map((h) => (
+                <span key={h} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                  {h}
+                </span>
               ))}
             </div>
 
@@ -865,9 +760,13 @@ function RolesTabWithExternalTrigger({
             ) : (
               <div className="divide-y divide-white/5">
                 {filteredAdmins.map((admin) => {
-                  const roleName = admin.adminRole?.name || "Viewer";
+                  const label = departmentLabel(admin);
+                  const isSuper = label === "SUPER ADMIN";
                   const initialLetters = getInitials(admin.firstName, admin.lastName, admin.email);
-                  
+                  const permCount = isSuper
+                    ? "All"
+                    : (admin.permissions ?? admin.adminRole?.permissions ?? []).length;
+
                   return (
                     <div key={admin.id} className="grid grid-cols-3 items-center px-6 py-4 hover:bg-white/[0.01] transition-colors">
                       <div className="flex items-center gap-3">
@@ -876,40 +775,34 @@ function RolesTabWithExternalTrigger({
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-white truncate">
-                            {admin.firstName || admin.lastName ? `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim() : "Admin Profile"}
+                            {admin.firstName || admin.lastName
+                              ? `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim()
+                              : "Admin Profile"}
                           </div>
                           <div className="text-xs text-gray-500 truncate">{admin.email}</div>
                         </div>
                       </div>
 
                       <div className="pr-4">
-                        {assigningUserId === admin.id ? (
-                          <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                            <Loader className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                            <span>Updating...</span>
-                          </div>
-                        ) : (
-                          <select
-                            value={admin.adminRoleId || ""}
-                            disabled={!isEditingPerms}
-                            onChange={(e) => handleAssignRole(admin.id, e.target.value || null)}
-                            className="bg-[#111318] border border-white/10 hover:border-white/25 text-xs text-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer w-full max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-white/10"
-                          >
-                            <option value="">Viewer (No Role)</option>
-                            {roles.map((r) => (
-                              <option key={r.id} value={r.id}>
-                                {r.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
+                        <span
+                          className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-lg border ${
+                            isSuper
+                              ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                              : "bg-white/5 border-white/10 text-gray-300"
+                          }`}
+                        >
+                          {isSuper ? "Super Admin" : label}
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${admin.status === "ACTIVE" ? "bg-emerald-500" : "bg-red-500"}`} />
-                        <span className={`text-sm ${admin.status === "ACTIVE" ? "text-emerald-400" : "text-red-400"}`}>
-                          {admin.status === "ACTIVE" ? "Active" : "Suspended"}
-                        </span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-gray-400">{permCount} permissions</span>
+                        <button
+                          onClick={() => openEditAccess(admin)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Edit access
+                        </button>
                       </div>
                     </div>
                   );
@@ -917,96 +810,9 @@ function RolesTabWithExternalTrigger({
               </div>
             )}
           </div>
-
-          {selectedRole && (
-            <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-                <div>
-                  <h2 className="text-base font-semibold text-white">Granular Module Permissions</h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Configuring permissions for: <span className="text-blue-400 font-bold">{selectedRole.name}</span>
-                  </p>
-                </div>
-                {selectedRole.name === "SUPER ADMIN" ? (
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 uppercase tracking-wider">
-                    <Lock className="w-3.5 h-3.5" /> Immutable
-                  </span>
-                ) : !isEditingPerms ? (
-                  <button
-                    onClick={() => {
-                      setError(null);
-                      setSuccessMessage(null);
-                      setIsEditingPerms(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </button>
-                ) : (
-                  <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 uppercase tracking-wider">
-                    Editing
-                  </span>
-                )}
-              </div>
-
-              <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
-                {PERMISSIONS_LIST.map((perm) => {
-                  const IconComponent = perm.icon;
-                  const isChecked = selectedRole.name === "SUPER ADMIN" || rolePermissions.includes(perm.key);
-                  const isSuperAdmin = selectedRole.name === "SUPER ADMIN";
-                  const toggleDisabled = isSuperAdmin || !isEditingPerms;
-
-                  return (
-                    <div key={perm.key} className="flex items-center gap-4 px-6 py-4 hover:bg-white/[0.01] transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center flex-shrink-0 text-gray-400">
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-white flex items-center gap-2">
-                          {perm.label}
-                          <span className="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1.5 py-0.5 rounded uppercase">
-                            {perm.key.split(":")[1]}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-0.5 truncate">{perm.description}</div>
-                      </div>
-                      <Toggle
-                        checked={isChecked}
-                        disabled={toggleDisabled}
-                        onChange={() => handleTogglePermission(perm.key)}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {selectedRole.name !== "SUPER ADMIN" && isEditingPerms && (
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5 bg-white/[0.01]">
-                  <button
-                    onClick={() => {
-                      setRolePermissions(selectedRole.permissions || []);
-                      setIsEditingPerms(false);
-                    }}
-                    disabled={savingPermissions}
-                    className="px-5 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSavePermissions}
-                    disabled={savingPermissions}
-                    className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-                  >
-                    {savingPermissions && <Loader className="w-4 h-4 animate-spin" />}
-                    Save Authority Mapping
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Right Col */}
+        {/* Right: summary */}
         <div className="space-y-6">
           <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Authority Overview</div>
@@ -1019,79 +825,13 @@ function RolesTabWithExternalTrigger({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Super Admins</div>
-                <div className="text-2xl font-bold text-white">
-                  {admins.filter((a) => a.adminRole?.name === "SUPER ADMIN").length}
-                </div>
+                <div className="text-2xl font-bold text-white">{superAdminCount}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Custom Roles</div>
-                <div className="text-2xl font-bold text-white">
-                  {roles.length}
-                </div>
+                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Departments</div>
+                <div className="text-2xl font-bold text-white">{departmentCount}</div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Role Types</div>
-              <Info className="w-4 h-4 text-gray-500" />
-            </div>
-            
-            {loadingRoles ? (
-              <div className="flex items-center justify-center py-6 text-sm text-gray-400 gap-2">
-                <Loader className="w-4 h-4 animate-spin text-blue-500" />
-                <span>Loading roles...</span>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {roles.map((role) => {
-                  const isSelected = selectedRole?.id === role.id;
-                  const isSuperAdmin = role.name === "SUPER ADMIN";
-                  
-                  return (
-                    <div
-                      key={role.id}
-                      className={`flex items-center justify-between px-4 py-3 border rounded-xl transition-all ${
-                        isSelected
-                          ? "bg-blue-500/10 border-blue-500/30"
-                          : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <button
-                        onClick={() => handleSelectRole(role)}
-                        className="flex-1 flex items-center gap-3 text-left group min-w-0"
-                      >
-                        <span className={`w-2 h-2 rounded-full ${isSelected ? "bg-blue-400" : "bg-gray-500"}`} />
-                        <div className="min-w-0 flex-1">
-                          <span className={`text-sm font-medium transition-colors block truncate ${isSelected ? "text-white font-bold" : "text-gray-300"}`}>
-                            {role.name}
-                          </span>
-                          {role.description && (
-                            <p className="text-[10px] text-gray-500 truncate w-full">{role.description}</p>
-                          )}
-                        </div>
-                      </button>
-
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        {isSuperAdmin ? (
-                          <Lock className="w-3.5 h-3.5 text-gray-600" />
-                        ) : (
-                          <button
-                            onClick={() => handleDeleteRole(role)}
-                            className="text-gray-500 hover:text-red-400 transition-colors p-1"
-                            title="Delete role"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <ChevronRight className={`w-4 h-4 ${isSelected ? "text-blue-400" : "text-gray-600"}`} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
@@ -1100,12 +840,13 @@ function RolesTabWithExternalTrigger({
               <span className="text-sm font-bold text-red-400">Elevated Privileges</span>
             </div>
             <p className="text-xs text-red-300/80 leading-relaxed">
-              Assigning Super Admin roles grants full database modification authority. Use extreme caution when expanding this group.
+              Assigning the Super Admin department grants full database modification authority. Use extreme caution when expanding this group.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Invite Admin modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
@@ -1142,26 +883,14 @@ function RolesTabWithExternalTrigger({
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
-                  Assign Role
-                </label>
-                <select
-                  value={inviteRoleId}
-                  onChange={(e) => setInviteRoleId(e.target.value)}
-                  className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
-                >
-                  <option value="">Viewer (No Role)</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-gray-500 mt-1.5">
-                  Controls which admin modules the new staff member can access. Can be changed later.
-                </p>
-              </div>
+              <AccessFields
+                department={inviteDepartment}
+                customDepartment={inviteCustomDept}
+                permissions={invitePerms}
+                onDepartmentChange={setInviteDepartment}
+                onCustomDepartmentChange={setInviteCustomDept}
+                onTogglePermission={(key) => togglePerm(setInvitePerms, key)}
+              />
 
               <div className="flex gap-3 justify-end pt-4 border-t border-white/5">
                 <button
@@ -1173,7 +902,7 @@ function RolesTabWithExternalTrigger({
                 </button>
                 <button
                   type="submit"
-                  disabled={invitingAdmin || !inviteEmail.trim()}
+                  disabled={invitingAdmin || !inviteEmail.trim() || !resolveDept(inviteDepartment, inviteCustomDept)}
                   className="px-5 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
                 >
                   {invitingAdmin && <Loader className="w-4 h-4 animate-spin" />}
@@ -1185,104 +914,48 @@ function RolesTabWithExternalTrigger({
         </div>
       )}
 
-      {showCreateModal && (
+      {/* Edit-access modal */}
+      {editTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
           <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <h3 className="text-base font-semibold text-white">Create New Administrative Role</h3>
+              <div>
+                <h3 className="text-base font-semibold text-white">Edit Administrator Access</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{editTarget.email}</p>
+              </div>
               <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setNewRolePerms([]);
-                }}
+                onClick={() => setEditTarget(null)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateRole} className="p-6 space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
-                  Role Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Editor, Lead Auditor"
-                  value={newRoleName}
-                  onChange={(e) => setNewRoleName(e.target.value)}
-                  className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  placeholder="Role description..."
-                  value={newRoleDesc}
-                  onChange={(e) => setNewRoleDesc(e.target.value)}
-                  className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
-                  Select Initial Permissions ({newRolePerms.length})
-                </label>
-                <div className="bg-[#111318] border border-white/10 rounded-xl max-h-48 overflow-y-auto divide-y divide-white/5">
-                  {PERMISSIONS_LIST.map((p) => {
-                    const isSelected = newRolePerms.includes(p.key);
-                    return (
-                      <button
-                        type="button"
-                        key={p.key}
-                        onClick={() =>
-                          setNewRolePerms((prev) =>
-                            prev.includes(p.key)
-                              ? prev.filter((k) => k !== p.key)
-                              : [...prev, p.key]
-                          )
-                        }
-                        className="w-full flex items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-white/[0.02] transition-colors"
-                      >
-                        <div>
-                          <div className="font-semibold text-white">{p.label}</div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">{p.description}</div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          readOnly
-                          className="w-4 h-4 accent-blue-500 rounded border-white/10 cursor-pointer pointer-events-none"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            <form onSubmit={handleSaveAccess} className="p-6 space-y-4">
+              <AccessFields
+                department={editDepartment}
+                customDepartment={editCustomDept}
+                permissions={editPerms}
+                onDepartmentChange={setEditDepartment}
+                onCustomDepartmentChange={setEditCustomDept}
+                onTogglePermission={(key) => togglePerm(setEditPerms, key)}
+              />
 
               <div className="flex gap-3 justify-end pt-4 border-t border-white/5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setNewRolePerms([]);
-                  }}
+                  onClick={() => setEditTarget(null)}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={creatingRole || !newRoleName.trim()}
+                  disabled={savingAccess || !resolveDept(editDepartment, editCustomDept)}
                   className="px-5 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
                 >
-                  {creatingRole && <Loader className="w-4 h-4 animate-spin" />}
-                  Create Role
+                  {savingAccess && <Loader className="w-4 h-4 animate-spin" />}
+                  Save Access
                 </button>
               </div>
             </form>
@@ -1540,24 +1213,11 @@ export default function SettingsPage() {
 
       {/* Tab headers */}
       {activeTab === "roles" && (
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Roles & Permissions</h1>
-            <p className="text-gray-400 text-sm max-w-lg">
-              Define structural authority. Manage dynamic roles, modular permissions, and team administrative boundaries.
-            </p>
-          </div>
-          <div className="flex gap-3 flex-shrink-0">
-            <button
-              onClick={() => {
-                const btn = document.getElementById("create-role-btn-trigger");
-                if (btn) btn.click();
-              }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-colors"
-            >
-              <Plus className="w-4 h-4" /> Create New Role
-            </button>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-2">Roles & Permissions</h1>
+          <p className="text-gray-400 text-sm max-w-lg">
+            Onboard staff and manage each administrator&apos;s department and granular module permissions.
+          </p>
         </div>
       )}
 
@@ -1580,19 +1240,7 @@ export default function SettingsPage() {
       )}
 
       {/* Tab content */}
-      {activeTab === "roles" && (
-        <>
-          <button
-            id="create-role-btn-trigger"
-            onClick={() => {
-              const modalTrigger = document.getElementById("roles-tab-modal-opener");
-              if (modalTrigger) modalTrigger.click();
-            }}
-            className="hidden"
-          />
-          <RolesTabWrapper />
-        </>
-      )}
+      {activeTab === "roles" && <RolesTab />}
       {activeTab === "pillars" && <PillarTab />}
       {activeTab === "personal" && <PersonalInfoTab />}
     </div>

@@ -35,6 +35,8 @@ async function getAccountStatusAndPermissions(userId: string) {
 		where: { id: userId },
 		select: {
 			status: true,
+			permissions: true,
+			department: true,
 			adminRole: {
 				select: {
 					name: true,
@@ -44,6 +46,30 @@ async function getAccountStatusAndPermissions(userId: string) {
 		},
 	})
 	return user
+}
+
+/**
+ * Resolves an admin's effective access. Per-person fields on the User are the
+ * source of truth; the legacy adminRole relation is only a fallback for admins
+ * onboarded before per-person permissions existed. An admin is "super" when
+ * their department is SUPER ADMIN (new model) or their legacy role is named
+ * SUPER ADMIN.
+ */
+export function resolveAdminAccess(dbUser: {
+	permissions?: string[] | null
+	department?: string | null
+	adminRole?: { name: string; permissions: string[] } | null
+}): { isSuper: boolean; permissions: string[]; label: string | undefined } {
+	const isSuper =
+		dbUser.department === 'SUPER ADMIN' || dbUser.adminRole?.name === 'SUPER ADMIN'
+	const permissions =
+		dbUser.permissions && dbUser.permissions.length > 0
+			? dbUser.permissions
+			: dbUser.adminRole?.permissions || []
+	const label = isSuper
+		? 'SUPER ADMIN'
+		: dbUser.department ?? dbUser.adminRole?.name ?? undefined
+	return { isSuper, permissions, label }
 }
 
 export const authenticate = async (
@@ -79,10 +105,11 @@ export const authenticate = async (
 				.json({ message: 'Your account has been suspended. Contact support.' })
 		}
 
+		const access = resolveAdminAccess(dbUser)
 		req.user = {
 			...payload,
-			adminRoleName: dbUser.adminRole?.name,
-			permissions: dbUser.adminRole?.permissions || [],
+			adminRoleName: access.label,
+			permissions: access.permissions,
 		}
 	} catch (err) {
 		return res.status(500).json({ message: 'Could not verify account status' })

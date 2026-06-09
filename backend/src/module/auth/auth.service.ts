@@ -3,6 +3,7 @@ import { Phase, SessionStatus, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { parseLocation } from '../../service/shared/location';
+import { resolveAdminAccess } from '../../service/middleware/authMiddleware';
 import {
   BAD_REQUEST,
   CONFLICT,
@@ -455,6 +456,8 @@ export async function verifyAdminOTPService(
       isVerified: true,
       role: true,
       status: true,
+      permissions: true,
+      department: true,
       adminRoleId: true,
       adminRole: {
         select: {
@@ -479,11 +482,16 @@ export async function verifyAdminOTPService(
     throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
+  // Per-person permissions are the source of truth; the legacy adminRole is a
+  // fallback. resolveAdminAccess centralizes the super-admin + fallback rules
+  // shared with the auth middleware.
+  const access = resolveAdminAccess(user);
+
   const tokenPayload = {
     id: user.id,
     role: user.role,
-    adminRoleName: user.adminRole?.name || undefined,
-    permissions: user.adminRole?.permissions || [],
+    adminRoleName: access.label,
+    permissions: access.permissions,
   };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
@@ -500,8 +508,8 @@ export async function verifyAdminOTPService(
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
       role: user.role,
-      adminRoleName: user.adminRole?.name || null,
-      permissions: user.adminRole?.permissions || [],
+      adminRoleName: access.label ?? null,
+      permissions: access.permissions,
     },
     accessToken,
     refreshToken,

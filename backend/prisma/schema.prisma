@@ -221,6 +221,14 @@ model User {
   role         UserRole @default(USER)
   status       UserStatus @default(ACTIVE)
 
+  // Per-admin access control. `permissions` is this admin's own granular
+  // permission set (chosen at invite time); `department` is an org label
+  // ("Finance", "Audit", "SUPER ADMIN", or custom). For ADMIN users these are
+  // the source of truth — the legacy adminRole relation is only a fallback for
+  // admins onboarded before per-person permissions existed.
+  permissions  String[] @default([])
+  department   String?
+
   // Snapshotted from the originating Phase 1 AssessmentSession at registration.
   // Source of truth for Phase 2A `businessSize` filtering.
   businessSize   BusinessSize? @map("business_size")

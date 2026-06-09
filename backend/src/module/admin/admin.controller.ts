@@ -12,6 +12,7 @@ import {
   updateRoleSchema,
   assignRoleSchema,
   inviteAdminSchema,
+  updateAdminAccessSchema,
   updateAdminProfileSchema,
 } from './admin.types';
 import {
@@ -27,6 +28,7 @@ import {
   deleteRoleService,
   assignRoleToAdminService,
   inviteAdminService,
+  updateAdminAccessService,
   getAdminProfileService,
   updateAdminProfileService,
 } from './admin.service';
@@ -109,6 +111,13 @@ export const inviteAdmin = asyncHandler(async (req: Request, res: Response) => {
   const input = inviteAdminSchema.parse(req.body);
   const result = await inviteAdminService(input);
   return res.status(CREATED).json(result);
+});
+
+export const updateAdminAccess = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = showUserQuery.parse(req.params);
+  const input = updateAdminAccessSchema.parse(req.body);
+  const result = await updateAdminAccessService(id, input);
+  return res.status(OK).json({ message: 'Admin access updated successfully', user: result });
 });
 
 // ── Admin self-service profile (personal info) ──────────────────────────────

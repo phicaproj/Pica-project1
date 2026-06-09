@@ -1006,6 +1006,9 @@ export type AdminUserRow = {
 		name: string
 		permissions: string[]
 	} | null
+	// Per-person admin access (source of truth for new admins).
+	department?: string | null
+	permissions?: string[]
 	createdAt: string
 }
 
@@ -1635,16 +1638,29 @@ export const assignAdminRole = async (
 export type InvitedAdmin = {
 	id: string
 	email: string
-	adminRole: { id: string; name: string; permissions: string[] } | null
+	department: string | null
+	permissions: string[]
 }
 
 export const inviteAdmin = async (payload: {
 	email: string
-	adminRoleId?: string
+	department: string
+	permissions: string[]
 }) => {
 	return authedFetch<{ message: string; admin: InvitedAdmin }>(
 		'/admin/invite',
 		{ method: 'POST', body: JSON.stringify(payload) },
+	)
+}
+
+// Edit an existing admin's department + per-person permissions.
+export const updateAdminAccess = async (
+	userId: string,
+	payload: { department?: string; permissions?: string[] },
+) => {
+	return authedFetch<{ message: string; user: any }>(
+		`/admin/users/${userId}/access`,
+		{ method: 'PATCH', body: JSON.stringify(payload) },
 	)
 }
 

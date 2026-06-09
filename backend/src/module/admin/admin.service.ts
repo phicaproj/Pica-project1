@@ -17,6 +17,7 @@ import type {
   AssignRoleInput,
   InviteAdminInput,
   InviteAdminResponse,
+  UpdateAdminAccessInput,
   UpdateAdminProfileInput,
   AdminProfileResponse,
 } from './admin.types';
@@ -74,6 +75,8 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
         businessSize: true,
         industry: true,
         status: true,
+        department: true,
+        permissions: true,
         adminRoleId: true,
         adminRole: {
           select: {
@@ -118,6 +121,8 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
       status: row.status,
       adminRoleId: row.adminRoleId,
       adminRole: row.adminRole,
+      department: row.department,
+      permissions: row.permissions,
       createdAt: row.createdAt,
     };
   });
@@ -671,6 +676,10 @@ export async function assignRoleToAdminService(adminId: string, roleId: string |
 // account is rolled back so the email can be re-invited cleanly.
 export async function inviteAdminService(input: InviteAdminInput): Promise<InviteAdminResponse> {
   const normalizedEmail = input.email.trim().toLowerCase();
+  const isSuper = input.department === 'SUPER ADMIN';
+  // A super admin bypasses every permission gate, so storing an explicit
+  // permission list for them is redundant — keep it empty.
+  const permissions = isSuper ? [] : input.permissions;
 
   const existingUser = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -680,13 +689,6 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
     throw new AppError('This email already belongs to an existing account', CONFLICT);
   }
 
-  if (input.adminRoleId) {
-    const role = await prisma.adminRole.findUnique({ where: { id: input.adminRoleId } });
-    if (!role) {
-      throw new AppError('Role not found', NOT_FOUND);
-    }
-  }
-
   const admin = await prisma.$transaction(async (tx) => {
     const created = await tx.user.create({
       data: {
@@ -694,21 +696,21 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
         passwordHash: null,
         role: UserRole.ADMIN,
         status: UserStatus.ACTIVE,
-        adminRoleId: input.adminRoleId ?? null,
+        department: input.department,
+        permissions,
       },
       select: {
         id: true,
         email: true,
-        adminRole: {
-          select: { id: true, name: true, permissions: true },
-        },
+        department: true,
+        permissions: true,
       },
     });
 
     const inviteToken = generateInviteToken({ email: normalizedEmail, purpose: 'admin-invite' });
     const inviteLink = `${APP_URL}/Auth/accept-invite?token=${encodeURIComponent(inviteToken)}`;
 
-    const sent = await sendAdminInviteEmail(created.email, inviteLink, created.adminRole?.name);
+    const sent = await sendAdminInviteEmail(created.email, inviteLink, created.department);
     if (!sent.success) {
       // Throwing rolls back the transaction so no orphan account is left behind.
       throw new AppError(
@@ -725,9 +727,50 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
     admin: {
       id: admin.id,
       email: admin.email,
-      adminRole: admin.adminRole,
+      department: admin.department,
+      permissions: admin.permissions,
     },
   };
+}
+
+// Edit an existing admin's department + per-person permissions. SUPER ADMIN
+// department clears the explicit permission list (super bypasses gates).
+export async function updateAdminAccessService(
+  adminId: string,
+  input: UpdateAdminAccessInput
+) {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: { id: true, role: true },
+  });
+  if (!admin) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+  if (admin.role !== UserRole.ADMIN) {
+    throw new AppError('User is not an administrator', CONFLICT);
+  }
+
+  const isSuper = input.department === 'SUPER ADMIN';
+
+  return prisma.user.update({
+    where: { id: adminId },
+    data: {
+      ...(input.department !== undefined ? { department: input.department } : {}),
+      ...(input.permissions !== undefined
+        ? { permissions: isSuper ? [] : input.permissions }
+        : isSuper
+          ? { permissions: [] }
+          : {}),
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      department: true,
+      permissions: true,
+    },
+  });
 }
 
 // ── Admin self-service profile (personal info) ──────────────────────────────

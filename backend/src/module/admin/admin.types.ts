@@ -57,6 +57,10 @@ export type AdminUserRow = {
     permissions: string[];
   } | null;
 
+  // Per-person admin access (source of truth for new admins).
+  department?: string | null;
+  permissions?: string[];
+
   createdAt: Date;
 };
 
@@ -226,10 +230,33 @@ export type CreateRoleInput = z.infer<typeof createRoleSchema>;
 export type UpdateRoleInput = z.infer<typeof updateRoleSchema>;
 export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
 
+// Canonical granular permission keys. MUST stay in sync with the frontend
+// PERMISSIONS_LIST in my-app/app/admin/settings/page.tsx — both derive from the
+// same permission taxonomy. Used to validate invite / access-edit payloads so
+// arbitrary strings can't be written to a User's permissions.
+export const PERMISSION_KEYS = [
+  'users:read',
+  'users:write',
+  'questions:read',
+  'questions:write',
+  'scoring:read',
+  'scoring:write',
+  'coupons:read',
+  'coupons:write',
+  'analytics:read',
+  'ledger:read',
+  'ledger:write',
+  'settings:read',
+  'settings:write',
+] as const;
+
+const permissionKeySchema = z.enum(PERMISSION_KEYS);
+
 // ── Admin Onboarding (invite staff) ─────────────────────────────────────────
 export const inviteAdminSchema = z.object({
   email: z.email('Invalid email address'),
-  adminRoleId: z.string().uuid().optional(),
+  department: z.string().trim().min(1, 'Department is required').max(60),
+  permissions: z.array(permissionKeySchema).default([]),
 });
 
 export type InviteAdminInput = z.infer<typeof inviteAdminSchema>;
@@ -239,9 +266,18 @@ export type InviteAdminResponse = {
   admin: {
     id: string;
     email: string;
-    adminRole: { id: string; name: string; permissions: string[] } | null;
+    department: string | null;
+    permissions: string[];
   };
 };
+
+// ── Edit an existing admin's access (department + per-person permissions) ────
+export const updateAdminAccessSchema = z.object({
+  department: z.string().trim().min(1).max(60).optional(),
+  permissions: z.array(permissionKeySchema).optional(),
+});
+
+export type UpdateAdminAccessInput = z.infer<typeof updateAdminAccessSchema>;
 
 // ── Admin self-service profile (personal info) ──────────────────────────────
 export const updateAdminProfileSchema = z.object({

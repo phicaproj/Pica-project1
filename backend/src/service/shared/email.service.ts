@@ -139,11 +139,11 @@ export async function adminCodeEmail(toEmail: string, code: string): Promise<Sen
 export async function sendAdminInviteEmail(
   toEmail: string,
   inviteLink: string,
-  roleName?: string | null
+  department?: string | null
 ): Promise<SendEmailResponse> {
   try {
-    const roleLine = roleName
-      ? `You've been assigned the <strong>${roleName}</strong> role.`
+    const roleLine = department
+      ? `You've been added to the <strong>${department}</strong> team.`
       : '';
 
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
