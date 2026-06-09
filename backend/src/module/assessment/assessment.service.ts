@@ -568,9 +568,8 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
     };
   }
 
-  // Snapshot every active question for the user's businessSize, ordered by pillar
-  // then question displayOrder. The admin controls the question count by activating
-  // or deactivating questions in the bank — no hard-coded per-pillar quota.
+  // Snapshot active question for the user's businessSize, ordered by pillar
+  // then question displayOrder. Gated by configured limit per pillar.
   const pillars = await prisma.pillar.findMany({
     where: { isActive: true },
     select: {
@@ -587,7 +586,13 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
     orderBy: { displayOrder: 'asc' },
   });
 
-  const selectedQuestionIds = pillars.flatMap((p) => p.questions.map((q) => q.id));
+  const settings = await prisma.scoringSettings.findFirst();
+  const targetLimit = settings?.phase2aQuestionLimit ?? 40;
+  const limitPerPillar = Math.floor(targetLimit / Math.max(pillars.length, 1));
+
+  const selectedQuestionIds = pillars.flatMap((p) =>
+    p.questions.slice(0, limitPerPillar).map((q) => q.id)
+  );
 
   if (selectedQuestionIds.length === 0) {
     throw new AppError(
@@ -707,9 +712,8 @@ export async function startPhase2BService(
     };
   }
 
-  // Snapshot every active PHASE2B question for this pillar, ordered for
-  // deterministic display. No per-pillar count enforced — whatever the admin
-  // has seeded is what the user gets.
+  // Snapshot active PHASE2B question for this pillar, ordered for
+  // deterministic display. Gated by configured limit.
   const questions = await prisma.question.findMany({
     where: {
       pillarId: pillar.id,
@@ -727,7 +731,9 @@ export async function startPhase2BService(
     );
   }
 
-  const selectedQuestionIds = questions.map((q) => q.id);
+  const settings = await prisma.scoringSettings.findFirst();
+  const targetLimit = settings?.phase2bQuestionLimit ?? 30;
+  const selectedQuestionIds = questions.slice(0, targetLimit).map((q) => q.id);
 
   const created = await prisma.$transaction(async (tx) => {
     const session = await tx.assessmentSession.create({

@@ -46,6 +46,8 @@ async function getOrCreateSettings(): Promise<SettingsRow> {
       id: SINGLETON_ID,
       amberMin: new Prisma.Decimal(50),
       greenMin: new Prisma.Decimal(80),
+      phase2aQuestionLimit: 40,
+      phase2bQuestionLimit: 30,
     },
   });
 }
@@ -89,6 +91,12 @@ export async function updateScoringSettingsService(
       ...(input.greenLabel !== undefined ? { greenLabel: input.greenLabel } : {}),
       ...(input.greenDescription !== undefined
         ? { greenDescription: input.greenDescription }
+        : {}),
+      ...(input.phase2aQuestionLimit !== undefined
+        ? { phase2aQuestionLimit: input.phase2aQuestionLimit }
+        : {}),
+      ...(input.phase2bQuestionLimit !== undefined
+        ? { phase2bQuestionLimit: input.phase2bQuestionLimit }
         : {}),
     },
   });

@@ -62,6 +62,8 @@ export const updateScoringSettingsSchema = z
     amberDescription: bandDescription.optional(),
     greenLabel: bandLabel.optional(),
     greenDescription: bandDescription.optional(),
+    phase2aQuestionLimit: z.number().int().min(1).max(200).optional(),
+    phase2bQuestionLimit: z.number().int().min(1).max(200).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',

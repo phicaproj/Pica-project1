@@ -41,6 +41,17 @@ const NAV_ASSESSMENT: NavItemConfig[] = [
   { label: "Settings", icon: Settings, href: "/admin/settings" },
 ];
 
+const ROUTE_PERMISSIONS: Record<string, string> = {
+  "/admin/users": "users:read",
+  "/admin/reports": "analytics:read",
+  "/admin/subscription": "ledger:read",
+  "/admin/payments": "ledger:read",
+  "/admin/coupons": "coupons:read",
+  "/admin/question-bank": "questions:read",
+  "/admin/scoring": "scoring:read",
+  "/admin/settings": "settings:read",
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -57,8 +68,39 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       router.replace("/Auth/login");
       return;
     }
+
+    // Direct page access guard
+    if (pathname !== "/admin") {
+      const matchedEntry = Object.entries(ROUTE_PERMISSIONS).find(([route]) => pathname.startsWith(route));
+      const requiredPermission = matchedEntry?.[1];
+
+      if (
+        requiredPermission &&
+        user.adminRoleName !== "SUPER ADMIN" &&
+        (!user.permissions || !user.permissions.includes(requiredPermission))
+      ) {
+        // Redirect to admin landing home if missing permission
+        router.replace("/admin");
+        return;
+      }
+    }
+
     setAuthChecked(true);
-  }, [router]);
+  }, [router, pathname]);
+
+  const user = typeof window !== "undefined" ? getStoredUser() : null;
+  const isSuperAdmin = user?.adminRoleName === "SUPER ADMIN";
+  const permissions = user?.permissions || [];
+
+  const checkPermission = (href: string) => {
+    if (href === "/admin") return true;
+    const required = ROUTE_PERMISSIONS[href];
+    if (!required) return true;
+    return isSuperAdmin || permissions.includes(required);
+  };
+
+  const visibleNavMain = NAV_MAIN.filter((item) => checkPermission(item.href));
+  const visibleNavAssessment = NAV_ASSESSMENT.filter((item) => checkPermission(item.href));
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
@@ -172,11 +214,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside
           className={`fixed lg:static top-0 left-0 bottom-0 z-50 w-60 bg-[#161925] border-r border-white/5 flex flex-col py-6 px-3 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          } lg:flex-shrink-0 h-screen`}
+          } lg:flex-shrink-0 h-full`}
         >
           <nav className="space-y-1 flex-1 overflow-y-auto">
             <div className="space-y-1">
-              {NAV_MAIN.map((item) => (
+              {visibleNavMain.map((item) => (
                 <NavItem key={item.label} item={item} />
               ))}
             </div>
@@ -184,7 +226,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="my-4 h-px bg-white/5 mx-4" />
 
             <div className="space-y-1">
-              {NAV_ASSESSMENT.map((item) => (
+              {visibleNavAssessment.map((item) => (
                 <NavItem key={item.label} item={item} />
               ))}
             </div>

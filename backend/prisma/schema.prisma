@@ -143,6 +143,9 @@ model ScoringSettings {
   greenLabel       String @default("Healthy") @map("green_label")
   greenDescription String @default("Strong performance — keep it up.") @map("green_description")
 
+  phase2aQuestionLimit Int @default(40) @map("phase2a_question_limit")
+  phase2bQuestionLimit Int @default(30) @map("phase2b_question_limit")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -233,6 +236,8 @@ model User {
   payments       Payment[]
   phase2bUnlocks Phase2BPillarUnlock[]
   discounts      Discount[]
+  adminRoleId    String?               @map("admin_role_id")
+  adminRole      AdminRole?            @relation(fields: [adminRoleId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -569,4 +574,17 @@ model Discount {
   @@index([userId])
   @@index([plan, pillarId])
   @@map("discounts")
+}
+
+model AdminRole {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  permissions String[]
+  users       User[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_roles")
 }

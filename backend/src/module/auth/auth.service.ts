@@ -414,6 +414,13 @@ export async function verifyAdminOTPService(
       isVerified: true,
       role: true,
       status: true,
+      adminRoleId: true,
+      adminRole: {
+        select: {
+          name: true,
+          permissions: true,
+        },
+      },
     },
   });
 
@@ -431,7 +438,12 @@ export async function verifyAdminOTPService(
     throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
-  const tokenPayload = { id: user.id, role: user.role };
+  const tokenPayload = {
+    id: user.id,
+    role: user.role,
+    adminRoleName: user.adminRole?.name || undefined,
+    permissions: user.adminRole?.permissions || [],
+  };
   const accessToken = generateAccessToken(tokenPayload);
   const refreshToken = generateRefreshToken(tokenPayload);
 
@@ -447,6 +459,8 @@ export async function verifyAdminOTPService(
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
       role: user.role,
+      adminRoleName: user.adminRole?.name || null,
+      permissions: user.adminRole?.permissions || [],
     },
     accessToken,
     refreshToken,

@@ -30,6 +30,22 @@ async function getAccountStatus(userId: string): Promise<UserStatus | null> {
 	return user?.status ?? null
 }
 
+async function getAccountStatusAndPermissions(userId: string) {
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: {
+			status: true,
+			adminRole: {
+				select: {
+					name: true,
+					permissions: true,
+				},
+			},
+		},
+	})
+	return user
+}
+
 export const authenticate = async (
 	req: Request,
 	res: Response,
@@ -53,21 +69,47 @@ export const authenticate = async (
 	}
 
 	try {
-		const status = await getAccountStatus(payload.id)
-		if (status === null) {
+		const dbUser = await getAccountStatusAndPermissions(payload.id)
+		if (dbUser === null) {
 			return res.status(401).json({ message: 'Account no longer exists' })
 		}
-		if (status === UserStatus.DISABLED) {
+		if (dbUser.status === UserStatus.DISABLED) {
 			return res
 				.status(403)
 				.json({ message: 'Your account has been suspended. Contact support.' })
+		}
+
+		req.user = {
+			...payload,
+			adminRoleName: dbUser.adminRole?.name,
+			permissions: dbUser.adminRole?.permissions || [],
 		}
 	} catch (err) {
 		return res.status(500).json({ message: 'Could not verify account status' })
 	}
 
-	req.user = payload
 	next()
+}
+
+export const hasPermission = (requiredPermission: string) => {
+	return (req: Request, res: Response, next: NextFunction) => {
+		if (req.user?.role !== 'ADMIN') {
+			return res.status(403).json({ message: 'Admin privileges required' })
+		}
+
+		if (req.user.adminRoleName === 'SUPER ADMIN') {
+			return next()
+		}
+
+		const permissions = req.user.permissions || []
+		if (!permissions.includes(requiredPermission)) {
+			return res.status(403).json({
+				message: `Forbidden: You do not have the required permission (${requiredPermission})`,
+			})
+		}
+
+		next()
+	}
 }
 
 // Soft auth — populates req.user if a valid Bearer token is present, but does not

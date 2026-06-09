@@ -1,5 +1,5 @@
 import express from 'express';
-import { isAdmin, authenticate } from '../../service/middleware/authMiddleware';
+import { isAdmin, authenticate, hasPermission } from '../../service/middleware/authMiddleware';
 import {
   listUsers,
   listUserPayments,
@@ -7,6 +7,11 @@ import {
   showSessionById,
   showUserById,
   updateUserStatus,
+  listRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  assignRoleToAdmin,
 } from './admin.controller';
 import {
   addOption,
@@ -57,69 +62,76 @@ const adminRouter = express.Router();
 // Every admin route is gated by authenticate + isAdmin.
 adminRouter.use(authenticate, isAdmin);
 
+// Admin roles and permissions routes
+adminRouter.get('/roles', hasPermission('settings:read'), listRoles);
+adminRouter.post('/roles', hasPermission('settings:write'), createRole);
+adminRouter.patch('/roles/:id', hasPermission('settings:write'), updateRole);
+adminRouter.delete('/roles/:id', hasPermission('settings:write'), deleteRole);
+adminRouter.patch('/users/:id/role', hasPermission('users:write'), assignRoleToAdmin);
+
 // Admin users list — backs the admin Users table.
-adminRouter.get('/users', listUsers);
-adminRouter.get('/users/:id', showUserById);
+adminRouter.get('/users', hasPermission('users:read'), listUsers);
+adminRouter.get('/users/:id', hasPermission('users:read'), showUserById);
 // Suspend / reactivate. DISABLED blocks login and kills live tokens on the
 // next request (authenticate middleware re-checks status per request).
-adminRouter.patch('/users/:id/status', updateUserStatus);
+adminRouter.patch('/users/:id/status', hasPermission('users:write'), updateUserStatus);
 // Per-user paginated histories (5/page) for the user detail page.
-adminRouter.get('/users/:id/sessions', listUserSessions);
-adminRouter.get('/users/:id/payments', listUserPayments);
+adminRouter.get('/users/:id/sessions', hasPermission('users:read'), listUserSessions);
+adminRouter.get('/users/:id/payments', hasPermission('users:read'), listUserPayments);
 // Full session breakdown (score + answered questions) for the session modal.
-adminRouter.get('/sessions/:id', showSessionById);
+adminRouter.get('/sessions/:id', hasPermission('users:read'), showSessionById);
 
 // Question bank — authoring lives in the question module; mounted here behind
 // the admin gate. The pillar list is the admin variant (weight, isActive,
 // question counts) — a superset of the public shape, so existing consumers
 // keep working. Bulk weight save backs the scoring page's single Save button.
-adminRouter.get('/pillars', listAdminPillars);
-adminRouter.patch('/pillars/weights', savePillarWeights);
+adminRouter.get('/pillars', hasPermission('questions:read'), listAdminPillars);
+adminRouter.patch('/pillars/weights', hasPermission('questions:write'), savePillarWeights);
 
 // Score interpretation — the RED/AMBER/GREEN band cutoffs + display copy.
 // Singleton settings row; edits apply to future submissions only.
-adminRouter.get('/scoring-settings', getScoringSettings);
-adminRouter.patch('/scoring-settings', updateScoringSettings);
-adminRouter.get('/questions', listAdminQuestions);
-adminRouter.post('/questions', createQuestion);
-adminRouter.get('/questions/:id', getAdminQuestion);
-adminRouter.patch('/questions/:id', updateQuestion);
-adminRouter.delete('/questions/:id', deleteQuestion);
-adminRouter.post('/questions/:id/options', addOption);
-adminRouter.patch('/options/:id', updateOption);
-adminRouter.delete('/options/:id', deleteOption);
+adminRouter.get('/scoring-settings', hasPermission('scoring:read'), getScoringSettings);
+adminRouter.patch('/scoring-settings', hasPermission('scoring:write'), updateScoringSettings);
+adminRouter.get('/questions', hasPermission('questions:read'), listAdminQuestions);
+adminRouter.post('/questions', hasPermission('questions:write'), createQuestion);
+adminRouter.get('/questions/:id', hasPermission('questions:read'), getAdminQuestion);
+adminRouter.patch('/questions/:id', hasPermission('questions:write'), updateQuestion);
+adminRouter.delete('/questions/:id', hasPermission('questions:write'), deleteQuestion);
+adminRouter.post('/questions/:id/options', hasPermission('questions:write'), addOption);
+adminRouter.patch('/options/:id', hasPermission('questions:write'), updateOption);
+adminRouter.delete('/options/:id', hasPermission('questions:write'), deleteOption);
 
 // Per-user coupons / discounts.
-adminRouter.get('/coupons', listCoupons);
-adminRouter.post('/coupons', createCoupon);
-adminRouter.patch('/coupons/:id', updateCoupon);
-adminRouter.delete('/coupons/:id', deleteCoupon);
+adminRouter.get('/coupons', hasPermission('coupons:read'), listCoupons);
+adminRouter.post('/coupons', hasPermission('coupons:write'), createCoupon);
+adminRouter.patch('/coupons/:id', hasPermission('coupons:write'), updateCoupon);
+adminRouter.delete('/coupons/:id', hasPermission('coupons:write'), deleteCoupon);
 
 // Reports & Analytics. The report module owns the services; mounted here so
 // every /reports/* endpoint inherits the admin JWT + role guard. All endpoints
 // share the same optional filter query set (see report.types.ts).
-adminRouter.get('/reports/kpis', getReportKpis);
-adminRouter.get('/reports/funnel', getReportFunnel);
-adminRouter.get('/reports/problem-areas', getReportProblemAreas);
-adminRouter.get('/reports/breakdowns', getReportBreakdowns);
-adminRouter.get('/reports/sessions', getReportSessions);
-adminRouter.get('/reports/export', exportReportExcel);
+adminRouter.get('/reports/kpis', hasPermission('analytics:read'), getReportKpis);
+adminRouter.get('/reports/funnel', hasPermission('analytics:read'), getReportFunnel);
+adminRouter.get('/reports/problem-areas', hasPermission('analytics:read'), getReportProblemAreas);
+adminRouter.get('/reports/breakdowns', hasPermission('analytics:read'), getReportBreakdowns);
+adminRouter.get('/reports/sessions', hasPermission('analytics:read'), getReportSessions);
+adminRouter.get('/reports/export', hasPermission('analytics:read'), exportReportExcel);
 
 // Payments. The payment module owns the controllers; mounted here behind the
 // admin gate. /stats is registered before /:id so it isn't captured as an id.
-adminRouter.get('/payments', listPayments);
-adminRouter.get('/payments/stats', adminPaymentStats);
-adminRouter.get('/payments/:id', adminPaymentDetail);
+adminRouter.get('/payments', hasPermission('ledger:read'), listPayments);
+adminRouter.get('/payments/stats', hasPermission('ledger:read'), adminPaymentStats);
+adminRouter.get('/payments/:id', hasPermission('ledger:read'), adminPaymentDetail);
 // "Check payment": settled rows answer from our records; PENDING rows are
 // re-verified against Paystack (and entitlements granted if it turns out paid).
-adminRouter.post('/payments/:id/check', adminCheckPayment);
+adminRouter.post('/payments/:id/check', hasPermission('ledger:write'), adminCheckPayment);
 // Manual status override with required audit reason.
-adminRouter.patch('/payments/:id/status', adminUpdatePaymentStatus);
+adminRouter.patch('/payments/:id/status', hasPermission('ledger:write'), adminUpdatePaymentStatus);
 
 // Plan pricing. The payment module owns the service; admin routes own access.
-adminRouter.get('/pricing', listPricing);
-adminRouter.post('/pricing', createPricing);
-adminRouter.patch('/pricing/:id', updatePricing);
-adminRouter.delete('/pricing/:id', deletePricing);
+adminRouter.get('/pricing', hasPermission('ledger:read'), listPricing);
+adminRouter.post('/pricing', hasPermission('ledger:write'), createPricing);
+adminRouter.patch('/pricing/:id', hasPermission('ledger:write'), updatePricing);
+adminRouter.delete('/pricing/:id', hasPermission('ledger:write'), deletePricing);
 
 export default adminRouter;

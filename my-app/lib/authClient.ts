@@ -32,6 +32,8 @@ export interface AuthUser {
 	avatarUrl: string | null
 	isVerified: boolean
 	role: string
+	adminRoleName?: string | null
+	permissions?: string[]
 }
 
 export type BusinessSize = 'SMALL' | 'MEDIUM'
@@ -419,6 +421,8 @@ export type ScoringSettings = {
 	amberDescription: string
 	greenLabel: string
 	greenDescription: string
+	phase2aQuestionLimit: number
+	phase2bQuestionLimit: number
 	updatedAt: string
 }
 
@@ -1550,5 +1554,66 @@ export const updateAdminPaymentStatus = async (
 	return authedFetch<{ message: string; payment: AdminPaymentDetail }>(
 		`/admin/payments/${id}/status`,
 		{ method: 'PATCH', body: JSON.stringify(payload) },
+	)
+}
+
+export type AdminRoleRow = {
+	id: string
+	name: string
+	description: string | null
+	permissions: string[]
+	_count: {
+		users: number
+	}
+	createdAt: string
+	updatedAt: string
+}
+
+export const listAdminRoles = async () => {
+	return authedFetch<{ message: string; roles: AdminRoleRow[] }>(
+		'/admin/roles',
+		{ method: 'GET' },
+	)
+}
+
+export const createAdminRole = async (payload: {
+	name: string
+	description?: string
+	permissions: string[]
+}) => {
+	return authedFetch<{ message: string; role: AdminRoleRow }>(
+		'/admin/roles',
+		{ method: 'POST', body: JSON.stringify(payload) },
+	)
+}
+
+export const updateAdminRole = async (
+	id: string,
+	payload: {
+		name?: string
+		description?: string
+		permissions?: string[]
+	},
+) => {
+	return authedFetch<{ message: string; role: AdminRoleRow }>(
+		`/admin/roles/${id}`,
+		{ method: 'PATCH', body: JSON.stringify(payload) },
+	)
+}
+
+export const deleteAdminRole = async (id: string) => {
+	return authedFetch<{ message: string }>(
+		`/admin/roles/${id}`,
+		{ method: 'DELETE' },
+	)
+}
+
+export const assignAdminRole = async (
+	userId: string,
+	adminRoleId: string | null,
+) => {
+	return authedFetch<{ message: string; user: any }>(
+		`/admin/users/${userId}/role`,
+		{ method: 'PATCH', body: JSON.stringify({ adminRoleId }) },
 	)
 }

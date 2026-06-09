@@ -7,6 +7,13 @@ import {
   JWT_REFRESH_EXPIRE,
   JWT_OTP_SECRET,
   JWT_OTP_EXPIRE,
+import {
+  JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET,
+  JWT_ACCESS_EXPIRE,
+  JWT_REFRESH_EXPIRE,
+  JWT_OTP_SECRET,
+  JWT_OTP_EXPIRE,
   JWT_PASSWORD_RESET_SECRET,
   JWT_PASSWORD_RESET_EXPIRE,
 } from '../../Config/env';
@@ -16,6 +23,8 @@ import { BAD_REQUEST } from './http';
 export interface TokenPayload {
   id: string;
   role: 'USER' | 'ADMIN';
+  adminRoleName?: string;
+  permissions?: string[];
 }
 export interface OtpTokenPayload {
   email: string;

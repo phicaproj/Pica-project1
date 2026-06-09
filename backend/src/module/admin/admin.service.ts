@@ -11,6 +11,9 @@ import type {
   ShowUserResponse,
   UpdateUserStatusInput,
   UserSubListQuery,
+  CreateRoleInput,
+  UpdateRoleInput,
+  AssignRoleInput,
 } from './admin.types';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
@@ -18,11 +21,13 @@ import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
 const ACTIVE_WINDOW_DAYS = 30;
 
 export async function getAllUsersService(query: ListUsersQuery): Promise<ListUsersResponse> {
-  const { page, search, businessSize, plan, active } = query;
+  const { page, search, businessSize, plan, active, role } = query;
   const pageSize = query.limit ?? query.pageSize;
 
+  const targetRole = role === 'ADMIN' ? UserRole.ADMIN : UserRole.USER;
+
   const where: Prisma.UserWhereInput = {
-    role: UserRole.USER,
+    role: targetRole,
     ...(businessSize ? { businessSize } : {}),
     ...(search
       ? {
@@ -34,8 +39,6 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
           ],
         }
       : {}),
-    // SUBSCRIPTION filter: 'FREE' = no successful payment; a plan value = at
-    // least one SUCCESS payment on that plan.
     ...(plan === 'FREE'
       ? { payments: { none: { status: PaymentStatus.SUCCESS } } }
       : plan
@@ -63,15 +66,21 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
         businessSize: true,
         industry: true,
         status: true,
+        adminRoleId: true,
+        adminRole: {
+          select: {
+            id: true,
+            name: true,
+            permissions: true,
+          },
+        },
         createdAt: true,
-        // SUBSCRIPTION — the user's last paid plan: most recent SUCCESS payment.
         payments: {
           where: { status: PaymentStatus.SUCCESS },
           orderBy: { paidAt: 'desc' },
           take: 1,
           select: { plan: true },
         },
-        // LAST SEEN — most recent session activity.
         sessions: {
           orderBy: { updatedAt: 'desc' },
           take: 1,
@@ -99,6 +108,8 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
       isActive: lastSeenAt !== null && lastSeenAt >= activeThreshold,
       lastSeenAt,
       status: row.status,
+      adminRoleId: row.adminRoleId,
+      adminRole: row.adminRole,
       createdAt: row.createdAt,
     };
   });
@@ -525,4 +536,121 @@ export async function getSessionDetailsService(sessionId: string): Promise<ShowS
       })),
     },
   };
+}
+
+// ── Admin Roles & Permissions Services ──────────────────────────────────────────
+
+export async function listRolesService() {
+  return prisma.adminRole.findMany({
+    orderBy: { name: 'asc' },
+    include: {
+      _count: {
+        select: { users: true },
+      },
+    },
+  });
+}
+
+export async function createRoleService(input: CreateRoleInput) {
+  const existing = await prisma.adminRole.findUnique({
+    where: { name: input.name.toUpperCase() },
+  });
+  if (existing) {
+    throw new AppError('Role name already exists', CONFLICT);
+  }
+  return prisma.adminRole.create({
+    data: {
+      name: input.name.toUpperCase(),
+      description: input.description,
+      permissions: input.permissions,
+    },
+  });
+}
+
+export async function updateRoleService(id: string, input: UpdateRoleInput) {
+  const role = await prisma.adminRole.findUnique({ where: { id } });
+  if (!role) {
+    throw new AppError('Role not found', NOT_FOUND);
+  }
+  if (role.name === 'SUPER ADMIN') {
+    throw new AppError('The Super Admin role cannot be modified', CONFLICT);
+  }
+  if (input.name) {
+    const existingName = await prisma.adminRole.findFirst({
+      where: {
+        name: input.name.toUpperCase(),
+        NOT: { id },
+      },
+    });
+    if (existingName) {
+      throw new AppError('Another role with this name already exists', CONFLICT);
+    }
+  }
+  return prisma.adminRole.update({
+    where: { id },
+    data: {
+      ...(input.name ? { name: input.name.toUpperCase() } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.permissions ? { permissions: input.permissions } : {}),
+    },
+  });
+}
+
+export async function deleteRoleService(id: string) {
+  const role = await prisma.adminRole.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: { users: true },
+      },
+    },
+  });
+  if (!role) {
+    throw new AppError('Role not found', NOT_FOUND);
+  }
+  if (role.name === 'SUPER ADMIN') {
+    throw new AppError('The Super Admin role cannot be deleted', CONFLICT);
+  }
+  if (role._count.users > 0) {
+    throw new AppError('Cannot delete a role that is assigned to users. Reassign users first.', CONFLICT);
+  }
+  return prisma.adminRole.delete({ where: { id } });
+}
+
+export async function assignRoleToAdminService(adminId: string, roleId: string | null) {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+  });
+  if (!admin) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+  if (admin.role !== UserRole.ADMIN) {
+    throw new AppError('User is not an administrator', CONFLICT);
+  }
+
+  if (roleId) {
+    const role = await prisma.adminRole.findUnique({ where: { id: roleId } });
+    if (!role) {
+      throw new AppError('Role not found', NOT_FOUND);
+    }
+  }
+
+  return prisma.user.update({
+    where: { id: adminId },
+    data: { adminRoleId: roleId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      adminRoleId: true,
+      adminRole: {
+        select: {
+          id: true,
+          name: true,
+          permissions: true,
+        },
+      },
+    },
+  });
 }

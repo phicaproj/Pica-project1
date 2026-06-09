@@ -19,6 +19,7 @@ export const listUsersQuery = z.object({
   businessSize: z.enum(['SMALL', 'MEDIUM']).optional(),
   plan: z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'FREE']).optional(),
   active: z.coerce.boolean().optional(),
+  role: z.enum(['USER', 'ADMIN']).optional(),
 });
 
 export const showUserQuery = z.object({
@@ -47,6 +48,14 @@ export type AdminUserRow = {
   // Account standing — ACTIVE or DISABLED (suspended). Distinct from
   // isActive, which is derived from recent session activity.
   status: UserStatus;
+
+  // Roles assignment (for admin users)
+  adminRoleId?: string | null;
+  adminRole?: {
+    id: string;
+    name: string;
+    permissions: string[];
+  } | null;
 
   createdAt: Date;
 };
@@ -195,3 +204,25 @@ export type ShowSessionResponse = {
   message: string;
   session: AdminSessionDetail;
 };
+
+// ── Admin Roles & Permissions Schemas ──────────────────────────────────────────
+export const createRoleSchema = z.object({
+  name: z.string().trim().min(1, 'Role name cannot be empty').max(50),
+  description: z.string().trim().max(255).optional(),
+  permissions: z.array(z.string()).default([]),
+});
+
+export const updateRoleSchema = z.object({
+  name: z.string().trim().min(1).max(50).optional(),
+  description: z.string().trim().max(255).optional(),
+  permissions: z.array(z.string()).optional(),
+});
+
+export const assignRoleSchema = z.object({
+  adminRoleId: z.string().uuid().nullable(),
+});
+
+export type CreateRoleInput = z.infer<typeof createRoleSchema>;
+export type UpdateRoleInput = z.infer<typeof updateRoleSchema>;
+export type AssignRoleInput = z.infer<typeof assignRoleSchema>;
+
