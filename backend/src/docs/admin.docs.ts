@@ -121,6 +121,217 @@ registry.registerPath({
 })
 
 // ============================================================
+// User detail page — paginated sessions/payments + session detail
+// ============================================================
+
+const subListQuery = z.object({
+	page: z.coerce.number().int().min(1).default(1).openapi({ param: { name: 'page', in: 'query' } }),
+	pageSize: z.coerce.number().int().min(1).max(50).default(5).openapi({ param: { name: 'pageSize', in: 'query' } }),
+})
+
+const AdminUserSessionRowSchema = registry.register(
+	'AdminUserSessionRow',
+	z
+		.object({
+			id: z.string().uuid(),
+			phase: z.string(),
+			status: z.string(),
+			pillarId: z.string().uuid().nullable(),
+			pillarName: z.string().nullable(),
+			reportPdfUrl: z.string().url().nullable(),
+			startedAt: z.string().datetime(),
+			completedAt: z.string().datetime().nullable(),
+			updatedAt: z.string().datetime(),
+			totalScore: z.number().nullable(),
+			colorBand: z.enum(['RED', 'AMBER', 'GREEN']).nullable(),
+		})
+		.openapi('AdminUserSessionRow'),
+)
+
+const AdminUserPaymentRowSchema = registry.register(
+	'AdminUserPaymentRow',
+	z
+		.object({
+			id: z.string().uuid(),
+			plan: z.string(),
+			amount: z.number(),
+			currency: z.string(),
+			status: z.string(),
+			reference: z.string(),
+			paidAt: z.string().datetime().nullable(),
+			updatedAt: z.string().datetime(),
+		})
+		.openapi('AdminUserPaymentRow'),
+)
+
+const AdminSessionDetailSchema = registry.register(
+	'AdminSessionDetail',
+	z
+		.object({
+			id: z.string().uuid(),
+			phase: z.string(),
+			status: z.string(),
+			businessSize: z.enum(['SMALL', 'MEDIUM']).nullable(),
+			pillarId: z.string().uuid().nullable(),
+			pillarName: z.string().nullable(),
+			startedAt: z.string().datetime(),
+			completedAt: z.string().datetime().nullable(),
+			user: z.object({
+				id: z.string().uuid().nullable(),
+				name: z.string().nullable(),
+				email: z.string().nullable(),
+			}),
+			result: z
+				.object({
+					totalScore: z.number(),
+					colorBand: z.enum(['RED', 'AMBER', 'GREEN']),
+					hasAnyKnockout: z.boolean(),
+					isPaid: z.boolean(),
+					reportPdfUrl: z.string().url().nullable(),
+				})
+				.nullable(),
+			pillarScores: z.array(
+				z.object({
+					pillarId: z.string().uuid(),
+					pillarCode: z.string(),
+					pillarName: z.string(),
+					rawScore: z.number().int(),
+					maxPossibleScore: z.number().int(),
+					weightedScore: z.number(),
+					hasKnockout: z.boolean(),
+					colorBand: z.enum(['RED', 'AMBER', 'GREEN']),
+					insightRuleApplied: z.string(),
+				}),
+			),
+			responses: z.array(
+				z.object({
+					questionId: z.string().uuid(),
+					pillarCode: z.string(),
+					pillarName: z.string(),
+					questionCode: z.string(),
+					questionText: z.string(),
+					selectedLabel: z.string(),
+					selectedText: z.string(),
+					scoreAtTime: z.number().int(),
+					maxScore: z.number().int(),
+					riskTypeAtTime: z.enum(['NORMAL', 'RISK', 'KNOCKOUT']),
+					answeredAt: z.string().datetime(),
+				}),
+			),
+		})
+		.openapi('AdminSessionDetail'),
+)
+
+// ----- GET /api/admin/users/:id/sessions -----------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/users/{id}/sessions',
+	tags: ['Admin'],
+	summary: "Paginated list of a user's assessment sessions",
+	description:
+		"Admin-only. Returns the user's session history, newest first, 5 per page by default. Each row includes the result summary (score + band) when the session has been scored.",
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+		query: subListQuery,
+	},
+	responses: {
+		200: {
+			description: 'User sessions retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						page: z.number(),
+						pageSize: z.number(),
+						total: z.number(),
+						totalPages: z.number(),
+						sessions: z.array(AdminUserSessionRowSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		404: errorResponse('User not found'),
+	},
+})
+
+// ----- GET /api/admin/users/:id/payments -----------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/users/{id}/payments',
+	tags: ['Admin'],
+	summary: "Paginated list of a user's payments",
+	description:
+		"Admin-only. Returns the user's payment history, newest first, 5 per page by default.",
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+		query: subListQuery,
+	},
+	responses: {
+		200: {
+			description: 'User payments retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						page: z.number(),
+						pageSize: z.number(),
+						total: z.number(),
+						totalPages: z.number(),
+						payments: z.array(AdminUserPaymentRowSchema),
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		404: errorResponse('User not found'),
+	},
+})
+
+// ----- GET /api/admin/sessions/:id -------------------------------------------
+
+registry.registerPath({
+	method: 'get',
+	path: '/api/admin/sessions/{id}',
+	tags: ['Admin'],
+	summary: 'Full session breakdown (score + answered questions)',
+	description:
+		'Admin-only. Returns the session result, per-pillar scores, and every answered question with the selected option, its score, and risk type. Not paywalled — admins always see the full breakdown, even for unpaid results or in-progress sessions (result is null until scored).',
+	security: [{ bearerAuth: [] }],
+	request: {
+		params: z.object({
+			id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
+		}),
+	},
+	responses: {
+		200: {
+			description: 'Session details retrieved successfully',
+			content: {
+				'application/json': {
+					schema: z.object({
+						message: z.string(),
+						session: AdminSessionDetailSchema,
+					}),
+				},
+			},
+		},
+		401: errorResponse('Missing or invalid token'),
+		403: errorResponse('Forbidden: User is not an admin'),
+		404: errorResponse('Assessment session not found'),
+	},
+})
+
+// ============================================================
 // Scoring page — pillar weights & score interpretation
 // ============================================================
 

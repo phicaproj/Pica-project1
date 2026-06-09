@@ -1,6 +1,12 @@
 import express from 'express';
 import { isAdmin, authenticate } from '../../service/middleware/authMiddleware';
-import { listUsers, showUserById } from './admin.controller';
+import {
+  listUsers,
+  listUserPayments,
+  listUserSessions,
+  showSessionById,
+  showUserById,
+} from './admin.controller';
 import {
   addOption,
   createQuestion,
@@ -53,6 +59,11 @@ adminRouter.use(authenticate, isAdmin);
 // Admin users list — backs the admin Users table.
 adminRouter.get('/users', listUsers);
 adminRouter.get('/users/:id', showUserById);
+// Per-user paginated histories (5/page) for the user detail page.
+adminRouter.get('/users/:id/sessions', listUserSessions);
+adminRouter.get('/users/:id/payments', listUserPayments);
+// Full session breakdown (score + answered questions) for the session modal.
+adminRouter.get('/sessions/:id', showSessionById);
 
 // Question bank — authoring lives in the question module; mounted here behind
 // the admin gate. The pillar list is the admin variant (weight, isActive,

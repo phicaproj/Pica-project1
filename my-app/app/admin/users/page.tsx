@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
-  ChevronDown,
   Eye,
   FileText,
   Ban,
@@ -13,11 +13,10 @@ import {
   LayoutGrid,
   Table2,
   Loader,
-  X,
 } from "lucide-react";
-import { getAllUsers, getAdminUserDetails, type AdminUserRow, type AdminUserDetails } from "@/lib/authClient";
+import { getAllUsers, type AdminUserRow } from "@/lib/authClient";
 
-// ── Display helpers ───────────────────────────────────────────
+// â”€â”€ Display helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const fullName = (u: AdminUserRow) => {
   const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
   return name || u.businessName || u.email;
@@ -70,6 +69,7 @@ const lastSeenLabel = (iso: string | null) => {
 };
 
 export default function UsersPage() {
+  const router = useRouter();
   const [view, setView] = useState<"table" | "grid">("table");
   const [search, setSearch] = useState("");
 
@@ -85,7 +85,7 @@ export default function UsersPage() {
   const [plan, setPlan] = useState<"PHASE2A" | "PHASE2B_PILLAR" | "FREE" | "">("");
   const [active, setActive] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const openUser = (userId: string) => router.push(`/admin/users/${userId}`);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -321,7 +321,7 @@ export default function UsersPage() {
                     {users.map((user) => (
                       <tr
                         key={user.id}
-                        onClick={() => setSelectedUserId(user.id)}
+                        onClick={() => openUser(user.id)}
                         className={`border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors cursor-pointer ${!user.isActive ? "opacity-70" : ""}`}
                       >
                         <td className="px-6 py-4">
@@ -361,13 +361,13 @@ export default function UsersPage() {
                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => setSelectedUserId(user.id)}
+                              onClick={() => openUser(user.id)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => setSelectedUserId(user.id)}
+                              onClick={() => openUser(user.id)}
                               className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                             >
                               <FileText className="w-4 h-4" />
@@ -436,7 +436,7 @@ export default function UsersPage() {
                 {users.map((user) => (
                   <div
                     key={user.id}
-                    onClick={() => setSelectedUserId(user.id)}
+                    onClick={() => openUser(user.id)}
                     className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-5 hover:border-white/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-start justify-between mb-4">
@@ -471,7 +471,7 @@ export default function UsersPage() {
                     </div>
                     <div className="mt-4 pt-4 border-t border-white/5 flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => setSelectedUserId(user.id)}
+                        onClick={() => openUser(user.id)}
                         className="flex-1 py-1.5 text-xs font-semibold text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
                       >
                         View
@@ -532,263 +532,6 @@ export default function UsersPage() {
         </>
       )}
 
-      {/* User Details Modal */}
-      {selectedUserId && (
-        <UserDetailModal
-          userId={selectedUserId}
-          onClose={() => setSelectedUserId(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-interface UserModalProps {
-  userId: string;
-  onClose: () => void;
-}
-
-function UserDetailModal({ userId, onClose }: UserModalProps) {
-  const [details, setDetails] = useState<AdminUserDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadDetails() {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await getAdminUserDetails(userId);
-        if (res.error) {
-          setError(res.error.message);
-        } else if (res.data) {
-          setDetails(res.data.user);
-        }
-      } catch {
-        setError("Failed to fetch user details.");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadDetails();
-  }, [userId]);
-
-  if (loading) {
-    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-        <div className="w-full max-w-2xl rounded-xl border border-white/10 bg-[#1C1F2E] p-12 text-center shadow-2xl">
-          <Loader className="mx-auto h-8 w-8 animate-spin text-blue-400" />
-          <p className="mt-4 text-sm text-gray-400">Loading user details...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !details) {
-    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
-        <div className="w-full max-w-md rounded-xl border border-red-500/20 bg-[#1C1F2E] p-6 text-center shadow-2xl">
-          <h3 className="text-lg font-bold text-white mb-2">Error</h3>
-          <p className="text-sm text-red-400 mb-6">{error || "Failed to load user"}</p>
-          <button
-            onClick={onClose}
-            className="w-full rounded-lg bg-white/5 border border-white/10 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const name = `${details.firstName ?? ""} ${details.lastName ?? ""}`.trim() || details.email;
-
-  return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-4 overflow-y-auto">
-      <div className="flex flex-col max-h-[90vh] w-full max-w-4xl rounded-2xl border border-white/10 bg-[#1C1F2E] shadow-2xl overflow-hidden my-8">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
-          <div className="flex items-center gap-4">
-            {details.avatarUrl ? (
-              <img src={details.avatarUrl} alt={name} className="w-14 h-14 rounded-full object-cover" />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-lg font-bold text-white">
-                {name.substring(0, 2).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h2 className="text-xl font-bold text-white">{name}</h2>
-              <p className="text-sm text-gray-400">{details.email}</p>
-              {details.phone && <p className="text-xs text-gray-500 mt-0.5">{details.phone}</p>}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-          {/* Business Profile */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 rounded-xl border border-white/5 bg-white/[0.01] p-4">
-            <div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Business Name</span>
-              <span className="text-sm text-white font-medium">{details.businessName || "Unspecified"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Business Size</span>
-              <span className="text-xs text-white font-semibold px-2.5 py-0.5 border border-white/10 rounded-full bg-white/5 inline-block mt-0.5">
-                {details.businessSize || "Unspecified"}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Industry</span>
-              <span className="text-sm text-white font-medium">{details.industry || "Unspecified"}</span>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Plan / Subscription</span>
-              <span className="text-sm text-blue-400 font-semibold">{details.subscriptionPlan || "FREE"}</span>
-            </div>
-          </div>
-
-          {/* Stats Banner */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Total Sessions", value: details.totalSessions },
-              { label: "Completed Sessions", value: details.completedSessions },
-              { label: "Successful Payments", value: details.totalSuccessfulPayments },
-              { label: "Total Spent", value: `N${new Intl.NumberFormat("en-NG").format(details.totalSpent)}` },
-            ].map((stat, i) => (
-              <div key={i} className="rounded-xl border border-white/5 bg-white/[0.02] p-4 text-center">
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{stat.label}</div>
-                <div className="text-xl font-bold text-white">{stat.value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Recent Sessions */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Recent Assessment Sessions (Last 5)</h3>
-            {details.recentSessions.length === 0 ? (
-              <div className="text-xs text-gray-500 italic py-6 text-center border border-dashed border-white/10 rounded-xl">No sessions found.</div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/[0.01]">
-                <table className="w-full text-xs text-left">
-                  <thead>
-                    <tr className="bg-white/5 border-b border-white/5 text-gray-400">
-                      <th className="px-4 py-3">ID / Phase</th>
-                      <th className="px-4 py-3">Pillar</th>
-                      <th className="px-4 py-3">Updated</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Report</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {details.recentSessions.map((session) => (
-                      <tr key={session.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.01]">
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-white">{session.phase}</div>
-                          <div className="text-[10px] text-gray-500 font-mono mt-0.5">{session.id}</div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-300">{session.pillarName || "All Pillars"}</td>
-                        <td className="px-4 py-3 text-gray-400">{new Date(session.updatedAt).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            session.status === "COMPLETED" || session.status === "REPORT_GENERATED" || session.status === "PAID"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-amber-500/10 text-amber-400"
-                          }`}>
-                            {session.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {session.reportPdfUrl ? (
-                            <a
-                              href={session.reportPdfUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-400 hover:text-blue-300 hover:underline"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              Download
-                            </a>
-                          ) : (
-                            <span className="text-gray-600">N/A</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Recent Payments */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Recent Payments (Last 5)</h3>
-            {details.recentPayments.length === 0 ? (
-              <div className="text-xs text-gray-500 italic py-6 text-center border border-dashed border-white/10 rounded-xl">No payments found.</div>
-            ) : (
-              <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/[0.01]">
-                <table className="w-full text-xs text-left">
-                  <thead>
-                    <tr className="bg-white/5 border-b border-white/5 text-gray-400">
-                      <th className="px-4 py-3">Reference / Plan</th>
-                      <th className="px-4 py-3">Amount</th>
-                      <th className="px-4 py-3">Paid At</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {details.recentPayments.map((payment) => (
-                      <tr key={payment.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.01]">
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-white">{payment.plan === "PHASE2A" ? "Phase 2A" : "Phase 2B"}</div>
-                          <div className="text-[10px] text-gray-500 font-mono mt-0.5">{payment.reference}</div>
-                        </td>
-                        <td className="px-4 py-3 text-white font-medium">
-                          {payment.currency} {new Intl.NumberFormat("en-NG").format(payment.amount)}
-                        </td>
-                        <td className="px-4 py-3 text-gray-400">
-                          {payment.paidAt
-                            ? new Date(payment.paidAt).toLocaleDateString("en-NG", { day: 'numeric', month: 'short', year: 'numeric' })
-                            : "N/A"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            payment.status === "SUCCESS"
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : payment.status === "PENDING"
-                              ? "bg-amber-500/10 text-amber-400"
-                              : "bg-red-500/10 text-red-400"
-                          }`}>
-                            {payment.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-white/5 px-6 py-5 bg-[#171923]">
-          <button
-            onClick={onClose}
-            className="rounded-lg bg-white/5 border border-white/10 px-6 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

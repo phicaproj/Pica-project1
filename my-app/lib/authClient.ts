@@ -1057,6 +1057,125 @@ export const getAdminUserDetails = async (id: string) => {
 	})
 }
 
+// ─── Admin: per-user paginated histories + session detail ──────────────────
+
+export type AdminUserSessionRow = AdminUserDetails['recentSessions'][number] & {
+	startedAt: string
+	completedAt: string | null
+	totalScore: number | null
+	colorBand: 'RED' | 'AMBER' | 'GREEN' | null
+}
+
+export type AdminUserSessionsResponse = {
+	message: string
+	page: number
+	pageSize: number
+	total: number
+	totalPages: number
+	sessions: AdminUserSessionRow[]
+}
+
+export type AdminUserPaymentsResponse = {
+	message: string
+	page: number
+	pageSize: number
+	total: number
+	totalPages: number
+	payments: AdminUserDetails['recentPayments']
+}
+
+export type AdminSessionPillarScore = {
+	pillarId: string
+	pillarCode: string
+	pillarName: string
+	rawScore: number
+	maxPossibleScore: number
+	weightedScore: number
+	hasKnockout: boolean
+	colorBand: 'RED' | 'AMBER' | 'GREEN'
+	insightRuleApplied: 'KNOCKOUT' | 'BOTH_RISK' | 'ONE_RISK' | 'BOTH_NORMAL'
+}
+
+export type AdminSessionResponseRow = {
+	questionId: string
+	pillarCode: string
+	pillarName: string
+	questionCode: string
+	questionText: string
+	selectedLabel: string
+	selectedText: string
+	scoreAtTime: number
+	maxScore: number
+	riskTypeAtTime: 'NORMAL' | 'RISK' | 'KNOCKOUT'
+	answeredAt: string
+}
+
+export type AdminSessionDetail = {
+	id: string
+	phase: 'PHASE1' | 'PHASE2A' | 'PHASE2B'
+	status: 'IN_PROGRESS' | 'COMPLETED' | 'PAID' | 'REPORT_GENERATED'
+	businessSize: BusinessSize | null
+	pillarId: string | null
+	pillarName: string | null
+	startedAt: string
+	completedAt: string | null
+	user: {
+		id: string | null
+		name: string | null
+		email: string | null
+	}
+	result: {
+		totalScore: number
+		colorBand: 'RED' | 'AMBER' | 'GREEN'
+		hasAnyKnockout: boolean
+		isPaid: boolean
+		reportPdfUrl: string | null
+	} | null
+	pillarScores: AdminSessionPillarScore[]
+	responses: AdminSessionResponseRow[]
+}
+
+export type AdminSessionDetailResponse = {
+	message: string
+	session: AdminSessionDetail
+}
+
+export const getAdminUserSessions = async (
+	userId: string,
+	params: { page?: number; pageSize?: number } = {},
+) => {
+	const qs = new URLSearchParams()
+	if (params.page) qs.set('page', String(params.page))
+	if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+	const query = qs.toString()
+
+	return authedFetch<AdminUserSessionsResponse>(
+		`/admin/users/${userId}/sessions${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
+}
+
+export const getAdminUserPayments = async (
+	userId: string,
+	params: { page?: number; pageSize?: number } = {},
+) => {
+	const qs = new URLSearchParams()
+	if (params.page) qs.set('page', String(params.page))
+	if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+	const query = qs.toString()
+
+	return authedFetch<AdminUserPaymentsResponse>(
+		`/admin/users/${userId}/payments${query ? `?${query}` : ''}`,
+		{ method: 'GET' },
+	)
+}
+
+export const getAdminSessionDetails = async (sessionId: string) => {
+	return authedFetch<AdminSessionDetailResponse>(`/admin/sessions/${sessionId}`, {
+		method: 'GET',
+	})
+}
+
 // ---------------------------------------------------------------------------
 // Reports & Analytics (admin)
 // ---------------------------------------------------------------------------

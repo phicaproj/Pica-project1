@@ -3,8 +3,13 @@ import prisma from '../../Config/db';
 import type {
   ListUsersQuery,
   ListUsersResponse,
+  ListUserPaymentsResponse,
+  ListUserSessionsResponse,
   AdminUserRow,
+  AdminSessionResponseRow,
+  ShowSessionResponse,
   ShowUserResponse,
+  UserSubListQuery,
 } from './admin.types';
 import AppError from '../../service/shared/appError';
 import { NOT_FOUND } from '../../service/shared/http';
@@ -220,6 +225,256 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       totalSessions,
       completedSessions,
       totalSuccessfulPayments,
+    },
+  };
+}
+
+/** Throws NOT_FOUND unless a user with this id exists. */
+async function assertUserExists(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+  if (!user) throw new AppError('User not found', NOT_FOUND);
+}
+
+/**
+ * Paginated session history for one user — backs the user detail page's
+ * sessions table (5 per page by default). Includes the result summary so the
+ * row can show the score/band without opening the session modal.
+ */
+export async function listUserSessionsService(
+  userId: string,
+  query: UserSubListQuery
+): Promise<ListUserSessionsResponse> {
+  await assertUserExists(userId);
+
+  const { page, pageSize } = query;
+  const where: Prisma.AssessmentSessionWhereInput = { userId };
+
+  const [total, sessions] = await Promise.all([
+    prisma.assessmentSession.count({ where }),
+    prisma.assessmentSession.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        updatedAt: true,
+        status: true,
+        phase: true,
+        pillarId: true,
+        startedAt: true,
+        completedAt: true,
+        pillar: { select: { name: true } },
+        result: {
+          select: { reportPdfUrl: true, totalScore: true, colorBand: true },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    message: 'User sessions fetched successfully',
+    page,
+    pageSize,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    sessions: sessions.map((session) => ({
+      id: session.id,
+      updatedAt: session.updatedAt,
+      status: session.status,
+      phase: session.phase,
+      pillarId: session.pillarId,
+      pillarName: session.pillar?.name ?? null,
+      reportPdfUrl: session.result?.reportPdfUrl ?? null,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      totalScore: session.result ? Number(session.result.totalScore) : null,
+      colorBand: session.result?.colorBand ?? null,
+    })),
+  };
+}
+
+/**
+ * Paginated payment history for one user — backs the user detail page's
+ * payments table (5 per page by default).
+ */
+export async function listUserPaymentsService(
+  userId: string,
+  query: UserSubListQuery
+): Promise<ListUserPaymentsResponse> {
+  await assertUserExists(userId);
+
+  const { page, pageSize } = query;
+  const where: Prisma.PaymentWhereInput = { userId };
+
+  const [total, payments] = await Promise.all([
+    prisma.payment.count({ where }),
+    prisma.payment.findMany({
+      where,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        plan: true,
+        amount: true,
+        currency: true,
+        status: true,
+        providerReference: true,
+        paidAt: true,
+        updatedAt: true,
+      },
+    }),
+  ]);
+
+  return {
+    message: 'User payments fetched successfully',
+    page,
+    pageSize,
+    total,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    payments: payments.map((payment) => ({
+      id: payment.id,
+      plan: payment.plan,
+      amount: payment.amount.toNumber(),
+      status: payment.status,
+      currency: payment.currency,
+      reference: payment.providerReference,
+      paidAt: payment.paidAt,
+      updatedAt: payment.updatedAt,
+    })),
+  };
+}
+
+/**
+ * Full session breakdown for the admin session modal: result summary,
+ * per-pillar scores, and every answered question with the selected option.
+ * NOT paywalled — unlike the public result endpoint, admins always see the
+ * full data. Works for in-progress sessions too (result is just null and the
+ * responses list shows what's been answered so far).
+ */
+export async function getSessionDetailsService(sessionId: string): Promise<ShowSessionResponse> {
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      phase: true,
+      status: true,
+      businessSize: true,
+      pillarId: true,
+      startedAt: true,
+      completedAt: true,
+      leadEmail: true,
+      pillar: { select: { name: true } },
+      user: {
+        select: { id: true, firstName: true, lastName: true, email: true },
+      },
+      result: {
+        select: {
+          totalScore: true,
+          colorBand: true,
+          hasAnyKnockout: true,
+          isPaid: true,
+          reportPdfUrl: true,
+        },
+      },
+    },
+  });
+
+  if (!session) throw new AppError('Assessment session not found', NOT_FOUND);
+
+  const [pillarScores, responses] = await Promise.all([
+    prisma.sessionPillarScore.findMany({
+      where: { sessionId },
+      select: {
+        pillarId: true,
+        rawScore: true,
+        maxPossibleScore: true,
+        weightedScore: true,
+        hasKnockout: true,
+        colorBand: true,
+        insightRuleApplied: true,
+        pillar: { select: { code: true, name: true, displayOrder: true } },
+      },
+      orderBy: { pillar: { displayOrder: 'asc' } },
+    }),
+    prisma.sessionResponse.findMany({
+      where: { sessionId },
+      select: {
+        questionId: true,
+        scoreAtTime: true,
+        riskTypeAtTime: true,
+        answeredAt: true,
+        question: {
+          select: {
+            questionCode: true,
+            questionText: true,
+            pillar: { select: { code: true, name: true, displayOrder: true } },
+            options: { select: { score: true } },
+          },
+        },
+        selectedOption: { select: { optionLabel: true, optionText: true } },
+      },
+      orderBy: [
+        { question: { pillar: { displayOrder: 'asc' } } },
+        { question: { displayOrder: 'asc' } },
+      ],
+    }),
+  ]);
+
+  const userName = session.user
+    ? `${session.user.firstName ?? ''} ${session.user.lastName ?? ''}`.trim() || null
+    : null;
+
+  return {
+    message: 'Session details fetched successfully',
+    session: {
+      id: session.id,
+      phase: session.phase,
+      status: session.status,
+      businessSize: session.businessSize,
+      pillarId: session.pillarId,
+      pillarName: session.pillar?.name ?? null,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      user: {
+        id: session.user?.id ?? null,
+        name: userName,
+        email: session.user?.email ?? session.leadEmail ?? null,
+      },
+      result: session.result
+        ? {
+            totalScore: Number(session.result.totalScore),
+            colorBand: session.result.colorBand,
+            hasAnyKnockout: session.result.hasAnyKnockout,
+            isPaid: session.result.isPaid,
+            reportPdfUrl: session.result.reportPdfUrl,
+          }
+        : null,
+      pillarScores: pillarScores.map((score) => ({
+        pillarId: score.pillarId,
+        pillarCode: score.pillar.code,
+        pillarName: score.pillar.name,
+        rawScore: score.rawScore,
+        maxPossibleScore: score.maxPossibleScore,
+        weightedScore: Number(score.weightedScore),
+        hasKnockout: score.hasKnockout,
+        colorBand: score.colorBand,
+        insightRuleApplied: score.insightRuleApplied,
+      })),
+      responses: responses.map<AdminSessionResponseRow>((response) => ({
+        questionId: response.questionId,
+        pillarCode: response.question.pillar.code,
+        pillarName: response.question.pillar.name,
+        questionCode: response.question.questionCode,
+        questionText: response.question.questionText,
+        selectedLabel: response.selectedOption.optionLabel,
+        selectedText: response.selectedOption.optionText,
+        scoreAtTime: response.scoreAtTime,
+        maxScore: response.question.options.reduce((max, o) => Math.max(max, o.score), 0),
+        riskTypeAtTime: response.riskTypeAtTime,
+        answeredAt: response.answeredAt,
+      })),
     },
   };
 }
