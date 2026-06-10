@@ -3,6 +3,7 @@ import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import { computeScoring } from '../scoring/scoring.service';
+import type { ScoringResultPayload } from '../scoring/scoring.types';
 import { generateReportPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
@@ -287,6 +288,57 @@ export async function submitAssessmentService(
   return submitPhase1Service(sessionId);
 }
 
+/**
+ * Generates the report PDF, persists it to R2, and emails it — entirely in the
+ * background. Callers invoke this WITHOUT awaiting so the submit response returns
+ * immediately; the PDF lands in R2 (and the inbox) a moment later. Fully
+ * self-contained and best-effort: any failure is logged and swallowed so it can
+ * never affect the already-committed submission.
+ */
+function deliverReportInBackground(params: {
+  result: ScoringResultPayload;
+  businessName: string;
+  phase: Phase;
+  sessionId: string;
+  recipientEmail: string | null;
+}): void {
+  const { result, businessName, phase, sessionId, recipientEmail } = params;
+  const phaseFolder =
+    phase === Phase.PHASE2B ? 'phase2b' : phase === Phase.PHASE2A ? 'phase2a' : 'phase1';
+
+  void (async () => {
+    try {
+      const pdfBuffer = await generateReportPDF(result, businessName, phase);
+
+      // Upload to R2 under a stable per-session key — re-submitting/regenerating
+      // overwrites the same object instead of leaving orphans.
+      const { url: reportPdfUrl } = await uploadPdf(
+        `reports/${phaseFolder}/${sessionId}.pdf`,
+        pdfBuffer
+      );
+
+      // Persist the public URL so subsequent downloads stream from R2 instead of
+      // regenerating the PDF on every request.
+      await prisma.sessionResult.update({
+        where: { sessionId },
+        data: { reportPdfUrl, generatedAt: new Date() },
+      });
+
+      if (recipientEmail) {
+        await sendReportEmail({
+          toEmail: recipientEmail,
+          businessName,
+          pdfBuffer,
+          reportPdfUrl,
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error(`Background report delivery failed for ${phase} ${sessionId}:`, message);
+    }
+  })();
+}
+
 async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentResponse> {
   const transactionResult = await prisma.$transaction(
     async (tx) => {
@@ -374,47 +426,16 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
     }
   );
 
-  // After scoring resolves, generate PDF, persist to R2, and email it
-  // (Phase 1 only — best-effort; failures don't roll back the submission).
-  try {
-    const pdfBuffer = await generateReportPDF(
-      transactionResult.result,
-      transactionResult.session.businessName,
-      Phase.PHASE1
-    );
-
-    // Upload to R2 under a stable per-session key — re-submitting/regenerating
-    // overwrites the same object instead of leaving orphans.
-    const { url: reportPdfUrl } = await uploadPdf(
-      `reports/phase1/${sessionId}.pdf`,
-      pdfBuffer
-    );
-
-    // Persist the public URL so subsequent downloads can stream from R2
-    // instead of regenerating the PDF on every request.
-    await prisma.sessionResult.update({
-      where: { sessionId },
-      data: {
-        reportPdfUrl,
-        generatedAt: new Date(),
-      },
-    });
-
-    if (!transactionResult.session.leadEmail) {
-      throw new Error('Lead email is missing');
-    }
-
-    await sendReportEmail({
-      toEmail: transactionResult.session.leadEmail,
-      businessName: transactionResult.session.businessName,
-      pdfBuffer,
-      reportPdfUrl,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Error generating PDF or sending report email:', message);
-    // Continue without throwing - assessment is already submitted
-  }
+  // Fire-and-forget: build/upload/email the PDF in the background so the user
+  // isn't held while it generates. The result page reads scoring straight from
+  // the DB; the PDF URL is filled in once delivery completes.
+  deliverReportInBackground({
+    result: transactionResult.result,
+    businessName: transactionResult.session.businessName,
+    phase: Phase.PHASE1,
+    sessionId,
+    recipientEmail: transactionResult.session.leadEmail ?? null,
+  });
 
   return {
     message: 'Assessment submitted successfully',
@@ -900,40 +921,15 @@ async function submitPhase2BService(sessionId: string): Promise<SubmitAssessment
     }
   );
 
-  // After scoring resolves, generate PDF, persist to R2, and email it —
-  // best-effort; failures here don't roll back the submission.
-  try {
-    const pdfBuffer = await generateReportPDF(
-      transactionResult.result,
-      transactionResult.businessName,
-      Phase.PHASE2B
-    );
-
-    const { url: reportPdfUrl } = await uploadPdf(
-      `reports/phase2b/${sessionId}.pdf`,
-      pdfBuffer
-    );
-
-    await prisma.sessionResult.update({
-      where: { sessionId },
-      data: {
-        reportPdfUrl,
-        generatedAt: new Date(),
-      },
-    });
-
-    if (transactionResult.recipientEmail) {
-      await sendReportEmail({
-        toEmail: transactionResult.recipientEmail,
-        businessName: transactionResult.businessName,
-        pdfBuffer,
-        reportPdfUrl,
-      });
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Error generating PDF or sending Phase 2B report email:', message);
-  }
+  // Fire-and-forget: build/upload/email the PDF in the background so the user
+  // isn't held while it generates (see deliverReportInBackground).
+  deliverReportInBackground({
+    result: transactionResult.result,
+    businessName: transactionResult.businessName,
+    phase: Phase.PHASE2B,
+    sessionId,
+    recipientEmail: transactionResult.recipientEmail ?? null,
+  });
 
   return {
     message: 'Phase 2B assessment submitted successfully',
