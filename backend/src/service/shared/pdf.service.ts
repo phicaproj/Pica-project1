@@ -188,7 +188,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string)
 
   // PICA wordmark + tagline next to the logo
   doc
-    .fontSize(20)
+    .fontSize(16)
     .fillColor(COLORS.white)
     .text('Beauvision Associates', textX, 24, { characterSpacing: 3, lineBreak: false });
   doc
@@ -197,7 +197,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string)
     .text('LEAD CONSULTANT ENTITY', textX, 50, { characterSpacing: 2, lineBreak: false });
 
   // Report title + business + date, right-aligned
-  doc.fontSize(13).fillColor('#f8bd0d').text('PICA SEAL', PAGE_MARGIN, 26, {
+  doc.fontSize(13).font('Helvetica-Bold').fillColor('#f8bd0d').text('PICA SEAL', PAGE_MARGIN, 26, {
     align: 'right',
     width: COLORS.pageWidth,
   });
@@ -444,8 +444,9 @@ const drawCoverPage = (
   // CONFIDENTIAL — small, letter-spaced, muted, centered near the top.
   doc
     .fontSize(10)
+    .font('Arial-BoldMT') // built-in bold font for emphasis
     .fillColor(COLORS.mutedText)
-    .text('────── CONFIDENTIAL ──────', PAGE_MARGIN, 120, {
+    .text('CONFIDENTIAL', PAGE_MARGIN, 120, {
       width: COLORS.pageWidth,
       align: 'center',
       characterSpacing: 4,

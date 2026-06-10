@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
+import { motion, AnimatePresence } from "framer-motion";
 import { PillarPickerModal } from "../deep-dive/PillarPickerModal";
 import {
   AlertTriangle,
@@ -935,6 +936,7 @@ function CheckoutView({
   const [couponPricing, setCouponPricing] = useState<CouponPricing | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const paidRef = useRef(false);
 
   const baseAmount = plan.amount;
@@ -1016,12 +1018,15 @@ function CheckoutView({
 
     setCouponCode(response.data.pricing.code);
     setCouponPricing(response.data.pricing);
+    setShowConfetti(true);
+    window.setTimeout(() => setShowConfetti(false), 1800);
   };
 
   const removeCoupon = () => {
     setCouponCode("");
     setCouponPricing(null);
     setCouponError(null);
+    setShowConfetti(false);
   };
 
   const handlePay = async () => {
@@ -1182,20 +1187,37 @@ function CheckoutView({
               ))}
             </ul>
             <div className="mb-3">
-              <p className="text-xs text-gray-500 mb-1">Total due now</p>
-              <p className="text-3xl font-extrabold text-white">
-                {displayTotal}
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
+                Total due now
               </p>
+              <div className="flex items-baseline gap-3">
+                <p className="text-4xl font-black text-white">{displayTotal}</p>
+                {couponPricing && (
+                  <span className="text-lg font-bold text-gray-500 line-through">
+                    {formatPrice(couponPricing.basePrice, plan.currency)}
+                  </span>
+                )}
+              </div>
               {couponPricing && (
-                <div className="mt-3 space-y-1 text-xs text-gray-400">
-                  <div className="flex justify-between gap-4">
-                    <span>Base price</span>
-                    <span>{formatPrice(couponPricing.basePrice, plan.currency)}</span>
+                <div className="mt-4 space-y-2.5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 text-sm">
+                  <div className="flex justify-between gap-4 text-gray-200">
+                    <span className="font-semibold">Base price</span>
+                    <span className="font-bold text-white">
+                      {formatPrice(couponPricing.basePrice, plan.currency)}
+                    </span>
                   </div>
                   <div className="flex justify-between gap-4 text-teal-300">
-                    <span>Coupon {couponPricing.code}</span>
-                    <span>
+                    <span className="font-semibold">
+                      Coupon {couponPricing.code}
+                    </span>
+                    <span className="font-extrabold">
                       -{formatPrice(couponPricing.discountAmount, plan.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-teal-500/20 pt-2.5 text-white">
+                    <span className="font-bold">You pay</span>
+                    <span className="text-lg font-black text-[#00ffaa]">
+                      {formatPrice(couponPricing.finalAmount, plan.currency)}
                     </span>
                   </div>
                 </div>
@@ -1259,15 +1281,21 @@ function CheckoutView({
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
+          <div className="relative overflow-visible rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
+            <AnimatePresence>{showConfetti && <CouponConfetti />}</AnimatePresence>
             <div className="flex items-center justify-between gap-4 mb-3">
               <p className="text-xs font-bold uppercase tracking-widest text-orange-400">
                 Coupon Discount
               </p>
               {hasAppliedCoupon && (
-                <span className="rounded-full bg-teal-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-300">
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                  className="rounded-full bg-teal-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-300"
+                >
                   Applied
-                </span>
+                </motion.span>
               )}
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -1300,13 +1328,22 @@ function CheckoutView({
               )}
             </div>
             {couponError && (
-              <p className="mt-3 text-sm text-red-400">{couponError}</p>
+              <p className="mt-3 text-sm font-semibold text-red-400">{couponError}</p>
             )}
             {couponPricing && (
-              <p className="mt-3 text-sm text-teal-300">
-                Coupon applied. You save{" "}
-                {formatPrice(couponPricing.discountAmount, plan.currency)}.
-              </p>
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 flex items-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3"
+              >
+                <CheckCircle className="h-5 w-5 flex-shrink-0 text-[#00ffaa]" />
+                <p className="text-base font-bold text-white">
+                  Coupon applied! You save{" "}
+                  <span className="text-[#00ffaa]">
+                    {formatPrice(couponPricing.discountAmount, plan.currency)}
+                  </span>
+                </p>
+              </motion.div>
             )}
           </div>
 
@@ -1360,6 +1397,64 @@ function CheckoutView({
         </div>
         <span>&copy; 2024 PICA.</span>
       </footer>
+    </div>
+  );
+}
+
+const CONFETTI_COLORS = [
+  "#f97316",
+  "#2dd4bf",
+  "#facc15",
+  "#a855f7",
+  "#ec4899",
+  "#34d399",
+];
+
+// Lightweight party-popper burst — fires once when a coupon is applied.
+// Pieces spray outward from the center and fall away; no external lib needed.
+function CouponConfetti() {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: 36 }, (_, i) => {
+        const angle = (Math.PI * 2 * i) / 36 + Math.random() * 0.4;
+        const distance = 120 + Math.random() * 160;
+        return {
+          id: i,
+          x: Math.cos(angle) * distance,
+          y: Math.sin(angle) * distance - 40,
+          rotate: Math.random() * 540 - 270,
+          color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+          delay: Math.random() * 0.12,
+          size: 6 + Math.random() * 6,
+          round: Math.random() > 0.5,
+        };
+      }),
+    [],
+  );
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center overflow-visible">
+      {pieces.map((p) => (
+        <motion.span
+          key={p.id}
+          initial={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 }}
+          animate={{
+            opacity: [1, 1, 0],
+            x: p.x,
+            y: [0, p.y, p.y + 220],
+            rotate: p.rotate,
+            scale: [1, 1, 0.6],
+          }}
+          transition={{ duration: 1.5, delay: p.delay, ease: "easeOut" }}
+          style={{
+            position: "absolute",
+            width: p.size,
+            height: p.size,
+            backgroundColor: p.color,
+            borderRadius: p.round ? "9999px" : "2px",
+          }}
+        />
+      ))}
     </div>
   );
 }
