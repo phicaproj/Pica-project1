@@ -3,7 +3,7 @@ import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import { computeScoring } from '../scoring/scoring.service';
-import { generatePhase1PDF } from '../../service/shared/pdf.service';
+import { generateReportPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
 import type {
@@ -377,9 +377,10 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
   // After scoring resolves, generate PDF, persist to R2, and email it
   // (Phase 1 only — best-effort; failures don't roll back the submission).
   try {
-    const pdfBuffer = await generatePhase1PDF(
+    const pdfBuffer = await generateReportPDF(
       transactionResult.result,
-      transactionResult.session.businessName
+      transactionResult.session.businessName,
+      Phase.PHASE1
     );
 
     // Upload to R2 under a stable per-session key — re-submitting/regenerating
@@ -902,9 +903,10 @@ async function submitPhase2BService(sessionId: string): Promise<SubmitAssessment
   // After scoring resolves, generate PDF, persist to R2, and email it —
   // best-effort; failures here don't roll back the submission.
   try {
-    const pdfBuffer = await generatePhase1PDF(
+    const pdfBuffer = await generateReportPDF(
       transactionResult.result,
-      transactionResult.businessName
+      transactionResult.businessName,
+      Phase.PHASE2B
     );
 
     const { url: reportPdfUrl } = await uploadPdf(

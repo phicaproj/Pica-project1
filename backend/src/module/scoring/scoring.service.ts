@@ -117,29 +117,42 @@ const determineInsightRule = (responses: SessionResponseRecord[]): InsightRule =
  *
  * Step 3 — Map to clean ScoringFinding objects for storage.
  */
+const toFinding = (response: SessionResponseRecord): ScoringFinding => ({
+  optionId: response.selectedOption.id,
+  questionText: response.question.questionText,
+  selectedLabel: response.selectedOption.optionLabel,
+  observation: response.selectedOption.observation,
+  recommendation: response.selectedOption.recommendation,
+  riskType: response.riskTypeAtTime,
+  score: response.scoreAtTime,
+});
+
+/** Reorders a pillar's responses by priority: KNOCKOUT → RISK → NORMAL. */
+const orderByPriority = (responses: SessionResponseRecord[]): SessionResponseRecord[] => [
+  ...responses.filter((r) => r.riskTypeAtTime === RiskType.KNOCKOUT),
+  ...responses.filter((r) => r.riskTypeAtTime === RiskType.RISK),
+  ...responses.filter((r) => r.riskTypeAtTime === RiskType.NORMAL),
+];
+
 const pickFindings = (responses: SessionResponseRecord[], rule: InsightRule): ScoringFinding[] => {
   // Step 1: reorder by priority
-  const ordered = [
-    ...responses.filter((r) => r.riskTypeAtTime === RiskType.KNOCKOUT),
-    ...responses.filter((r) => r.riskTypeAtTime === RiskType.RISK),
-    ...responses.filter((r) => r.riskTypeAtTime === RiskType.NORMAL),
-  ];
+  const ordered = orderByPriority(responses);
 
   // Step 2: determine how many findings to surface
   // Only BOTH_RISK shows 2 findings — every other rule shows 1
   const takeCount = rule === InsightRule.BOTH_RISK ? 2 : 1;
 
   // Step 3: map to clean finding shape
-  return ordered.slice(0, takeCount).map((response) => ({
-    optionId: response.selectedOption.id,
-    questionText: response.question.questionText,
-    selectedLabel: response.selectedOption.optionLabel,
-    observation: response.selectedOption.observation,
-    recommendation: response.selectedOption.recommendation,
-    riskType: response.riskTypeAtTime,
-    score: response.scoreAtTime,
-  }));
+  return ordered.slice(0, takeCount).map(toFinding);
 };
+
+/**
+ * Maps EVERY answered question in the pillar to a finding, ordered
+ * KNOCKOUT → RISK → NORMAL. Drives the PDF report's per-pillar pages so they
+ * present the full picture; the result page view keeps using `pickFindings`.
+ */
+const pickAllFindings = (responses: SessionResponseRecord[]): ScoringFinding[] =>
+  orderByPriority(responses).map(toFinding);
 
 type ComputeScoringOptions = {
   phase: Phase;
@@ -330,6 +343,7 @@ export async function computeScoring(
     // how many findings are returned (1 or 2), not a blind slice(0,2)
     const insightRuleApplied = determineInsightRule(pillarResponses);
     const findings = pickFindings(pillarResponses, insightRuleApplied);
+    const allFindings = pickAllFindings(pillarResponses);
     const colorBand = toColorBand(weightedScore, thresholds);
 
     // Contribute this pillar's weighted score to the overall total.
@@ -348,6 +362,7 @@ export async function computeScoring(
       colorBand,
       insightRuleApplied,
       findings,
+      allFindings,
     });
   }
 

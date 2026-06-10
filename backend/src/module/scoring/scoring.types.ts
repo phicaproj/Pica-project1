@@ -23,7 +23,14 @@ export interface ScoringPillarPayload {
   hasKnockout: boolean;
   colorBand: ColorBand;
   insightRuleApplied: InsightRule;
+  /** Top 1–2 findings surfaced on the result page view. */
   findings: ScoringFinding[];
+  /**
+   * Every answered question's observation/recommendation for this pillar,
+   * ordered KNOCKOUT → RISK → NORMAL. Used by the PDF report so each pillar
+   * page is complete; the result page view continues to use `findings`.
+   */
+  allFindings: ScoringFinding[];
 }
 
 // ── Overall result ─────────────────────────────────────────

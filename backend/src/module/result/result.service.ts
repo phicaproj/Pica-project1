@@ -2,7 +2,7 @@ import { Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
-import { generatePhase1PDF } from '../../service/shared/pdf.service';
+import { generateReportPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
 import { APP_URL } from '../../Config/env';
@@ -220,7 +220,7 @@ export async function downloadResultPdfService(
   const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;
   const businessName = session.businessName ?? 'Business';
 
-  const pdfBuffer = await generatePhase1PDF(scoringPayload, businessName);
+  const pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase);
   const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
 
   // Persist the PDF to R2 on first download — subsequent downloads reuse the
