@@ -134,13 +134,16 @@ export async function getReportKpisService(filters: ReportFilters): Promise<Repo
       prisma.payment.groupBy({
         by: ['plan'],
         where: { ...buildPaymentWhere(f), status: PaymentStatus.SUCCESS },
-        _sum: { amount: true },
+        // USD base currency for analytics — every Payment row carries
+        // amountUsd (back-filled in Slice 2A) so totals are comparable even
+        // when half the rows were captured in NGN and half in USD.
+        _sum: { amountUsd: true },
       }),
     ]);
 
-  const phase2a = revenueByPlan.find((r) => r.plan === Plan.PHASE2A)?._sum.amount?.toNumber() ?? 0;
+  const phase2a = revenueByPlan.find((r) => r.plan === Plan.PHASE2A)?._sum.amountUsd?.toNumber() ?? 0;
   const phase2b =
-    revenueByPlan.find((r) => r.plan === Plan.PHASE2B_PILLAR)?._sum.amount?.toNumber() ?? 0;
+    revenueByPlan.find((r) => r.plan === Plan.PHASE2B_PILLAR)?._sum.amountUsd?.toNumber() ?? 0;
 
   return {
     message: 'Report KPIs fetched successfully',
@@ -157,7 +160,7 @@ export async function getReportKpisService(filters: ReportFilters): Promise<Repo
         total: phase2a + phase2b,
         phase2a,
         phase2b,
-        currency: 'NGN',
+        currency: 'USD',
       },
     },
   };

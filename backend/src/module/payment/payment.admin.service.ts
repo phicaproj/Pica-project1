@@ -49,25 +49,28 @@ export async function adminPaymentStatsService(): Promise<AdminPaymentStatsRespo
   // 6 calendar months back, including the current one.
   const startOfWindow = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
+  // Roll-ups are in USD — the catalogue base after Slice 2. `amountUsd` is
+  // back-filled for every row (currency-mixed `amount` would have skewed
+  // totals once NGN-priced payments started landing alongside USD ones).
   const [totalAgg, thisMonthAgg, lastMonthAgg, pendingAgg, byStatus, windowRows] =
     await Promise.all([
       prisma.payment.aggregate({
-        _sum: { amount: true },
+        _sum: { amountUsd: true },
         where: { status: PaymentStatus.SUCCESS },
       }),
       prisma.payment.aggregate({
-        _sum: { amount: true },
+        _sum: { amountUsd: true },
         where: { status: PaymentStatus.SUCCESS, paidAt: { gte: startOfThisMonth } },
       }),
       prisma.payment.aggregate({
-        _sum: { amount: true },
+        _sum: { amountUsd: true },
         where: {
           status: PaymentStatus.SUCCESS,
           paidAt: { gte: startOfLastMonth, lt: startOfThisMonth },
         },
       }),
       prisma.payment.aggregate({
-        _sum: { amount: true },
+        _sum: { amountUsd: true },
         _count: { _all: true },
         where: { status: PaymentStatus.PENDING },
       }),
@@ -79,13 +82,13 @@ export async function adminPaymentStatsService(): Promise<AdminPaymentStatsRespo
       // SUCCESS rows is small).
       prisma.payment.findMany({
         where: { status: PaymentStatus.SUCCESS, paidAt: { gte: startOfWindow } },
-        select: { amount: true, paidAt: true },
+        select: { amountUsd: true, paidAt: true },
       }),
     ]);
 
-  const totalRevenue = totalAgg._sum.amount?.toNumber() ?? 0;
-  const revenueThisMonth = thisMonthAgg._sum.amount?.toNumber() ?? 0;
-  const revenueLastMonth = lastMonthAgg._sum.amount?.toNumber() ?? 0;
+  const totalRevenue = totalAgg._sum.amountUsd?.toNumber() ?? 0;
+  const revenueThisMonth = thisMonthAgg._sum.amountUsd?.toNumber() ?? 0;
+  const revenueLastMonth = lastMonthAgg._sum.amountUsd?.toNumber() ?? 0;
 
   // Success rate over settled payments only — PENDING rows haven't concluded
   // so counting them would unfairly drag the rate down.
@@ -111,7 +114,7 @@ export async function adminPaymentStatsService(): Promise<AdminPaymentStatsRespo
       (m) => m.year === row.paidAt!.getFullYear() && m.month === row.paidAt!.getMonth()
     );
     if (bucket) {
-      bucket.amount += row.amount.toNumber();
+      bucket.amount += row.amountUsd?.toNumber() ?? 0;
       bucket.count += 1;
     }
   }
@@ -126,7 +129,7 @@ export async function adminPaymentStatsService(): Promise<AdminPaymentStatsRespo
         revenueLastMonth > 0
           ? Number((((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100).toFixed(1))
           : null,
-      pendingAmount: pendingAgg._sum.amount?.toNumber() ?? 0,
+      pendingAmount: pendingAgg._sum.amountUsd?.toNumber() ?? 0,
       pendingCount: pendingAgg._count._all,
       successRatePct:
         settledTotal > 0 ? Number(((successCount / settledTotal) * 100).toFixed(1)) : null,

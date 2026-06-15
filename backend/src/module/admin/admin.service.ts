@@ -167,6 +167,7 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
           id: true,
           plan: true,
           amount: true,
+          amountUsd: true,
           currency: true,
           status: true,
           providerReference: true,
@@ -199,7 +200,9 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
         where: { userId, status: { in: ['COMPLETED', 'PAID', 'REPORT_GENERATED'] } },
       }),
       prisma.payment.count({ where: { userId, status: PaymentStatus.SUCCESS } }),
-      prisma.payment.aggregate({ _sum: { amount: true }, where: { userId, status: 'SUCCESS' } }),
+      // totalSpent is reported in USD — see report.service.ts notes on
+      // amountUsd as the analytics base.
+      prisma.payment.aggregate({ _sum: { amountUsd: true }, where: { userId, status: 'SUCCESS' } }),
       prisma.payment.findFirst({
         where: { userId, status: 'SUCCESS' },
         orderBy: { paidAt: 'desc' },
@@ -207,7 +210,7 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       }),
     ]);
 
-  const totalSpent = spend._sum.amount?.toNumber() ?? 0;
+  const totalSpent = spend._sum.amountUsd?.toNumber() ?? 0;
 
   const isActive =
     user.sessions.length > 0 &&
@@ -244,7 +247,10 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
       recentPayments: user.payments.map((payment) => ({
         id: payment.id,
         plan: payment.plan,
+        // amount is in the row's captured currency; amountUsd is the analytics
+        // base. FE picks which one to render per its display rules.
         amount: payment.amount.toNumber(),
+        amountUsd: payment.amountUsd?.toNumber() ?? null,
         status: payment.status,
         currency: payment.currency,
         reference: payment.providerReference,
@@ -391,6 +397,7 @@ export async function listUserPaymentsService(
         id: true,
         plan: true,
         amount: true,
+        amountUsd: true,
         currency: true,
         status: true,
         providerReference: true,
@@ -410,6 +417,7 @@ export async function listUserPaymentsService(
       id: payment.id,
       plan: payment.plan,
       amount: payment.amount.toNumber(),
+      amountUsd: payment.amountUsd?.toNumber() ?? null,
       status: payment.status,
       currency: payment.currency,
       reference: payment.providerReference,

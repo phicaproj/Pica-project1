@@ -14,6 +14,10 @@ import {
   Database,
   Activity,
   TicketPercent,
+  Crown,
+  MessageSquare,
+  Inbox,
+  Banknote,
   Menu,
   X,
   LogOut,
@@ -33,6 +37,16 @@ const NAV_MAIN: NavItemConfig[] = [
   { label: "Payments", icon: DollarSign, href: "/admin/payments" },
 ];
 
+// Pricing & catalogue lives in its own group below assessment ops because
+// editing tier prices/durations is a different cognitive mode than running
+// the day-to-day inbox (Consultations) or grading rules (Scoring).
+const NAV_PRICING: NavItemConfig[] = [
+  { label: "Subscription Tiers", icon: Crown, href: "/admin/subscription-tiers" },
+  { label: "Consultation Tiers", icon: MessageSquare, href: "/admin/consultation-tiers" },
+  { label: "Consultations", icon: Inbox, href: "/admin/consultations" },
+  { label: "FX & App Settings", icon: Banknote, href: "/admin/app-settings" },
+];
+
 const NAV_ASSESSMENT: NavItemConfig[] = [
   { label: "Coupons", icon: TicketPercent, href: "/admin/coupons" },
   { label: "Question Bank", icon: Database, href: "/admin/question-bank" },
@@ -45,6 +59,14 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/admin/reports": "analytics:read",
   "/admin/subscription": "ledger:read",
   "/admin/payments": "ledger:read",
+  // Subscription/consultation tier CRUD reuses ledger:read/write — same
+  // person who manages pricing manages catalogue. Inbox uses its own scope.
+  "/admin/subscription-tiers": "ledger:read",
+  "/admin/consultation-tiers": "ledger:read",
+  "/admin/consultations": "consultations:read",
+  // FX rate sits under settings:read (singleton app-settings row, same
+  // scope as the existing /admin/settings page).
+  "/admin/app-settings": "settings:read",
   "/admin/coupons": "coupons:read",
   "/admin/question-bank": "questions:read",
   "/admin/scoring": "scoring:read",
@@ -99,6 +121,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const visibleNavMain = NAV_MAIN.filter((item) => checkPermission(item.href));
+  const visibleNavPricing = NAV_PRICING.filter((item) => checkPermission(item.href));
   const visibleNavAssessment = NAV_ASSESSMENT.filter((item) => checkPermission(item.href));
 
   const isActive = (href: string) => {
@@ -208,6 +231,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <NavItem key={item.label} item={item} />
               ))}
             </div>
+
+            {visibleNavPricing.length > 0 && (
+              <>
+                <div className="my-4 h-px bg-white/5 mx-4" />
+                <div className="space-y-1">
+                  {visibleNavPricing.map((item) => (
+                    <NavItem key={item.label} item={item} />
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className="my-4 h-px bg-white/5 mx-4" />
 

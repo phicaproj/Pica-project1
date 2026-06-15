@@ -51,6 +51,27 @@ enum Plan {
   /// (via `userSubscriptionId`) is the entitlement. grantSuccessEntitlements
   /// short-circuits for SUBSCRIPTION rows because there's nothing to unlock.
   SUBSCRIPTION
+  /// One-off consultation paywall. Paid when the user has no consultation
+  /// quota left on their subscription. The Payment row is linked to a
+  /// ConsultationBooking via Payment.consultationBookingId; grant logic flips
+  /// the booking from REQUESTED-pending-payment to REQUESTED-confirmable.
+  CONSULTATION
+}
+
+/// Lifecycle of a consultation booking.
+///   REQUESTED — user submitted; either covered by subscription quota or
+///               waiting for paywall completion. Visible to admin in either
+///               case (Payment.status acts as the "ready to confirm" gate).
+///   CONFIRMED — admin set scheduledAt + meetingLink, user notified.
+///   ATTENDED  — admin marked complete after the session.
+///   NO_SHOW   — admin recorded the user didn't show.
+///   CANCELLED — user-cancelled OR admin-cancelled (preserves the audit row).
+enum ConsultationBookingStatus {
+  REQUESTED
+  CONFIRMED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
 }
 
 enum PaymentStatus {
@@ -289,6 +310,7 @@ model User {
   // edited (there's only one row anyway).
   appSettingsUpdates AppSettings[]      @relation("AppSettingsUpdatedBy")
   subscriptions      UserSubscription[]
+  consultations      ConsultationBooking[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -424,7 +446,8 @@ model SessionResult {
   paidByPaymentId String?   @unique @map("paid_by_payment_id")
 
   // Relations
-  session AssessmentSession @relation(fields: [sessionId], references: [id])
+  session              AssessmentSession     @relation(fields: [sessionId], references: [id])
+  consultationBookings ConsultationBooking[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -453,6 +476,10 @@ model Payment {
   // SUBSCRIPTION: required (the UserSubscription this charge funds).
   // PHASE2A / PHASE2B_PILLAR: null.
   userSubscriptionId String? @map("user_subscription_id")
+  // CONSULTATION: required (the ConsultationBooking this paywall row funds).
+  // All other plans: null. Booking is created REQUESTED up front and becomes
+  // "ready to confirm" once Payment.status = SUCCESS.
+  consultationBookingId String? @unique @map("consultation_booking_id")
 
   plan     Plan
   provider PaymentProvider @default(PAYSTACK)
@@ -497,11 +524,12 @@ model Payment {
   verifyPayload Json? @map("verify_payload")
 
   // Relations
-  user             User              @relation(fields: [userId], references: [id])
-  pillar           Pillar?           @relation(fields: [pillarId], references: [id])
-  userSubscription UserSubscription? @relation(fields: [userSubscriptionId], references: [id])
-  webhookEvents    WebhookEvent[]
-  phase2bUnlock    Phase2BPillarUnlock?
+  user                 User                  @relation(fields: [userId], references: [id])
+  pillar               Pillar?               @relation(fields: [pillarId], references: [id])
+  userSubscription     UserSubscription?     @relation(fields: [userSubscriptionId], references: [id])
+  consultationBooking  ConsultationBooking?  @relation(fields: [consultationBookingId], references: [id])
+  webhookEvents        WebhookEvent[]
+  phase2bUnlock        Phase2BPillarUnlock?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -789,4 +817,98 @@ model SubscriptionUsage {
   @@unique([userSubscriptionId, periodStart])
   @@index([userSubscriptionId, periodEnd])
   @@map("subscription_usage")
+}
+
+// ============================================================
+// LAYER F — CONSULTATIONS (Section E)
+// ============================================================
+//
+// One-off advisory calls. Unlike subscription plans, ConsultationTier rows
+// are NOT mirrored to Paystack — every booking that needs payment generates a
+// fresh one-off transaction via initializeTransaction (same path as Phase 2A
+// / 2B). The tier is a price + duration template; the booking is the actual
+// event.
+//
+// Quota integration: subscribers consume `consultationsPerMonth` from their
+// active UserSubscription via assertSubscriptionQuota('consultation'). If
+// quota is available, the booking is coveredBySubscription=true with no
+// Payment row attached. Otherwise a paywall Payment is created and the
+// booking sits in REQUESTED until the Payment lands as SUCCESS.
+
+/// Admin-defined consultation tier (e.g. 30min / 60min / 90min). Prices are
+/// USD-base like subscription plans; NGN users see the converted price at
+/// checkout via the same FX rate.
+model ConsultationTier {
+  id String @id @default(uuid())
+
+  tier         Int
+  name         String
+  description  String  @default("")
+  priceUsd     Decimal @map("price_usd") @db.Decimal(12, 2)
+  durationMinutes Int  @map("duration_minutes")
+
+  isActive     Boolean @default(true) @map("is_active")
+  displayOrder Int     @default(0)    @map("display_order")
+
+  bookings ConsultationBooking[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, displayOrder])
+  @@map("consultation_tiers")
+}
+
+/// One row per request. Created in REQUESTED state as soon as the user
+/// submits — quota path keeps it as-is, paywall path attaches a Payment via
+/// Payment.consultationBookingId. The booking stays REQUESTED until the
+/// admin confirms (sets scheduledAt + meetingLink); subsequent state changes
+/// are ATTENDED / NO_SHOW / CANCELLED.
+model ConsultationBooking {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  tierId String @map("tier_id")
+
+  status ConsultationBookingStatus @default(REQUESTED)
+
+  // Form fields. `topic` is short ("hiring plan review"); `notes` is the
+  // longer-form context the consultant wants to read before the call.
+  // `preferredTimes` is free-form for now (user types like "Mon AM, Wed
+  // afternoon") — kept simple; we don't try to parse it.
+  topic          String
+  notes          String  @default("")
+  preferredTimes String? @map("preferred_times")
+
+  // Optional link back to the SessionResult the user wants to discuss. The
+  // form populates this from the user's completed+paid Phase 2A / Phase 2B
+  // results so the consultant lands with context.
+  relatedSessionResultId String? @map("related_session_result_id")
+
+  // Admin-set after confirm.
+  scheduledAt DateTime? @map("scheduled_at")
+  meetingLink String?   @map("meeting_link")
+
+  // Quota path: true when a subscription consultation slot was consumed.
+  // No Payment row exists in that case; the entitlement IS the
+  // SubscriptionUsage decrement.
+  coveredBySubscription Boolean @default(false) @map("covered_by_subscription")
+
+  // Paywall path: linked Payment row. The Payment.consultationBookingId
+  // side is @unique, so this is effectively 1:1 from the booking side too.
+  // Read via `payment` relation rather than carrying paymentId here.
+
+  requestedAt DateTime @default(now()) @map("requested_at")
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id])
+  tier           ConsultationTier @relation(fields: [tierId], references: [id])
+  relatedResult  SessionResult? @relation(fields: [relatedSessionResultId], references: [id])
+  payment        Payment?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([status, requestedAt])
+  @@map("consultation_bookings")
 }

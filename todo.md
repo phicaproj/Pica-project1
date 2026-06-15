@@ -64,18 +64,23 @@
   - *Note:* Phase 2B is implicitly gated (requires a paid pillar unlock, which requires `businessSize`). Phase 2A copy updated explicitly.
 - [x] Update `auth.types.ts register schema` to accept the new self-entered fields.
 
-## D. Subscriptions (Paystack recurring, 3 tiers)
+## D. Subscriptions (Paystack recurring, 3 tiers) ✅ DONE (2026-06-15)
 
-- [ ] **New Prisma models** (+ migration):
-  - `SubscriptionPlan` (admin-defined tier): `tier (1|2|3 or enum)`, `name`, `priceUsd Decimal`, `paystackPlanCode`, quotas → `phase2aPerMonth Int`, `phase2bPerMonth Int`, `consultationsPerMonth Int`, `isActive Boolean`, feature list (JSON or text[]), `displayOrder`.
-  - `UserSubscription`: `userId`, `planId`, `status (ACTIVE|PAST_DUE|CANCELLED|EXPIRED)`, `paystackSubscriptionCode`, `paystackCustomerCode`, `currentPeriodStart/End`, `cancelAtPeriodEnd`.
-  - `SubscriptionUsage`: per-user, per-period counters (`phase2aUsed`, `phase2bUsed`, `consultationsUsed`) keyed by `(userSubscriptionId, periodStart)`; or compute usage from existing tables — decide and document.
-- [ ] **Paystack Plans integration.** On admin creating/updating a `SubscriptionPlan`, create/update the matching **Paystack Plan** (per currency — NGN plan + USD plan, since currency differs by country). Store the plan code(s).
-- [ ] **Subscribe endpoint** (`POST /api/subscription/subscribe`): create Paystack subscription for the user's resolved currency; return auth URL.
-- [ ] **Webhooks for recurring**: extend the existing webhook handler (`payment.service.ts` / `WebhookEvent`) to process `subscription.create`, `charge.success` (renewal), `subscription.disable`, `invoice.payment_failed` → update `UserSubscription.status` + roll period + reset usage. Keep idempotency on `providerEventId`.
-- [ ] **Cancel endpoint** (`POST /api/subscription/cancel`) → Paystack disable; set `cancelAtPeriodEnd`.
-- [ ] **Quota enforcement service.** Helper `assertSubscriptionQuota(userId, kind)` used by Phase 2A start, Phase 2B start, and consultation booking. Subscribers consume monthly quota; non-subscribers fall through to pay-per-use.
-- [ ] **`GET /api/subscription/me`** → current plan, status, period end, remaining quotas. Backs dashboard subscription card.
+- [x] **New Prisma models** (+ migration `20260615200000_subscriptions`):
+  - `SubscriptionPlan` — `tier Int`, `name`, `description`, `priceUsd Decimal(12,2)`, `phase2aPerMonth`, `phase2bPerMonth`, `consultationsPerMonth`, `features String[]`, `paystackPlanCodeUsd`/`paystackPlanCodeNgn`, `isActive`, `displayOrder`. Seeded with Starter (2/2/1 @ $40), Growth (4/4/2 @ $80), Scale (6/6/3 @ $120).
+  - `UserSubscription` — `userId`, `planId`, `status (ACTIVE|PAST_DUE|CANCELLED|EXPIRED)`, Paystack codes (`subscriptionCode @unique`, `customerCode`, `emailToken`), `currency`, `currentPeriodStart/End`, `cancelAtPeriodEnd`. Card-on-file columns added by `20260615210000_subscription_card_on_file` (`cardLast4/Brand/Bank/ExpMonth/ExpYear/AuthorizationCode`).
+  - `SubscriptionUsage` — `(userSubscriptionId, periodStart)` unique, `phase2aUsed`, `phase2bUsed`, `consultationsUsed`. Lazy-created on first consumption.
+  - `Plan` enum extended with `SUBSCRIPTION` and `Payment.userSubscriptionId` FK added (`20260615220000_subscription_payment_link`) so every recurring charge persists an idempotent `Payment` row.
+- [x] **Paystack Plans integration.** `paystack.service.ts` gained `createPaystackPlan`, `updatePaystackPlan`, `initializeSubscriptionTransaction`, `disablePaystackSubscription`. Admin save creates the USD Paystack plan eagerly; NGN plan is lazily created on first Nigerian subscriber (so admins don't need NGN config until they have an NG customer).
+- [x] **Subscribe endpoint** (`POST /api/subscription/subscribe`): rejects if user already has ACTIVE/PAST_DUE, snapshots USD→NGN at init for NG users, returns Paystack hosted checkout URL.
+- [x] **Webhooks for recurring** — `handleSubscriptionEvent` (subscription.create + subscription.disable) and `handleSubscriptionChargeSuccess` (charge.success with `metadata.kind === 'subscription'`). Idempotency anchor is `Payment.providerReference @unique` upsert — period only rolls when the upsert actually inserts. Card on file captured from `data.authorization` on every charge. `subscription.disable` flips status to CANCELLED locally; `expireLapsedSubscriptions()` self-heals to EXPIRED on next read.
+- [x] **Cancel endpoint** (`POST /api/subscription/cancel`) — Paystack disable + `cancelAtPeriodEnd=true`. Rejects double-cancel via CONFLICT.
+- [x] **Quota enforcement.** `assertSubscriptionQuota(userId, kind)` is non-throwing — returns `{ hasQuota: true, subscriptionId, periodStart, remaining }` or `{ hasQuota: false, reason: 'no-subscription' | 'quota-exhausted' | 'expired' }`. Wired into `initPaymentService`: subscription quota short-circuits the Paystack init for `PHASE2A` + `PHASE2B_PILLAR` — $0 Payment row + `consumeSubscriptionQuota` + entitlement grant in one `$transaction`. Falls through to pay-per-use when quota is unavailable. `assertSubscriptionQuota('consultation')` is exported and ready for Section E.
+- [x] **`GET /api/subscription/me`** + **`GET /api/subscription/plans`** — current subscription with quota meters, card on file, period dates; public plan catalogue with USD prices + live `usdToNgn` for FE conversion.
+- [x] **Admin tier CRUD** — `/api/admin/subscription-plans` GET/POST/PATCH/DELETE under `ledger:read`/`ledger:write`. Tier number is immutable post-create (changing it would shadow displayOrder). Soft-delete only — flips `isActive=false`, existing subscribers keep working.
+- [x] **Hard period boundary.** No quota rollover. `expireLapsedSubscriptions()` runs on every quota check so even without a cron, lapsed subscriptions self-heal to EXPIRED at read time.
+
+  *Files added:* `module/subscription/{types,service,controller,routes}.ts`, three migrations under `prisma/migrations/2026061520*`–`2026061522*`, helpers added to `paystack.service.ts`. Webhook dispatch lives in `payment.service.ts`.
 
 ## E. Consultation (manual scheduling)
 
@@ -189,16 +194,16 @@ to collect during the free scan). So we move the "gate" from registration to the
 - [x] **Build the profile-completion form** (most likely inside `dashboard/settings`) so users can fill in the missing details, after which the paid tests unlock.
   - *Implementation:* the existing settings page already wires `staffSize` + business fields through `updateUserBusiness`. No new form needed.
 
-## N. Build the user's subscription screen
+## N. Build the user's subscription screen ✅ DONE (2026-06-15)
 
-**Background:** `dashboard/subscription/page.tsx` is currently a "buy one scan" checkout.
-The client wants real monthly subscriptions (3 tiers) that auto-renew through Paystack.
+**Background:** `dashboard/subscription/page.tsx` is the one-off pay-per-use checkout — kept as-is.
+The new recurring monthly tiers live at `/dashboard/plans` so the two flows stay distinct.
 
-- [ ] **Rework `dashboard/subscription/page.tsx` to show subscriptions.**
-  - *How:* show the 3 tiers and what each includes. Show the user's current plan, its status, when the current month/period ends, and **how many of each test they have left this month**. Add a "Subscribe" button (sends them to Paystack to pay) and a "Cancel" button.
-  - **Needs backend:** `/subscription/me` (current plan + remaining quota), subscribe, and cancel endpoints.
-- [ ] **Keep the pay-per-use (buy one test) option visible too**, side by side with subscriptions — matching the two offerings on the public pricing page.
-- [ ] **Add the API helper functions** in `lib/authClient.ts`: `getSubscriptionPlans`, `getMySubscription`, `subscribe`, `cancelSubscription`.
+- [x] **New `dashboard/plans/page.tsx`** with two views in one page:
+  - **Picker view** (no active sub): Starter / Growth / Scale cards. Each card shows price in `formatMoney(convertFromUsd(...), displayCurrency)` so Nigerian users see ₦, everyone else $. Quota lines (Phase 2A / 2B / consultations per month) render via `<QuotaLine>`; description renders inline above bonus features (matches the planning conversation). Subscribe button redirects to Paystack hosted checkout.
+  - **Manage view** (active sub): status badge, quota meters with used / total and a "falls back to pay-per-use" hint when exhausted, billing card (USD price + next renewal), **card-on-file panel** rendering `Visa •••• 4242 — exp 12/27`, cancel button. Cancel modal calls out "quota stays through period end, no rollover after" before confirming.
+- [x] **Pay-per-use stays linked** — a footer line on the picker view points back to `/dashboard/subscription` ("Already exhausted your quota? You can still pay per use").
+- [x] **API helpers** added in `lib/api/subscription.ts` and re-exported through `authClient.ts`: `getSubscriptionPlans`, `getMySubscription`, `subscribeToPlan`, `cancelMySubscription`, plus the admin trio.
 
 ## O. Rebuild the consultation page
 
@@ -223,18 +228,18 @@ free; otherwise they hit a paywall and must pay for the consultation before it's
 **Background:** Admins need to control all of the above: subscription tiers, consultation
 tiers, what's turned on/off, the exchange rate, and consultation bookings.
 
-- [ ] **Expand the admin pricing page** (`admin/subscription/page.tsx`) — today it only edits pay-per-use prices. Add:
-  - **Subscription tiers (3):** create/edit/delete each tier's monthly price (USD) and its quotas (how many Phase 2A, Phase 2B, and consultations per month) plus its feature list.
-    - *Note:* the feature list is currently saved only in the browser (localStorage). Move it to the backend so it's shared and permanent.
-  - **Consultation tiers (3):** create/edit/delete each tier's price (USD) and duration (minutes/hours).
-  - **On/off switches:** a toggle for each individual tier, plus two big section toggles — "Pay Per Use" and "Subscription". *Important:* the UI must stop the admin from turning BOTH sections off at the same time (at least one must stay live) — show an error/disabled state.
-  - **Exchange rate editor:** a field where the admin sets the USD→Naira rate.
-  - **Needs backend:** endpoints for subscription tiers, consultation tiers, section toggles, and the exchange rate.
+- [x] **Subscription tier CRUD page** — new page at `admin/subscription-tiers/page.tsx` (distinct from `admin/subscription/page.tsx` which still owns the one-off pay-per-use pricing rows). Inline editor for price (USD), quotas, name, description, bonus features (newline-separated textarea), active flag, display order. Tier number is locked once a row is saved. Each row surfaces its Paystack USD/NGN plan code sync state. Soft-delete via "Deactivate" — existing subscribers keep working.
+- [ ] **Admin sidebar link.** Add a sidebar entry for the new tier page in `admin/layout.tsx` (the page exists, but isn't yet linked from the nav).
+- [ ] **Consultation tiers (3):** create/edit/delete each tier's price (USD) and duration (minutes/hours).
+- [ ] **Section on/off switches.** Big toggles for "Pay Per Use" vs "Subscription" sections + the BE invariant ("at least one section must stay live"). Per-tier `isActive` is already in place.
+- [ ] **Exchange rate editor in the admin UI.** BE endpoint `/api/admin/app-settings` already exists from Section A; the admin page still needs a small form to GET/PATCH the rate.
+- [ ] **Move pay-per-use feature list out of localStorage** — today `admin/subscription/page.tsx` stores it under `FEATURE_STORAGE_KEY`. Should move to BE so it's shared and persistent.
 - [ ] **Create a new admin "Consultation Management" page.**
-  - *What it does:* lists all consultation requests by status (requested / confirmed / attended / cancelled). The admin can confirm a request, set the date/time and paste a meeting link, and later mark it attended or no-show.
-  - *How:* add the page under `admin/`, and add a link to it in the admin sidebar (`admin/layout.tsx`). It will also need a permission key like the other admin pages.
-  - **Needs backend:** consultation management endpoints.
-- [ ] **Add the admin API helper functions** in `lib/authClient.ts` for subscription tiers, consultation tiers, consultation bookings, and the exchange rate.
+  - *What it does:* lists all consultation requests by status (requested / confirmed / attended / cancelled). Admin confirms a request, sets the date/time and pastes a meeting link, marks attended or no-show.
+  - *How:* add the page under `admin/`, link from sidebar (`admin/layout.tsx`). Will also need a permission key like the other admin pages.
+  - **Needs backend:** consultation management endpoints (Section E).
+- [x] **Admin subscription API helpers** added in `lib/api/subscription.ts`: `adminListSubscriptionPlans`, `adminCreateSubscriptionPlan`, `adminUpdateSubscriptionPlan`, `adminDeleteSubscriptionPlan`.
+- [ ] **Add remaining admin helpers** in `lib/authClient.ts` for consultation tiers, consultation bookings, and the exchange rate (the rate endpoint already exists in `lib/api/admin.ts`? — verify and add if missing).
 
 ## Q. General notes
 

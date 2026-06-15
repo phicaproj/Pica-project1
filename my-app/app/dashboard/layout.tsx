@@ -13,6 +13,7 @@ import {
   FileText,
   MessageSquare,
   CreditCard,
+  Crown,
   Settings,
   Bell,
   Menu,
@@ -32,8 +33,11 @@ const NAV_MAIN = [
 ];
 
 const NAV_SUPPORT = [
+  // Monthly plans (recurring subscription tiers) — distinct from
+  // /dashboard/subscription which is the one-off pay-per-use checkout.
+  { label: "Plans", icon: Crown, href: "/dashboard/plans" },
   { label: "Consultation", icon: MessageSquare, href: "/dashboard/consultation" },
-  { label: "Subscription", icon: CreditCard, href: "/dashboard/subscription" },
+  { label: "Pay-per-use", icon: CreditCard, href: "/dashboard/subscription" },
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
 

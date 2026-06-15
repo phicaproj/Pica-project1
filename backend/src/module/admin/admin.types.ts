@@ -86,6 +86,10 @@ export type AdminUserDetails = AdminUserRow & {
   recentPayments: {
     id: string;
     amount: number;
+    // USD-normalised amount (null only for legacy rows missing back-fill).
+    // FE rolls totals up off this, but renders per-row in the captured
+    // `currency` for fidelity.
+    amountUsd: number | null;
     plan: Payment['plan'];
     status: PaymentStatus;
     currency: string;

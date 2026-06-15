@@ -85,8 +85,11 @@ const formatDate = (iso: string | null) => {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 };
 
-const formatNaira = (n: number) =>
-  `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+// USD is the analytics base after Slice 2 — BE rolls Payment.amountUsd up so
+// totals stay comparable across NGN- and USD-captured rows. Per-row tables
+// elsewhere still honour the captured currency.
+const formatUsd = (n: number) =>
+  `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
 type BreakdownTab = "pillars" | "phases" | "regions" | "industries";
 
@@ -449,11 +452,11 @@ export default function ReportsAnalyticsPage() {
               <DollarSign className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             </div>
             <div className="text-3xl font-bold text-white mb-1">
-              {loading && !kpis ? "—" : formatNaira(kpis?.revenue.total ?? 0)}
+              {loading && !kpis ? "—" : formatUsd(kpis?.revenue.total ?? 0)}
             </div>
             <div className="text-xs text-gray-400">
               {kpis
-                ? `Full Diagnostic ${formatNaira(kpis.revenue.phase2a)} · Deep Dives ${formatNaira(kpis.revenue.phase2b)}`
+                ? `Full Diagnostic ${formatUsd(kpis.revenue.phase2a)} · Deep Dives ${formatUsd(kpis.revenue.phase2b)}`
                 : ""}
             </div>
           </div>

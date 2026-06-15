@@ -59,6 +59,15 @@ import {
   adminUpdatePlan,
   adminDeletePlan,
 } from '../subscription/subscription.controller';
+import {
+  adminListTiers as adminListConsultationTiers,
+  adminCreateTier as adminCreateConsultationTier,
+  adminUpdateTier as adminUpdateConsultationTier,
+  adminDeleteTier as adminDeleteConsultationTier,
+  adminListBookings as adminListConsultationBookings,
+  adminConfirmBooking as adminConfirmConsultationBooking,
+  adminUpdateBookingStatus as adminUpdateConsultationBookingStatus,
+} from '../consultation/consultation.controller';
 
 const adminRouter = express.Router();
 
@@ -162,5 +171,26 @@ adminRouter.get('/subscription-plans', hasPermission('ledger:read'), adminListPl
 adminRouter.post('/subscription-plans', hasPermission('ledger:write'), adminCreatePlan);
 adminRouter.patch('/subscription-plans/:id', hasPermission('ledger:write'), adminUpdatePlan);
 adminRouter.delete('/subscription-plans/:id', hasPermission('ledger:write'), adminDeletePlan);
+
+// Consultation tier CRUD + booking management. Tiers share the ledger
+// permission bucket (same shape as subscription/pricing). Booking management
+// uses a separate 'consultations:*' bucket — operations staff might need
+// to confirm bookings without seeing revenue, and vice versa.
+adminRouter.get('/consultation-tiers', hasPermission('ledger:read'), adminListConsultationTiers);
+adminRouter.post('/consultation-tiers', hasPermission('ledger:write'), adminCreateConsultationTier);
+adminRouter.patch('/consultation-tiers/:id', hasPermission('ledger:write'), adminUpdateConsultationTier);
+adminRouter.delete('/consultation-tiers/:id', hasPermission('ledger:write'), adminDeleteConsultationTier);
+
+adminRouter.get('/consultation-bookings', hasPermission('consultations:read'), adminListConsultationBookings);
+adminRouter.patch(
+  '/consultation-bookings/:id/confirm',
+  hasPermission('consultations:write'),
+  adminConfirmConsultationBooking,
+);
+adminRouter.patch(
+  '/consultation-bookings/:id/status',
+  hasPermission('consultations:write'),
+  adminUpdateConsultationBookingStatus,
+);
 
 export default adminRouter;

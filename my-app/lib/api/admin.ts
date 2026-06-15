@@ -756,3 +756,31 @@ export const updateMyAdminProfile = async (payload: {
 		{ method: 'PATCH', body: JSON.stringify(payload) },
 	)
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// App settings — singleton holding the USD→NGN FX rate used to convert USD
+// catalogue prices into NGN at charge time / display time for Nigerian users.
+// Only `settings:read`/`settings:write` admins can touch this.
+// ──────────────────────────────────────────────────────────────────────────
+
+export type AppSettingsPayload = {
+	usdToNgn: number
+	updatedBy: string | null
+	updatedAt: string
+}
+
+export type AppSettingsResponse = {
+	message: string
+	settings: AppSettingsPayload
+}
+
+export const getAdminAppSettings = async () => {
+	return authedFetch<AppSettingsResponse>('/admin/app-settings', { method: 'GET' })
+}
+
+export const updateAdminAppSettings = async (input: { usdToNgn?: number }) => {
+	return authedFetch<AppSettingsResponse>('/admin/app-settings', {
+		method: 'PATCH',
+		body: JSON.stringify(input),
+	})
+}

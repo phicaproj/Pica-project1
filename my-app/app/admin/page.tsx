@@ -29,11 +29,15 @@ import {
   type ReportColorBand,
 } from "@/lib/authClient";
 
-// ── Formatting helpers (client is non-technical, NGN-first) ───────
-const formatNaira = (n: number) =>
-  `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+// ── Formatting helpers ────────────────────────────────────────────
+// Admin analytics roll-ups are USD-denominated (BE aggregates
+// Payment.amountUsd) so totals are comparable across NGN- and USD-captured
+// payments. Per-row tables on the Payments page still honour each row's
+// captured currency — that's a different display rule.
+const formatUsd = (n: number) =>
+  `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
-const formatNumber = (n: number) => n.toLocaleString("en-NG");
+const formatNumber = (n: number) => n.toLocaleString("en-US");
 
 const formatRelative = (iso: string | null) => {
   if (!iso) return "—";
@@ -170,7 +174,7 @@ export default function AdminDashboardPage() {
         <StatCard
           label="Total Revenue"
           icon={<DollarSign className="text-white/10 w-10 h-10 absolute right-4 top-4" />}
-          value={revenue ? formatNaira(revenue.total) : "—"}
+          value={revenue ? formatUsd(revenue.total) : "—"}
           growth={growthPct}
           growthSuffix="vs last month"
         />
@@ -216,7 +220,7 @@ export default function AdminDashboardPage() {
               <div className="text-right">
                 <div className="text-xs text-gray-500 uppercase tracking-wider">This month</div>
                 <div className="text-lg font-bold text-white">
-                  {formatNaira(paymentStats?.revenueThisMonth ?? 0)}
+                  {formatUsd(paymentStats?.revenueThisMonth ?? 0)}
                 </div>
               </div>
             )}
@@ -233,7 +237,7 @@ export default function AdminDashboardPage() {
                   <div key={i} className="flex flex-col items-center flex-1 group">
                     <div className="w-full relative flex justify-center h-[180px] items-end">
                       <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-[#2A2E3D] text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
-                        {formatNaira(m.amount)}
+                        {formatUsd(m.amount)}
                         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#2A2E3D]"></div>
                       </div>
                       <div
@@ -455,7 +459,7 @@ export default function AdminDashboardPage() {
               : "—"
           }
           sub={
-            paymentStats ? formatNaira(paymentStats.pendingAmount) + " awaiting" : undefined
+            paymentStats ? formatUsd(paymentStats.pendingAmount) + " awaiting" : undefined
           }
         />
 

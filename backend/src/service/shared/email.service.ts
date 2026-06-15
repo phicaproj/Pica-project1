@@ -377,3 +377,51 @@ export async function sendCouponEmail({
     htmlContent: html,
   });
 }
+
+// Booking-confirmation email — fired by the admin confirm flow. Carries the
+// scheduled time + the meeting link. Kept simple: a heading, the details, and
+// a CTA. Errors are swallowed by the caller (sendConsultationConfirmedEmailBestEffort).
+export async function sendConsultationConfirmedEmail({
+  toEmail,
+  businessName,
+  tierName,
+  durationMinutes,
+  scheduledAt,
+  meetingLink,
+}: {
+  toEmail: string;
+  businessName: string | null;
+  tierName: string;
+  durationMinutes: number;
+  scheduledAt: Date;
+  meetingLink: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = businessName ?? 'there';
+  const when = scheduledAt.toLocaleString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+
+  const html = renderEmail({
+    heading: `Your consultation is confirmed`,
+    preheader: `${tierName} • ${when}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">Your <strong>${tierName}</strong> (${durationMinutes} minutes) is confirmed for:</p>
+      <p style="margin:0 0 16px 0; font-size:16px; font-weight:600; color:${TEXT_COLOR};">${when}</p>
+      ${ctaButton(meetingLink, 'Join the meeting')}
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">If you can't make it, reply to this email and we'll reschedule.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your ${BRAND} consultation is confirmed`,
+    htmlContent: html,
+  });
+}

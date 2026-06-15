@@ -83,11 +83,14 @@ const formatAmount = (n: number, currency?: string | null) => {
   return formatMoney(n, c);
 };
 
-const compactAmount = (n: number, currency?: string | null) => {
-  const symbol = currency === "NGN" ? "₦" : "$";
-  if (n >= 1_000_000) return `${symbol}${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${symbol}${(n / 1_000).toFixed(1)}k`;
-  return formatAmount(n, currency);
+// Roll-up amounts (Total Revenue, This Month, Pending) are now USD-denominated
+// because the BE aggregates Payment.amountUsd — there's no per-row currency to
+// honour here. We only abbreviate at $10k+ (≥ 5 figures) so small totals like
+// $100 don't render as the absurd "$100.0k". M kicks in at $1M+.
+const compactAmount = (n: number) => {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 10_000) return `$${(n / 1_000).toFixed(1)}k`;
+  return formatAmount(n, "USD");
 };
 
 const formatDate = (iso: string | null) => {

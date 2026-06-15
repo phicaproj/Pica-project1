@@ -1063,6 +1063,16 @@ export async function grantSuccessEntitlements(
     return;
   }
 
+  // Consultation paywall: there's nothing to grant — the ConsultationBooking
+  // row already exists in REQUESTED state and the FE/admin both read the
+  // Payment.status off the include. Flipping Payment to SUCCESS is the
+  // entitlement; the admin then sees the booking surface as
+  // "ready-to-confirm" in their inbox. Short-circuit so the Phase 2A/2B
+  // branches below don't try to find a session/pillar.
+  if (payment.plan === Plan.CONSULTATION) {
+    return;
+  }
+
   // Per-result paywall: on first successful Phase 2A payment, mark the
   // SessionResult as paid. The Payment row carries the sessionId set at
   // init time; legacy rows without a sessionId are skipped and logged.
