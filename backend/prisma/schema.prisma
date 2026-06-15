@@ -46,6 +46,11 @@ enum BusinessSize {
 enum Plan {
   PHASE2A
   PHASE2B_PILLAR
+  /// Recurring subscription charge — used for both the first charge and every
+  /// renewal. The Payment row is the audit trail; the UserSubscription row
+  /// (via `userSubscriptionId`) is the entitlement. grantSuccessEntitlements
+  /// short-circuits for SUBSCRIPTION rows because there's nothing to unlock.
+  SUBSCRIPTION
 }
 
 enum PaymentStatus {
@@ -78,6 +83,17 @@ enum UserRole {
 enum UserStatus {
   ACTIVE
   DISABLED
+}
+
+// Subscription lifecycle. Mirrors Paystack's `subscription` statuses but only
+// names the ones our flows actually act on. The remaining Paystack states
+// (e.g. "non-renewing", "attention") collapse to PAST_DUE or CANCELLED based
+// on whether the user can still consume quota.
+enum SubscriptionStatus {
+  ACTIVE     // current period valid, quota consumable
+  PAST_DUE   // renewal charge failed; access until period end then EXPIRED
+  CANCELLED  // user (or admin) ended it; access until period end if cancelAtPeriodEnd
+  EXPIRED    // no current period; user must resubscribe
 }
 
 // The seven fixed pillar codes. Used as the canonical identifier for a Pillar
@@ -272,6 +288,7 @@ model User {
   // type-checks; admins shouldn't need to enumerate the AppSettings rows they
   // edited (there's only one row anyway).
   appSettingsUpdates AppSettings[]      @relation("AppSettingsUpdatedBy")
+  subscriptions      UserSubscription[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -433,6 +450,9 @@ model Payment {
   // PHASE2B_PILLAR: required (the pillar being unlocked).
   // PHASE2A: null.
   pillarId  String? @map("pillar_id")
+  // SUBSCRIPTION: required (the UserSubscription this charge funds).
+  // PHASE2A / PHASE2B_PILLAR: null.
+  userSubscriptionId String? @map("user_subscription_id")
 
   plan     Plan
   provider PaymentProvider @default(PAYSTACK)
@@ -477,10 +497,11 @@ model Payment {
   verifyPayload Json? @map("verify_payload")
 
   // Relations
-  user          User                 @relation(fields: [userId], references: [id])
-  pillar        Pillar?              @relation(fields: [pillarId], references: [id])
-  webhookEvents WebhookEvent[]
-  phase2bUnlock Phase2BPillarUnlock?
+  user             User              @relation(fields: [userId], references: [id])
+  pillar           Pillar?           @relation(fields: [pillarId], references: [id])
+  userSubscription UserSubscription? @relation(fields: [userSubscriptionId], references: [id])
+  webhookEvents    WebhookEvent[]
+  phase2bUnlock    Phase2BPillarUnlock?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -488,6 +509,7 @@ model Payment {
   @@index([userId])
   @@index([status])
   @@index([plan])
+  @@index([userSubscriptionId])
   @@map("payments")
 }
 
@@ -629,4 +651,142 @@ model AdminRole {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("admin_roles")
+}
+
+// ============================================================
+// LAYER E — SUBSCRIPTIONS (Paystack recurring, 3 tiers)
+// ============================================================
+
+/// Admin-defined subscription tier. Three rows are seeded by the migration —
+/// Starter / Growth / Scale — and the admin can edit every field below. The
+/// description renders inline with the feature list on the dashboard card.
+///
+/// Paystack Plans are per-currency, so each tier carries TWO plan codes: one
+/// for NGN-billed users and one for USD-billed users. The codes are populated
+/// by the admin create/update path after it calls Paystack; nullable so a
+/// row can exist briefly between insert and the Paystack round-trip.
+model SubscriptionPlan {
+  id String @id @default(uuid())
+
+  // Display tier (1 = Starter, 2 = Growth, 3 = Scale). An int rather than an
+  // enum so the admin can re-order or add tiers without a schema migration.
+  tier        Int
+  name        String
+  description String  @default("")
+  priceUsd    Decimal @map("price_usd") @db.Decimal(12, 2)
+
+  // Monthly quotas — what one period of this subscription buys. 0 means the
+  // tier doesn't include that benefit (e.g. a future "view-only" tier).
+  phase2aPerMonth        Int @map("phase2a_per_month")
+  phase2bPerMonth        Int @map("phase2b_per_month")
+  consultationsPerMonth  Int @map("consultations_per_month")
+
+  // Feature bullets shown on the storefront card. Stored as text[] so the
+  // admin can re-order them; the dashboard renders these *after* `description`
+  // on the same card.
+  features String[] @default([])
+
+  // Paystack-side plan codes, one per wire currency. Populated by the admin
+  // create/update flow via paystack.service.createPlan; null only in the brief
+  // window before that call returns.
+  paystackPlanCodeUsd String? @map("paystack_plan_code_usd")
+  paystackPlanCodeNgn String? @map("paystack_plan_code_ngn")
+
+  isActive     Boolean @default(true) @map("is_active")
+  displayOrder Int     @default(0)    @map("display_order")
+
+  subscriptions UserSubscription[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, displayOrder])
+  @@map("subscription_plans")
+}
+
+/// One row per user-subscription lifecycle. New row on every fresh subscribe;
+/// the renewal webhook rolls `currentPeriodStart/End` in place rather than
+/// creating new rows so a single UserSubscription represents the whole
+/// relationship with Paystack until cancelled.
+model UserSubscription {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  planId String @map("plan_id")
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  // Paystack identifiers — `subscriptionCode` is what we call cancel/disable
+  // against; `customerCode` is reusable across subscriptions for the same user.
+  // `emailToken` is required by Paystack disable but only known after the
+  // first subscription.create webhook lands.
+  paystackSubscriptionCode String? @unique @map("paystack_subscription_code")
+  paystackCustomerCode     String? @map("paystack_customer_code")
+  paystackEmailToken       String? @map("paystack_email_token")
+
+  // The currency this subscription is billed in. Locked at subscribe time —
+  // changing currency requires cancelling and resubscribing because Paystack
+  // Plans are currency-specific.
+  currency String @default("USD")
+
+  // Card-on-file snapshot for the Settings → Payments screen. Paystack
+  // returns these on the first charge.success in `data.authorization`. We
+  // ONLY store masked / non-PAN fields — last4, type, bank, expiry — plus
+  // the reusable `authorizationCode` token that Paystack uses for charging
+  // future renewals on the same card. Never the full PAN, never the CVV.
+  cardLast4              String? @map("card_last4")
+  cardBrand              String? @map("card_brand")
+  cardBank               String? @map("card_bank")
+  cardExpMonth           String? @map("card_exp_month")
+  cardExpYear            String? @map("card_exp_year")
+  cardAuthorizationCode  String? @map("card_authorization_code")
+
+  // Current billing period. Rolled forward by the charge.success webhook on
+  // each successful renewal. EXPIRED rows still carry the last period for
+  // audit; new periods are gated on status === ACTIVE.
+  currentPeriodStart DateTime @map("current_period_start")
+  currentPeriodEnd   DateTime @map("current_period_end")
+
+  // If true, the subscription stops at the next period end (user clicked
+  // cancel mid-period). The actual flip to EXPIRED happens when Paystack
+  // sends `subscription.disable` or the period rolls past `currentPeriodEnd`.
+  cancelAtPeriodEnd Boolean @default(false) @map("cancel_at_period_end")
+
+  user     User              @relation(fields: [userId], references: [id])
+  plan     SubscriptionPlan  @relation(fields: [planId], references: [id])
+  usage    SubscriptionUsage[]
+  payments Payment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("user_subscriptions")
+}
+
+/// Per-period usage counters. A new row is created at the start of each
+/// billing period (subscribe + every successful renewal); old rows are kept
+/// so we can show the user a history of what they consumed when.
+///
+/// `(userSubscriptionId, periodStart)` is unique — the renewal webhook is
+/// idempotent and the upsert here is what guards against duplicate periods
+/// if Paystack ever delivers the same event twice past WebhookEvent dedupe.
+model SubscriptionUsage {
+  id                   String @id @default(uuid())
+  userSubscriptionId   String @map("user_subscription_id")
+
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+
+  phase2aUsed       Int @default(0) @map("phase2a_used")
+  phase2bUsed       Int @default(0) @map("phase2b_used")
+  consultationsUsed Int @default(0) @map("consultations_used")
+
+  userSubscription UserSubscription @relation(fields: [userSubscriptionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userSubscriptionId, periodStart])
+  @@index([userSubscriptionId, periodEnd])
+  @@map("subscription_usage")
 }

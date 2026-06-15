@@ -53,6 +53,12 @@ import {
 } from '../payment/payment.admin.controller';
 import { getScoringSettings, updateScoringSettings } from '../scoring/scoring.admin.controller';
 import { getAppSettings, updateAppSettings } from '../settings/settings.controller';
+import {
+  adminListPlans,
+  adminCreatePlan,
+  adminUpdatePlan,
+  adminDeletePlan,
+} from '../subscription/subscription.controller';
 
 const adminRouter = express.Router();
 
@@ -147,5 +153,14 @@ adminRouter.get('/pricing', hasPermission('ledger:read'), listPricing);
 adminRouter.post('/pricing', hasPermission('ledger:write'), createPricing);
 adminRouter.patch('/pricing/:id', hasPermission('ledger:write'), updatePricing);
 adminRouter.delete('/pricing/:id', hasPermission('ledger:write'), deletePricing);
+
+// Subscription tier CRUD. Owned by the subscription module; mounted here
+// behind the admin gate. Uses the ledger permission bucket because tiers map
+// directly to recurring revenue; an admin who can edit one-off pricing can
+// edit subscription pricing too.
+adminRouter.get('/subscription-plans', hasPermission('ledger:read'), adminListPlans);
+adminRouter.post('/subscription-plans', hasPermission('ledger:write'), adminCreatePlan);
+adminRouter.patch('/subscription-plans/:id', hasPermission('ledger:write'), adminUpdatePlan);
+adminRouter.delete('/subscription-plans/:id', hasPermission('ledger:write'), adminDeletePlan);
 
 export default adminRouter;

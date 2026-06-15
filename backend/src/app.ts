@@ -14,6 +14,7 @@ import paymentRouter from './module/payment/payment.routes';
 import userRouter from './module/user/user.routes';
 import adminRouter from './module/admin/admin.routes';
 import couponRouter from './module/coupon/coupon.routes';
+import subscriptionRouter from './module/subscription/subscription.routes';
 import { buildOpenApiDocument } from './docs/openapi';
 
 const app = express();
@@ -42,6 +43,7 @@ app.use('/api/result', resultRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/coupon', couponRouter);
+app.use('/api/subscription', subscriptionRouter);
 
 // OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
 const openApiDocument = buildOpenApiDocument();

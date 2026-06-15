@@ -38,6 +38,13 @@ import type {
 import { resolvePlanPrice } from './pricing.service';
 import { validateAndPriceCoupon } from '../coupon/coupon.service';
 import { getUsdToNgnRate } from '../settings/settings.service';
+import {
+  activateSubscriptionFromWebhook,
+  assertSubscriptionQuota,
+  consumeSubscriptionQuota,
+  markSubscriptionCancelled,
+  type PaystackAuthorizationSnapshot,
+} from '../subscription/subscription.service';
 
 // Mirror of the FE resolveDisplayCurrency() — Nigerian users charge in NGN,
 // everyone else (including users with no country on file) in USD. Kept local
@@ -176,6 +183,86 @@ export async function initPaymentService(
   }
 
   const reference = newPaymentReference();
+  const round2Usd = (n: number) => Math.round(n * 100) / 100;
+
+  // ── Subscription quota short-circuit ────────────────────────────────────
+  // Auto-consume the user's subscription quota BEFORE any Paystack init.
+  // assertSubscriptionQuota is non-throwing — `hasQuota: false` (no sub,
+  // exhausted, or expired) falls through to pay-per-use untouched. When
+  // quota is available, we record a $0 Payment row tagged with the
+  // subscription id, decrement the counter, and grant the entitlement in
+  // the same transaction so a crash mid-flight can't grant without
+  // decrementing (or vice versa).
+  const quotaKind = input.plan === Plan.PHASE2A ? 'phase2a' : 'phase2b';
+  const verdict = await assertSubscriptionQuota(user.id, quotaKind);
+  if (verdict.hasQuota) {
+    const paidAt = new Date();
+    const quotaPayment = await prisma.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          userId: user.id,
+          sessionId: paymentSessionId,
+          pillarId: paymentPillarId,
+          userSubscriptionId: verdict.subscriptionId,
+          plan: input.plan,
+          provider: PaymentProvider.PAYSTACK,
+          providerReference: reference,
+          amount: new Prisma.Decimal(0),
+          amountUsd: new Prisma.Decimal(0),
+          currency: 'USD',
+          status: PaymentStatus.SUCCESS,
+          paymentMethod: 'subscription',
+          paidAt,
+          customerEmail: user.email,
+          customerBusinessName: user.businessName,
+        },
+        select: {
+          id: true,
+          userId: true,
+          sessionId: true,
+          pillarId: true,
+          plan: true,
+          amount: true,
+          currency: true,
+          customerEmail: true,
+          customerBusinessName: true,
+          appliedCouponCode: true,
+        },
+      });
+      // Re-read the period end inside the tx — assertSubscriptionQuota only
+      // returns periodStart for the upsert key.
+      const sub = await tx.userSubscription.findUnique({
+        where: { id: verdict.subscriptionId },
+        select: { currentPeriodEnd: true },
+      });
+      await consumeSubscriptionQuota(tx, {
+        subscriptionId: verdict.subscriptionId,
+        periodStart: verdict.periodStart,
+        periodEnd: sub?.currentPeriodEnd ?? new Date(),
+        kind: quotaKind,
+      });
+      await grantSuccessEntitlements(tx, created, paidAt, 'subscription-quota');
+      return created;
+    });
+
+    sendSuccessEmailBestEffort(quotaPayment, reference, 'subscription-quota');
+
+    return {
+      message: 'Granted from your subscription — no charge',
+      free: true,
+      authorizationUrl: null,
+      accessCode: null,
+      reference,
+      paymentId: quotaPayment.id,
+      amount: 0,
+      // Pre-quota price is what they would have paid; useful for the
+      // FE receipt copy ("Saved $40 with your Starter plan").
+      baseAmount: round2Usd(basePrice),
+      discountAmount: round2Usd(basePrice),
+      currency: 'USD',
+      couponCode: null,
+    };
+  }
 
   // Apply a coupon if one was supplied. validateAndPriceCoupon enforces that the
   // coupon is active and (if user-scoped) belongs to this user, and returns the
@@ -470,6 +557,36 @@ export async function handleWebhookService(params: {
     throw new AppError('Invalid webhook signature', BAD_REQUEST);
   }
 
+  // Subscription lifecycle events. Paystack emits subscription.create on the
+  // FIRST successful charge with a plan attached (we get the subscription_code
+  // + email_token here), then charge.success on every renewal afterwards.
+  // subscription.disable arrives after Paystack stops billing — either because
+  // the user cancelled or because the renewal charge kept failing.
+  if (parsedBody.event === 'subscription.create' || parsedBody.event === 'subscription.disable') {
+    try {
+      await handleSubscriptionEvent(parsedBody);
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.PROCESSED,
+          processedAt: new Date(),
+        },
+      });
+      return { message: 'Subscription event processed', processingStatus: WebhookProcessingStatus.PROCESSED };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.FAILED,
+          processingError: message,
+          processedAt: new Date(),
+        },
+      });
+      throw error;
+    }
+  }
+
   // Only charge.success carries actionable state for us. Everything else is logged
   // and ignored — Paystack retries 'transfer.*' events too which we don't use.
   if (parsedBody.event !== 'charge.success') {
@@ -499,6 +616,29 @@ export async function handleWebhookService(params: {
   try {
     // Defense in depth: never trust the webhook body alone — re-verify with Paystack.
     const verifyData = await verifyTransaction(reference);
+
+    // Subscription-flavoured charge.success — metadata.kind === 'subscription'
+    // means this is either the first charge for a new subscription or a
+    // renewal. Either way, route into activateSubscriptionFromWebhook with
+    // the card-on-file snapshot from data.authorization. We DON'T flip a
+    // Payment row for these — there's no one-off Payment record; the
+    // subscription IS the record.
+    const meta = verifyData.metadata as Record<string, unknown> | null;
+    if (meta?.kind === 'subscription') {
+      await handleSubscriptionChargeSuccess(verifyData, parsedBody);
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.PROCESSED,
+          processedAt: new Date(),
+        },
+      });
+      return {
+        message: 'Subscription charge processed',
+        processingStatus: WebhookProcessingStatus.PROCESSED,
+      };
+    }
+
     const result = await applyVerificationResult(reference, verifyData, {
       source: 'webhook',
     });
@@ -522,6 +662,206 @@ export async function handleWebhookService(params: {
       },
     });
     throw error;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Subscription webhook dispatch
+// ──────────────────────────────────────────────────────────────────────────
+//
+// Paystack's subscription envelopes look different from charge envelopes —
+// `data` carries the subscription_code / email_token at top level, the
+// customer code as `customer.customer_code`, the plan we attached via
+// metadata.planId on subscribe init, and the period info as
+// `next_payment_date`. We thread the raw shape through with a permissive
+// type because Paystack adds fields over time.
+
+type PaystackSubscriptionData = {
+  subscription_code?: string;
+  email_token?: string;
+  status?: string;
+  next_payment_date?: string;
+  createdAt?: string;
+  customer?: { customer_code?: string; metadata?: Record<string, unknown> | null };
+  plan?: { plan_code?: string };
+  metadata?: Record<string, unknown> | null;
+};
+
+function readSubscriptionMetaUserId(data: PaystackSubscriptionData): string | null {
+  const top = data.metadata?.userId;
+  if (typeof top === 'string' && top) return top;
+  const customer = data.customer?.metadata?.userId;
+  if (typeof customer === 'string' && customer) return customer;
+  return null;
+}
+
+async function handleSubscriptionEvent(parsedBody: WebhookEnvelope): Promise<void> {
+  const data = parsedBody.data as unknown as PaystackSubscriptionData;
+  const subscriptionCode = data.subscription_code;
+  if (!subscriptionCode) {
+    throw new AppError('Subscription event missing subscription_code', BAD_REQUEST);
+  }
+
+  if (parsedBody.event === 'subscription.disable') {
+    // User cancelled OR Paystack gave up on a failing renewal. Either way we
+    // mark CANCELLED locally; expireLapsedSubscriptions() flips to EXPIRED
+    // once the current period closes. No quota carries over.
+    await markSubscriptionCancelled(subscriptionCode);
+    return;
+  }
+
+  // subscription.create. Pair with the user via metadata.userId (set at
+  // subscribe init time). If it's missing — should never happen, but log and
+  // skip rather than crash the whole webhook pipeline.
+  const userId = readSubscriptionMetaUserId(data);
+  const planIdMeta = data.metadata?.planId ?? data.customer?.metadata?.planId;
+  const currencyMeta = data.metadata?.currency ?? data.customer?.metadata?.currency;
+
+  if (!userId || typeof planIdMeta !== 'string' || !planIdMeta) {
+    console.warn('[webhook:subscription.create] missing userId/planId metadata, skipping');
+    return;
+  }
+  const currency: 'USD' | 'NGN' = currencyMeta === 'NGN' ? 'NGN' : 'USD';
+
+  const periodStart = data.createdAt ? new Date(data.createdAt) : new Date();
+  const periodEnd = data.next_payment_date ? new Date(data.next_payment_date) : undefined;
+
+  await activateSubscriptionFromWebhook({
+    userId,
+    planId: planIdMeta,
+    currency,
+    paystackSubscriptionCode: subscriptionCode,
+    paystackCustomerCode: data.customer?.customer_code ?? null,
+    paystackEmailToken: data.email_token ?? null,
+    periodStart,
+    periodEnd,
+    // subscription.create itself doesn't carry the authorization block —
+    // that lands on the paired charge.success. We persist card details there.
+    authorization: null,
+  });
+}
+
+async function handleSubscriptionChargeSuccess(
+  verifyData: PaystackVerifyData,
+  parsedBody: WebhookEnvelope
+): Promise<void> {
+  const meta = verifyData.metadata as Record<string, unknown> | null;
+  const userId = typeof meta?.userId === 'string' ? meta.userId : null;
+  const planId = typeof meta?.planId === 'string' ? meta.planId : null;
+  if (!userId || !planId) {
+    throw new AppError('Subscription charge missing userId/planId metadata', BAD_REQUEST);
+  }
+
+  const currency: 'USD' | 'NGN' = verifyData.currency === 'NGN' ? 'NGN' : 'USD';
+
+  // Paystack puts subscription_code on the raw envelope's data block, not on
+  // the verify response. Read both — verify is canonical for everything else.
+  const raw = parsedBody.data as unknown as PaystackSubscriptionData & {
+    authorization?: PaystackAuthorizationSnapshot | null;
+  };
+  const subscriptionCode = raw.subscription_code ?? null;
+  const authorization = raw.authorization ?? null;
+
+  const periodStart = verifyData.paid_at ? new Date(verifyData.paid_at) : new Date();
+  const periodEnd = raw.next_payment_date ? new Date(raw.next_payment_date) : undefined;
+
+  // ── Idempotency anchor ──────────────────────────────────────────────────
+  // Paystack guarantees one reference per charge. We upsert on Payment.
+  // providerReference (already @unique) BEFORE rolling the subscription
+  // period forward, then only fire the period-roll if the upsert actually
+  // inserted. A replayed charge.success with the same reference therefore
+  // becomes a no-op even if WebhookEvent dedupe is bypassed.
+  //
+  // amountUsd: Paystack's amount is in minor units; / 100 → major units of
+  // the wire currency. Convert to USD via the FX rate the user was charged at
+  // (we re-read it here rather than relying on the webhook delivery time
+  // because the user's record is the source of truth, not the wire).
+  const chargedMajor = verifyData.amount / 100;
+  const amountUsd =
+    currency === 'NGN' ? chargedMajor / (await getUsdToNgnRate()) : chargedMajor;
+
+  // Resolve which UserSubscription row this charge funds. We may not have it
+  // yet on a brand-new subscribe (the subscription.create event might land
+  // after this charge.success); in that case we still create the Payment row
+  // but leave userSubscriptionId null. activateSubscriptionFromWebhook below
+  // will create/locate the row; a follow-up update reconciles the link.
+  const existingSub = subscriptionCode
+    ? await prisma.userSubscription.findUnique({
+        where: { paystackSubscriptionCode: subscriptionCode },
+        select: { id: true },
+      })
+    : null;
+
+  // Look up the user's email/businessName for the customer snapshot. Cheap
+  // and consistent with one-off Payment rows.
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, businessName: true },
+  });
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+
+  // Upsert by providerReference — the @unique index turns a duplicate into
+  // an update no-op (`update: {}`). The fact that `create` ran or didn't
+  // tells us whether to roll the period; we infer that by reading createdAt
+  // after the upsert and comparing to a marker we set on the create path.
+  const before = await prisma.payment.findUnique({
+    where: { providerReference: verifyData.reference },
+    select: { id: true },
+  });
+  await prisma.payment.upsert({
+    where: { providerReference: verifyData.reference },
+    create: {
+      userId,
+      userSubscriptionId: existingSub?.id ?? null,
+      plan: Plan.SUBSCRIPTION,
+      provider: PaymentProvider.PAYSTACK,
+      providerReference: verifyData.reference,
+      amount: new Prisma.Decimal(round2(chargedMajor)),
+      amountUsd: new Prisma.Decimal(round2(amountUsd)),
+      currency,
+      status: PaymentStatus.SUCCESS,
+      paymentMethod: verifyData.channel ?? null,
+      paidAt: verifyData.paid_at ? new Date(verifyData.paid_at) : new Date(),
+      customerEmail: user?.email ?? verifyData.customer?.email ?? 'unknown',
+      customerBusinessName: user?.businessName ?? null,
+      verifyPayload: verifyData as unknown as Prisma.InputJsonValue,
+    },
+    update: {}, // duplicate delivery — leave row alone
+  });
+  const isFirstDelivery = !before;
+
+  if (!isFirstDelivery) {
+    // We've already accounted for this reference. Period-roll already
+    // happened on the original delivery; don't double it.
+    return;
+  }
+
+  await activateSubscriptionFromWebhook({
+    userId,
+    planId,
+    currency,
+    paystackSubscriptionCode: subscriptionCode,
+    paystackCustomerCode: raw.customer?.customer_code ?? null,
+    paystackEmailToken: raw.email_token ?? null,
+    periodStart,
+    periodEnd,
+    authorization,
+  });
+
+  // Reconcile the Payment.userSubscriptionId link if the subscription row
+  // didn't exist when we wrote the Payment row above.
+  if (!existingSub && subscriptionCode) {
+    const linked = await prisma.userSubscription.findUnique({
+      where: { paystackSubscriptionCode: subscriptionCode },
+      select: { id: true },
+    });
+    if (linked) {
+      await prisma.payment.update({
+        where: { providerReference: verifyData.reference },
+        data: { userSubscriptionId: linked.id },
+      });
+    }
   }
 }
 
@@ -713,6 +1053,14 @@ export async function grantSuccessEntitlements(
         data: { status: 'USED', isActive: false },
       });
     }
+  }
+
+  // Subscription charges have no entitlement to grant here — the
+  // UserSubscription row IS the entitlement. Period roll + card capture
+  // happen in handleSubscriptionChargeSuccess. Return early so the Phase
+  // 2A/2B branches below don't try to find a session/pillar.
+  if (payment.plan === Plan.SUBSCRIPTION) {
+    return;
   }
 
   // Per-result paywall: on first successful Phase 2A payment, mark the

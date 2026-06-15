@@ -125,3 +125,198 @@ export function newPaymentReference(prefix = 'PICA') {
   // to be human-friendly in the admin transaction page.
   return `${prefix}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
+
+/* ───────────────────────────── Plans + Subscriptions ─────────────────────────
+ * Recurring billing pieces. The flow is:
+ *
+ *   1. Admin creates/updates a SubscriptionPlan row — we mirror it as a
+ *      Paystack Plan via createPaystackPlan() (one per currency, USD+NGN),
+ *      and persist the returned plan_code on our row.
+ *   2. User subscribes — we initialize a transaction with the plan code; the
+ *      first charge is the first period, and Paystack auto-creates the
+ *      subscription record (subscription.create webhook → we persist code).
+ *   3. Subsequent renewals fire charge.success webhooks tied to the same
+ *      subscription code; the webhook handler bumps current_period_end.
+ *   4. Cancel — disablePaystackSubscription() flips Paystack-side; webhook
+ *      subscription.disable → status='CANCELLED' locally.
+ *
+ * Paystack's price is in MINOR units. Interval is 'monthly' for our case.
+ */
+
+export type PaystackPlanInterval =
+  | 'hourly'
+  | 'daily'
+  | 'weekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'biannually'
+  | 'annually';
+
+export type PaystackPlanInput = {
+  name: string;
+  /** Major units (e.g. 40 USD, 60000 NGN). Converted to minor units internally. */
+  amount: number;
+  currency: PaystackCurrency;
+  interval: PaystackPlanInterval;
+  description?: string;
+};
+
+export type PaystackPlanData = {
+  id: number;
+  name: string;
+  plan_code: string;
+  description: string | null;
+  amount: number; // minor units
+  interval: string;
+  currency: string;
+};
+
+export async function createPaystackPlan(input: PaystackPlanInput): Promise<PaystackPlanData> {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/plan`, {
+    method: 'POST',
+    headers: paystackHeaders(),
+    body: JSON.stringify({
+      name: input.name,
+      amount: Math.round(input.amount * 100),
+      interval: input.interval,
+      currency: input.currency,
+      description: input.description,
+    }),
+  });
+
+  const body = (await response.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+    data?: PaystackPlanData;
+  } | null;
+
+  if (!response.ok || !body?.status || !body.data) {
+    throw new AppError(
+      body?.message ?? 'Failed to create Paystack plan',
+      response.status >= 400 && response.status < 500 ? BAD_REQUEST : INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return body.data;
+}
+
+/**
+ * Paystack's plan update endpoint takes plan_code or numeric id as path param.
+ * Only fields you pass get changed — pass undefined to leave a field alone.
+ * Currency is immutable on Paystack's side; if it has to change, create a
+ * fresh plan and swap the code on our row.
+ */
+export async function updatePaystackPlan(
+  planCode: string,
+  input: Partial<Omit<PaystackPlanInput, 'currency'>>
+): Promise<void> {
+  const payload: Record<string, unknown> = {};
+  if (input.name !== undefined) payload.name = input.name;
+  if (input.amount !== undefined) payload.amount = Math.round(input.amount * 100);
+  if (input.interval !== undefined) payload.interval = input.interval;
+  if (input.description !== undefined) payload.description = input.description;
+
+  const response = await fetch(
+    `${PAYSTACK_BASE_URL}/plan/${encodeURIComponent(planCode)}`,
+    {
+      method: 'PUT',
+      headers: paystackHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
+
+  const body = (await response.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+  } | null;
+
+  if (!response.ok || !body?.status) {
+    throw new AppError(
+      body?.message ?? 'Failed to update Paystack plan',
+      response.status >= 400 && response.status < 500 ? BAD_REQUEST : INTERNAL_SERVER_ERROR
+    );
+  }
+}
+
+export type PaystackSubscriptionInitInput = {
+  email: string;
+  planCode: string;
+  /** Paystack debits this amount on the first charge; it must match the plan. */
+  amount: number;
+  currency: PaystackCurrency;
+  reference: string;
+  metadata?: Record<string, unknown>;
+};
+
+/**
+ * "Create subscription" via Paystack is really "initialize a transaction with
+ * a plan attached" — the first charge becomes the first period and Paystack
+ * spawns the subscription record server-side. We rely on the
+ * subscription.create webhook to learn the subscription_code afterwards.
+ */
+export async function initializeSubscriptionTransaction(
+  input: PaystackSubscriptionInitInput
+): Promise<PaystackInitData> {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
+    method: 'POST',
+    headers: paystackHeaders(),
+    body: JSON.stringify({
+      email: input.email,
+      amount: Math.round(input.amount * 100),
+      currency: input.currency,
+      plan: input.planCode,
+      reference: input.reference,
+      metadata: input.metadata ?? {},
+    }),
+  });
+
+  const body = (await response.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+    data?: PaystackInitData;
+  } | null;
+
+  if (!response.ok || !body?.status || !body.data) {
+    throw new AppError(
+      body?.message ?? 'Failed to initialize Paystack subscription',
+      response.status >= 400 && response.status < 500 ? BAD_REQUEST : INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return body.data;
+}
+
+/**
+ * Cancel a subscription. Paystack requires BOTH the subscription code AND the
+ * customer-specific email_token (returned alongside the subscription on
+ * subscription.create). We persist both on UserSubscription.
+ *
+ * After this call Paystack stops billing; the subscription.disable webhook
+ * arrives shortly after — the recurring webhook handler is what flips our
+ * local status to CANCELLED.
+ */
+export async function disablePaystackSubscription(input: {
+  subscriptionCode: string;
+  emailToken: string;
+}): Promise<void> {
+  const response = await fetch(`${PAYSTACK_BASE_URL}/subscription/disable`, {
+    method: 'POST',
+    headers: paystackHeaders(),
+    body: JSON.stringify({
+      code: input.subscriptionCode,
+      token: input.emailToken,
+    }),
+  });
+
+  const body = (await response.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+  } | null;
+
+  if (!response.ok || !body?.status) {
+    throw new AppError(
+      body?.message ?? 'Failed to disable Paystack subscription',
+      response.status >= 400 && response.status < 500 ? BAD_REQUEST : INTERNAL_SERVER_ERROR
+    );
+  }
+}
