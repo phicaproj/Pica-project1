@@ -14,7 +14,9 @@ import {
 	ArrowRight,
 } from 'lucide-react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3210/api'
+const API_BASE =
+	process.env.NEXT_PUBLIC_API_BASE_URL ||
+	'https://pica-project1.onrender.com/api'
 
 type ColorBand = 'RED' | 'AMBER' | 'GREEN'
 

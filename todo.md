@@ -44,21 +44,24 @@
 - [ ] **Coupons/discounts**: confirm `Discount.amountOff` semantics under USD base (it's currently NGN major units). Re-baseline to USD; verify `coupon.service.ts` math.
 - [ ] **Admin transactions/analytics**: ensure revenue reporting sums in **USD** (`amountUsd`), not mixed currencies. Files: `payment.admin.service.ts`, `admin.service.ts` analytics.
 
-## B. Business size by staff only (remove revenue)
+## B. Business size by staff only (remove revenue) ✅ DONE (2026-06-15)
 
-- [ ] **Drop revenue from business-size logic.** In `assessment.service.ts` remove `classifyRevenue` + the revenue branch in `computeBusinessSize`; size = `classifyStaffSize(staffSize)` only (≤50 SMALL, >50 MEDIUM). Update the doc comment block (lines ~38–82).
-- [ ] **Make `annualRevenue` optional** in `assessment.types.ts startAssessmentInput` (or remove entirely if FE stops sending it). Confirm no downstream code requires it.
+- [x] **Drop revenue from business-size logic.** In `assessment.service.ts` remove `classifyRevenue` + the revenue branch in `computeBusinessSize`; size = `classifyStaffSize(staffSize)` only (≤50 SMALL, >50 MEDIUM). Update the doc comment block (lines ~38–82).
+- [x] **Make `annualRevenue` optional** in `assessment.types.ts startAssessmentInput` (or remove entirely if FE stops sending it). Confirm no downstream code requires it.
   - Note: `annualRevenue` columns exist on `User` + `AssessmentSession`. Keep columns for history; just stop requiring/using them for sizing. (Optional cleanup task to remove later.)
-- [ ] Confirm the SMALL/MEDIUM category ranges with client copy for the UI tooltip (≤50 = Small, >50 = Medium).
+  - *Implementation:* AssessmentSession.annualRevenue defaults to `''` when FE omits it — no migration needed.
+- [x] Confirm the SMALL/MEDIUM category ranges with client copy for the UI tooltip (≤50 = Small, >50 = Medium).
 
-## C. Registration without Phase 1 (profile-completion gate instead)
+## C. Registration without Phase 1 (profile-completion gate instead) ✅ DONE (2026-06-15)
 
-- [ ] **Remove the hard Phase-1 gate** in `auth.service.ts registerService` (currently throws FORBIDDEN at ~line 86 if no completed Phase 1 session). Allow registration with the user's own details.
+- [x] **Remove the hard Phase-1 gate** in `auth.service.ts registerService` (currently throws FORBIDDEN at ~line 86 if no completed Phase 1 session). Allow registration with the user's own details.
   - Registration must now collect/accept the profile fields previously snapshotted from Phase 1 (businessName, phone, staffSize/businessSize, industry, country, etc.) OR mark profile incomplete.
   - Add a `profileComplete` boolean (derive or store) so the dashboard can prompt. Minimum needed for Phase 2A = `businessSize` resolved (which needs `staffSize`).
-- [ ] **Still link any existing Phase 1 sessions** by email on register (keep the `updateMany` that attaches `userId`).
-- [ ] **Gate paid tests on profile completion**, not on registration. In `assessment.service.ts` Phase 2A/2B start: if `businessSize`/required profile is missing → `AppError(... complete your profile ...)`. `GET /auth/me` should return `profileComplete` for the FE prompt.
-- [ ] Update `auth.types.ts register schema` to accept the new self-entered fields.
+  - *Implementation:* derived (`businessSize !== null`), not stored. Phase 1 snapshot still used as a fallback when present.
+- [x] **Still link any existing Phase 1 sessions** by email on register (keep the `updateMany` that attaches `userId`).
+- [x] **Gate paid tests on profile completion**, not on registration. In `assessment.service.ts` Phase 2A/2B start: if `businessSize`/required profile is missing → `AppError(... complete your profile ...)`. `GET /auth/me` should return `profileComplete` for the FE prompt.
+  - *Note:* Phase 2B is implicitly gated (requires a paid pillar unlock, which requires `businessSize`). Phase 2A copy updated explicitly.
+- [x] Update `auth.types.ts register schema` to accept the new self-entered fields.
 
 ## D. Subscriptions (Paystack recurring, 3 tiers)
 
@@ -151,18 +154,19 @@ stores every price in USD and gives us a USD→Naira exchange rate to convert wi
   - *How:* just render whatever the API returns — don't hardcode tiers. If the API doesn't return a tier/section, it shouldn't appear.
 - [ ] `pages/pricing/page.tsx` already just renders `PricingView` — no change needed there.
 
-## J. Remove "Annual Revenue" from the free-test form
+## J. Remove "Annual Revenue" from the free-test form ✅ DONE (2026-06-15)
 
 **Background:** Business size (Small vs Medium) used to be decided by both staff count AND
 annual revenue. The client is dropping revenue entirely — size is now based on **staff size
 only** (50 or fewer = Small, more than 50 = Medium). So the revenue question should go away.
 
-- [ ] **Delete the "Annual Revenue Range" block from the form.**
+- [x] **Delete the "Annual Revenue Range" block from the form.**
   - *Where:* `View/GeneralTestView.tsx` (the revenue buttons are around lines 418–460).
   - *How:* remove that UI block, remove `annualRevenue` from the form's state (around line 871), and remove the revenue check from the form validation (around line 932).
-- [ ] **Keep the Staff Size field** — that's now the only thing that decides business size.
+- [x] **Keep the Staff Size field** — that's now the only thing that decides business size.
   - *Optional:* add a small hint under it like "50 or fewer = Small business, more than 50 = Medium business".
-- [ ] **Stop sending `annualRevenue` when starting the assessment.**
+  - *Implementation:* hint added directly under the input.
+- [x] **Stop sending `annualRevenue` when starting the assessment.**
   - *How:* remove it from the data sent to `/assessment/start`. (The backend is making this field optional, so this won't break.)
 
 ## K. Fix the mobile experience while taking the test
@@ -190,22 +194,25 @@ only** (50 or fewer = Small, more than 50 = Medium). So the revenue question sho
 - [ ] **Add a back-to-home button on the Login and Registration pages** — `Auth/login/page.tsx` and `Auth/signup/page.tsx`.
   - *How:* a simple link/button (e.g. top-left, with a back arrow or the logo) that navigates to `/`.
 
-## M. Let people register without taking the free scan first
+## M. Let people register without taking the free scan first ✅ DONE (2026-06-15)
 
 **Background:** Today you CAN'T create an account unless you've already finished the free
 Phase 1 scan — the backend blocks it. The client wants to allow signup anytime. But to take
 the paid tests later, the user must first complete their profile (the business details we used
 to collect during the free scan). So we move the "gate" from registration to the dashboard.
 
-- [ ] **Update the signup page to work without a prior scan.**
+- [x] **Update the signup page to work without a prior scan.**
   - *Where:* `Auth/signup/page.tsx`.
   - *Why:* since they may not have done the free scan, we no longer have their business details automatically — so the signup form needs to collect them (business name, phone, staff size, industry, country, etc.).
   - **Needs backend:** registration will stop requiring a prior Phase 1 scan and will accept these fields.
-- [ ] **Show a "Complete your profile" prompt on the dashboard when the profile is incomplete.**
+  - *Implementation:* added an optional "Business profile" block (staff size + industry + country + years) to the signup form. The `SignUp` helper only forwards filled fields.
+- [x] **Show a "Complete your profile" prompt on the dashboard when the profile is incomplete.**
   - *Why:* a user who skipped the scan needs to fill in their details before they can take Phase 2A or any paid test.
   - *How:* the backend will tell us if the profile is complete (a `profileComplete` flag from `/auth/me`). If it's false, show a banner/modal and disable the buttons that start paid tests.
   - *Where:* dashboard home/layout, plus the entry points in `dashboard/strategic-scan`, `dashboard/deep-dive`, `dashboard/subscription`.
-- [ ] **Build the profile-completion form** (most likely inside `dashboard/settings`) so users can fill in the missing details, after which the paid tests unlock.
+  - *Implementation done:* banner on `dashboard/page.tsx` links to `/dashboard/settings`. Per-CTA disabling on strategic-scan / deep-dive / subscription entry points is **still TODO** — the backend already refuses Phase 2A/2B start when businessSize is missing, but the FE should grey out the buttons too.
+- [x] **Build the profile-completion form** (most likely inside `dashboard/settings`) so users can fill in the missing details, after which the paid tests unlock.
+  - *Implementation:* the existing settings page already wires `staffSize` + business fields through `updateUserBusiness`. No new form needed.
 
 ## N. Build the user's subscription screen
 

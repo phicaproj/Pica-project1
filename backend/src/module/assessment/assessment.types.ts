@@ -12,7 +12,10 @@ export const startAssessmentInput = z.object({
 	industry: requiredText('Industry'),
 	location: requiredText('Location'),
 	operatingYears: requiredText('Operating years'),
-	annualRevenue: requiredText('Annual revenue'),
+	// Annual revenue used to feed the SMALL/MEDIUM classifier; business size
+	// is now staff-only (see assessment.service.ts). The column is kept on
+	// AssessmentSession for history, so we still accept it when provided.
+	annualRevenue: z.string().trim().optional(),
 })
 
 export const assessmentSessionParams = z.object({

@@ -18,7 +18,9 @@ import {
 	BarChart2,
 } from 'lucide-react'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3210/api'
+const API_BASE =
+	process.env.NEXT_PUBLIC_API_BASE_URL ||
+	'https://pica-project1.onrender.com/api'
 
 const OPTIONS_LABELS = ['A', 'B', 'C', 'D']
 const INDUSTRIES = [
@@ -66,7 +68,6 @@ interface ProfileData {
 	industry: string
 	location: string
 	operatingYears: string
-	annualRevenue: string
 }
 
 type Step = 'intro' | 'profile' | 'questions' | 'processing'
@@ -320,6 +321,11 @@ function ProfileStep({
 							}
 							className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-400'}`}
 						/>
+						<p
+							className={`mt-2 text-[11px] ${d ? 'text-gray-500' : 'text-gray-500'}`}
+						>
+							50 or fewer = Small business · more than 50 = Medium
+						</p>
 					</div>
 				</div>
 
@@ -412,46 +418,6 @@ function ProfileStep({
 								)}
 							</div>
 						</div>
-					</div>
-				</div>
-
-				<div className='mb-8'>
-					<label
-						className={`text-xs font-bold uppercase tracking-widest block mb-3 ${d ? 'text-gray-400' : 'text-gray-500'}`}
-					>
-						Annual Revenue Range
-					</label>
-					<div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-						{[
-							{ key: 'Under ₦5M', label: 'Under', value: '₦5M' },
-							{
-								key: 'Mid ₦5M - ₦50M',
-								label: 'Mid-Range',
-								value: '₦5M - ₦50M',
-							},
-							{
-								key: 'Enterprise ₦50M+',
-								label: 'Enterprise',
-								value: '₦50M+',
-							},
-						].map(({ key, label, value }) => (
-							<button
-								key={key}
-								onClick={() => update('annualRevenue', key)}
-								className={`p-4 rounded-xl border text-left transition ${profile.annualRevenue === key ? 'border-[#00ffaa] bg-[#00ffaa]/5' : d ? 'border-white/10 hover:border-white/20' : 'border-gray-200 hover:bg-gray-50'}`}
-							>
-								<p
-									className={`text-xs mb-1 ${profile.annualRevenue === key ? 'text-[#00ffaa]' : d ? 'text-gray-400' : 'text-gray-500'}`}
-								>
-									{label}
-								</p>
-								<p
-									className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}
-								>
-									{value}
-								</p>
-							</button>
-						))}
 					</div>
 				</div>
 
@@ -868,7 +834,6 @@ export default function GeneralTestPage() {
 		industry: '',
 		location: '',
 		operatingYears: '',
-		annualRevenue: '',
 	})
 
 	const [answerInFlight, setAnswerInFlight] = useState(false)
@@ -929,7 +894,6 @@ export default function GeneralTestPage() {
 		if (!profile.industry.trim()) missing.push('industry')
 		if (!profile.location.trim()) missing.push('location')
 		if (!profile.operatingYears.trim()) missing.push('years in operation')
-		if (!profile.annualRevenue.trim()) missing.push('annual revenue')
 		if (missing.length > 0) {
 			setError(`Please provide ${missing.join(', ')}.`)
 			return

@@ -1,5 +1,12 @@
 import z from 'zod';
 
+// Registration no longer requires a prior Phase 1 scan. The mandatory fields
+// stay the same (email + password + businessName + phone); profile fields are
+// accepted optionally so a user who skipped the free scan can supply them at
+// signup. Whatever the user leaves blank can be filled in later via
+// /user/business — the dashboard prompts when profileComplete is false.
+// `annualRevenue` is intentionally absent: business size is staff-only now
+// (see assessment.service.ts).
 export const registerSchema = z.object({
   email: z.email('Invalid email address'),
   password: z
@@ -16,6 +23,11 @@ export const registerSchema = z.object({
   phone: z
     .string()
     .regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits, optionally starting with +'),
+  staffSize: z.string().trim().min(1).optional(),
+  industry: z.string().trim().min(1).optional(),
+  country: z.string().trim().min(1).optional(),
+  state: z.string().trim().min(1).optional(),
+  operatingYears: z.string().trim().min(1).optional(),
 });
 
 export const loginSchema = z.object({
@@ -145,6 +157,11 @@ export type MeUser = AuthUser & {
   state: string | null;
   operatingYears: string | null;
   annualRevenue: string | null;
+  // True once the user has supplied enough profile data to unlock paid tests
+  // (Phase 2A / 2B). Today the only hard requirement is `businessSize`, which
+  // is derived from staffSize at lead capture or at signup; everything else is
+  // surfaced to the FE so it can render a profile-completion banner.
+  profileComplete: boolean;
 };
 
 export type MeResponse = {

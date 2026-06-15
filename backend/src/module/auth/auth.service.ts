@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
-import { Phase, SessionStatus, UserRole, UserStatus } from '@prisma/client';
+import { randomInt } from 'crypto';
+import { BusinessSize, Phase, SessionStatus, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { parseLocation } from '../../service/shared/location';
@@ -49,6 +50,18 @@ import type {
 
 const SALT_ROUNDS = 10;
 
+// Mirrors the staff-only classifier in assessment.service.ts so registerService
+// can derive businessSize from the headcount the user types at signup. Kept
+// local on purpose — it's two lines, and routing the call through assessment
+// would couple auth to it for no other reason.
+const SMALL_STAFF_THRESHOLD = 50;
+function classifyStaffSizeForRegistration(staffSize: string): BusinessSize {
+  const match = staffSize.match(/\d+/);
+  if (!match) return BusinessSize.SMALL;
+  const headcount = Number.parseInt(match[0], 10);
+  return headcount > SMALL_STAFF_THRESHOLD ? BusinessSize.MEDIUM : BusinessSize.SMALL;
+}
+
 export async function registerService(data: RegisterInput): Promise<RegisterResponse> {
   const normalizedEmail = data.email.trim().toLowerCase();
 
@@ -61,9 +74,12 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     throw new AppError('An account with this email already exists', CONFLICT);
   }
 
-  // Gate: registration is only allowed for users who have completed (or progressed past)
-  // a Phase 1 assessment under this email. We snapshot the Phase 1 lead data onto the User
-  // so Phase 2A can read businessSize directly from req.user.
+  // Registration no longer requires a prior Phase 1 session. We still look
+  // one up by email so we can pre-fill profile fields the user already gave
+  // us during the free scan (and so businessSize is resolved automatically);
+  // anything missing falls back to what the user typed at signup. The
+  // dashboard prompts the user to finish their profile when businessSize is
+  // still null — see meService.profileComplete.
   const phase1Session = await prisma.assessmentSession.findFirst({
     where: {
       leadEmail: normalizedEmail,
@@ -83,16 +99,20 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     },
   });
 
-  if (!phase1Session) {
-    throw new AppError(
-      'You must take the free Phase 1 scan before creating an account. Please complete the free assessment first.',
-      FORBIDDEN
-    );
-  }
-
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
-  const { country, state } = parseLocation(phase1Session.location);
+  // Resolve country/state from either the user's signup input (preferred when
+  // present) or the Phase 1 session's free-text location.
+  const fallbackLocation = phase1Session
+    ? parseLocation(phase1Session.location)
+    : { country: null as string | null, state: null as string | null };
+
+  // Staff size dictates businessSize. If we have it from either source,
+  // classify; otherwise leave businessSize null and let the dashboard nag.
+  const resolvedStaffSize = data.staffSize ?? phase1Session?.staffSize ?? null;
+  const resolvedBusinessSize = resolvedStaffSize
+    ? classifyStaffSizeForRegistration(resolvedStaffSize)
+    : phase1Session?.businessSize ?? null;
 
   const user = await prisma.user.create({
     data: {
@@ -100,13 +120,13 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
       passwordHash,
       businessName: data.businessName,
       phone: data.phone,
-      businessSize: phase1Session.businessSize,
-      staffSize: phase1Session.staffSize,
-      industry: phase1Session.industry,
-      country,
-      state,
-      operatingYears: phase1Session.operatingYears,
-      annualRevenue: phase1Session.annualRevenue,
+      businessSize: resolvedBusinessSize,
+      staffSize: resolvedStaffSize,
+      industry: data.industry ?? phase1Session?.industry ?? null,
+      country: data.country ?? fallbackLocation.country,
+      state: data.state ?? fallbackLocation.state,
+      operatingYears: data.operatingYears ?? phase1Session?.operatingYears ?? null,
+      annualRevenue: phase1Session?.annualRevenue ?? null,
     },
     select: {
       id: true,
@@ -237,8 +257,11 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
   };
 }
 
+// Cryptographically strong 5-digit OTP. Math.random() is predictable enough
+// to be guessable from a few observed codes, which matters for admin login
+// and password reset — randomInt uses the OS CSPRNG.
 function generateOtpCode(): string {
-  return Math.floor(10000 + Math.random() * 90000).toString();
+  return randomInt(10000, 100000).toString();
 }
 
 export async function forgotPasswordService(
@@ -552,6 +575,11 @@ export async function meService(userId: string): Promise<MeResponse> {
     },
   });
 
+  // Minimum required to unlock paid tests: businessSize must be resolved
+  // (which means we have a staffSize from either lead capture or signup).
+  // The FE uses this flag to show / hide the "Complete your profile" banner.
+  const profileComplete = user.businessSize !== null;
+
   return {
     message: 'User fetched successfully',
     user: {
@@ -572,6 +600,7 @@ export async function meService(userId: string): Promise<MeResponse> {
       state: user.state,
       operatingYears: user.operatingYears,
       annualRevenue: user.annualRevenue,
+      profileComplete,
     },
   };
 }

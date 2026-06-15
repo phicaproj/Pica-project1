@@ -23,6 +23,7 @@ import {
 	getLastSessionId,
 	getMe,
 	getStoredUser,
+	type MeUser,
 } from '@/lib/authClient'
 
 const API_BASE =
@@ -741,7 +742,10 @@ export default function DashboardHomePage() {
 	const [data, setData] = useState<GetResultResponse | null>(null)
 	const [allResults, setAllResults] = useState<GetResultResponse[]>([])
 	const [errorMessage, setErrorMessage] = useState<string>('')
-	const [user, setUser] = useState<AuthUser | null>(null)
+	// MeUser is a superset of AuthUser; we need profileComplete + businessSize
+	// in this component to render the completion banner. Components that only
+	// need the AuthUser slice still accept the wider type fine.
+	const [user, setUser] = useState<MeUser | null>(null)
 
 	useEffect(() => {
 		const token = getAccessToken()
@@ -750,7 +754,10 @@ export default function DashboardHomePage() {
 			return
 		}
 
-		setUser(getStoredUser())
+		// getStoredUser() returns the AuthUser slice — the dashboard widens it
+		// to MeUser once /auth/me lands a few lines below. Until then, the
+		// banner falls back to "incomplete" (its guard checks profileComplete).
+		setUser(getStoredUser() as MeUser | null)
 		const sessionId = getLastSessionId()
 
 		let cancelled = false
@@ -914,15 +921,60 @@ export default function DashboardHomePage() {
 		}
 	}, [router])
 
-	if (state === 'loading') return <LoadingState />
-	if (state === 'empty') return <EmptyState user={user} />
-	if (state === 'in-progress') return <InProgressState />
-	if (state === 'error') return <ErrorState message={errorMessage} />
-	if (state === 'active' && data) {
-		return <ActiveState data={data} user={user} allResults={allResults} />
+	// `profileComplete` is set by the backend on /auth/me. While we're still
+	// waiting on /auth/me (or after it failed), `user` may only be the AuthUser
+	// slice from localStorage — in that case we default the flag to `true`
+	// (don't nag on cold load).
+	const profileComplete = user?.profileComplete ?? true
+
+	const renderState = () => {
+		if (state === 'loading') return <LoadingState />
+		if (state === 'empty') return <EmptyState user={user} />
+		if (state === 'in-progress') return <InProgressState />
+		if (state === 'error') return <ErrorState message={errorMessage} />
+		if (state === 'active' && data) {
+			return <ActiveState data={data} user={user} allResults={allResults} />
+		}
+		if (state === 'in-progress-active' && data) {
+			return <ActiveState data={data} user={user} allResults={allResults} inProgress />
+		}
+		return <EmptyState user={user} />
 	}
-	if (state === 'in-progress-active' && data) {
-		return <ActiveState data={data} user={user} allResults={allResults} inProgress />
-	}
-	return <EmptyState user={user} />
+
+	return (
+		<>
+			{!profileComplete && state !== 'loading' && (
+				<ProfileCompletionBanner />
+			)}
+			{renderState()}
+		</>
+	)
+}
+
+// Rendered above whatever dashboard state is active when the user hasn't yet
+// supplied the data we need to unlock paid tests (today: staffSize → businessSize).
+// Tapping the CTA drops them on the settings page to finish onboarding.
+function ProfileCompletionBanner() {
+	return (
+		<div className='mb-6 rounded-2xl border border-orange-500/30 bg-orange-500/10 p-5 flex flex-col sm:flex-row sm:items-center gap-4'>
+			<div className='w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0'>
+				<AlertTriangle className='w-5 h-5 text-orange-400' />
+			</div>
+			<div className='flex-1 min-w-0'>
+				<p className='text-sm font-semibold text-white'>
+					Finish setting up your business profile
+				</p>
+				<p className='text-xs text-gray-400 mt-1'>
+					Add your staff size (and any other details) so we can tailor
+					your assessment and unlock the paid scans.
+				</p>
+			</div>
+			<Link
+				href='/dashboard/settings'
+				className='inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase tracking-wider transition'
+			>
+				Complete profile <ArrowRight className='w-4 h-4' />
+			</Link>
+		</div>
+	)
 }

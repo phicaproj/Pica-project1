@@ -39,53 +39,32 @@ const phase1QuestionCount = async (
  * the resulting value is persisted on AssessmentSession and copied onto User
  * at registration. Never recomputed.
  *
- * Rules:
+ * Rule (staff size only):
  *   - staffSize is a free-text headcount the user types. Parse the first integer.
  *       <= 50  → SMALL
  *       >= 51  → MEDIUM
  *     If unparseable, treat as SMALL (don't upgrade based on noise).
- *   - annualRevenue is one of three fixed FE-provided buckets:
- *       "Under 5M"            → SMALL
- *       "Mid-Range 5M-50M"    → MEDIUM
- *       "Enterprise 50M+"     → MEDIUM
- *     Matching is case-insensitive on the bracket markers ("under", "mid", "enterprise").
- *   - Final size is MEDIUM if EITHER signal says MEDIUM, else SMALL.
- *     (Either the headcount or the revenue can pull a business up to MEDIUM.)
+ *
+ * Annual revenue used to be a second signal that could pull a business up to
+ * MEDIUM; the client dropped that requirement on 2026-06-13, so size is now
+ * staff-only. The `annualRevenue` column on AssessmentSession/User is kept for
+ * history and is still accepted at lead capture when supplied, just not used
+ * to compute size.
  */
 const SMALL_STAFF_THRESHOLD = 50;
 
-function classifyStaffSize(staffSize: string): BusinessSize {
+function computeBusinessSize(staffSize: string): BusinessSize {
   const match = staffSize.match(/\d+/);
   if (!match) return BusinessSize.SMALL;
   const headcount = Number.parseInt(match[0], 10);
   return headcount > SMALL_STAFF_THRESHOLD ? BusinessSize.MEDIUM : BusinessSize.SMALL;
 }
 
-function classifyRevenue(annualRevenue: string): BusinessSize {
-  const normalized = annualRevenue.trim().toLowerCase();
-  if (normalized.includes('under')) return BusinessSize.SMALL;
-  if (normalized.includes('mid') || normalized.includes('enterprise')) {
-    return BusinessSize.MEDIUM;
-  }
-  // Unknown bucket — be conservative.
-  return BusinessSize.SMALL;
-}
-
-function computeBusinessSize(staffSize: string, annualRevenue: string): BusinessSize {
-  if (
-    classifyStaffSize(staffSize) === BusinessSize.MEDIUM ||
-    classifyRevenue(annualRevenue) === BusinessSize.MEDIUM
-  ) {
-    return BusinessSize.MEDIUM;
-  }
-  return BusinessSize.SMALL;
-}
-
 export async function startAssessmentService(
   data: StartAssessmentInput
 ): Promise<StartAssessmentResponse> {
   const leadEmail = data.leadEmail.trim().toLowerCase();
-  const businessSize = computeBusinessSize(data.staffSize, data.annualRevenue);
+  const businessSize = computeBusinessSize(data.staffSize);
 
   const existingSession = await prisma.assessmentSession.findFirst({
     where: {
@@ -125,7 +104,9 @@ export async function startAssessmentService(
       industry: data.industry,
       location: data.location,
       operatingYears: data.operatingYears,
-      annualRevenue: data.annualRevenue,
+      // Column is required on the schema and kept for history. Default to ''
+      // when the FE omits it (it no longer feeds business-size classification).
+      annualRevenue: data.annualRevenue ?? '',
       businessSize,
     },
     select: {
@@ -569,7 +550,7 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
 
   if (!user.businessSize) {
     throw new AppError(
-      'Business size is missing on your account. Please complete the free Phase 1 scan first.',
+      'Please complete your profile (staff size required) before starting a paid assessment.',
       FORBIDDEN
     );
   }

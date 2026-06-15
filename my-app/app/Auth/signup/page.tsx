@@ -19,6 +19,14 @@ export default function SignUpPage() {
     email: "",
     phone: "",
     password: "",
+    // Optional profile fields — if the user fills them at signup the
+    // dashboard's "Complete your profile" banner stays hidden. Staff size
+    // is the only one that actually unlocks Phase 2A/2B; the rest are
+    // captured here for convenience.
+    staffSize: "",
+    industry: "",
+    country: "",
+    operatingYears: "",
   });
   const [submitError, setSubmitError] = useState("");
 
@@ -187,6 +195,51 @@ export default function SignUpPage() {
                 {errors.phone && (
                   <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
                 )}
+              </div>
+
+              {/* Optional profile fields — fill now or later from the
+                  dashboard. Staff size is the only one that unlocks paid
+                  tests; the others just round out the profile. */}
+              <div className="rounded-xl border border-white/10 bg-[#0d1117]/60 p-4 space-y-3">
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  Business profile (optional)
+                </p>
+                <input
+                  type="text"
+                  placeholder="Staff size (e.g. 25)"
+                  value={form.staffSize}
+                  onChange={(e) => handleChange("staffSize", e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
+                />
+                <p className="text-[11px] text-gray-500 -mt-1">
+                  50 or fewer = Small · more than 50 = Medium. Required before
+                  taking paid tests.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Industry"
+                    value={form.industry}
+                    onChange={(e) => handleChange("industry", e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Country"
+                    value={form.country}
+                    onChange={(e) => handleChange("country", e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Years in operation (e.g. 3-10)"
+                  value={form.operatingYears}
+                  onChange={(e) =>
+                    handleChange("operatingYears", e.target.value)
+                  }
+                  className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
+                />
               </div>
 
               {/* Password with tooltip */}
