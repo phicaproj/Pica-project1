@@ -43,6 +43,7 @@ import {
   type PublicPricingResponse,
   type VerifyPaymentResponse,
 } from "@/lib/authClient";
+import { convertFromUsd, formatMoney, resolveDisplayCurrency, type Currency } from "@/lib/utils";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -96,33 +97,46 @@ type PlanCard = {
   priceMissing?: boolean;
 };
 
-function formatPrice(amount: number | null | undefined, currency = "NGN") {
-  if (amount === null || amount === undefined) return "Not configured";
-  const prefix = currency === "NGN" ? "N" : `${currency} `;
-  return `${prefix}${amount.toLocaleString()}`;
+// Renders a USD catalogue value in the user's display currency. Nigerian
+// users see ₦ (converted via pricing.usdToNgn); everyone else sees $.
+// Kept as a closure inside buildPlans / use-sites so the call signature stays
+// (amount, currency) for any existing inline reader.
+function formatPrice(amount: number | null | undefined, currency: string = "USD") {
+  const c: Currency = currency === "NGN" ? "NGN" : "USD";
+  return formatMoney(amount, c);
 }
 
 function buildPlans(
   businessSize: BusinessSize | null,
   pricing: PublicPricingResponse | null,
+  display: Currency,
 ): PlanCard[] {
-  const phase2APrice = pricing?.phase2A?.price ?? null;
+  const usdToNgn = pricing?.usdToNgn ?? 1;
+  const phase2APriceUsd = pricing?.phase2A?.price ?? null;
   const phase2BPrices = pricing?.phase2B ?? [];
-  const phase2BStartPrice =
+  const phase2BStartPriceUsd =
     phase2BPrices.length > 0
       ? Math.min(...phase2BPrices.map((price) => price.price))
       : null;
 
+  // Display values: USD catalogue → user currency. `amount` stays in the
+  // display currency because the coupon math and Paystack receipt downstream
+  // expect a single currency throughout.
+  const phase2APriceDisplay = convertFromUsd(phase2APriceUsd, display, usdToNgn);
+  const phase2BStartPriceDisplay = convertFromUsd(phase2BStartPriceUsd, display, usdToNgn);
+
   const phase2BLabel =
-    phase2BStartPrice === null ? "Not configured" : `From ${formatPrice(phase2BStartPrice)}`;
+    phase2BStartPriceDisplay === null
+      ? "Not configured"
+      : `From ${formatMoney(phase2BStartPriceDisplay, display)}`;
 
   return [
     {
       tier: "FOUNDATION",
       name: "Free",
-      price: "N0",
+      price: formatMoney(0, display),
       amount: 0,
-      currency: "NGN",
+      currency: display,
       features: [
         "Phase 1 quick scan",
         "Standard insights summary",
@@ -134,9 +148,9 @@ function buildPlans(
     {
       tier: "ACCELERATOR",
       name: "Plan 2A",
-      price: formatPrice(phase2APrice),
-      amount: phase2APrice,
-      currency: pricing?.phase2A?.currency ?? "NGN",
+      price: formatMoney(phase2APriceDisplay, display),
+      amount: phase2APriceDisplay,
+      currency: display,
       features: [
         "Full Phase 2A diagnostic",
         businessSize === "MEDIUM" ? "Medium-business question set" : "Pillar-by-pillar findings",
@@ -146,14 +160,14 @@ function buildPlans(
       buttonVariant: "filled",
       recommended: true,
       backendPlan: "PHASE2A",
-      priceMissing: phase2APrice === null,
+      priceMissing: phase2APriceUsd === null,
     },
     {
       tier: "DEEP DIVE",
       name: "Plan 2B Module",
       price: phase2BLabel,
-      amount: phase2BStartPrice,
-      currency: "NGN",
+      amount: phase2BStartPriceDisplay,
+      currency: display,
       features: [
         "Targeted Pillar Analysis",
         "Granular scoring",
@@ -162,7 +176,7 @@ function buildPlans(
       buttonLabel: "Buy a Module",
       buttonVariant: "filled",
       backendPlan: "PHASE2B_PILLAR",
-      priceMissing: phase2BStartPrice === null,
+      priceMissing: phase2BStartPriceUsd === null,
     },
   ];
 }
@@ -211,9 +225,16 @@ function SubscriptionPageInner() {
   const [pricingLoading, setPricingLoading] = useState(true);
   const [chargedAmount, setChargedAmount] = useState<number | null>(null);
 
+  // NG users see NGN throughout; everyone else USD. Falls back to USD when
+  // /auth/me is still in flight so the page doesn't jump currencies mid-render.
+  const displayCurrency: Currency = useMemo(
+    () => resolveDisplayCurrency(me?.country ?? null),
+    [me?.country],
+  );
+
   const plans = useMemo(
-    () => buildPlans(me?.businessSize ?? null, pricing),
-    [me?.businessSize, pricing],
+    () => buildPlans(me?.businessSize ?? null, pricing, displayCurrency),
+    [me?.businessSize, pricing, displayCurrency],
   );
 
   const pricingByPillarId = useMemo(() => {
@@ -335,12 +356,18 @@ function SubscriptionPageInner() {
       );
       if (!phase2bPlan) return;
       const pillarPrice = pricingByPillarId.get(urlPillarId);
+      // Catalogue prices are USD; convert to the display currency before
+      // surfacing them as the checkout amount.
+      const usdToNgn = pricing?.usdToNgn ?? 1;
+      const pillarPriceDisplay = convertFromUsd(pillarPrice?.price ?? null, displayCurrency, usdToNgn);
+      const fallbackAmount = phase2bPlan.amount;
+      const checkoutAmount = pillarPriceDisplay ?? fallbackAmount;
       setPaymentError(null);
       setSelectedPlan({
         ...phase2bPlan,
-        price: formatPrice(pillarPrice?.price ?? phase2bPlan.amount),
-        amount: pillarPrice?.price ?? phase2bPlan.amount,
-        currency: pillarPrice?.currency ?? phase2bPlan.currency,
+        price: formatMoney(checkoutAmount, displayCurrency),
+        amount: checkoutAmount,
+        currency: displayCurrency,
         priceMissing: !pillarPrice,
       });
       setCheckoutPillarId(urlPillarId);
@@ -453,11 +480,18 @@ function SubscriptionPageInner() {
           getMyPhase2BPillars()
         ]);
         if (pillarsRes.data) {
-          const enrichedPillars = (pillarsRes.data.pillars || []).map((pillar: any) => ({
-            ...pillar,
-            price: pricingByPillarId.get(pillar.id)?.price ?? null,
-            currency: pricingByPillarId.get(pillar.id)?.currency ?? "NGN",
-          }));
+          const usdToNgn = pricing?.usdToNgn ?? 1;
+          const enrichedPillars = (pillarsRes.data.pillars || []).map((pillar: any) => {
+            const row = pricingByPillarId.get(pillar.id);
+            const display = convertFromUsd(row?.price ?? null, displayCurrency, usdToNgn);
+            return {
+              ...pillar,
+              // The picker renders these values verbatim — pre-convert and
+              // pre-label so it doesn't need to know about FX.
+              price: display,
+              currency: displayCurrency,
+            };
+          });
           setAllPillars(enrichedPillars);
         }
         if (myPillarsRes.data) {
@@ -483,12 +517,16 @@ function SubscriptionPageInner() {
   const handlePickPillar = (pillarId: string) => {
     if (!pendingPlan) return;
     const pillarPrice = pricingByPillarId.get(pillarId);
+    // Same USD→display conversion as the auto-checkout branch above.
+    const usdToNgn = pricing?.usdToNgn ?? 1;
+    const pillarPriceDisplay = convertFromUsd(pillarPrice?.price ?? null, displayCurrency, usdToNgn);
+    const checkoutAmount = pillarPriceDisplay ?? pendingPlan.amount;
     setShowPillarPicker(false);
     setSelectedPlan({
       ...pendingPlan,
-      price: formatPrice(pillarPrice?.price ?? pendingPlan.amount),
-      amount: pillarPrice?.price ?? pendingPlan.amount,
-      currency: pillarPrice?.currency ?? pendingPlan.currency,
+      price: formatMoney(checkoutAmount, displayCurrency),
+      amount: checkoutAmount,
+      currency: displayCurrency,
       priceMissing: !pillarPrice,
     });
     setCheckoutSessionId(null);
@@ -758,9 +796,17 @@ function ChoosePlanView({
 
       {!businessSize && (
         <div className="max-w-2xl mx-auto px-4 mb-12">
-          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5 text-sm text-yellow-300">
-            We couldn&apos;t determine your business size yet. Please complete the
-            free Phase 1 scan first so we can show plans that fit your operation.
+          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5 text-sm text-yellow-300 flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="flex-1">
+              We couldn&apos;t determine your business size yet. Add your staff
+              size in settings so we can show plans that fit your operation.
+            </span>
+            <Link
+              href="/dashboard/settings"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-500/30 hover:bg-yellow-500/40 text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+            >
+              Complete profile
+            </Link>
           </div>
         </div>
       )}
@@ -808,7 +854,10 @@ function ChoosePlanView({
               disabled={
                 !plan.backendPlan ||
                 plan.priceMissing ||
-                (plan.backendPlan === "PHASE2A" && me.hasPaidPhase2A)
+                (plan.backendPlan === "PHASE2A" && me.hasPaidPhase2A) ||
+                // Paid Phase 2A/2B both require a resolved businessSize on the
+                // BE; greying these out matches the gate instead of erroring late.
+                (plan.backendPlan !== undefined && !me.profileComplete)
               }
               onSelect={() => onSelectPlan(plan)}
             />

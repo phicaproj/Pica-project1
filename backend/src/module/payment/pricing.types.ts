@@ -53,6 +53,9 @@ export type ListPricingQuery = z.infer<typeof listPricingQuerySchema>;
 export type CreatePricingInput = z.infer<typeof createPricingSchema>;
 export type UpdatePricingInput = z.infer<typeof updatePricingSchema>;
 
+// Catalogue rows are always USD post-Slice 2. The wire currency at charge
+// time can still be NGN (for Nigerian users), but that's a payment.service
+// concern — the pricing API serves the base currency only.
 export type PricingRow = {
   id: string;
   plan: Plan;
@@ -60,7 +63,7 @@ export type PricingRow = {
   pillarCode: string | null;
   pillarName: string | null;
   price: number;
-  currency: 'NGN';
+  currency: 'USD';
   createdAt: Date;
   updatedAt: Date;
 };
@@ -77,7 +80,12 @@ export type PricingDetailResponse = {
 
 export type PublicPricingResponse = {
   message: string;
-  currency: 'NGN';
+  // The base currency the catalogue is priced in (always USD post-Slice 2).
+  // The FE resolves the display currency from the user's country and uses
+  // `usdToNgn` to convert when rendering NGN; the value here is the same rate
+  // the BE will charge against.
+  currency: 'USD';
+  usdToNgn: number;
   phase2A: PricingRow | null;
   phase2B: PricingRow[];
 };

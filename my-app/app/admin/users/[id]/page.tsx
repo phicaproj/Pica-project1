@@ -21,6 +21,7 @@ import {
   type AdminUserPaymentsResponse,
   type AdminUserSessionsResponse,
 } from "@/lib/authClient";
+import { formatMoney } from "@/lib/utils";
 
 const SUB_PAGE_SIZE = 5;
 
@@ -278,7 +279,9 @@ export default function UserDetailPage() {
           { label: "Successful Payments", value: details.totalSuccessfulPayments },
           {
             label: "Total Spent",
-            value: `N${new Intl.NumberFormat("en-NG").format(details.totalSpent)}`,
+            // Admin-facing roll-up always in USD (base currency). Per-payment
+            // rows below still render in their captured currency.
+            value: formatMoney(details.totalSpent, "USD"),
           },
         ].map((stat, i) => (
           <div

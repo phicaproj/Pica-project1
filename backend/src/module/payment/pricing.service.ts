@@ -2,6 +2,7 @@ import { Plan, Prisma } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
+import { getUsdToNgnRate } from '../settings/settings.service';
 import type {
   CreatePricingInput,
   ListPricingQuery,
@@ -31,6 +32,10 @@ type RawPricingRow = Prisma.PlanPriceGetPayload<{
   select: typeof pricingSelect;
 }>;
 
+// Catalogue prices are stored as USD major units after the
+// 20260615150000_plan_prices_to_usd migration. Display conversion to NGN for
+// Nigerian users happens on the FE using `usdToNgn` from the public pricing
+// response; charge-time conversion happens in payment.service.
 const toPricingRow = (row: RawPricingRow): PricingRow => ({
   id: row.id,
   plan: row.plan,
@@ -38,7 +43,7 @@ const toPricingRow = (row: RawPricingRow): PricingRow => ({
   pillarCode: row.pillar?.code ?? null,
   pillarName: row.pillar?.name ?? null,
   price: row.price.toNumber(),
-  currency: 'NGN',
+  currency: 'USD',
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
@@ -118,19 +123,28 @@ export async function listPricingService(
 }
 
 export async function getPublicPricingService(): Promise<PublicPricingResponse> {
-  const prices = await prisma.planPrice.findMany({
-    where: {
-      OR: [{ plan: Plan.PHASE2A }, { plan: Plan.PHASE2B_PILLAR, pillar: { isActive: true } }],
-    },
-    select: pricingSelect,
-    orderBy: [{ plan: 'asc' }, { pillar: { displayOrder: 'asc' } }, { updatedAt: 'desc' }],
-  });
+  // Prices and the FX rate are independent reads with no ordering constraint —
+  // fetch them in parallel so the public pricing endpoint doesn't pay two
+  // sequential round-trips.
+  const [prices, usdToNgn] = await Promise.all([
+    prisma.planPrice.findMany({
+      where: {
+        OR: [{ plan: Plan.PHASE2A }, { plan: Plan.PHASE2B_PILLAR, pillar: { isActive: true } }],
+      },
+      select: pricingSelect,
+      orderBy: [{ plan: 'asc' }, { pillar: { displayOrder: 'asc' } }, { updatedAt: 'desc' }],
+    }),
+    getUsdToNgnRate(),
+  ]);
 
   const rows = prices.map(toPricingRow);
 
+  // Catalogue currency is USD. The FE picks the display currency from the
+  // user's country and uses `usdToNgn` to convert when rendering NGN.
   return {
     message: 'Pricing fetched successfully',
-    currency: 'NGN',
+    currency: 'USD',
+    usdToNgn,
     phase2A: rows.find((row) => row.plan === Plan.PHASE2A) ?? null,
     phase2B: rows.filter((row) => row.plan === Plan.PHASE2B_PILLAR),
   };

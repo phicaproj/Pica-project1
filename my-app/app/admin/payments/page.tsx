@@ -30,6 +30,7 @@ import {
   type AdminPaymentDetail,
   type PaymentStatusValue,
 } from "@/lib/authClient";
+import { formatMoney, type Currency } from "@/lib/utils";
 
 // ── Display helpers ───────────────────────────────────────────
 const STATUS_STYLES: Record<PaymentStatusValue, string> = {
@@ -73,13 +74,20 @@ const initialsOf = (p: AdminPaymentRow) => {
   return source.substring(0, 2).toUpperCase();
 };
 
-const formatNaira = (n: number) =>
-  `₦${n.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+// Per-row amounts are rendered in the currency the payment was actually
+// captured with (Payment.currency). Roll-ups / stats / month bars don't have
+// a per-row currency, so they default to USD — the catalogue base after Slice
+// 2. Callers can pass `null`/`undefined`/'' to fall back to USD too.
+const formatAmount = (n: number, currency?: string | null) => {
+  const c: Currency = currency === "NGN" ? "NGN" : "USD";
+  return formatMoney(n, c);
+};
 
-const compactNaira = (n: number) => {
-  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `₦${(n / 1_000).toFixed(1)}k`;
-  return formatNaira(n);
+const compactAmount = (n: number, currency?: string | null) => {
+  const symbol = currency === "NGN" ? "₦" : "$";
+  if (n >= 1_000_000) return `${symbol}${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${symbol}${(n / 1_000).toFixed(1)}k`;
+  return formatAmount(n, currency);
 };
 
 const formatDate = (iso: string | null) => {
@@ -320,7 +328,7 @@ export default function PaymentsPage() {
           <div className="p-6">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Total Revenue</div>
             <div className="text-3xl font-bold text-white mb-2">
-              {statsLoading && !stats ? "—" : compactNaira(stats?.totalRevenue ?? 0)}
+              {statsLoading && !stats ? "—" : compactAmount(stats?.totalRevenue ?? 0)}
             </div>
             {stats?.revenueGrowthPct !== null && stats?.revenueGrowthPct !== undefined ? (
               <div
@@ -356,10 +364,10 @@ export default function PaymentsPage() {
           <div className="p-6">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">This Month</div>
             <div className="text-3xl font-bold text-white mb-2">
-              {statsLoading && !stats ? "—" : compactNaira(stats?.revenueThisMonth ?? 0)}
+              {statsLoading && !stats ? "—" : compactAmount(stats?.revenueThisMonth ?? 0)}
             </div>
             <div className="text-xs text-gray-400">
-              Last month: {compactNaira(stats?.revenueLastMonth ?? 0)}
+              Last month: {compactAmount(stats?.revenueLastMonth ?? 0)}
             </div>
             <div className="mt-3">
               <svg viewBox="0 0 100 30" className="w-full h-8">
@@ -382,7 +390,7 @@ export default function PaymentsPage() {
           <div className="p-6">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Pending Payments</div>
             <div className="text-3xl font-bold text-orange-400 mb-2">
-              {statsLoading && !stats ? "—" : compactNaira(stats?.pendingAmount ?? 0)}
+              {statsLoading && !stats ? "—" : compactAmount(stats?.pendingAmount ?? 0)}
             </div>
             <div className="text-xs text-gray-400">
               {stats?.pendingCount ?? 0} transaction{(stats?.pendingCount ?? 0) === 1 ? "" : "s"}{" "}
@@ -482,7 +490,7 @@ export default function PaymentsPage() {
             {/* X labels + per-month amounts */}
             <div className="absolute bottom-0 left-0 right-0 flex justify-between text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-1">
               {monthly.map((m) => (
-                <span key={`${m.monthLabel}-${m.year}`} title={`${formatNaira(m.amount)} · ${m.count} payments`}>
+                <span key={`${m.monthLabel}-${m.year}`} title={`${formatAmount(m.amount)} · ${m.count} payments`}>
                   {m.monthLabel}
                 </span>
               ))}
@@ -678,7 +686,7 @@ export default function PaymentsPage() {
                       {formatDate(tx.paidAt ?? tx.createdAt)}
                     </td>
                     <td className="px-6 py-4 text-sm font-semibold text-white whitespace-nowrap">
-                      {formatNaira(tx.amount)}
+                      {formatAmount(tx.amount, tx.currency)}
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-xs font-semibold text-gray-300 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 whitespace-nowrap">
@@ -787,12 +795,12 @@ export default function PaymentsPage() {
                   {/* Status + amount strip */}
                   <div className="flex items-center justify-between flex-wrap gap-3">
                     <div>
-                      <div className="text-3xl font-bold text-white">{formatNaira(detail.amount)}</div>
+                      <div className="text-3xl font-bold text-white">{formatAmount(detail.amount, detail.currency)}</div>
                       {detail.discountAmount ? (
                         <div className="text-xs text-gray-400 mt-1">
-                          Base {formatNaira(detail.baseAmount)} − coupon{" "}
+                          Base {formatAmount(detail.baseAmount, detail.currency)} − coupon{" "}
                           <span className="font-mono text-purple-400">{detail.couponCode}</span> (
-                          {formatNaira(detail.discountAmount)})
+                          {formatAmount(detail.discountAmount, detail.currency)})
                         </div>
                       ) : null}
                     </div>

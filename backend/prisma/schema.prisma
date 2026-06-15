@@ -152,6 +152,28 @@ model ScoringSettings {
   @@map("scoring_settings")
 }
 
+/// Singleton (one row) — admin-editable app-wide settings. Today this owns the
+/// USD→NGN exchange rate used to display/charge Nigerian users in Naira while
+/// non-NG users see USD. Kept as its own table (rather than bolted onto
+/// ScoringSettings) because the lifecycle and ownership are different.
+/// `updatedBy` is the admin User.id so we can attribute rate changes.
+model AppSettings {
+  id String @id @default(uuid())
+
+  // Rate to convert USD (base) → NGN at display/charge time. Decimal(12, 4)
+  // gives 4dp precision, enough for any realistic FX value; the seed below
+  // installs a reasonable starting rate that the admin is expected to update.
+  usdToNgn Decimal @map("usd_to_ngn") @db.Decimal(12, 4)
+
+  updatedBy String? @map("updated_by")
+  updatedByUser User? @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
 model Question {
   id                String       @id @default(uuid())
   pillarId          String       @map("pillar_id")
@@ -246,6 +268,10 @@ model User {
   discounts      Discount[]
   adminRoleId    String?               @map("admin_role_id")
   adminRole      AdminRole?            @relation(fields: [adminRoleId], references: [id])
+  // Reverse side of AppSettings.updatedBy — kept here only so the relation
+  // type-checks; admins shouldn't need to enumerate the AppSettings rows they
+  // edited (there's only one row anyway).
+  appSettingsUpdates AppSettings[]      @relation("AppSettingsUpdatedBy")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -416,14 +442,22 @@ model Payment {
   accessCode        String? @map("access_code") // Paystack init response
   authorizationUrl  String? @map("authorization_url") // Paystack init response
 
-  // Amount in MAJOR units (NGN) for readability — this is the FINAL charged
-  // amount after any coupon discount. Paystack works in kobo; convert at the boundary.
+  // Amount in MAJOR units of `currency` — this is the FINAL charged amount
+  // after any coupon discount. Paystack works in kobo (NGN) or cents (USD);
+  // convert at the boundary. `currency` is the wire currency the user was
+  // actually billed in (NGN for Nigerian users, USD for everyone else).
   amount   Decimal @db.Decimal(12, 2)
-  currency String  @default("NGN")
+  currency String  @default("USD")
 
-  // Coupon applied at init time (if any). discountAmount is the major-unit NGN
-  // value subtracted from the base price to reach `amount`. Both null when no
-  // coupon was used. Kept for the admin transactions view / audit.
+  // The USD-equivalent of `amount` at charge time. Lets admin roll-ups and
+  // analytics aggregate revenue in one currency even when individual rows
+  // span NGN and USD. For USD charges this equals `amount`; for NGN charges
+  // it is `amount / usdToNgn` snapshotted from app_settings at init time.
+  amountUsd Decimal? @map("amount_usd") @db.Decimal(12, 2)
+
+  // Coupon applied at init time (if any). discountAmount is in the same major
+  // units as `amount` (whichever currency the user was charged in). Both null
+  // when no coupon was used. Kept for the admin transactions view / audit.
   appliedCouponCode String?  @map("applied_coupon_code")
   discountAmount    Decimal? @map("discount_amount") @db.Decimal(12, 2)
 

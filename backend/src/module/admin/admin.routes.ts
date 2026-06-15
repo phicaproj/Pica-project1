@@ -52,6 +52,7 @@ import {
   adminUpdatePaymentStatus,
 } from '../payment/payment.admin.controller';
 import { getScoringSettings, updateScoringSettings } from '../scoring/scoring.admin.controller';
+import { getAppSettings, updateAppSettings } from '../settings/settings.controller';
 
 const adminRouter = express.Router();
 
@@ -99,6 +100,12 @@ adminRouter.patch('/pillars/weights', hasPermission('questions:write'), savePill
 // Singleton settings row; edits apply to future submissions only.
 adminRouter.get('/scoring-settings', hasPermission('scoring:read'), getScoringSettings);
 adminRouter.patch('/scoring-settings', hasPermission('scoring:write'), updateScoringSettings);
+
+// App-wide settings — currently just the USD→NGN exchange rate. Singleton row,
+// admin-editable. Settings is the natural permission bucket (this is config
+// rather than score interpretation).
+adminRouter.get('/app-settings', hasPermission('settings:read'), getAppSettings);
+adminRouter.patch('/app-settings', hasPermission('settings:write'), updateAppSettings);
 adminRouter.get('/questions', hasPermission('questions:read'), listAdminQuestions);
 adminRouter.post('/questions', hasPermission('questions:write'), createQuestion);
 adminRouter.get('/questions/:id', hasPermission('questions:read'), getAdminQuestion);

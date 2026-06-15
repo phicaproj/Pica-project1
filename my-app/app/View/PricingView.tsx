@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useTheme } from "@/components/ThemeContext";
 import { CheckCircle, Globe, Loader, Shield } from "lucide-react";
 import { getPublicPricing, type PublicPricingResponse } from "@/lib/authClient";
+import { formatMoney } from "@/lib/utils";
 
-function formatPrice(amount: number | null | undefined, currency = "NGN") {
-  if (amount === null || amount === undefined) return "Not configured";
-  const prefix = currency === "NGN" ? "N" : `${currency} `;
-  return `${prefix}${amount.toLocaleString()}`;
-}
+// Anonymous landing page — there's no logged-in user to derive a country from,
+// so we default to USD here. Once a country picker lands (see todo I/H), feed
+// its value to resolveDisplayCurrency() and convert via usdToNgn.
 
 export default function PricingPage() {
   const { dark } = useTheme();
@@ -98,7 +97,7 @@ export default function PricingPage() {
             <div className={`rounded-2xl p-8 border ${d ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
               <p className={`text-xs font-semibold uppercase tracking-widest mb-2 ${d ? "text-gray-400" : "text-gray-500"}`}>Layer 01</p>
               <h3 className={`text-2xl md:text-3xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Free Scan</h3>
-              <p className="text-3xl md:text-5xl font-extrabold mb-6">N0</p>
+              <p className="text-3xl md:text-5xl font-extrabold mb-6">{formatMoney(0, "USD")}</p>
               <ul className="space-y-3 mb-10">
                 {["Core business health check", "Phase 1 quick scan", "Basic PDF Performance Summary"].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
@@ -118,7 +117,7 @@ export default function PricingPage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 02</p>
               <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Plan 2A Full Diagnostic</h3>
               <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
-                {formatPrice(phase2A?.price, phase2A?.currency)}
+                {formatMoney(phase2A?.price, phase2A?.currency ?? "USD")}
               </p>
               <ul className="space-y-3 mb-8">
                 {["Deep-dive structural audit", "Pillar-by-pillar findings", "Detailed Insight PDF Package"].map((item) => (
@@ -136,7 +135,9 @@ export default function PricingPage() {
               <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 03</p>
               <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Plan 2B Deep Dive</h3>
               <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
-                {phase2BFrom === null ? "Not configured" : `From ${formatPrice(phase2BFrom)}`}
+                {phase2BFrom === null
+                  ? "Not configured"
+                  : `From ${formatMoney(phase2BFrom, pricing?.currency ?? "USD")}`}
               </p>
               <ul className="space-y-3 mb-8">
                 {["Targeted pillar modules", "Granular scoring", "Actionable insights per pillar"].map((item) => (

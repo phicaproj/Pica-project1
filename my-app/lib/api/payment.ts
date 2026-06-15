@@ -66,6 +66,12 @@ export const verifyPayment = async (reference: string) => {
 	)
 }
 
+// Per Slice 2A: the catalogue is now USD-base. Per-payment rows on /history
+// can still carry NGN (Nigerian users were billed in NGN), so the wider
+// receipt/history types keep using string; only pricing-catalogue rows narrow
+// to 'USD'.
+export type Currency = 'USD' | 'NGN'
+
 export type PricingRow = {
 	id: string
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
@@ -73,14 +79,17 @@ export type PricingRow = {
 	pillarCode: string | null
 	pillarName: string | null
 	price: number
-	currency: 'NGN'
+	currency: 'USD'
 	createdAt: string
 	updatedAt: string
 }
 
 export type PublicPricingResponse = {
 	message: string
-	currency: 'NGN'
+	currency: 'USD'
+	// Live USD→NGN rate served from app_settings. Use this to convert when
+	// rendering NGN prices to Nigerian users while everyone else sees USD.
+	usdToNgn: number
 	phase2A: PricingRow | null
 	phase2B: PricingRow[]
 }

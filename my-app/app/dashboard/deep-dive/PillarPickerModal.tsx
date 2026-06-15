@@ -1,6 +1,7 @@
 "use client";
 
 import { X, ArrowRight, Lock } from "lucide-react";
+import { formatMoney, type Currency } from "@/lib/utils";
 
 type PillarForPicker = {
   id: string;
@@ -17,10 +18,12 @@ interface PillarPickerModalProps {
   onSelect: (pillarId: string) => void;
 }
 
-function formatPrice(amount: number | null | undefined, currency = "NGN") {
-  if (amount === null || amount === undefined) return "Not configured";
-  const prefix = currency === "NGN" ? "N" : `${currency} `;
-  return `${prefix}${amount.toLocaleString()}`;
+// Pillar rows arrive tagged with the currency the pricing API returned. Any
+// unknown value falls through to USD (the catalogue base) — safer than NGN
+// once the BE flips PlanPrice to USD.
+function formatPrice(amount: number | null | undefined, currency: string = "USD") {
+  const c: Currency = currency === "NGN" ? "NGN" : "USD";
+  return formatMoney(amount, c);
 }
 
 export function PillarPickerModal({

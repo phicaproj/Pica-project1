@@ -22,9 +22,10 @@ import {
   updateUserProfile, 
   updateUserBusiness, 
   verifyUserEmail, 
-  uploadAvatar as uploadAvatarApi, 
-  getMyBillingHistory 
+  uploadAvatar as uploadAvatarApi,
+  getMyBillingHistory
 } from "@/lib/authClient";
+import { formatMoney, type Currency } from "@/lib/utils";
 
 type Tab = "Profile" | "Business Info" | "Billing";
 
@@ -932,9 +933,11 @@ function BillingSettings() {
     fetchBillingHistory(1);
   }, []);
 
+  // Billing history shows each payment in whatever currency it was actually
+  // captured with (per-row), so we honor the row's currency tag.
   const formatPrice = (amount: number, currency: string) => {
-    const symbol = currency === "NGN" ? "₦" : "$";
-    return `${symbol}${amount.toLocaleString()}`;
+    const c: Currency = currency === "NGN" ? "NGN" : "USD";
+    return formatMoney(amount, c);
   };
 
   const formatDateLabel = (isoStr: string) => {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
 import { setLastSessionId } from '@/lib/authClient'
 import {
@@ -78,8 +79,16 @@ function IntroStep({ dark, onStart }: { dark: boolean; onStart: () => void }) {
 	const d = dark
 	return (
 		<div
-			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 ${d ? 'bg-black' : 'bg-gray-50'}`}
+			className={`min-h-screen flex flex-col items-center justify-center relative px-4 sm:px-6 md:px-8 ${d ? 'bg-black' : 'bg-gray-50'}`}
 		>
+			{/* Back-to-home in the corner — same intent as on QuestionStep,
+			    placed where users instinctively look for an escape. */}
+			<Link
+				href='/'
+				className={`absolute top-4 left-4 sm:top-6 sm:left-6 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest transition ${d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+			>
+				<ArrowLeft className='w-3.5 h-3.5' /> Back to home
+			</Link>
 			<div
 				className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 ${d ? 'bg-[#1a2235]' : 'bg-gray-200'}`}
 				style={{
@@ -489,12 +498,30 @@ function QuestionStep({
 	const progress = ((currentIndex + 1) / totalQuestions) * 100
 	const isLast = currentIndex === totalQuestions - 1
 
+	// When the user advances to a new question, scroll the page to the top so
+	// the question text + options are visible without manual scrolling. On
+	// mobile this matters a lot — the question block sits below a 200+px
+	// header chunk and the options are easy to miss otherwise.
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+		window.scrollTo({ top: 0, behavior: 'smooth' })
+	}, [currentIndex])
+
 	return (
 		<div
 			className={`min-h-screen flex flex-col ${d ? 'bg-[#0d1117]' : 'bg-gray-50'}`}
 		>
 			<div className='flex-1 px-4 sm:px-6 md:px-12 py-8'>
-				<div className='flex items-start justify-between mb-2'>
+				{/* Escape hatch — users were getting stuck inside the question
+				    flow with no obvious way back to the marketing pages. The
+				    answers are auto-saved per turn so leaving is non-destructive. */}
+				<Link
+					href='/'
+					className={`inline-flex items-center gap-1.5 mb-6 text-xs font-semibold uppercase tracking-widest transition ${d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+				>
+					<ArrowLeft className='w-3.5 h-3.5' /> Back to home
+				</Link>
+				<div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
 					<div>
 						<p className='text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-1'>
 							Current Pillar
@@ -520,8 +547,10 @@ function QuestionStep({
 						</p>
 					</div>
 				</div>
+				{/* Progress bar — h-2 so it's clearly visible on phones; the
+				    previous h-1 effectively vanished against the dark theme. */}
 				<div
-					className={`h-1 rounded-full mb-10 ${d ? 'bg-white/10' : 'bg-gray-200'}`}
+					className={`h-2 rounded-full mb-10 overflow-hidden ${d ? 'bg-white/10' : 'bg-gray-200'}`}
 				>
 					<div
 						className='h-full rounded-full bg-[#00ffaa] transition-all duration-500'

@@ -17,7 +17,9 @@ import {
   Play,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import {
+  getMe,
   getMyPhase2BPillars,
   getMyCompletedResults,
   getAllPillars,
@@ -26,7 +28,9 @@ import {
   PricingRow,
   getSessionResponses,
   startPhase2B,
+  type MeUser,
 } from "@/lib/authClient";
+import { convertFromUsd, resolveDisplayCurrency } from "@/lib/utils";
 import { PillarPickerModal } from "./PillarPickerModal";
 
 const PILLAR_ICONS: Record<string, any> = {
@@ -44,6 +48,10 @@ export default function DeepDivePage() {
   const [pillarsData, setPillarsData] = useState<Phase2BPillarSession[]>([]);
   const [resultsData, setResultsData] = useState<any[]>([]);
   const [allPillars, setAllPillars] = useState<any[]>([]);
+  // `me.profileComplete` mirrors the BE's Phase 2B gate (needs a resolved
+  // businessSize). When false we keep the "Start" / picker triggers disabled
+  // and surface a banner pointing at settings.
+  const [me, setMe] = useState<MeUser | null>(null);
   
   const [showPicker, setShowPicker] = useState(false);
   const [showPainPoints, setShowPainPoints] = useState(false);
@@ -56,6 +64,18 @@ export default function DeepDivePage() {
   } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await getMe();
+      if (cancelled) return;
+      if (res.data) setMe(res.data.user);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
@@ -65,17 +85,26 @@ export default function DeepDivePage() {
           getPublicPricing(),
         ]);
         const priceMap = new Map<string, PricingRow>();
+        let usdToNgn = 1;
         if (pricingRes.data) {
+          usdToNgn = pricingRes.data.usdToNgn ?? 1;
           for (const row of pricingRes.data.phase2B) {
             if (row.pillarId) priceMap.set(row.pillarId, row);
           }
         }
+        // Display currency is derived from the user's country. `me` may still
+        // be loading in the sibling effect; fall back to USD which the user
+        // will see corrected once /auth/me lands (this effect re-runs on me).
+        const display = resolveDisplayCurrency(me?.country ?? null);
         if (pillarsRes.data) {
-          setAllPillars((pillarsRes.data.pillars || []).map((pillar: any) => ({
-            ...pillar,
-            price: priceMap.get(pillar.id)?.price ?? null,
-            currency: priceMap.get(pillar.id)?.currency ?? "NGN",
-          })));
+          setAllPillars((pillarsRes.data.pillars || []).map((pillar: any) => {
+            const row = priceMap.get(pillar.id);
+            return {
+              ...pillar,
+              price: convertFromUsd(row?.price ?? null, display, usdToNgn),
+              currency: display,
+            };
+          }));
         }
 
         // Load user's unlocked pillars (Phase2B sessions)
@@ -98,7 +127,9 @@ export default function DeepDivePage() {
       }
     }
     loadData();
-  }, []);
+    // Re-run when the user's country resolves so the picker shows the right
+    // currency without a full page reload.
+  }, [me?.country]);
 
   // Fetch progress for the active session when pillarsData updates
   useEffect(() => {
@@ -163,11 +194,30 @@ export default function DeepDivePage() {
     );
   }
 
+  // Default to "complete" while /auth/me is in flight so we don't briefly
+  // grey out the CTA for users whose profile is fine.
+  const profileIncomplete = me ? !me.profileComplete : false;
+
   return (
     <div className="space-y-6 max-w-full">
       {error && (
         <div className="px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300">
           {error}
+        </div>
+      )}
+
+      {profileIncomplete && (
+        <div className="px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200 flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="flex-1">
+            Finish your business profile to unlock Deep Dive modules — we need
+            your staff size first.
+          </span>
+          <Link
+            href="/dashboard/settings"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+          >
+            Complete profile <ArrowRight className="w-3 h-3" />
+          </Link>
         </div>
       )}
 
@@ -231,7 +281,9 @@ export default function DeepDivePage() {
                 </p>
                 <button
                   onClick={() => setShowPicker(true)}
-                  className="inline-flex items-center gap-2 px-6 py-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
+                  disabled={profileIncomplete}
+                  title={profileIncomplete ? "Complete your business profile first" : undefined}
+                  className="inline-flex items-center gap-2 px-6 py-4 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold transition shadow-lg shadow-orange-500/20"
                 >
                   Start New Module <ArrowRight className="w-4 h-4" />
                 </button>
@@ -306,7 +358,9 @@ export default function DeepDivePage() {
           </div>
           <button
             onClick={() => setShowPicker(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
+            disabled={profileIncomplete}
+            title={profileIncomplete ? "Complete your business profile first" : undefined}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition"
           >
             <Plus className="w-4 h-4" /> New Pillar Deep Dive
           </button>
@@ -372,7 +426,9 @@ export default function DeepDivePage() {
               </p>
               <button
                 onClick={() => setShowPicker(true)}
-                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition"
+                disabled={profileIncomplete}
+                title={profileIncomplete ? "Complete your business profile first" : undefined}
+                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed transition"
               >
                 Start your first Deep Dive
               </button>

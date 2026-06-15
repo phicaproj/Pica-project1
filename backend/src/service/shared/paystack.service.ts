@@ -12,10 +12,18 @@ import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from './http';
  * units (NGN) on this boundary so the rest of the codebase stays clean.
  */
 
+// Paystack wire currency. NGN charges in kobo (×100); USD charges in cents
+// (×100 — same multiplier, different ISO code). Account-level support for USD
+// is a per-merchant Paystack setting (BE-0 in todo.md); if the account is
+// NGN-only, USD inits will be rejected at the provider boundary.
+export type PaystackCurrency = 'NGN' | 'USD';
+
 export type PaystackInitInput = {
   email: string;
-  /** Major units (e.g. 25000 NGN). Converted to kobo internally. */
+  /** Major units of `currency` (e.g. 25000 NGN, 30 USD). Converted internally. */
   amount: number;
+  /** Defaults to NGN for backward compatibility with existing call sites. */
+  currency?: PaystackCurrency;
   /** Idempotency key — if reused, Paystack will reject. */
   reference: string;
   /** Free-form key/value snapshot Paystack echoes back on verify. */
@@ -46,12 +54,16 @@ const paystackHeaders = () => ({
 });
 
 export async function initializeTransaction(input: PaystackInitInput): Promise<PaystackInitData> {
+  const currency: PaystackCurrency = input.currency ?? 'NGN';
   const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
     method: 'POST',
     headers: paystackHeaders(),
     body: JSON.stringify({
       email: input.email,
-      amount: Math.round(input.amount * 100), // NGN -> kobo
+      // Both NGN→kobo and USD→cents are ×100. Paystack rejects fractional
+      // amounts, so round at the boundary.
+      amount: Math.round(input.amount * 100),
+      currency,
       reference: input.reference,
       metadata: input.metadata ?? {},
     }),

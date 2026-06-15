@@ -25,6 +25,7 @@ import {
   type PillarMeta,
   type AdminUserRow,
 } from "@/lib/authClient";
+import { formatMoney } from "@/lib/utils";
 
 type DiscountMode = "AMOUNT" | "PERCENT";
 
@@ -69,9 +70,9 @@ function formatDate(value: string) {
 
 function formatDiscount(coupon: AdminCoupon) {
   if (coupon.percentOff > 0) return `${coupon.percentOff}% off`;
-  return `N${new Intl.NumberFormat("en-NG", {
-    maximumFractionDigits: 0,
-  }).format(coupon.amountOff)} off`;
+  // Coupon `amountOff` is stored in the base currency (USD) the same way
+  // PlanPrice is. Admin-facing rollup → USD.
+  return `${formatMoney(coupon.amountOff, "USD")} off`;
 }
 
 export default function CouponsPage() {

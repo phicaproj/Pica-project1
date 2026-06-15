@@ -27,22 +27,23 @@
 
 # BACKEND TASKS
 
-## A. Currency & FX (USD base, NGN for Nigeria)
+## A. Currency & FX (USD base, NGN for Nigeria) ✅ DONE (2026-06-15)
 
-- [ ] **Add an admin-set FX rate setting.** New singleton-style config (e.g. extend a settings table or add `AppSettings`/`FxRate` model) holding `usdToNgn: Decimal` + `updatedAt` + `updatedBy`. Admin-editable.
-  - Files: `prisma/schema.prisma`, new `module/settings` (or extend admin module), migration.
-- [ ] **Change base pricing to USD.**
-  - `PlanPrice.price` now represents **USD**. Update `pricing.service.ts` `toPricingRow` to return `currency: 'USD'` and drop the hardcoded `'NGN'`.
-  - `pricing.types.ts`: change `currency: 'NGN'` types → `'USD'` (and a runtime currency union `'USD' | 'NGN'` for resolved/checkout responses).
-  - Decide migration of existing NGN price rows → convert to USD using a chosen rate (one-off data migration; document the rate used).
-- [ ] **Resolve display + charge currency by user country at checkout.**
-  - New helper `resolveCurrencyForUser(country)` → `'NGN'` if Nigeria else `'USD'`.
-  - In `payment.service.ts initPaymentService`: compute `chargeCurrency`, and if NGN, convert USD base price → NGN using the FX rate. Pass the correct `currency` + amount to Paystack (NGN→kobo as today; USD→cents).
-  - Persist `currency` + the **USD-equivalent** on every `Payment` for clean USD accounting (add `amountUsd Decimal` to `Payment`, keep `amount`/`currency` as the charged values).
-  - Files: `payment.service.ts`, `payment.types.ts`, `prisma/schema.prisma` (+ migration), `Payment.currency` default review.
-- [ ] **Public pricing endpoint returns both views.** `getPublicPricingService` (+ `/payment/pricing`) should return USD prices and, for convenience, the current FX rate so the FE can show NGN to NG visitors. Add optional `?country=` or derive from auth when present.
-- [ ] **Coupons/discounts**: confirm `Discount.amountOff` semantics under USD base (it's currently NGN major units). Re-baseline to USD; verify `coupon.service.ts` math.
-- [ ] **Admin transactions/analytics**: ensure revenue reporting sums in **USD** (`amountUsd`), not mixed currencies. Files: `payment.admin.service.ts`, `admin.service.ts` analytics.
+- [x] **Add an admin-set FX rate setting.** Singleton `AppSettings` model with `usdToNgn Decimal(12,4)` + `updatedBy → User` + audit timestamps; admin `GET/PATCH /api/admin/app-settings` under `settings:read`/`settings:write`. Service self-heals if the row is missing.
+  - *Files added:* `prisma/schema.prisma` (AppSettings + reverse rel on User), `prisma/migrations/20260615120000_app_settings_fx/migration.sql` (seeded with placeholder 1500), `module/settings/{settings.types,settings.service,settings.controller}.ts`, wired into `admin.routes.ts`.
+- [x] **Change base pricing to USD.** `PlanPrice.price` is now USD; one-off SQL divides every row by 1500 (matches the seeded `usdToNgn`). `pricing.service.toPricingRow` returns `currency: 'USD'`; `pricing.types` narrowed to `'USD'` on catalogue rows and `'USD' | 'NGN'` on checkout/init responses.
+  - *Migration:* `prisma/migrations/20260615150000_plan_prices_to_usd/migration.sql` — single-shot, also re-baselines `Discount.amount_off` and back-fills `payments.amount_usd` for historical rows.
+- [x] **Resolve display + charge currency by user country at checkout.** `resolveChargeCurrency(country)` in `payment.service` mirrors the FE helper. `initPaymentService` snapshots `usdToNgn` at init time, charges NG users in NGN, everyone else in USD, persists `Payment.amount` (wire), `Payment.amountUsd`, and `Payment.currency`. Paystack now receives the right `currency` field.
+  - *Files:* `payment.service.ts`, `service/shared/paystack.service.ts` (accepts `currency: 'NGN' | 'USD'`), `prisma/schema.prisma` (`Payment.amountUsd`, `currency` default → `'USD'`).
+- [x] **Public pricing endpoint returns both views.** `/api/payment/pricing` returns `{ currency: 'USD', usdToNgn, phase2A, phase2B }` — FE picks display currency from `me.country`. No `?country=` param added; derived client-side.
+- [x] **Coupons/discounts**: `Discount.amountOff` re-baselined to USD by the same migration. `coupon.service` math is currency-agnostic (just a number); `initPaymentService` runs coupon math in USD, then converts the discount to wire currency before persisting.
+- [ ] **Admin transactions/analytics**: `Payment.amountUsd` now back-fills every row, but admin services (`payment.admin.service.ts`, `admin.service.ts` analytics) still aggregate `amount` not `amountUsd`. **TODO:** flip the sums to `amountUsd` so revenue reporting is in one currency.
+
+## FE counterparts to Section A ✅ DONE (2026-06-15)
+
+- [x] `lib/utils.ts`: `formatMoney(amount, currency)`, `resolveDisplayCurrency(country)`, `convertFromUsd(usd, target, rate)`, `Currency` type.
+- [x] All `formatPrice` / `N`-prefix call sites swapped to `formatMoney` across `View/PricingView.tsx`, `dashboard/{subscription,deep-dive,settings}`, `admin/{subscription,payments,coupons,users/[id]}`. Per-payment rows honor the row's currency; admin roll-ups display USD.
+- [x] Dashboard pricing renders in `resolveDisplayCurrency(me.country)`, converting via `convertFromUsd(price, target, pricing.usdToNgn)` — Nigerian users see ₦, everyone else $. Public landing `PricingView` stays USD by design.
 
 ## B. Business size by staff only (remove revenue) ✅ DONE (2026-06-15)
 
@@ -114,27 +115,12 @@
 > these can be fully wired. Where a task depends on the backend, it's noted as **Needs backend:**.
 > Use real data from the API wherever possible; avoid leaving hardcoded/mock values.
 
-## H. Show the right currency (USD for everyone, Naira only for Nigeria)
+## H. Show the right currency (USD for everyone, Naira only for Nigeria) ✅ DONE (2026-06-15)
 
-**Background:** Right now the whole app shows prices in Naira and always puts an "N" in front
-of the number. The client wants the opposite: **USD is the main currency**. Nigerian users
-should see and pay in **Naira**, and everyone else sees and pays in **USD**. The backend now
-stores every price in USD and gives us a USD→Naira exchange rate to convert with.
-
-- [ ] **Build one shared money-formatting helper instead of repeating the "N" prefix.**
-  - *Why:* The "N" prefix is copy-pasted in many files. If we centralize it, switching between $ and ₦ is a one-line change everywhere.
-  - *Where:* add it in `lib/utils.ts` (or `lib/authClient.ts`).
-  - *How:* write `formatMoney(amount, currency)` that returns `"$1,200"` when currency is `USD` and `"₦1,800,000"` when currency is `NGN`. Then replace the existing `formatPrice` functions in `View/PricingView.tsx` and `admin/subscription/page.tsx` with it.
-- [ ] **Decide which currency to show based on the user's country.**
-  - *Why:* Nigerian users pay Naira; everyone else pays USD. We figure this out from the user's `country`.
-  - *How:* if `country` is Nigeria → show Naira (take the USD price and multiply by the exchange rate the API gives us). Otherwise → show USD as-is. For visitors who aren't logged in yet (e.g. the public pricing page), default to USD or add a small country picker.
-  - **Needs backend:** the public pricing API will return the USD prices and the current exchange rate.
-- [ ] **Update the pricing types in `lib/authClient.ts`.**
-  - *Why:* the types currently say currency is always `'NGN'`; that's no longer true.
-  - *How:* change `currency: 'NGN'` to `currency: 'USD' | 'NGN'`, and read the new exchange-rate field from the pricing response.
-- [ ] **Go through every screen that shows a price and switch it to the new helper.**
-  - *Where:* `View/PricingView.tsx`, `dashboard/subscription`, `dashboard/deep-dive`, `admin/subscription`, `admin/payments`, `admin/analytics`, and the coupons screens.
-  - *How:* search the frontend for `N` price prefixes / `formatPrice` and replace each with `formatMoney(...)`.
+- [x] **Shared `formatMoney(amount, currency)` helper** in `lib/utils.ts` (+ `resolveDisplayCurrency(country)` and `convertFromUsd(usd, target, rate)`).
+- [x] **Country-driven display.** `me.country === 'Nigeria'` (case-insensitive + aliases NG/NGA/Federal Republic of Nigeria) → NGN, everyone else → USD. Public `PricingView` (anonymous) defaults to USD; no country picker added yet.
+- [x] **Pricing types updated.** `PricingRow.currency: 'USD'`, `PublicPricingResponse: { currency: 'USD', usdToNgn }`. `Currency = 'USD' | 'NGN'` union exported for downstream readers.
+- [x] **All price-display call sites swapped.** Replaced `formatPrice` / `N`-prefix in `View/PricingView.tsx`, `dashboard/{subscription,deep-dive,settings}`, `admin/{subscription,payments,coupons,users/[id]}`. Per-payment rows honor the row's captured currency; admin roll-ups display USD.
 
 ## I. Rebuild the public pricing page into two offerings
 
@@ -173,26 +159,15 @@ only** (50 or fewer = Small, more than 50 = Medium). So the revenue question sho
 
 **Background:** Several issues were reported specifically on phones during the free test.
 
-- [ ] **The progress bar doesn't show on mobile — make it visible.**
-  - *Where:* `View/GeneralTestView.tsx` (progress bar markup around lines 523–562).
-  - *How:* it's likely hidden by a responsive class or a width that collapses on small screens. Make sure the bar and its container render at mobile sizes.
-- [ ] **Auto-scroll to the top when the question changes.**
-  - *Why:* right now when you move to the next question, the page stays scrolled down and the user has to scroll up themselves.
-  - *How:* when the current question index changes, scroll to the top — e.g. `window.scrollTo({ top: 0, behavior: 'smooth' })` (or scroll the question card into view) inside an effect that watches the question index.
-- [ ] **Do a general mobile cleanup of the question screens.**
-  - *How:* check spacing, button sizes (easy to tap), and the answer option cards on a phone-width screen.
-- [ ] **Make the "show password" eye button respond instantly.**
-  - *Why:* it currently lags when tapped.
-  - *Where:* the Auth pages — `Auth/login`, `Auth/signup`, `Auth/new-password`.
-  - *How:* the delay is usually a slow re-render or a CSS transition on the toggle. Make the toggle flip the input type immediately with no transition delay.
+- [x] **Progress bar visible on mobile.** Bumped from `h-1` to `h-2` (the old 4px bar effectively vanished against the dark theme); added `overflow-hidden` and made the header `flex-wrap` so the pillar name + progress label don't collide on narrow widths.
+- [x] **Auto-scroll to top when the question changes.** `useEffect` watching `currentIndex` calls `window.scrollTo({ top: 0, behavior: 'smooth' })` in `QuestionStep`.
+- [ ] **Do a general mobile cleanup of the question screens.** *(deferred — not yet swept; spacing/tap-target audit still TODO)*
+- [x] **Instant "show password" eye toggle.** Hoisted `EyeIcon` / `EyeOffIcon` out of every Auth page (they were being re-created each render, forcing a remount of the SVG subtree); removed the `transition` class on the toggle button so the icon swap is immediate. Applied to `Auth/login`, `Auth/signup`, `Auth/new-password`, `Auth/accept-invite`.
 
-## L. Add "back to home" buttons
+## L. Add "back to home" buttons ✅ DONE (2026-06-15)
 
-**Background:** Users can get stuck on certain pages with no easy way back to the homepage.
-
-- [ ] **Add a back-to-home button on the question/test page** — `View/GeneralTestView.tsx`.
-- [ ] **Add a back-to-home button on the Login and Registration pages** — `Auth/login/page.tsx` and `Auth/signup/page.tsx`.
-  - *How:* a simple link/button (e.g. top-left, with a back arrow or the logo) that navigates to `/`.
+- [x] **Back-to-home on the question/test page** — added on both `IntroStep` (absolute-positioned top-left) and `QuestionStep` (inline above the pillar header) in `View/GeneralTestView.tsx`.
+- [x] **Back-to-home on Login and Registration** — uppercase tracking-widest link with a back-arrow SVG above the logo in `Auth/login/page.tsx` and `Auth/signup/page.tsx`.
 
 ## M. Let people register without taking the free scan first ✅ DONE (2026-06-15)
 
@@ -210,7 +185,7 @@ to collect during the free scan). So we move the "gate" from registration to the
   - *Why:* a user who skipped the scan needs to fill in their details before they can take Phase 2A or any paid test.
   - *How:* the backend will tell us if the profile is complete (a `profileComplete` flag from `/auth/me`). If it's false, show a banner/modal and disable the buttons that start paid tests.
   - *Where:* dashboard home/layout, plus the entry points in `dashboard/strategic-scan`, `dashboard/deep-dive`, `dashboard/subscription`.
-  - *Implementation done:* banner on `dashboard/page.tsx` links to `/dashboard/settings`. Per-CTA disabling on strategic-scan / deep-dive / subscription entry points is **still TODO** — the backend already refuses Phase 2A/2B start when businessSize is missing, but the FE should grey out the buttons too.
+  - *Implementation done:* banner on `dashboard/page.tsx` links to `/dashboard/settings`. Per-CTA disabling now also in place on `dashboard/strategic-scan` (Start button + early-return guard in `handleStart`), `dashboard/deep-dive` (banner + greys out "Start New Module", sidebar "New Pillar Deep Dive", empty-state "Start your first Deep Dive"), and `dashboard/subscription` (PricingCard `disabled` now covers `!me.profileComplete` for any backendPlan, and the "we couldn't determine your business size" copy points at settings instead of the deprecated Phase 1 scan).
 - [x] **Build the profile-completion form** (most likely inside `dashboard/settings`) so users can fill in the missing details, after which the paid tests unlock.
   - *Implementation:* the existing settings page already wires `staffSize` + business fields through `updateUserBusiness`. No new form needed.
 

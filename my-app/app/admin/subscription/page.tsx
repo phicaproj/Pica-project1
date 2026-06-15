@@ -23,6 +23,7 @@ import {
   type PricingPlan,
   type PricingRow,
 } from "@/lib/authClient";
+import { formatMoney } from "@/lib/utils";
 
 const FEATURE_STORAGE_KEY = "pica.admin.subscriptionFeatures";
 
@@ -39,11 +40,11 @@ const DEFAULT_FEATURES: Record<PricingPlan, string[]> = {
   ],
 };
 
+// Admin pricing screens always display the catalogue in USD — the base
+// currency. The NGN view is for end-users (NG country) only and gets the
+// usdToNgn conversion at render time on the dashboard.
 function formatPrice(amount: number | null | undefined) {
-  if (amount === null || amount === undefined) return "Not configured";
-  return `N${new Intl.NumberFormat("en-NG", {
-    maximumFractionDigits: 0,
-  }).format(amount)}`;
+  return formatMoney(amount, "USD");
 }
 
 function formatDate(value: string | null | undefined) {

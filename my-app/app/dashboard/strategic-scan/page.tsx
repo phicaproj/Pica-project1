@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+// Link is used below to gate paid-test entry on profile completion.
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -12,7 +13,7 @@ import {
 	Radar,
 	Save,
 } from 'lucide-react'
-import { getAccessToken, setLastSessionId } from '@/lib/authClient'
+import { getAccessToken, getMe, setLastSessionId, type MeUser } from '@/lib/authClient'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const API_BASE =
@@ -208,10 +209,15 @@ function LandingState({
 	onStart,
 	loading,
 	error,
+	profileIncomplete,
 }: {
 	onStart: () => void
 	loading: boolean
 	error: string | null
+	// Paid tests (Phase 2A) require a resolved businessSize, which depends on
+	// staffSize. When that's missing we keep the Start button disabled and
+	// point the user at /dashboard/settings — same gate the backend enforces.
+	profileIncomplete: boolean
 }) {
 	return (
 		<motion.div
@@ -293,6 +299,21 @@ function LandingState({
 							</div>
 						)}
 
+						{profileIncomplete && (
+							<div className='mb-6 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200 flex flex-col sm:flex-row sm:items-center gap-3'>
+								<span className='flex-1'>
+									Finish your business profile to unlock the
+									Strategic Scan — we need your staff size first.
+								</span>
+								<Link
+									href='/dashboard/settings'
+									className='inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap'
+								>
+									Complete profile <ArrowRight className='w-3 h-3' />
+								</Link>
+							</div>
+						)}
+
 						<motion.div
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
@@ -300,10 +321,19 @@ function LandingState({
 							className='flex flex-wrap items-center gap-6'
 						>
 							<motion.button
-								whileHover={{ scale: 1.02 }}
-								whileTap={{ scale: 0.98 }}
+								whileHover={
+									!profileIncomplete ? { scale: 1.02 } : {}
+								}
+								whileTap={
+									!profileIncomplete ? { scale: 0.98 } : {}
+								}
 								onClick={onStart}
-								disabled={loading}
+								disabled={loading || profileIncomplete}
+								title={
+									profileIncomplete
+										? 'Complete your business profile first'
+										: undefined
+								}
 								className='inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold transition shadow-lg shadow-orange-500/20'
 							>
 								{loading ? (
@@ -628,8 +658,24 @@ export default function StrategicScanPage() {
 	const [submitting, setSubmitting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [resultData, setResultData] = useState<GetResultResponse | null>(null)
+	// `me.profileComplete` tells us whether the user has a resolved businessSize
+	// (today: staffSize set). The backend refuses Phase 2A start without it; we
+	// mirror that in the UI so the CTA reads as gated rather than failing late.
+	const [me, setMe] = useState<MeUser | null>(null)
 
 	const flat = useMemo(() => flattenPillars(pillars), [pillars])
+
+	useEffect(() => {
+		let cancelled = false
+		;(async () => {
+			const res = await getMe()
+			if (cancelled) return
+			if (res.data) setMe(res.data.user)
+		})()
+		return () => {
+			cancelled = true
+		}
+	}, [])
 
 	const loadResult = useCallback(async (id: string) => {
 		const res = await authFetch(`/result/${id}`)
@@ -704,6 +750,14 @@ export default function StrategicScanPage() {
 			return
 		}
 
+		// Mirror the BE gate — see assessment.service Phase 2A start.
+		if (me && !me.profileComplete) {
+			setError(
+				'Complete your business profile (staff size) before starting Phase 2A.',
+			)
+			return
+		}
+
 		setLoading(true)
 		try {
 			const startRes = await authFetch('/assessment/phase2a/start', {
@@ -730,7 +784,7 @@ export default function StrategicScanPage() {
 		} finally {
 			setLoading(false)
 		}
-	}, [loadQuestions, router])
+	}, [loadQuestions, me, router])
 
 	const handleSelect = useCallback(
 		async (optionId: string) => {
@@ -907,6 +961,10 @@ export default function StrategicScanPage() {
 		return <ProcessingState />
 	}
 
+	// Until /auth/me resolves, default to "complete" so we don't briefly grey
+	// out the CTA for users whose profile is fine.
+	const profileIncomplete = me ? !me.profileComplete : false
+
 	return (
 		<AnimatePresence mode='wait'>
 			<LandingState
@@ -914,6 +972,7 @@ export default function StrategicScanPage() {
 				onStart={handleStart}
 				loading={loading}
 				error={error}
+				profileIncomplete={profileIncomplete}
 			/>
 		</AnimatePresence>
 	)

@@ -37,6 +37,22 @@ import type {
 } from './payment.types';
 import { resolvePlanPrice } from './pricing.service';
 import { validateAndPriceCoupon } from '../coupon/coupon.service';
+import { getUsdToNgnRate } from '../settings/settings.service';
+
+// Mirror of the FE resolveDisplayCurrency() — Nigerian users charge in NGN,
+// everyone else (including users with no country on file) in USD. Kept local
+// to payment.service because it's the only BE caller and the alias list is
+// the same shape the FE accepts.
+const NIGERIA_ALIASES = new Set([
+  'nigeria',
+  'ng',
+  'nga',
+  'federal republic of nigeria',
+]);
+function resolveChargeCurrency(country: string | null | undefined): 'USD' | 'NGN' {
+  if (!country) return 'USD';
+  return NIGERIA_ALIASES.has(country.trim().toLowerCase()) ? 'NGN' : 'USD';
+}
 
 // Maps Paystack `data.status` strings onto our PaymentStatus enum.
 export const mapPaystackStatus = (status: string): PaymentStatus => {
@@ -68,6 +84,7 @@ export async function initPaymentService(
       id: true,
       email: true,
       businessName: true,
+      country: true,
     },
   });
 
@@ -80,8 +97,8 @@ export async function initPaymentService(
   // (Phase2BPillarUnlock) which is later redeemed via /assessment/phase2b/start.
   let paymentSessionId: string | null = null;
   let paymentPillarId: string | null = null;
-  // Backend-owned base price (major NGN units), resolved per plan below. The FE
-  // no longer supplies an amount.
+  // Backend-owned base price (major USD units after Slice 2). Converted to NGN
+  // at the bottom of this function if the user's country resolves to Nigeria.
   let basePrice: number;
 
   if (input.plan === Plan.PHASE2A) {
@@ -162,20 +179,44 @@ export async function initPaymentService(
 
   // Apply a coupon if one was supplied. validateAndPriceCoupon enforces that the
   // coupon is active and (if user-scoped) belongs to this user, and returns the
-  // discounted total. We charge `chargeAmount` and snapshot the discount.
-  let chargeAmount = basePrice;
+  // discounted total. Coupon math runs in USD — the base currency — so a
+  // fixed amountOff means the same thing for NGN and non-NGN users.
+  let chargeAmountUsd = basePrice;
   let appliedCouponCode: string | null = null;
-  let discountAmount: Prisma.Decimal | null = null;
+  // discountAmount, like amount, is stored in the wire currency the user is
+  // actually charged in. Computed from the USD discount below after we know
+  // the wire currency.
+  let discountUsd = 0;
 
   if (input.couponCode) {
     const pricing = await validateAndPriceCoupon(input.couponCode, user.id, basePrice, {
       plan: input.plan,
       pillarId: paymentPillarId,
     });
-    chargeAmount = pricing.finalAmount;
+    chargeAmountUsd = pricing.finalAmount;
     appliedCouponCode = pricing.code;
-    discountAmount = new Prisma.Decimal(pricing.discountAmount);
+    discountUsd = pricing.discountAmount;
   }
+
+  // Resolve the wire currency the user will actually be charged in. Nigerian
+  // users charge in NGN (Paystack's native currency); everyone else in USD
+  // (subject to Paystack USD support on the account — see BE-0 in todo.md).
+  // Rate is snapshotted here so the user sees the same amount we charge even
+  // if an admin edits the FX rate between init and verify.
+  const chargeCurrency = resolveChargeCurrency(user.country);
+  const usdToNgn = chargeCurrency === 'NGN' ? await getUsdToNgnRate() : 1;
+  // Round to 2dp at the boundary so Paystack's ×100 minor-unit conversion
+  // doesn't surface a fractional kobo/cent the gateway will reject.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const chargeAmount = round2(
+    chargeCurrency === 'NGN' ? chargeAmountUsd * usdToNgn : chargeAmountUsd,
+  );
+  const discountAmountWire = round2(
+    chargeCurrency === 'NGN' ? discountUsd * usdToNgn : discountUsd,
+  );
+  const discountAmount: Prisma.Decimal | null = appliedCouponCode
+    ? new Prisma.Decimal(discountAmountWire)
+    : null;
 
   // 100% waiver: a full-discount coupon leaves nothing to charge. Paystack
   // rejects zero-amount transactions, so skip the provider entirely — record
@@ -193,9 +234,10 @@ export async function initPaymentService(
           provider: PaymentProvider.PAYSTACK,
           providerReference: reference,
           amount: new Prisma.Decimal(0),
+          amountUsd: new Prisma.Decimal(0),
           appliedCouponCode,
           discountAmount,
-          currency: 'NGN',
+          currency: chargeCurrency,
           status: PaymentStatus.SUCCESS,
           paymentMethod: 'coupon',
           paidAt,
@@ -229,9 +271,12 @@ export async function initPaymentService(
       reference,
       paymentId: freePayment.id,
       amount: 0,
-      baseAmount: basePrice,
-      discountAmount: discountAmount?.toNumber() ?? basePrice,
-      currency: 'NGN',
+      // baseAmount is reported in the wire currency the user would have been
+      // charged in, matching `currency` below — keeps the receipt internally
+      // consistent.
+      baseAmount: round2(chargeCurrency === 'NGN' ? basePrice * usdToNgn : basePrice),
+      discountAmount: discountAmount?.toNumber() ?? round2(chargeCurrency === 'NGN' ? basePrice * usdToNgn : basePrice),
+      currency: chargeCurrency,
       couponCode: appliedCouponCode,
     };
   }
@@ -247,10 +292,14 @@ export async function initPaymentService(
       plan: input.plan,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
+      // `amount` is the wire-currency major-unit value the user will be billed.
+      // `amountUsd` is the USD-equivalent snapshot so admin analytics can roll
+      // up across mixed-currency rows without re-querying the FX history.
       amount: new Prisma.Decimal(chargeAmount),
+      amountUsd: new Prisma.Decimal(round2(chargeAmountUsd)),
       appliedCouponCode,
       discountAmount,
-      currency: 'NGN',
+      currency: chargeCurrency,
       status: PaymentStatus.PENDING,
       customerEmail: user.email,
       customerBusinessName: user.businessName,
@@ -261,6 +310,7 @@ export async function initPaymentService(
   const paystackData = await initializeTransaction({
     email: user.email,
     amount: chargeAmount,
+    currency: chargeCurrency,
     reference,
     metadata: {
       paymentId: payment.id,
@@ -288,9 +338,11 @@ export async function initPaymentService(
     reference,
     paymentId: payment.id,
     amount: chargeAmount,
-    baseAmount: basePrice,
+    // Returned figures all in the wire currency so the FE can render the
+    // receipt without re-converting. baseAmount is the pre-coupon charge.
+    baseAmount: round2(chargeCurrency === 'NGN' ? basePrice * usdToNgn : basePrice),
     discountAmount: discountAmount?.toNumber() ?? 0,
-    currency: 'NGN',
+    currency: chargeCurrency,
     couponCode: appliedCouponCode,
   };
 }
