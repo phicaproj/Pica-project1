@@ -427,7 +427,10 @@ export async function addOptionService(
 
     await resyncOptionRiskTypes(tx, questionId);
 
-    return tx.question.findUniqueOrThrow({ where: { id: questionId }, select: adminQuestionSelect });
+    return tx.question.findUniqueOrThrow({
+      where: { id: questionId },
+      select: adminQuestionSelect,
+    });
   });
 
   return {
@@ -472,9 +475,7 @@ export async function updateOptionService(
   };
 }
 
-export async function deleteOptionService(
-  optionId: string
-): Promise<AdminQuestionDetailResponse> {
+export async function deleteOptionService(optionId: string): Promise<AdminQuestionDetailResponse> {
   const question = await prisma.$transaction(async (tx) => {
     const option = await tx.questionOption.findUnique({
       where: { id: optionId },

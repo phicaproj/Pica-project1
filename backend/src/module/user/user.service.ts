@@ -135,10 +135,7 @@ export async function verifyUserEmailService(userId: string): Promise<AuthUser> 
   return updated;
 }
 
-export async function updateAvatarUrlService(
-  userId: string,
-  avatarUrl: string
-): Promise<AuthUser> {
+export async function updateAvatarUrlService(userId: string, avatarUrl: string): Promise<AuthUser> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true, avatarUrl: true },

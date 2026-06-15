@@ -192,19 +192,20 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
 
   if (!user) throw new AppError('User not found', NOT_FOUND);
 
-  const [totalSessions, completedSessions, totalSuccessfulPayments, spend, lastPaid] = await Promise.all([
-    prisma.assessmentSession.count({ where: { userId } }),
-    prisma.assessmentSession.count({
-      where: { userId, status: { in: ['COMPLETED', 'PAID', 'REPORT_GENERATED'] } },
-    }),
-    prisma.payment.count({ where: { userId, status: PaymentStatus.SUCCESS } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { userId, status: 'SUCCESS' } }),
-    prisma.payment.findFirst({
-      where: { userId, status: 'SUCCESS' },
-      orderBy: { paidAt: 'desc' },
-      select: { plan: true },
-    }),
-  ]);
+  const [totalSessions, completedSessions, totalSuccessfulPayments, spend, lastPaid] =
+    await Promise.all([
+      prisma.assessmentSession.count({ where: { userId } }),
+      prisma.assessmentSession.count({
+        where: { userId, status: { in: ['COMPLETED', 'PAID', 'REPORT_GENERATED'] } },
+      }),
+      prisma.payment.count({ where: { userId, status: PaymentStatus.SUCCESS } }),
+      prisma.payment.aggregate({ _sum: { amount: true }, where: { userId, status: 'SUCCESS' } }),
+      prisma.payment.findFirst({
+        where: { userId, status: 'SUCCESS' },
+        orderBy: { paidAt: 'desc' },
+        select: { plan: true },
+      }),
+    ]);
 
   const totalSpent = spend._sum.amount?.toNumber() ?? 0;
 
@@ -625,7 +626,10 @@ export async function deleteRoleService(id: string) {
     throw new AppError('The Super Admin role cannot be deleted', CONFLICT);
   }
   if (role._count.users > 0) {
-    throw new AppError('Cannot delete a role that is assigned to users. Reassign users first.', CONFLICT);
+    throw new AppError(
+      'Cannot delete a role that is assigned to users. Reassign users first.',
+      CONFLICT
+    );
   }
   return prisma.adminRole.delete({ where: { id } });
 }
@@ -735,10 +739,7 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
 
 // Edit an existing admin's department + per-person permissions. SUPER ADMIN
 // department clears the explicit permission list (super bypasses gates).
-export async function updateAdminAccessService(
-  adminId: string,
-  input: UpdateAdminAccessInput
-) {
+export async function updateAdminAccessService(adminId: string, input: UpdateAdminAccessInput) {
   const admin = await prisma.user.findUnique({
     where: { id: adminId },
     select: { id: true, role: true },

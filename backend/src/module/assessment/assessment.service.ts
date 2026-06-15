@@ -614,7 +614,7 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
       staffSize: user.staffSize,
       businessName: user.businessName ?? '',
       industry: user.industry ?? '',
-      location: user.state ? `${user.state}, ${user.country || ''}` : (user.country || ''),
+      location: user.state ? `${user.state}, ${user.country || ''}` : user.country || '',
       operatingYears: user.operatingYears ?? '',
       annualRevenue: user.annualRevenue ?? '',
       businessSize: user.businessSize,
@@ -702,10 +702,7 @@ export async function startPhase2BService(
     );
   }
 
-  if (
-    existingUnlock.session &&
-    existingUnlock.session.status === SessionStatus.IN_PROGRESS
-  ) {
+  if (existingUnlock.session && existingUnlock.session.status === SessionStatus.IN_PROGRESS) {
     const snapshot = (existingUnlock.session.selectedQuestionIds ?? []) as string[];
     return {
       message: 'Resuming existing Phase 2B session.',
@@ -749,7 +746,7 @@ export async function startPhase2BService(
         staffSize: user.staffSize,
         businessName: user.businessName ?? '',
         industry: user.industry ?? '',
-        location: user.state ? `${user.state}, ${user.country || ''}` : (user.country || ''),
+        location: user.state ? `${user.state}, ${user.country || ''}` : user.country || '',
         operatingYears: user.operatingYears ?? '',
         annualRevenue: user.annualRevenue ?? '',
         businessSize: user.businessSize,
@@ -994,7 +991,7 @@ export async function getSessionResponsesService(
   }
 
   const snapshot = (session.selectedQuestionIds ?? []) as string[];
-  
+
   const responses = await prisma.sessionResponse.findMany({
     where: { sessionId },
     select: { questionId: true, selectedOptionId: true },

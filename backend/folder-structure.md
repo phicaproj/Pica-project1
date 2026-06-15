@@ -1,54 +1,39 @@
 src/
-├── modules/
-│ ├── assessment/
-│ │ ├── assessment.controller.ts
-│ │ ├── assessment.service.ts
-│ │ ├── assessment.routes.ts
-│ │ └── assessment.types.ts
-│ │
-│ ├── auth/
-│ │ ├── auth.controller.ts
-│ │ ├── auth.service.ts
-│ │ ├── auth.route.ts
-│ │ └── auth.types.ts
-│ │
-│ ├── question/
-│ │ ├── question.controller.ts
-│ │ ├── question.service.ts
-│ │ ├── question.routes.ts
-│ │ └── question.types.ts
-│ │
-│ ├── scoring/
-│ │ ├── scoring.service.ts ← no controller, internal only
-│ │ └── scoring.types.ts
-│ │
-│ ├── result/
-│ │ ├── result.controller.ts
-│ │ ├── result.service.ts
-│ │ ├── result.routes.ts
-│ │ └── result.types.ts
-│ │
-│ └── user/
-│ ├── user.controller.ts
-│ ├── user.service.ts
-│ ├── user.routes.ts
-│ └── user.types.ts
+├── module/                     ← one folder per domain: controller + service + routes + types
+│ ├── admin/                    (admin.controller, admin.service, admin.routes, admin.types)
+│ ├── assessment/               (assessment.controller, assessment.service, assessment.routes, assessment.types)
+│ ├── auth/                     (auth.controller, auth.service, auth.route, auth.types)
+│ ├── coupon/                   (coupon.controller, coupon.service, coupon.routes, coupon.types)
+│ ├── payment/                  (payment + payment.admin + pricing controllers/services/types, payment.routes)
+│ ├── question/                 (question + question.admin controllers/services, question.routes, question.types)
+│ ├── report/                   (report.controller, report.service, report.export.service, report.types)
+│ ├── result/                   (result.controller, result.service, result.routes, result.types)
+│ ├── scoring/                  ← no public routes; scoring.service is internal, scoring.admin.* is admin-only
+│ └── user/                     (user.controller, user.service, user.routes, user.types)
 │
-├── shared/
-| ├──middleware/
-| │ ├── auth.middleware.ts
-| │ ├── validate.middleware.ts
-| │ └── error.middleware.ts
-| |
-| └──shared/
-│ ├── prisma.ts ← Prisma client singleton
-│ ├── errors.ts ← Custom error classes
-│ ├── response.ts ← Standard API response wrapper
-│ └── types.ts ← Shared TS interfaces
+├── service/
+│ ├── middleware/
+│ │ ├── authMiddleware.ts       ← authenticate / softAuthenticate / otpAuth / hasPermission / isAdmin
+│ │ └── errorHandler.ts         ← single Express error handler (ZodError + AppError + MulterError)
+│ └── shared/
+│   ├── appError.ts             ← AppError class (statusCode + isOperational)
+│   ├── catchErrors.ts          ← asyncHandler wrapper used by every controller
+│   ├── http.ts                 ← named HTTP status constants
+│   ├── generateToken.ts        ← JWT sign/verify (access, refresh, otp, reset, invite)
+│   ├── rateLimiter.ts          ← express-rate-limit instances (GlobalLimiter, etc.)
+│   ├── email.service.ts        ← Brevo transactional email
+│   ├── pdf.service.ts          ← PDFKit report generation
+│   ├── paystack.service.ts     ← Paystack API + webhook signature helpers
+│   ├── storage.service.ts      ← Cloudflare R2 (S3-compatible) PDF upload
+│   └── location.ts             ← country/state helpers
 │
-├──
+├── docs/                       ← Zod-driven OpenAPI registry + per-module *.docs.ts, served at /api/docs
+├── Config/
+│ ├── db.ts                     ← Prisma client singleton
+│ └── env.ts                    ← required-env-var loader (fails fast on boot)
 │
-└── app.ts
+├── app.ts                      ← Express app: middleware, route mounting, Swagger
+└── server.ts                   ← HTTP server bootstrap
 
 <!-- API Integration Guide for Frontend -->
 

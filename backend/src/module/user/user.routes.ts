@@ -1,12 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../../service/middleware/authMiddleware';
-import {
-  updateProfile,
-  updateBusinessInfo,
-  verifyEmail,
-  uploadAvatar,
-} from './user.controller';
+import { updateProfile, updateBusinessInfo, verifyEmail, uploadAvatar } from './user.controller';
 
 const userRouter = Router();
 

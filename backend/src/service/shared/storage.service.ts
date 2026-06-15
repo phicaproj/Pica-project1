@@ -81,10 +81,7 @@ export const uploadObject = async ({
 };
 
 /** Convenience wrapper for PDF uploads — sets the right content type. */
-export const uploadPdf = async (
-  key: string,
-  body: Buffer
-): Promise<UploadResult> =>
+export const uploadPdf = async (key: string, body: Buffer): Promise<UploadResult> =>
   uploadObject({
     key,
     body,
@@ -108,9 +105,7 @@ export const uploadAvatar = async (
 /** Delete an object by key. Safe to call for keys that don't exist (R2 returns 204). */
 export const deleteObject = async (key: string): Promise<void> => {
   try {
-    await r2Client.send(
-      new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key })
-    );
+    await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown R2 delete error';
     throw new AppError(`Failed to delete from storage: ${message}`, INTERNAL_SERVER_ERROR);

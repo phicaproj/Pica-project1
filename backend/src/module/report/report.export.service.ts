@@ -80,7 +80,8 @@ function dateCell(value: Date | null | undefined): Date | '' {
 function describeFilters(filters: ReportFilters): string {
   const parts: string[] = [];
   if (filters.phase) parts.push(`Assessment type: ${PHASE_LABELS[filters.phase]}`);
-  if (filters.dateFrom && filters.dateTo) parts.push(`Date range: ${filters.dateFrom} to ${filters.dateTo}`);
+  if (filters.dateFrom && filters.dateTo)
+    parts.push(`Date range: ${filters.dateFrom} to ${filters.dateTo}`);
   else if (filters.dateFrom) parts.push(`From: ${filters.dateFrom}`);
   else if (filters.dateTo) parts.push(`Up to: ${filters.dateTo}`);
   if (filters.country) parts.push(`Country: ${filters.country}`);
@@ -162,7 +163,9 @@ export async function streamReportExcelService(
   for (const row of kpis.kpis.assessmentsByPhase) {
     overview.addRow([`  …of which ${PHASE_LABELS[row.phase]}`, row.count]).commit();
   }
-  overview.addRow(['Average score (completed assessments)', kpis.kpis.avgTotalScore ?? 'No data']).commit();
+  overview
+    .addRow(['Average score (completed assessments)', kpis.kpis.avgTotalScore ?? 'No data'])
+    .commit();
   overview.addRow(['High-risk assessments (%)', kpis.kpis.highRiskPct ?? 'No data']).commit();
   overview.addRow(['Total revenue (NGN)', kpis.kpis.revenue.total]).commit();
   overview.addRow(['  …from Full Diagnostic', kpis.kpis.revenue.phase2a]).commit();
@@ -172,7 +175,11 @@ export async function streamReportExcelService(
   overview.addRow(['Where users drop off', 'Count', '% of previous step']).commit();
   for (const step of funnel.funnel) {
     overview
-      .addRow([step.label, step.count, step.pctOfPrevious !== null ? `${step.pctOfPrevious}%` : '—'])
+      .addRow([
+        step.label,
+        step.count,
+        step.pctOfPrevious !== null ? `${step.pctOfPrevious}%` : '—',
+      ])
       .commit();
   }
   overview.commit();

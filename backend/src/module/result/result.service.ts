@@ -95,8 +95,7 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
   // paywall is gated by the Paystack payment; for 2B it is gated by consuming
   // a Phase2BPillarUnlock at submit time (which sets isPaid: true directly).
   const isPaywalled =
-    (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) &&
-    !result.isPaid;
+    (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) && !result.isPaid;
 
   const payload: ResultResponse = {
     ...result,
@@ -108,9 +107,7 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
     pillarScores: pillarScores.map<ResultPillarScoreResponse>((pillarScore) => ({
       ...pillarScore,
       weightedScore: Number(pillarScore.weightedScore),
-      findings: isPaywalled
-        ? []
-        : (pillarScore.findings as ResultPillarScoreResponse['findings']),
+      findings: isPaywalled ? [] : (pillarScore.findings as ResultPillarScoreResponse['findings']),
     })),
   };
 
@@ -210,10 +207,7 @@ export async function downloadResultPdfService(
       throw new AppError('You are not authorized to download this report', FORBIDDEN);
     }
     if (!result.isPaid) {
-      throw new AppError(
-        `Payment is required to download the ${session.phase} report`,
-        FORBIDDEN
-      );
+      throw new AppError(`Payment is required to download the ${session.phase} report`, FORBIDDEN);
     }
   }
 
@@ -236,10 +230,7 @@ export async function downloadResultPdfService(
           ? 'phase2b'
           : 'phase1';
     try {
-      const uploaded = await uploadPdf(
-        `reports/${phaseFolder}/${sessionId}.pdf`,
-        pdfBuffer
-      );
+      const uploaded = await uploadPdf(`reports/${phaseFolder}/${sessionId}.pdf`, pdfBuffer);
       reportPdfUrl = uploaded.url;
       await prisma.sessionResult.update({
         where: { sessionId },
@@ -256,8 +247,8 @@ export async function downloadResultPdfService(
   // For Phase 1 fall back to leadEmail (no user yet).
   const recipientEmail =
     session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B
-      ? session.user?.email ?? null
-      : session.leadEmail ?? session.user?.email ?? null;
+      ? (session.user?.email ?? null)
+      : (session.leadEmail ?? session.user?.email ?? null);
 
   if (recipientEmail) {
     void sendReportEmail({

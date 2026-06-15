@@ -85,13 +85,9 @@ export async function updateScoringSettingsService(
       ...(input.redLabel !== undefined ? { redLabel: input.redLabel } : {}),
       ...(input.redDescription !== undefined ? { redDescription: input.redDescription } : {}),
       ...(input.amberLabel !== undefined ? { amberLabel: input.amberLabel } : {}),
-      ...(input.amberDescription !== undefined
-        ? { amberDescription: input.amberDescription }
-        : {}),
+      ...(input.amberDescription !== undefined ? { amberDescription: input.amberDescription } : {}),
       ...(input.greenLabel !== undefined ? { greenLabel: input.greenLabel } : {}),
-      ...(input.greenDescription !== undefined
-        ? { greenDescription: input.greenDescription }
-        : {}),
+      ...(input.greenDescription !== undefined ? { greenDescription: input.greenDescription } : {}),
       ...(input.phase2aQuestionLimit !== undefined
         ? { phase2aQuestionLimit: input.phase2aQuestionLimit }
         : {}),

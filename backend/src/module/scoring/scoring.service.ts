@@ -1,4 +1,12 @@
-import { BusinessSize, ColorBand, InsightRule, Phase, Prisma, RiskType, type PrismaClient } from '@prisma/client';
+import {
+  BusinessSize,
+  ColorBand,
+  InsightRule,
+  Phase,
+  Prisma,
+  RiskType,
+  type PrismaClient,
+} from '@prisma/client';
 import type { ScoringFinding, ScoringPillarPayload, ScoringResultPayload } from './scoring.types';
 
 type ScoringTx = Prisma.TransactionClient | PrismaClient;

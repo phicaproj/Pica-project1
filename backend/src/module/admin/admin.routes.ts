@@ -29,12 +29,7 @@ import {
   updateOption,
   updateQuestion,
 } from '../question/question.admin.controller';
-import {
-  createCoupon,
-  deleteCoupon,
-  listCoupons,
-  updateCoupon,
-} from '../coupon/coupon.controller';
+import { createCoupon, deleteCoupon, listCoupons, updateCoupon } from '../coupon/coupon.controller';
 import {
   createPricing,
   deletePricing,
@@ -56,10 +51,7 @@ import {
   adminPaymentStats,
   adminUpdatePaymentStatus,
 } from '../payment/payment.admin.controller';
-import {
-  getScoringSettings,
-  updateScoringSettings,
-} from '../scoring/scoring.admin.controller';
+import { getScoringSettings, updateScoringSettings } from '../scoring/scoring.admin.controller';
 
 const adminRouter = express.Router();
 

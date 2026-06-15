@@ -139,7 +139,7 @@ export async function getPublicPricingService(): Promise<PublicPricingResponse> 
 export async function createPricingService(
   input: CreatePricingInput
 ): Promise<PricingDetailResponse> {
-  const pillarId = input.plan === Plan.PHASE2B_PILLAR ? input.pillarId ?? null : null;
+  const pillarId = input.plan === Plan.PHASE2B_PILLAR ? (input.pillarId ?? null) : null;
 
   if (input.plan === Plan.PHASE2B_PILLAR && pillarId) {
     await assertActivePillar(pillarId);

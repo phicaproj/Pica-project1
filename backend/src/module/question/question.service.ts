@@ -1,12 +1,7 @@
 import { BusinessSize, Phase, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
-import {
-  CONFLICT,
-  FORBIDDEN,
-  NOT_FOUND,
-  UNPROCESSABLE_CONTENT,
-} from '../../service/shared/http';
+import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import type {
   AllPillarsResponse,
   Phase1QuestionsResponse,
@@ -142,10 +137,7 @@ export async function getPhase2AQuestionsService(
 
   const snapshot = (session.selectedQuestionIds ?? []) as string[];
   if (!Array.isArray(snapshot) || snapshot.length === 0) {
-    throw new AppError(
-      'Phase 2A session has no question snapshot',
-      UNPROCESSABLE_CONTENT
-    );
+    throw new AppError('Phase 2A session has no question snapshot', UNPROCESSABLE_CONTENT);
   }
 
   const [pillars, answers] = await Promise.all([

@@ -112,7 +112,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
   const resolvedStaffSize = data.staffSize ?? phase1Session?.staffSize ?? null;
   const resolvedBusinessSize = resolvedStaffSize
     ? classifyStaffSizeForRegistration(resolvedStaffSize)
-    : phase1Session?.businessSize ?? null;
+    : (phase1Session?.businessSize ?? null);
 
   const user = await prisma.user.create({
     data: {
@@ -222,7 +222,10 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';
       console.error('Error sending admin login code:', message);
-      throw new AppError('Could not send admin login code. Please try again.', INTERNAL_SERVER_ERROR);
+      throw new AppError(
+        'Could not send admin login code. Please try again.',
+        INTERNAL_SERVER_ERROR
+      );
     }
 
     return {
@@ -359,9 +362,7 @@ export async function resetPasswordService(
 // passwordHash: null (see inviteAdminService), so login is impossible until
 // this sets the invitee's own password. Re-using a spent invite link is
 // rejected so a leaked link can't reset an already-active account.
-export async function acceptInviteService(
-  data: AcceptInviteInput
-): Promise<AcceptInviteResponse> {
+export async function acceptInviteService(data: AcceptInviteInput): Promise<AcceptInviteResponse> {
   const payload = verifyInviteToken(data.token);
 
   if (payload.purpose !== 'admin-invite') {

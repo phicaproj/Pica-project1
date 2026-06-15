@@ -81,15 +81,17 @@ export const listCouponsQuerySchema = z.object({
 
 // User-facing validation at checkout. basePrice is the pre-discount amount the
 // frontend intends to charge (major NGN units) so we can compute the discount.
-export const validateCouponSchema = z.object({
-  code: z.string().trim().min(1, 'code is required'),
-  basePrice: z.coerce.number().min(0, 'basePrice cannot be negative'),
-  plan: couponPlanSchema,
-  pillarId: z.string().uuid().optional(),
-}).refine((data) => data.plan !== 'PHASE2B_PILLAR' || !!data.pillarId, {
-  path: ['pillarId'],
-  message: 'pillarId is required for PHASE2B_PILLAR coupons',
-});
+export const validateCouponSchema = z
+  .object({
+    code: z.string().trim().min(1, 'code is required'),
+    basePrice: z.coerce.number().min(0, 'basePrice cannot be negative'),
+    plan: couponPlanSchema,
+    pillarId: z.string().uuid().optional(),
+  })
+  .refine((data) => data.plan !== 'PHASE2B_PILLAR' || !!data.pillarId, {
+    path: ['pillarId'],
+    message: 'pillarId is required for PHASE2B_PILLAR coupons',
+  });
 
 export const codeParamSchema = z.object({
   code: z.string().trim().min(1, 'code is required'),

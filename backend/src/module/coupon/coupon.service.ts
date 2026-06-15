@@ -70,7 +70,7 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
 
 export async function createCouponService(input: CreateCouponInput): Promise<CouponDetailResponse> {
   const plan = input.plan ?? null;
-  const pillarId = plan === Plan.PHASE2B_PILLAR ? input.pillarId ?? null : null;
+  const pillarId = plan === Plan.PHASE2B_PILLAR ? (input.pillarId ?? null) : null;
   // User-scoped coupons are single-use by definition; otherwise honour the
   // admin's cap (Zod already defaulted it to 1 when omitted).
   const maxUses = input.userId ? 1 : input.maxUses;

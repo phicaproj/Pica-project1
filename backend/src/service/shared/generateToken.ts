@@ -67,8 +67,7 @@ export function otpCodeMatches(payload: OtpTokenPayload, code: string): boolean 
   const actualBuffer = Buffer.from(payload.codeHash, 'hex');
   const expectedBuffer = Buffer.from(expected, 'hex');
   return (
-    actualBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(actualBuffer, expectedBuffer)
+    actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer)
   );
 }
 

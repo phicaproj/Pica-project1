@@ -4,7 +4,10 @@ export const updateProfileSchema = z.object({
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
   businessName: z.string().min(3).max(100).optional(),
-  phone: z.string().regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits').optional(),
+  phone: z
+    .string()
+    .regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits')
+    .optional(),
   email: z.string().email('Invalid email address').optional(),
 });
 

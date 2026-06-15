@@ -304,4 +304,3 @@ export type AdminProfileResponse = {
     avatarUrl: string | null;
   };
 };
-

@@ -167,7 +167,9 @@ export async function getReportKpisService(filters: ReportFilters): Promise<Repo
 // Funnel
 // ---------------------------------------------------------------------------
 
-export async function getReportFunnelService(filters: ReportFilters): Promise<ReportFunnelResponse> {
+export async function getReportFunnelService(
+  filters: ReportFilters
+): Promise<ReportFunnelResponse> {
   const f = resolveFilters(filters);
   // The funnel inherently spans phases, so the `phase` filter is ignored here;
   // the demographic/date/status-agnostic filters still apply to every step.
