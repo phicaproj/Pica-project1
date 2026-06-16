@@ -765,6 +765,11 @@ export const updateMyAdminProfile = async (payload: {
 
 export type AppSettingsPayload = {
 	usdToNgn: number
+	// Section F — storefront section toggles. BE enforces "at least one
+	// section must stay live" on PATCH; the FE additionally disables the
+	// toggle that would zero everything so the user can't even try.
+	payPerUseActive: boolean
+	subscriptionActive: boolean
 	updatedBy: string | null
 	updatedAt: string
 }
@@ -778,7 +783,11 @@ export const getAdminAppSettings = async () => {
 	return authedFetch<AppSettingsResponse>('/admin/app-settings', { method: 'GET' })
 }
 
-export const updateAdminAppSettings = async (input: { usdToNgn?: number }) => {
+export const updateAdminAppSettings = async (input: {
+	usdToNgn?: number
+	payPerUseActive?: boolean
+	subscriptionActive?: boolean
+}) => {
 	return authedFetch<AppSettingsResponse>('/admin/app-settings', {
 		method: 'PATCH',
 		body: JSON.stringify(input),

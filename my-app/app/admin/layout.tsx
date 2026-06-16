@@ -14,6 +14,7 @@ import {
   Database,
   Activity,
   TicketPercent,
+  Inbox,
   Menu,
   X,
   LogOut,
@@ -30,6 +31,10 @@ const NAV_MAIN: NavItemConfig[] = [
   { label: "Users", icon: Users, href: "/admin/users" },
   { label: "Reports & Analytics", icon: BarChart2, href: "/admin/reports" },
   { label: "Subscription", icon: CreditCard, href: "/admin/subscription" },
+  // Consultations triage — operationally distinct from pricing tabs above,
+  // so it gets its own top-level slot. Gated on the consultations:read
+  // permission so ops staff can manage bookings without ledger access.
+  { label: "Consultations", icon: Inbox, href: "/admin/consultations" },
   { label: "Payments", icon: DollarSign, href: "/admin/payments" },
 ];
 
@@ -44,6 +49,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/admin/users": "users:read",
   "/admin/reports": "analytics:read",
   "/admin/subscription": "ledger:read",
+  "/admin/consultations": "consultations:read",
   "/admin/payments": "ledger:read",
   "/admin/coupons": "coupons:read",
   "/admin/question-bank": "questions:read",

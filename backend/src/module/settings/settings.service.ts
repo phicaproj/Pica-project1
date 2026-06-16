@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../../Config/db';
+import AppError from '../../service/shared/appError';
+import { UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import type {
   AppSettingsPayload,
   AppSettingsResponse,
@@ -18,12 +20,16 @@ const DEFAULT_USD_TO_NGN = 1500;
 type SettingsRow = {
   id: string;
   usdToNgn: Prisma.Decimal;
+  payPerUseActive: boolean;
+  subscriptionActive: boolean;
   updatedBy: string | null;
   updatedAt: Date;
 };
 
 const toPayload = (row: SettingsRow): AppSettingsPayload => ({
   usdToNgn: Number(row.usdToNgn),
+  payPerUseActive: row.payPerUseActive,
+  subscriptionActive: row.subscriptionActive,
   updatedBy: row.updatedBy,
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -67,11 +73,31 @@ export async function updateAppSettingsService(
 ): Promise<AppSettingsResponse> {
   const existing = await getOrCreateSettings();
 
+  // Section F invariant — at least one storefront section must stay live.
+  // We compute the effective post-patch values up front so the rejection is
+  // synchronous and we never write a "both off" row.
+  const nextPayPerUseActive =
+    input.payPerUseActive ?? existing.payPerUseActive;
+  const nextSubscriptionActive =
+    input.subscriptionActive ?? existing.subscriptionActive;
+  if (!nextPayPerUseActive && !nextSubscriptionActive) {
+    throw new AppError(
+      'At least one pricing section (pay-per-use or subscription) must stay active.',
+      UNPROCESSABLE_CONTENT
+    );
+  }
+
   const updated = await prisma.appSettings.update({
     where: { id: existing.id },
     data: {
       ...(input.usdToNgn !== undefined
         ? { usdToNgn: new Prisma.Decimal(input.usdToNgn.toFixed(4)) }
+        : {}),
+      ...(input.payPerUseActive !== undefined
+        ? { payPerUseActive: input.payPerUseActive }
+        : {}),
+      ...(input.subscriptionActive !== undefined
+        ? { subscriptionActive: input.subscriptionActive }
         : {}),
       updatedBy,
     },

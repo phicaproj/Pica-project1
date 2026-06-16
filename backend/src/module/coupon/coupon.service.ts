@@ -59,10 +59,9 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   status: coupon.status,
   maxUses: coupon.maxUses,
   usedCount: coupon.usedCount,
-  // Coupons only ever target one-off plans — SUBSCRIPTION isn't a couponable
-  // product. The narrow cast keeps the response type stable while the Discount
-  // table itself stays compatible with the wider Plan enum.
-  plan: coupon.plan as 'PHASE2A' | 'PHASE2B_PILLAR' | null,
+  // Coupons can now target one-off plans OR a monthly subscription. The cast
+  // mirrors the Plan enum subset we expose through the public API surface.
+  plan: coupon.plan as 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION' | null,
   pillarId: coupon.pillarId,
   pillarCode: coupon.pillar?.code ?? null,
   pillarName: coupon.pillar?.name ?? null,

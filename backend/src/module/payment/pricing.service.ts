@@ -123,10 +123,10 @@ export async function listPricingService(
 }
 
 export async function getPublicPricingService(): Promise<PublicPricingResponse> {
-  // Prices and the FX rate are independent reads with no ordering constraint —
-  // fetch them in parallel so the public pricing endpoint doesn't pay two
-  // sequential round-trips.
-  const [prices, usdToNgn] = await Promise.all([
+  // Prices, the FX rate, and the section toggles are independent reads with
+  // no ordering constraint — fetch them in parallel so the public pricing
+  // endpoint doesn't pay three sequential round-trips.
+  const [prices, usdToNgn, settings] = await Promise.all([
     prisma.planPrice.findMany({
       where: {
         OR: [{ plan: Plan.PHASE2A }, { plan: Plan.PHASE2B_PILLAR, pillar: { isActive: true } }],
@@ -135,18 +135,37 @@ export async function getPublicPricingService(): Promise<PublicPricingResponse> 
       orderBy: [{ plan: 'asc' }, { pillar: { displayOrder: 'asc' } }, { updatedAt: 'desc' }],
     }),
     getUsdToNgnRate(),
+    prisma.appSettings.findFirst({
+      select: { payPerUseActive: true, subscriptionActive: true },
+    }),
   ]);
+
+  // Default to "both sections live" if the singleton row is somehow missing
+  // — getOrCreateSettings runs everywhere else, but findFirst is best-effort
+  // for read-only paths.
+  const payPerUseActive = settings?.payPerUseActive ?? true;
+  const subscriptionActive = settings?.subscriptionActive ?? true;
 
   const rows = prices.map(toPricingRow);
 
-  // Catalogue currency is USD. The FE picks the display currency from the
-  // user's country and uses `usdToNgn` to convert when rendering NGN.
+  // Section F — when pay-per-use is off we zero out the catalogue rows so
+  // anonymous visitors never see a price for a deactivated section, even if
+  // their cached FE hasn't yet picked up the new section flag.
+  const phase2A = payPerUseActive ? rows.find((row) => row.plan === Plan.PHASE2A) ?? null : null;
+  const phase2B = payPerUseActive
+    ? rows.filter((row) => row.plan === Plan.PHASE2B_PILLAR)
+    : [];
+
   return {
     message: 'Pricing fetched successfully',
     currency: 'USD',
     usdToNgn,
-    phase2A: rows.find((row) => row.plan === Plan.PHASE2A) ?? null,
-    phase2B: rows.filter((row) => row.plan === Plan.PHASE2B_PILLAR),
+    sections: {
+      payPerUse: payPerUseActive,
+      subscription: subscriptionActive,
+    },
+    phase2A,
+    phase2B,
   };
 }
 

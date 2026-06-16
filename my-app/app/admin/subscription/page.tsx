@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CreditCard,
   Edit3,
-  Inbox,
   Layers3,
   Loader,
   MessageSquare,
@@ -27,11 +26,7 @@ import {
   type PricingRow,
 } from "@/lib/authClient";
 import { formatMoney } from "@/lib/utils";
-import {
-  ConsultationTiersTab,
-  ConsultationsInboxTab,
-  SubscriptionTiersTab,
-} from "./_tabs";
+import { ConsultationTiersTab, SubscriptionTiersTab } from "./_tabs";
 
 const FEATURE_STORAGE_KEY = "pica.admin.subscriptionFeatures";
 
@@ -706,11 +701,13 @@ function PayPerUseTab() {
 // pattern used on /admin/settings.
 // ═════════════════════════════════════════════════════════════════════════
 
+// Consultations Inbox lives at /admin/consultations now (its own sidebar
+// entry) so the subscription page can stay focused on pricing — pay-per-use,
+// subscription tiers, and consultation tiers.
 const TABS = [
   { key: "pay-per-use", label: "Pay-per-use", icon: Layers3 },
   { key: "subscription", label: "Subscription Tiers", icon: CreditCard },
   { key: "consultation", label: "Consultation Tiers", icon: MessageSquare },
-  { key: "bookings", label: "Consultations", icon: Inbox },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -762,7 +759,6 @@ function PageInner() {
       {activeTab === "pay-per-use" && <PayPerUseTab />}
       {activeTab === "subscription" && <SubscriptionTiersTab />}
       {activeTab === "consultation" && <ConsultationTiersTab />}
-      {activeTab === "bookings" && <ConsultationsInboxTab />}
     </div>
   );
 }

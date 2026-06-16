@@ -69,17 +69,28 @@ export type MySubscriptionPayload = {
 
 export const subscribeSchema = z.object({
   planId: z.string().uuid('planId must be a valid uuid'),
+  // Optional discount code. When the discount covers 100% of the price the BE
+  // skips Paystack entirely and returns `free: true` — the FE renders the
+  // success state without ever opening the inline widget.
+  couponCode: z.string().trim().min(1).max(32).optional(),
 });
 
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 
+// Shape mirrors InitPaymentResponse so the FE can reuse the same coupon UI
+// across pay-per-use and subscription checkout. `authorizationUrl`/`accessCode`
+// are null on free-coupon settlements; FE must branch on `free`.
 export type SubscribeResponse = {
   message: string;
-  authorizationUrl: string;
-  accessCode: string;
+  free: boolean;
+  authorizationUrl: string | null;
+  accessCode: string | null;
   reference: string;
   amount: number;
+  baseAmount: number;
+  discountAmount: number;
   currency: 'USD' | 'NGN';
+  couponCode: string | null;
 };
 
 export type CancelSubscriptionResponse = {
@@ -97,6 +108,13 @@ export type ListPlansResponse = {
   message: string;
   currency: 'USD';
   usdToNgn: number;
+  // Section F — storefront on/off toggles. The FE branches on these so the
+  // user never sees a deactivated section even briefly. `plans` is zeroed
+  // when subscription is off so legacy callers still get a valid shape.
+  sections: {
+    payPerUse: boolean;
+    subscription: boolean;
+  };
   plans: SubscriptionPlanPublic[];
 };
 

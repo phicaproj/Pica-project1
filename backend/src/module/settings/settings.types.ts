@@ -21,6 +21,11 @@ const fxRate = z
 export const updateAppSettingsSchema = z
   .object({
     usdToNgn: fxRate.optional(),
+    // Section F — storefront toggles. The service additionally enforces the
+    // "at least one section must stay live" invariant after merging the
+    // incoming patch with the persisted row.
+    payPerUseActive: z.boolean().optional(),
+    subscriptionActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -30,6 +35,8 @@ export type UpdateAppSettingsInput = z.infer<typeof updateAppSettingsSchema>;
 
 export type AppSettingsPayload = {
   usdToNgn: number;
+  payPerUseActive: boolean;
+  subscriptionActive: boolean;
   updatedBy: string | null;
   updatedAt: string;
 };

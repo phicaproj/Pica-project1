@@ -50,7 +50,7 @@ export type ValidateCouponResponse = {
 export const validateCoupon = async (payload: {
 	code: string
 	basePrice: number
-	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
+	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION'
 	pillarId?: string
 }) => {
 	return authedFetch<ValidateCouponResponse>('/coupon/validate', {
@@ -90,6 +90,14 @@ export type PublicPricingResponse = {
 	// Live USD→NGN rate served from app_settings. Use this to convert when
 	// rendering NGN prices to Nigerian users while everyone else sees USD.
 	usdToNgn: number
+	// Section F — storefront on/off toggles. When `payPerUse` is false the
+	// `phase2A`/`phase2B` payload is zeroed by the BE; the FE should also
+	// hide the whole pay-per-use section so cached responses can't sneak
+	// through.
+	sections: {
+		payPerUse: boolean
+		subscription: boolean
+	}
 	phase2A: PricingRow | null
 	phase2B: PricingRow[]
 }

@@ -49,7 +49,9 @@ export const getMySubscription = asyncHandler(async (req: Request, res: Response
 export const subscribe = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
   const input = subscribeSchema.parse(req.body);
-  const result = await subscribeService(userId, input.planId);
+  const result = await subscribeService(userId, input.planId, {
+    couponCode: input.couponCode,
+  });
   return res.status(OK).json(result);
 });
 

@@ -202,6 +202,13 @@ model AppSettings {
   // installs a reasonable starting rate that the admin is expected to update.
   usdToNgn Decimal @map("usd_to_ngn") @db.Decimal(12, 4)
 
+  // Storefront section toggles for the public pricing page (Section F).
+  // Both default to true so the page renders as-is until an admin flips one
+  // off. The service layer enforces the "at least one section must stay
+  // live" invariant — turning both off at once is rejected.
+  payPerUseActive   Boolean @default(true) @map("pay_per_use_active")
+  subscriptionActive Boolean @default(true) @map("subscription_active")
+
   updatedBy String? @map("updated_by")
   updatedByUser User? @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
 

@@ -63,6 +63,13 @@ export type ListPlansResponse = {
 	message: string
 	currency: 'USD'
 	usdToNgn: number
+	// Section F — storefront on/off toggles. When `subscription` is false the
+	// BE returns an empty `plans` array; the FE should additionally hide the
+	// picker so a cached response never leaks the disabled section.
+	sections: {
+		payPerUse: boolean
+		subscription: boolean
+	}
 	plans: SubscriptionPlanPublic[]
 }
 
@@ -101,19 +108,33 @@ export const getMySubscription = async () => {
 	})
 }
 
+// Shape mirrors InitPaymentResponse so the FE can reuse the same coupon UI
+// across pay-per-use and subscription checkout. When `free` is true, the BE
+// already settled the subscription via a 100%-off coupon and the FE should
+// jump straight to verify/success — no Paystack widget.
 export type SubscribeResponse = {
 	message: string
-	authorizationUrl: string
-	accessCode: string
+	free: boolean
+	authorizationUrl: string | null
+	accessCode: string | null
 	reference: string
 	amount: number
+	baseAmount: number
+	discountAmount: number
 	currency: 'USD' | 'NGN'
+	couponCode: string | null
 }
 
-export const subscribeToPlan = async (planId: string) => {
+export const subscribeToPlan = async (
+	planId: string,
+	options: { couponCode?: string } = {},
+) => {
 	return authedFetch<SubscribeResponse>('/subscription/subscribe', {
 		method: 'POST',
-		body: JSON.stringify({ planId }),
+		body: JSON.stringify({
+			planId,
+			...(options.couponCode ? { couponCode: options.couponCode } : {}),
+		}),
 	})
 }
 

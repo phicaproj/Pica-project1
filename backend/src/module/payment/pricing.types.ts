@@ -86,6 +86,14 @@ export type PublicPricingResponse = {
   // the BE will charge against.
   currency: 'USD';
   usdToNgn: number;
+  // Section F — storefront on/off toggles. The FE branches on these so the
+  // user never sees a deactivated section even briefly while it tries to
+  // render an empty list. When a section is off the corresponding payload
+  // field is zeroed/empty so legacy callers don't crash.
+  sections: {
+    payPerUse: boolean;
+    subscription: boolean;
+  };
   phase2A: PricingRow | null;
   phase2B: PricingRow[];
 };

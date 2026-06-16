@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
-const couponPlanSchema = z.enum(['PHASE2A', 'PHASE2B_PILLAR']);
+// SUBSCRIPTION joined the enum in Slice F+ so admins can author coupons that
+// discount monthly plans the same way pay-per-use diagnostics do.
+const couponPlanSchema = z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'SUBSCRIPTION']);
 
 // Admin creates a coupon. Exactly one of amountOff / percentOff carries the
 // real value; the other is derived and stored so redemption can cross-check.
@@ -118,7 +120,7 @@ export type CouponResponse = {
   status: string;
   maxUses: number;
   usedCount: number;
-  plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null;
+  plan: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION' | null;
   pillarId: string | null;
   pillarCode: string | null;
   pillarName: string | null;

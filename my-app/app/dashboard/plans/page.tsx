@@ -1,30 +1,31 @@
 "use client";
 
-// Recurring subscription tier picker + active-subscription management.
-// Distinct from /dashboard/subscription, which is the one-off pay-per-use
-// flow (Phase 2A unlock, Phase 2B pillar unlock). This page owns the
-// Starter/Growth/Scale tiers and the post-subscribe management surface
-// (quota meters, card on file, cancel).
+// Subscription tier picker. The active-subscription management surface
+// (quota meters, card on file, cancel button) lives in Settings → Billing
+// now — this page only sells the tiers and decorates whichever one the user
+// is currently on. The previous in-page ManageView was confusing because the
+// picker disappeared the moment a user subscribed, leaving no way to compare
+// tiers from a logged-in state.
 //
-// Country-aware display: USD base everywhere, NGN converted via the FX rate
-// from /subscription/plans (which mirrors getUsdToNgnRate on the BE) for
-// users whose country resolves to Nigeria.
+// Checkout is fully inline: clicking a card opens SubscriptionCheckoutModal,
+// which optionally applies a coupon and either short-circuits to the success
+// state (100%-off coupon) or opens the Paystack popup over the modal. No
+// full-page redirects.
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Script from "next/script";
 import {
   ArrowRight,
-  Calendar,
   Check,
   CheckCircle,
-  CreditCard,
   Crown,
   Loader,
   Sparkles,
-  XCircle,
+  Tag,
+  X,
 } from "lucide-react";
 import {
-  cancelMySubscription,
   getMe,
   getMySubscription,
   getSubscriptionPlans,
@@ -34,58 +35,68 @@ import {
   type SubscriptionPlanPublic,
 } from "@/lib/authClient";
 import {
+  validateCoupon,
+  verifyPayment,
+  type CouponPricing,
+} from "@/lib/api/payment";
+import {
   convertFromUsd,
   formatMoney,
   resolveDisplayCurrency,
   type Currency,
 } from "@/lib/utils";
 
-type ViewState = "picker" | "manage";
-
-const formatDate = (iso: string | null) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+// Paystack inline-widget shape — kept in this file so plans/page is
+// self-contained (the pay-per-use checkout has its own copy).
+type PaystackHandler = { openIframe: () => void };
+type PaystackSetupOptions = {
+  key: string;
+  email: string;
+  amount: number;
+  ref: string;
+  currency?: string;
+  callback: (response: { reference: string }) => void;
+  onClose: () => void;
 };
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (options: PaystackSetupOptions) => PaystackHandler;
+    };
+  }
+}
 
-const STATUS_COPY: Record<string, { label: string; tone: string }> = {
-  ACTIVE: { label: "Active", tone: "bg-emerald-500/15 text-emerald-300" },
-  PAST_DUE: { label: "Past due", tone: "bg-amber-500/15 text-amber-300" },
-  CANCELLED: { label: "Cancelled", tone: "bg-rose-500/15 text-rose-300" },
-  EXPIRED: { label: "Expired", tone: "bg-gray-500/15 text-gray-300" },
-};
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
 export default function PlansPage() {
   const [me, setMe] = useState<MeUser | null>(null);
   const [meError, setMeError] = useState<string | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlanPublic[]>([]);
   const [usdToNgn, setUsdToNgn] = useState(1);
+  const [sectionsLive, setSectionsLive] = useState({
+    payPerUse: true,
+    subscription: true,
+  });
   const [mySub, setMySub] = useState<MySubscriptionPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionBusy, setActionBusy] = useState<string | null>(null);
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [pageError, setPageError] = useState<string | null>(null);
+  const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionPlanPublic | null>(
+    null,
+  );
 
-  // NG users see NGN, everyone else USD. Same resolver the existing
-  // /dashboard/subscription page uses.
   const displayCurrency: Currency = useMemo(
     () => resolveDisplayCurrency(me?.country ?? null),
     [me?.country],
   );
 
-  const view: ViewState = mySub ? "manage" : "picker";
+  const refreshSubscription = async () => {
+    const res = await getMySubscription();
+    if (res.data) setMySub(res.data.subscription);
+  };
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Three calls run in parallel — me to know the user's country, plans
-      // for the picker, and the active subscription (if any) for the manage
-      // surface. The /me endpoint is the only one that can fail-on-auth.
       const [meRes, plansRes, subRes] = await Promise.all([
         getMe(),
         getSubscriptionPlans(),
@@ -102,6 +113,10 @@ export default function PlansPage() {
       if (plansRes.data) {
         setPlans(plansRes.data.plans);
         setUsdToNgn(plansRes.data.usdToNgn);
+        setSectionsLive({
+          payPerUse: plansRes.data.sections?.payPerUse ?? true,
+          subscription: plansRes.data.sections?.subscription ?? true,
+        });
       }
 
       if (subRes.data) {
@@ -114,37 +129,6 @@ export default function PlansPage() {
       cancelled = true;
     };
   }, []);
-
-  const handleSubscribe = async (planId: string) => {
-    setActionBusy(planId);
-    setActionError(null);
-    const res = await subscribeToPlan(planId);
-    setActionBusy(null);
-    if (res.error || !res.data) {
-      setActionError(res.error?.message ?? "Could not start subscription.");
-      return;
-    }
-    // Paystack hands us a hosted checkout URL — full redirect rather than
-    // popup. Cleaner for recurring because the user lands back on this page
-    // and the webhook has already activated their subscription by then.
-    window.location.href = res.data.authorizationUrl;
-  };
-
-  const handleCancel = async () => {
-    setActionBusy("cancel");
-    setActionError(null);
-    const res = await cancelMySubscription();
-    setActionBusy(null);
-    setCancelOpen(false);
-    if (res.error || !res.data) {
-      setActionError(res.error?.message ?? "Could not cancel subscription.");
-      return;
-    }
-    // Refresh — status flips to cancelAtPeriodEnd; full CANCELLED comes
-    // later from the subscription.disable webhook.
-    const refreshed = await getMySubscription();
-    if (refreshed.data) setMySub(refreshed.data.subscription);
-  };
 
   if (loading) {
     return (
@@ -170,63 +154,112 @@ export default function PlansPage() {
     );
   }
 
+  const activePlanId =
+    mySub && (mySub.status === "ACTIVE" || mySub.status === "PAST_DUE")
+      ? mySub.plan.id
+      : null;
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white pb-20">
-      {actionError && (
+      {/* Paystack inline SDK — loaded once, used when a paid plan opens the
+          checkout modal. Kept at page scope so the script is ready by the
+          time the modal mounts. */}
+      <Script
+        src="https://js.paystack.co/v1/inline.js"
+        strategy="afterInteractive"
+      />
+
+      {pageError && (
         <div className="max-w-3xl mx-auto px-4 pt-6">
           <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300">
-            {actionError}
+            {pageError}
           </div>
         </div>
       )}
 
-      {view === "manage" && mySub ? (
-        <ManageView
-          me={me}
-          sub={mySub}
-          displayCurrency={displayCurrency}
-          usdToNgn={usdToNgn}
-          onOpenCancel={() => setCancelOpen(true)}
-        />
-      ) : (
-        <PickerView
-          plans={plans}
-          displayCurrency={displayCurrency}
-          usdToNgn={usdToNgn}
-          actionBusy={actionBusy}
-          onSubscribe={handleSubscribe}
-        />
-      )}
+      <PickerView
+        plans={plans}
+        displayCurrency={displayCurrency}
+        usdToNgn={usdToNgn}
+        activePlanId={activePlanId}
+        hasActiveSub={!!activePlanId}
+        subscriptionSectionLive={sectionsLive.subscription}
+        payPerUseSectionLive={sectionsLive.payPerUse}
+        onSelectPlan={(plan) => {
+          setPageError(null);
+          setCheckoutPlan(plan);
+        }}
+      />
 
-      {cancelOpen && mySub && (
-        <CancelConfirmModal
-          periodEnd={mySub.currentPeriodEnd}
-          busy={actionBusy === "cancel"}
-          onConfirm={handleCancel}
-          onClose={() => setCancelOpen(false)}
-        />
+      {checkoutPlan && (
+        <Suspense fallback={null}>
+          <SubscriptionCheckoutModal
+            plan={checkoutPlan}
+            me={me}
+            displayCurrency={displayCurrency}
+            usdToNgn={usdToNgn}
+            onClose={() => setCheckoutPlan(null)}
+            onSuccess={async () => {
+              setCheckoutPlan(null);
+              await refreshSubscription();
+            }}
+            onError={(msg) => setPageError(msg)}
+          />
+        </Suspense>
       )}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// PICKER VIEW — Starter / Growth / Scale
+// PICKER VIEW — Starter / Growth / Scale (always rendered)
 // ─────────────────────────────────────────────────────────────────────────
 
 function PickerView({
   plans,
   displayCurrency,
   usdToNgn,
-  actionBusy,
-  onSubscribe,
+  activePlanId,
+  hasActiveSub,
+  subscriptionSectionLive,
+  payPerUseSectionLive,
+  onSelectPlan,
 }: {
   plans: SubscriptionPlanPublic[];
   displayCurrency: Currency;
   usdToNgn: number;
-  actionBusy: string | null;
-  onSubscribe: (planId: string) => void;
+  activePlanId: string | null;
+  hasActiveSub: boolean;
+  subscriptionSectionLive: boolean;
+  payPerUseSectionLive: boolean;
+  onSelectPlan: (plan: SubscriptionPlanPublic) => void;
 }) {
+  // Section F — admin paused subscriptions. The BE returns an empty array;
+  // we show a friendlier paused-state copy than the generic empty.
+  if (!subscriptionSectionLive) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 pt-20 text-center">
+        <h2 className="text-2xl font-bold text-white mb-3">
+          Subscriptions are paused
+        </h2>
+        <p className="text-gray-400 text-sm mb-6">
+          Monthly plans aren&apos;t available right now.
+          {payPerUseSectionLive
+            ? " You can still pay per use for individual diagnostics."
+            : " Please check back later."}
+        </p>
+        {payPerUseSectionLive && (
+          <Link
+            href="/dashboard/subscription"
+            className="inline-block py-3 px-6 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white transition"
+          >
+            Go to pay-per-use
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   if (plans.length === 0) {
     return (
       <div className="max-w-3xl mx-auto px-4 pt-20 text-center">
@@ -258,6 +291,18 @@ function PickerView({
           period and don&apos;t roll over — once a period ends, unused tests
           expire. Need more for a one-off scan? Pay-per-use is always available.
         </p>
+        {hasActiveSub && (
+          // Anchor to /dashboard/settings with the deep-link param the
+          // billing tab will read to land on the Subscription sub-tab.
+          <div className="mt-6">
+            <Link
+              href="/dashboard/settings?tab=Billing&billingTab=Subscription"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-orange-400 hover:text-orange-300 transition"
+            >
+              Manage subscription <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
       </section>
 
       <section className="max-w-6xl mx-auto px-4">
@@ -266,6 +311,7 @@ function PickerView({
             const priceDisplay =
               convertFromUsd(plan.priceUsd, displayCurrency, usdToNgn) ?? 0;
             const isRecommended = idx === 1;
+            const isCurrent = activePlanId === plan.id;
             return (
               <SubscriptionCard
                 key={plan.id}
@@ -273,9 +319,9 @@ function PickerView({
                 priceDisplay={priceDisplay}
                 displayCurrency={displayCurrency}
                 recommended={isRecommended}
-                busy={actionBusy === plan.id}
-                disabled={actionBusy !== null && actionBusy !== plan.id}
-                onSubscribe={() => onSubscribe(plan.id)}
+                current={isCurrent}
+                hasActiveSub={hasActiveSub}
+                onSubscribe={() => onSelectPlan(plan)}
               />
             );
           })}
@@ -301,30 +347,51 @@ function SubscriptionCard({
   priceDisplay,
   displayCurrency,
   recommended,
-  busy,
-  disabled,
+  current,
+  hasActiveSub,
   onSubscribe,
 }: {
   plan: SubscriptionPlanPublic;
   priceDisplay: number;
   displayCurrency: Currency;
   recommended: boolean;
-  busy: boolean;
-  disabled: boolean;
+  current: boolean;
+  hasActiveSub: boolean;
   onSubscribe: () => void;
 }) {
+  // CTA logic:
+  //   - current plan → disabled "Current plan" pill, link out to manage
+  //   - other plan while subscribed → disabled "Cancel current first" pill
+  //     (the BE rejects double-subscribe; this surfaces it before the click)
+  //   - no active sub → normal subscribe button
+  const buttonDisabled = current || hasActiveSub;
+  const buttonLabel = current
+    ? "Current plan"
+    : hasActiveSub
+      ? "Cancel current to switch"
+      : `Subscribe to ${plan.name}`;
+
   return (
     <div
-      className={`relative bg-[#111827] border rounded-2xl p-6 flex flex-col justify-between ${
-        recommended
-          ? "border-orange-500/40 shadow-lg shadow-orange-500/10"
-          : "border-white/5"
+      className={`relative bg-[#111827] border rounded-2xl p-6 flex flex-col justify-between transition ${
+        current
+          ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
+          : recommended
+            ? "border-orange-500/40 shadow-lg shadow-orange-500/10"
+            : "border-white/5"
       }`}
     >
-      {recommended && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full">
-          Most Popular
+      {current ? (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full flex items-center gap-1.5">
+          <CheckCircle className="w-3 h-3" />
+          Your plan
         </div>
+      ) : (
+        recommended && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full">
+            Most Popular
+          </div>
+        )
       )}
 
       <div>
@@ -340,8 +407,6 @@ function SubscriptionCard({
         </p>
 
         {plan.description && (
-          // Description renders inline above the feature bullets — matches
-          // the spec from the planning conversation.
           <p className="text-sm text-gray-400 mb-5 leading-relaxed">
             {plan.description}
           </p>
@@ -368,15 +433,16 @@ function SubscriptionCard({
 
       <button
         onClick={onSubscribe}
-        disabled={busy || disabled}
+        disabled={buttonDisabled}
         className={`w-full py-3 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 ${
-          recommended
-            ? "bg-orange-500 hover:bg-orange-600 text-white"
-            : "border border-white/20 text-white hover:bg-white/5"
-        } disabled:opacity-60 disabled:cursor-not-allowed`}
+          current
+            ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 cursor-default"
+            : recommended
+              ? "bg-orange-500 hover:bg-orange-600 text-white"
+              : "border border-white/20 text-white hover:bg-white/5"
+        } disabled:opacity-60 ${buttonDisabled && !current ? "cursor-not-allowed" : ""}`}
       >
-        {busy && <Loader className="w-4 h-4 animate-spin" />}
-        {busy ? "Redirecting…" : `Subscribe to ${plan.name}`}
+        {buttonLabel}
       </button>
     </div>
   );
@@ -395,277 +461,331 @@ function QuotaLine({ label, count }: { label: string; count: number }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// MANAGE VIEW — active subscription
+// CHECKOUT MODAL — inline coupon + Paystack popup, no redirects
 // ─────────────────────────────────────────────────────────────────────────
 
-function ManageView({
+function SubscriptionCheckoutModal({
+  plan,
   me,
-  sub,
   displayCurrency,
   usdToNgn,
-  onOpenCancel,
+  onClose,
+  onSuccess,
+  onError,
 }: {
+  plan: SubscriptionPlanPublic;
   me: MeUser;
-  sub: MySubscriptionPayload;
   displayCurrency: Currency;
   usdToNgn: number;
-  onOpenCancel: () => void;
-}) {
-  const status = STATUS_COPY[sub.status] ?? {
-    label: sub.status,
-    tone: "bg-gray-500/15 text-gray-300",
-  };
-  const priceDisplay =
-    convertFromUsd(sub.plan.priceUsd, displayCurrency, usdToNgn) ?? 0;
-
-  return (
-    <div className="max-w-4xl mx-auto px-4 pt-12">
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-8">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-2">
-            Your subscription
-          </p>
-          <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">
-            {sub.plan.name}
-          </h1>
-        </div>
-        <span
-          className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest ${status.tone}`}
-        >
-          {status.label}
-        </span>
-      </div>
-
-      {sub.cancelAtPeriodEnd && (
-        <div className="mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 text-sm text-amber-300 flex items-start gap-3">
-          <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>
-            Your subscription is set to end on{" "}
-            <span className="font-bold">
-              {formatDate(sub.currentPeriodEnd)}
-            </span>
-            . You&apos;ll keep your remaining quota until then. After that
-            you&apos;ll be on pay-per-use unless you resubscribe.
-          </span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-10">
-        <div className="lg:col-span-2 bg-[#111827] border border-white/5 rounded-2xl p-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
-            Quota usage this period
-          </p>
-          <div className="space-y-5">
-            <QuotaMeter
-              label="Phase 2A diagnostics"
-              used={sub.usage.phase2aUsed}
-              total={sub.plan.phase2aPerMonth}
-            />
-            <QuotaMeter
-              label="Phase 2B deep dives"
-              used={sub.usage.phase2bUsed}
-              total={sub.plan.phase2bPerMonth}
-            />
-            <QuotaMeter
-              label="Expert consultations"
-              used={sub.usage.consultationsUsed}
-              total={sub.plan.consultationsPerMonth}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-6 leading-relaxed">
-            Quotas reset at the start of every billing period. Unused tests
-            don&apos;t roll over. When a quota is exhausted, the matching test
-            falls back to pay-per-use automatically.
-          </p>
-        </div>
-
-        <div className="bg-[#111827] border border-white/5 rounded-2xl p-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
-            Billing
-          </p>
-          <p className="text-2xl font-extrabold text-white mb-1">
-            {formatMoney(priceDisplay, displayCurrency)}
-          </p>
-          <p className="text-xs text-gray-500 mb-5">billed monthly</p>
-
-          <div className="border-t border-white/5 pt-4 space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Period started</span>
-              <span className="text-white font-medium">
-                {formatDate(sub.currentPeriodStart)}
-              </span>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Next renewal</span>
-              <span className="text-white font-medium">
-                {sub.cancelAtPeriodEnd ? "—" : formatDate(sub.currentPeriodEnd)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-[#111827] border border-white/5 rounded-2xl p-6 mb-10">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
-          Card on file
-        </p>
-        {sub.card ? (
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
-              <CreditCard className="w-5 h-5 text-orange-400" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
-                {sub.card.brand ? `${sub.card.brand} ` : ""}
-                <span className="font-mono tracking-wider">
-                  •••• {sub.card.last4}
-                </span>
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {sub.card.bank ? `${sub.card.bank} · ` : ""}
-                {sub.card.expMonth && sub.card.expYear
-                  ? `Expires ${sub.card.expMonth}/${sub.card.expYear.slice(-2)}`
-                  : "Expiry unknown"}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">
-            Card details will appear here after your first successful payment.
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Link
-          href="/dashboard"
-          className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition flex items-center justify-center gap-2"
-        >
-          Back to dashboard <ArrowRight className="w-4 h-4" />
-        </Link>
-        {!sub.cancelAtPeriodEnd && sub.status === "ACTIVE" && (
-          <button
-            onClick={onOpenCancel}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 transition flex items-center justify-center gap-2"
-          >
-            <XCircle className="w-4 h-4" />
-            Cancel subscription
-          </button>
-        )}
-      </div>
-
-      {/* Tiny note acknowledging the email — same kindness the one-off
-          success page extends. */}
-      <p className="mt-6 text-xs text-gray-600 text-center">
-        Billing receipts go to {me.email}.
-      </p>
-    </div>
-  );
-}
-
-function QuotaMeter({
-  label,
-  used,
-  total,
-}: {
-  label: string;
-  used: number;
-  total: number;
-}) {
-  // Defensive when total is 0 (a tier with 0 of something is a valid
-  // configuration — show the meter empty rather than dividing by zero).
-  const ratio = total > 0 ? Math.min(used / total, 1) : 0;
-  const remaining = Math.max(total - used, 0);
-  const exhausted = remaining === 0 && total > 0;
-  return (
-    <div>
-      <div className="flex items-baseline justify-between mb-2 gap-3">
-        <span className="text-sm font-medium text-white">{label}</span>
-        <span
-          className={`text-xs font-mono ${
-            exhausted ? "text-rose-300" : "text-gray-400"
-          }`}
-        >
-          {used} / {total}
-          {exhausted && " · falls back to pay-per-use"}
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${
-            exhausted
-              ? "bg-rose-500"
-              : ratio > 0.75
-                ? "bg-amber-500"
-                : "bg-emerald-500"
-          }`}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function CancelConfirmModal({
-  periodEnd,
-  busy,
-  onConfirm,
-  onClose,
-}: {
-  periodEnd: string;
-  busy: boolean;
-  onConfirm: () => void;
   onClose: () => void;
+  onSuccess: () => void;
+  onError: (msg: string) => void;
 }) {
+  const [couponCode, setCouponCode] = useState("");
+  const [couponPricing, setCouponPricing] = useState<CouponPricing | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  // Coupon validation runs in USD — same as the BE. The display values below
+  // re-convert to whatever the user's wire currency is when rendering.
+  const basePriceUsd = plan.priceUsd;
+  const finalPriceUsd = couponPricing?.finalAmount ?? basePriceUsd;
+  const discountUsd = couponPricing?.discountAmount ?? 0;
+
+  const basePriceDisplay =
+    convertFromUsd(basePriceUsd, displayCurrency, usdToNgn) ?? 0;
+  const finalPriceDisplay =
+    convertFromUsd(finalPriceUsd, displayCurrency, usdToNgn) ?? 0;
+  const discountDisplay =
+    convertFromUsd(discountUsd, displayCurrency, usdToNgn) ?? 0;
+
+  const verifyWithRetry = async (reference: string) => {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const verify = await verifyPayment(reference);
+      if (!verify.error && verify.data?.paid) {
+        return { ok: true as const };
+      }
+      const status = verify.data?.status;
+      if (verify.error || (status && status !== "PENDING")) {
+        return {
+          ok: false as const,
+          message:
+            verify.error?.message ??
+            `Payment status: ${status}. If you were charged, please contact support.`,
+        };
+      }
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 1500);
+      });
+    }
+    return {
+      ok: false as const,
+      message:
+        "Payment confirmation is taking longer than expected. Please refresh in a moment.",
+    };
+  };
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponError("Enter a coupon code.");
+      return;
+    }
+    setCouponBusy(true);
+    setCouponError(null);
+    const response = await validateCoupon({
+      code,
+      basePrice: basePriceUsd,
+      plan: "SUBSCRIPTION",
+    });
+    setCouponBusy(false);
+    if (response.error || !response.data) {
+      setCouponPricing(null);
+      setCouponError(response.error?.message ?? "Could not apply coupon.");
+      return;
+    }
+    setCouponCode(response.data.pricing.code);
+    setCouponPricing(response.data.pricing);
+  };
+
+  const removeCoupon = () => {
+    setCouponCode("");
+    setCouponPricing(null);
+    setCouponError(null);
+  };
+
+  const handlePay = async () => {
+    setError(null);
+    setBusy(true);
+
+    const res = await subscribeToPlan(plan.id, {
+      couponCode: couponPricing?.code,
+    });
+
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not start subscription.");
+      setBusy(false);
+      return;
+    }
+
+    // 100%-off coupon: BE already activated the subscription. Verify is a
+    // formality so the FE shows the same "settled" state the pay-per-use
+    // free path does.
+    if (res.data.free) {
+      setVerifying(true);
+      const result = await verifyWithRetry(res.data.reference);
+      setVerifying(false);
+      setBusy(false);
+      if (result.ok) {
+        onSuccess();
+      } else {
+        setError(result.message);
+      }
+      return;
+    }
+
+    // Paid path: open Paystack inline. Falls back to the hosted checkout
+    // URL only if the SDK didn't load (offline, ad-block, etc.).
+    if (typeof window === "undefined" || !window.PaystackPop) {
+      if (res.data.authorizationUrl) {
+        window.location.href = res.data.authorizationUrl;
+        return;
+      }
+      setError("Payment SDK is still loading. Please wait a moment and try again.");
+      setBusy(false);
+      return;
+    }
+    if (!PAYSTACK_PUBLIC_KEY) {
+      setError(
+        "Payment is not configured for this environment. Please contact support.",
+      );
+      setBusy(false);
+      return;
+    }
+
+    const { reference, amount, currency } = res.data;
+    const handler = window.PaystackPop.setup({
+      key: PAYSTACK_PUBLIC_KEY,
+      email: me.email,
+      amount: Math.round(amount * 100),
+      ref: reference,
+      currency,
+      callback: (response) => {
+        // Paystack runs this on its own; jump to verify in a microtask so
+        // React state updates land cleanly.
+        void (async () => {
+          setVerifying(true);
+          const result = await verifyWithRetry(response.reference);
+          setVerifying(false);
+          setBusy(false);
+          if (result.ok) {
+            onSuccess();
+          } else {
+            setError(result.message);
+            onError(result.message);
+          }
+        })();
+      },
+      onClose: () => {
+        // User closed the popup without paying — clear busy so they can
+        // retry without refreshing.
+        setBusy(false);
+      },
+    });
+    handler.openIframe();
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto"
+      onClick={busy ? undefined : onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl my-8"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-4">
-          <XCircle className="w-5 h-5 text-rose-400" />
-        </div>
-        <h2 className="text-xl font-bold text-white mb-2">
-          Cancel subscription?
-        </h2>
-        <p className="text-sm text-gray-400 mb-5">
-          You&apos;ll keep your remaining quota and continue with full access
-          until{" "}
-          <span className="text-white font-semibold">
-            {formatDate(periodEnd)}
-          </span>
-          . After that, you&apos;ll be on pay-per-use. You can resubscribe any
-          time.
-        </p>
-
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300 flex items-start gap-2 mb-5">
-          <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>
-            Unused tests do not roll over — they expire when the period ends.
-          </span>
-        </div>
-
-        <div className="flex gap-3">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-1">
+              Subscribe — Tier {plan.tier}
+            </p>
+            <h2 className="text-2xl font-bold text-white">{plan.name}</h2>
+          </div>
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-60"
+            className="w-8 h-8 rounded-lg hover:bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition disabled:opacity-40"
+            aria-label="Close"
           >
-            Keep subscription
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={busy}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white transition flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {busy && <Loader className="w-4 h-4 animate-spin" />}
-            Confirm cancel
+            <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Plan summary */}
+        <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 mb-4">
+          <div className="flex justify-between items-baseline gap-3 text-sm">
+            <span className="text-gray-400">Monthly price</span>
+            <span className="text-white font-semibold">
+              {formatMoney(basePriceDisplay, displayCurrency)}
+            </span>
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            <li className="text-xs text-gray-400 flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-orange-400" />
+              {plan.phase2aPerMonth} Phase 2A · {plan.phase2bPerMonth} Phase 2B ·{" "}
+              {plan.consultationsPerMonth} consultations / month
+            </li>
+          </ul>
+        </div>
+
+        {/* Coupon row */}
+        <div className="mb-4">
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+            Have a coupon?
+          </label>
+          {!couponPricing ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  setCouponError(null);
+                }}
+                placeholder="ENTER CODE"
+                className="flex-1 px-3 py-2.5 rounded-lg bg-[#0d1117] border border-white/10 text-white text-sm font-mono tracking-wider placeholder:text-gray-600 focus:outline-none focus:border-orange-500/40 transition"
+                disabled={couponBusy || busy}
+              />
+              <button
+                onClick={applyCoupon}
+                disabled={couponBusy || busy || !couponCode.trim()}
+                className="px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition disabled:opacity-60"
+              >
+                {couponBusy ? <Loader className="w-4 h-4 animate-spin" /> : "Apply"}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-3 text-sm">
+              <div className="flex items-center gap-2 min-w-0">
+                <Tag className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-emerald-300 font-semibold truncate">
+                    {couponPricing.code}
+                  </p>
+                  <p className="text-emerald-400/80 text-xs">
+                    Saved {formatMoney(discountDisplay, displayCurrency)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={removeCoupon}
+                disabled={busy}
+                className="text-emerald-400 hover:text-emerald-300 text-xs font-semibold disabled:opacity-50"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+          {couponError && (
+            <p className="text-xs text-rose-400 mt-2">{couponError}</p>
+          )}
+        </div>
+
+        {/* Total row */}
+        <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 mb-5">
+          <div className="flex justify-between items-baseline gap-3 text-sm mb-1.5">
+            <span className="text-gray-400">Subtotal</span>
+            <span className="text-gray-300">
+              {formatMoney(basePriceDisplay, displayCurrency)}
+            </span>
+          </div>
+          {couponPricing && (
+            <div className="flex justify-between items-baseline gap-3 text-sm mb-1.5">
+              <span className="text-gray-400">Discount</span>
+              <span className="text-emerald-300">
+                −{formatMoney(discountDisplay, displayCurrency)}
+              </span>
+            </div>
+          )}
+          <div className="border-t border-white/5 mt-2 pt-2 flex justify-between items-baseline gap-3">
+            <span className="text-white font-bold">Total today</span>
+            <span className="text-white text-xl font-extrabold">
+              {formatMoney(finalPriceDisplay, displayCurrency)}
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-500 mt-2">
+            Then {formatMoney(basePriceDisplay, displayCurrency)} every month.
+            Cancel anytime.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-xs text-red-300">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handlePay}
+          disabled={busy}
+          className="w-full py-3 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white transition flex items-center justify-center gap-2 disabled:opacity-60"
+        >
+          {(busy || verifying) && <Loader className="w-4 h-4 animate-spin" />}
+          {verifying
+            ? "Confirming…"
+            : busy
+              ? "Starting…"
+              : finalPriceUsd <= 0
+                ? "Activate (free with coupon)"
+                : "Pay & subscribe"}
+        </button>
+
+        <p className="mt-4 text-[10px] text-gray-500 text-center">
+          Billing receipts go to {me.email}.
+        </p>
       </div>
     </div>
   );

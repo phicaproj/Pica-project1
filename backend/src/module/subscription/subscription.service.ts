@@ -1,4 +1,4 @@
-import { Prisma, SubscriptionStatus } from '@prisma/client';
+import { PaymentProvider, PaymentStatus, Plan, Prisma, SubscriptionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import {
@@ -6,6 +6,7 @@ import {
   CONFLICT,
   NOT_FOUND,
 } from '../../service/shared/http';
+import { validateAndPriceCoupon } from '../coupon/coupon.service';
 import {
   newPaymentReference,
   initializeSubscriptionTransaction,
@@ -108,19 +109,36 @@ function addOneMonth(start: Date): Date {
 // ──────────────────────────────────────────────────────────────────────────
 
 export async function listPlansService(): Promise<ListPlansResponse> {
-  const [rows, usdToNgn] = await Promise.all([
+  const [rows, usdToNgn, settings] = await Promise.all([
     prisma.subscriptionPlan.findMany({
       where: { isActive: true },
       orderBy: [{ displayOrder: 'asc' }, { tier: 'asc' }],
     }),
     getUsdToNgnRate(),
+    prisma.appSettings.findFirst({
+      select: { payPerUseActive: true, subscriptionActive: true },
+    }),
   ]);
+
+  // Default "both live" if the singleton row is missing — best-effort for
+  // public reads. The toggle invariant is enforced on write so this branch
+  // is only hit on a freshly-truncated DB.
+  const payPerUseActive = settings?.payPerUseActive ?? true;
+  const subscriptionActive = settings?.subscriptionActive ?? true;
+
+  // Section F — when the subscription section is off we zero out the plan
+  // list so cached FE callers can never render the picker.
+  const plans = subscriptionActive ? rows.map(toPublicPlan) : [];
 
   return {
     message: 'Plans fetched successfully',
     currency: 'USD',
     usdToNgn,
-    plans: rows.map(toPublicPlan),
+    sections: {
+      payPerUse: payPerUseActive,
+      subscription: subscriptionActive,
+    },
+    plans,
   };
 }
 
@@ -202,12 +220,13 @@ export async function getMySubscriptionService(userId: string): Promise<MySubscr
 
 export async function subscribeService(
   userId: string,
-  planId: string
+  planId: string,
+  options: { couponCode?: string } = {}
 ): Promise<SubscribeResponse> {
   const [user, plan] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, country: true },
+      select: { id: true, email: true, country: true, businessName: true },
     }),
     prisma.subscriptionPlan.findUnique({ where: { id: planId } }),
   ]);
@@ -238,7 +257,92 @@ export async function subscribeService(
   const chargeCurrency = resolveChargeCurrency(user.country);
   const usdToNgn = chargeCurrency === 'NGN' ? await getUsdToNgnRate() : 1;
   const priceUsd = Number(plan.priceUsd);
-  const chargeAmount = round2(chargeCurrency === 'NGN' ? priceUsd * usdToNgn : priceUsd);
+
+  // Coupon math, like initPaymentService, runs in USD so a flat amountOff
+  // means the same thing across NGN and USD users. We compute the discount
+  // first, then convert the final charge into the wire currency.
+  let chargeUsd = priceUsd;
+  let appliedCouponCode: string | null = null;
+  let discountUsd = 0;
+  if (options.couponCode) {
+    const pricing = await validateAndPriceCoupon(options.couponCode, user.id, priceUsd, {
+      plan: Plan.SUBSCRIPTION,
+      pillarId: null,
+    });
+    chargeUsd = pricing.finalAmount;
+    appliedCouponCode = pricing.code;
+    discountUsd = pricing.discountAmount;
+  }
+
+  const chargeAmount = round2(chargeCurrency === 'NGN' ? chargeUsd * usdToNgn : chargeUsd);
+  const baseAmountWire = round2(chargeCurrency === 'NGN' ? priceUsd * usdToNgn : priceUsd);
+  const discountAmountWire = round2(chargeCurrency === 'NGN' ? discountUsd * usdToNgn : discountUsd);
+
+  const reference = newPaymentReference('SUB');
+
+  // 100% waiver: a full-discount coupon leaves nothing to charge. Mirror the
+  // pay-per-use free-coupon path — activate the subscription locally, record
+  // a $0 Payment row for audit/analytics, skip Paystack entirely. No email
+  // is sent for free settlements (see payment.service.ts comment).
+  if (chargeAmount <= 0 && appliedCouponCode) {
+    const now = new Date();
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.create({
+        data: {
+          userId: user.id,
+          plan: Plan.SUBSCRIPTION,
+          provider: PaymentProvider.PAYSTACK,
+          providerReference: reference,
+          amount: new Prisma.Decimal(0),
+          amountUsd: new Prisma.Decimal(0),
+          appliedCouponCode,
+          discountAmount: new Prisma.Decimal(discountAmountWire),
+          currency: chargeCurrency,
+          status: PaymentStatus.SUCCESS,
+          paymentMethod: 'coupon',
+          paidAt: now,
+          customerEmail: user.email,
+          customerBusinessName: user.businessName,
+        },
+      });
+      // Bump the coupon's redemption counter — validateAndPriceCoupon only
+      // checks; it doesn't decrement. Mirror payment.service's pattern.
+      await tx.discount.update({
+        where: { code: appliedCouponCode },
+        data: { usedCount: { increment: 1 } },
+      });
+      // Create the subscription row directly. There is no Paystack
+      // subscription code because we never hit Paystack — the row has no
+      // recurring billing handle, which is fine for a 100%-off bootstrap
+      // (the period is fixed; on expiry the user has to subscribe again).
+      await tx.userSubscription.create({
+        data: {
+          userId: user.id,
+          planId: plan.id,
+          status: SubscriptionStatus.ACTIVE,
+          currency: chargeCurrency,
+          paystackSubscriptionCode: null,
+          paystackCustomerCode: null,
+          paystackEmailToken: null,
+          currentPeriodStart: now,
+          currentPeriodEnd: addOneMonth(now),
+        },
+      });
+    });
+
+    return {
+      message: 'Subscription activated — coupon covered the full amount',
+      free: true,
+      authorizationUrl: null,
+      accessCode: null,
+      reference,
+      amount: 0,
+      baseAmount: baseAmountWire,
+      discountAmount: discountAmountWire,
+      currency: chargeCurrency,
+      couponCode: appliedCouponCode,
+    };
+  }
 
   // Need a Paystack plan code in the wire currency. If the admin saved the
   // tier before USD/NGN was enabled, we lazily create it here so the first
@@ -262,8 +366,6 @@ export async function subscribeService(
     });
   }
 
-  const reference = newPaymentReference('SUB');
-
   const paystackData = await initializeSubscriptionTransaction({
     email: user.email,
     planCode,
@@ -275,16 +377,23 @@ export async function subscribeService(
       userId: user.id,
       planId: plan.id,
       currency: chargeCurrency,
+      // Coupon code flows through metadata so the webhook can persist it on
+      // the first-charge Payment row for audit/redemption tracking.
+      ...(appliedCouponCode ? { couponCode: appliedCouponCode } : {}),
     },
   });
 
   return {
     message: 'Subscription initialized — complete payment to activate',
+    free: false,
     authorizationUrl: paystackData.authorization_url,
     accessCode: paystackData.access_code,
     reference: paystackData.reference,
     amount: chargeAmount,
+    baseAmount: baseAmountWire,
+    discountAmount: discountAmountWire,
     currency: chargeCurrency,
+    couponCode: appliedCouponCode,
   };
 }
 

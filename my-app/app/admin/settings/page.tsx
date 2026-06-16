@@ -1196,6 +1196,11 @@ function AppSettingsTab() {
   const [draftRate, setDraftRate] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Section F — separate inflight flag for the storefront toggles so flipping
+  // a switch doesn't dim the FX rate save button.
+  const [togglingSection, setTogglingSection] = useState<
+    "payPerUse" | "subscription" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -1256,6 +1261,29 @@ function AppSettingsTab() {
     setSettings(res.data.settings);
     setDraftRate(String(res.data.settings.usdToNgn));
     setSuccess(`Rate updated — $1 = ₦${res.data.settings.usdToNgn.toLocaleString()}.`);
+  };
+
+  // Section F — flip a single storefront section toggle. The BE rejects the
+  // patch if it would zero both sections, but we additionally disable the
+  // active toggle when it's the last one live so the user never sees the
+  // error in the first place.
+  const handleToggleSection = async (
+    key: "payPerUseActive" | "subscriptionActive",
+    next: boolean,
+  ) => {
+    if (!settings) return;
+    setTogglingSection(key === "payPerUseActive" ? "payPerUse" : "subscription");
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({ [key]: next });
+    setTogglingSection(null);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not update section toggle.");
+      return;
+    }
+    setSettings(res.data.settings);
+    const label = key === "payPerUseActive" ? "Pay-per-use" : "Subscription";
+    setSuccess(`${label} section ${next ? "enabled" : "disabled"}.`);
   };
 
   if (loading) {
@@ -1371,6 +1399,96 @@ function AppSettingsTab() {
           </button>
         </div>
       </div>
+
+      {/* ── Storefront sections (Section F) ───────────────────────── */}
+      {settings && (
+        <div className="mt-5 rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Settings2 className="w-4 h-4 text-blue-300" />
+            <h2 className="text-base font-bold text-white">Storefront sections</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-5">
+            Hide an entire section from the public pricing page. At least one
+            section must stay live — the toggle for the last active section is
+            locked.
+          </p>
+
+          <div className="space-y-3">
+            <SectionToggleRow
+              label="Pay-per-use"
+              caption="One-off Phase 2A and Phase 2B charges."
+              active={settings.payPerUseActive}
+              busy={togglingSection === "payPerUse"}
+              // Lock the toggle when it's the only section still live.
+              locked={settings.payPerUseActive && !settings.subscriptionActive}
+              onToggle={(next) =>
+                void handleToggleSection("payPerUseActive", next)
+              }
+            />
+            <SectionToggleRow
+              label="Subscription"
+              caption="Recurring monthly plans (Starter / Growth / Scale)."
+              active={settings.subscriptionActive}
+              busy={togglingSection === "subscription"}
+              locked={settings.subscriptionActive && !settings.payPerUseActive}
+              onToggle={(next) =>
+                void handleToggleSection("subscriptionActive", next)
+              }
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionToggleRow({
+  label,
+  caption,
+  active,
+  busy,
+  locked,
+  onToggle,
+}: {
+  label: string;
+  caption: string;
+  active: boolean;
+  busy: boolean;
+  locked: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-white/5 bg-[#111318] px-4 py-3.5">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-white">{label}</p>
+          {locked && (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+              Last live
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs text-gray-500">{caption}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggle(!active)}
+        disabled={busy || locked}
+        aria-pressed={active}
+        aria-label={`${active ? "Disable" : "Enable"} ${label}`}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          active ? "bg-emerald-500" : "bg-white/10"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+            active ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+        {busy && (
+          <Loader className="absolute -right-6 top-1 h-4 w-4 animate-spin text-blue-300" />
+        )}
+      </button>
     </div>
   );
 }

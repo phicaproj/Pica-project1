@@ -245,7 +245,11 @@ export async function initPaymentService(
       return created;
     });
 
-    sendSuccessEmailBestEffort(quotaPayment, reference, 'subscription-quota');
+    // No email for quota consumption — the user didn't actually pay anything,
+    // so a "we received your payment" mail is misleading. The $0 Payment row
+    // still exists for billing-history audit; the user sees it in their
+    // dashboard if they want to track credit usage.
+    void quotaPayment;
 
     return {
       message: 'Granted from your subscription — no charge',
@@ -348,7 +352,10 @@ export async function initPaymentService(
       return created;
     });
 
-    sendSuccessEmailBestEffort(freePayment, reference, 'free-coupon');
+    // No email — a 100%-off coupon means no money changed hands, so a
+    // "payment received" mail would be misleading. The $0 Payment row is
+    // still created for audit.
+    void freePayment;
 
     return {
       message: 'Payment completed — coupon covered the full amount',

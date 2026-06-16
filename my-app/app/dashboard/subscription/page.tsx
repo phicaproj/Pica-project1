@@ -30,6 +30,7 @@ import {
   getAccessToken,
   getLastSessionId,
   getMe,
+  getMySubscription,
   getPublicPricing,
   initPayment,
   validateCoupon,
@@ -39,6 +40,7 @@ import {
   type BusinessSize,
   type CouponPricing,
   type MeUser,
+  type MySubscriptionPayload,
   type PricingRow,
   type PublicPricingResponse,
   type VerifyPaymentResponse,
@@ -224,6 +226,18 @@ function SubscriptionPageInner() {
   const [pricing, setPricing] = useState<PublicPricingResponse | null>(null);
   const [pricingLoading, setPricingLoading] = useState(true);
   const [chargedAmount, setChargedAmount] = useState<number | null>(null);
+  // Set while we run the pre-init quota check. The BE returns `free: true`
+  // when the user's subscription still has unused tests, in which case the
+  // payment is settled and entitlements are granted — there's nothing to
+  // charge, so the FE should never show the checkout screen. We keep a
+  // short busy indicator over the picker while this single round-trip
+  // resolves rather than flashing the checkout UI in between.
+  const [quotaInFlight, setQuotaInFlight] = useState(false);
+  // Active subscription — when present we run the pre-init quota probe so a
+  // user with credits never sees the checkout screen. When absent we skip
+  // the probe entirely so the BE doesn't accumulate orphaned PENDING rows
+  // for non-subscribers.
+  const [mySub, setMySub] = useState<MySubscriptionPayload | null>(null);
 
   // NG users see NGN throughout; everyone else USD. Falls back to USD when
   // /auth/me is still in flight so the page doesn't jump currencies mid-render.
@@ -273,6 +287,21 @@ function SubscriptionPageInner() {
         setPricing(res.data);
       }
       setPricingLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch the user's active subscription up-front. The pre-init quota probe
+  // is gated on `mySub` being non-null so we don't run a wasteful init for
+  // pay-per-use users with no quota to consume in the first place.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await getMySubscription();
+      if (cancelled) return;
+      if (res.data) setMySub(res.data.subscription);
     })();
     return () => {
       cancelled = true;
@@ -461,8 +490,20 @@ function SubscriptionPageInner() {
         return;
       }
       if (locked.length === 1) {
+        // Auto-pick + pre-check quota in one shot — if the user's
+        // subscription has a free Phase 2A left we want them to skip the
+        // checkout screen, not flash through it.
+        const onlyScan = locked[0];
+        const shortCircuited = await tryFreeShortCircuit(plan, {
+          sessionId: onlyScan.sessionId,
+        });
+        if (shortCircuited) {
+          setSelectedPlan(plan);
+          setCheckoutSessionId(onlyScan.sessionId);
+          return;
+        }
         setSelectedPlan(plan);
-        setCheckoutSessionId(locked[0].sessionId);
+        setCheckoutSessionId(onlyScan.sessionId);
         setView("checkout");
         return;
       }
@@ -514,30 +555,118 @@ function SubscriptionPageInner() {
     setView("checkout");
   };
 
-  const handlePickPillar = (pillarId: string) => {
+  // Pre-init helper: ask the BE whether this purchase can be settled from
+  // the user's subscription quota (or some other free path) before we ever
+  // render the checkout screen. Returns `true` when the call already
+  // settled the payment and we've jumped to the success view; `false` when
+  // the user actually needs to pay and the caller should proceed into
+  // checkout. Errors fall back to `false` so the user can still complete
+  // the purchase manually — the BE will re-check quota at the real init.
+  const tryFreeShortCircuit = async (
+    plan: PlanCard,
+    args: { sessionId?: string; pillarId?: string },
+  ): Promise<boolean> => {
+    if (!plan.backendPlan) return false;
+    // Skip the probe entirely if the user has no active subscription.
+    // Without quota to consume there's nothing for the BE to short-circuit,
+    // and the wasted PENDING Payment row is the trade-off we're avoiding.
+    if (!mySub || (mySub.status !== "ACTIVE" && mySub.status !== "PAST_DUE")) {
+      return false;
+    }
+    setQuotaInFlight(true);
+    try {
+      const res = await initPayment({
+        plan: plan.backendPlan,
+        sessionId: args.sessionId,
+        pillarId: args.pillarId,
+      });
+      if (res.error || !res.data) {
+        // Couldn't pre-check — fall through to the normal checkout path
+        // where the same call runs again with proper error handling.
+        return false;
+      }
+      if (!res.data.free) {
+        // No quota — user must pay. Don't open the modal here; the
+        // checkout screen will issue its own initPayment (which may pick
+        // up a coupon the user enters). Two init calls is fine because
+        // each reference is single-use and the second call gets a fresh
+        // reference; we just discard the pending PENDING row from the
+        // first call.
+        return false;
+      }
+      // Quota covered it. Verify (BE returns "already settled") and jump
+      // to success. The success view shows entitlement details.
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const verify = await verifyPayment(res.data.reference);
+        if (!verify.error && verify.data?.paid) {
+          handlePaymentSuccess(verify.data, 0);
+          return true;
+        }
+        const status = verify.data?.status;
+        if (verify.error || (status && status !== "PENDING")) {
+          // Verify failed despite `free: true` from init — this is rare
+          // (it means the BE record didn't materialize). Surface the
+          // error and let the user retry.
+          setPaymentError(
+            verify.error?.message ??
+              "Could not confirm subscription credit. Please try again.",
+          );
+          return false;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      }
+      return false;
+    } finally {
+      setQuotaInFlight(false);
+    }
+  };
+
+  const handlePickPillar = async (pillarId: string) => {
     if (!pendingPlan) return;
+    setShowPillarPicker(false);
     const pillarPrice = pricingByPillarId.get(pillarId);
     // Same USD→display conversion as the auto-checkout branch above.
     const usdToNgn = pricing?.usdToNgn ?? 1;
     const pillarPriceDisplay = convertFromUsd(pillarPrice?.price ?? null, displayCurrency, usdToNgn);
     const checkoutAmount = pillarPriceDisplay ?? pendingPlan.amount;
-    setShowPillarPicker(false);
-    setSelectedPlan({
+    const planForCheckout: PlanCard = {
       ...pendingPlan,
       price: formatMoney(checkoutAmount, displayCurrency),
       amount: checkoutAmount,
       currency: displayCurrency,
       priceMissing: !pillarPrice,
+    };
+    // Pre-check quota before opening the checkout screen. If the user's
+    // subscription covers it, the helper jumps straight to success.
+    const shortCircuited = await tryFreeShortCircuit(planForCheckout, {
+      pillarId,
     });
+    if (shortCircuited) {
+      // We need a selectedPlan so the success view can label the purchase.
+      setSelectedPlan(planForCheckout);
+      setCheckoutSessionId(null);
+      setCheckoutPillarId(pillarId);
+      return;
+    }
+    setSelectedPlan(planForCheckout);
     setCheckoutSessionId(null);
     setCheckoutPillarId(pillarId);
     setView("checkout");
   };
 
-  const handlePickLockedScan = (sessionId: string) => {
+  const handlePickLockedScan = async (sessionId: string) => {
     if (!pendingPlan) return;
     setShowLockedPicker(false);
-    setSelectedPlan(pendingPlan);
+    const planForCheckout = pendingPlan;
+    const shortCircuited = await tryFreeShortCircuit(planForCheckout, {
+      sessionId,
+    });
+    if (shortCircuited) {
+      setSelectedPlan(planForCheckout);
+      setCheckoutSessionId(sessionId);
+      return;
+    }
+    setSelectedPlan(planForCheckout);
     setCheckoutSessionId(sessionId);
     setView("checkout");
   };
@@ -554,13 +683,17 @@ function SubscriptionPageInner() {
     setView("success");
   };
 
-  if (meLoading || pricingLoading || verifyingReturn) {
+  if (meLoading || pricingLoading || verifyingReturn || quotaInFlight) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
         <div className="flex flex-col items-center gap-3 text-center px-6">
           <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
           <p className="text-sm text-gray-400">
-            {verifyingReturn ? "Confirming your payment..." : "Loading your account..."}
+            {quotaInFlight
+              ? "Checking your subscription credits..."
+              : verifyingReturn
+                ? "Confirming your payment..."
+                : "Loading your account..."}
           </p>
         </div>
       </div>
@@ -583,10 +716,21 @@ function SubscriptionPageInner() {
     );
   }
 
+  // Section F — when the admin turns the pay-per-use section off, hide the
+  // catalogue entirely and push users to subscriptions. The BE already zeros
+  // out the pricing payload, but this gives a clearer in-app message than an
+  // empty grid. Default to "live" so the page renders normally during the
+  // initial fetch and any pre-toggle deploys keep working.
+  const payPerUseSectionLive = pricing?.sections?.payPerUse ?? true;
+  const subscriptionSectionLive = pricing?.sections?.subscription ?? true;
+
   return (
     <>
       <Script src="https://js.paystack.co/v1/inline.js" strategy="afterInteractive" />
-      {view === "plans" && (
+      {view === "plans" && !payPerUseSectionLive && (
+        <PayPerUsePausedView subscriptionLive={subscriptionSectionLive} />
+      )}
+      {view === "plans" && payPerUseSectionLive && (
         <ChoosePlanView
           me={me}
           plans={plans}
@@ -752,6 +896,35 @@ function LockedScanPickerModal({
               </button>
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Section F — rendered in place of the catalogue when admin has paused the
+// pay-per-use section. The BE invariant guarantees at least one section is
+// live so we always have something to direct the user toward.
+function PayPerUsePausedView({ subscriptionLive }: { subscriptionLive: boolean }) {
+  return (
+    <div className="min-h-screen bg-[#0d1117] text-white pb-20">
+      <div className="max-w-2xl mx-auto px-4 pt-24 text-center">
+        <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
+          One-off purchases are paused
+        </h1>
+        <p className="text-sm md:text-base text-gray-400 mb-8">
+          Pay-per-use checkout isn&apos;t available right now.
+          {subscriptionLive
+            ? " You can still subscribe to a monthly plan for full access."
+            : " Please check back later."}
+        </p>
+        {subscriptionLive && (
+          <Link
+            href="/dashboard/plans"
+            className="inline-block py-3 px-6 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-600 text-white transition"
+          >
+            See monthly plans
+          </Link>
         )}
       </div>
     </div>

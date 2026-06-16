@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
+  ArrowRight,
+  Calendar,
   Camera,
   CheckCircle2,
+  CreditCard,
   Building2,
   MapPin,
   User,
@@ -13,17 +18,22 @@ import {
   Info,
   Loader,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Sparkles,
+  XCircle
 } from "lucide-react";
-import { 
-  AuthUser, 
-  getStoredUser, 
-  getMe, 
-  updateUserProfile, 
-  updateUserBusiness, 
-  verifyUserEmail, 
+import {
+  AuthUser,
+  getStoredUser,
+  getMe,
+  updateUserProfile,
+  updateUserBusiness,
+  verifyUserEmail,
   uploadAvatar as uploadAvatarApi,
-  getMyBillingHistory
+  getMyBillingHistory,
+  getMySubscription,
+  cancelMySubscription,
+  type MySubscriptionPayload
 } from "@/lib/authClient";
 import { formatMoney, type Currency } from "@/lib/utils";
 
@@ -36,9 +46,51 @@ const TABS: Tab[] = [
 ];
 
 export default function DashboardSettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Profile");
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Loader className="w-6 h-6 animate-spin text-teal-400" />
+        </div>
+      }
+    >
+      <DashboardSettingsPageInner />
+    </Suspense>
+  );
+}
+
+function DashboardSettingsPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Outer tab persists via ?tab=Billing; defaults to Profile. Reading the
+  // param on mount lets the /dashboard/plans "Manage subscription →" link
+  // land deep on Billing → Subscription without an extra click.
+  const initialTab: Tab = (() => {
+    const t = searchParams.get("tab");
+    return t === "Profile" || t === "Business Info" || t === "Billing"
+      ? t
+      : "Profile";
+  })();
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any | null>(null);
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "Profile") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    // Clear the billingTab hint when leaving Billing so it doesn't linger
+    // and snap the next visit back to Subscription unexpectedly.
+    if (tab !== "Billing") params.delete("billingTab");
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/settings?${qs}` : "/dashboard/settings", {
+      scroll: false,
+    });
+  };
 
   const fetchUserData = async () => {
     try {
@@ -77,7 +129,7 @@ export default function DashboardSettingsPage() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
               className={`whitespace-nowrap text-sm font-semibold transition pb-2 relative ${
                 activeTab === tab
                   ? "text-orange-400 font-bold"
@@ -893,7 +945,76 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
 }
 
 // ─── Billing & Subscription Settings ─────────────────────────────────────────
+// Mirrors STATUS_COPY from /dashboard/plans. Kept here so the lifted
+// ManageView sub-tab is self-contained and doesn't import from /plans.
+const SUBSCRIPTION_STATUS_COPY: Record<string, { label: string; tone: string }> = {
+  ACTIVE: { label: "Active", tone: "bg-emerald-500/15 text-emerald-300" },
+  PAST_DUE: { label: "Past due", tone: "bg-amber-500/15 text-amber-300" },
+  CANCELLED: { label: "Cancelled", tone: "bg-rose-500/15 text-rose-300" },
+  EXPIRED: { label: "Expired", tone: "bg-gray-500/15 text-gray-300" },
+};
+
+const formatSubscriptionDate = (iso: string | null) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+type BillingSubTab = "History" | "Subscription";
+
 function BillingSettings() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialBillingTab: BillingSubTab =
+    searchParams.get("billingTab") === "Subscription" ? "Subscription" : "History";
+  const [billingTab, setBillingTab] = useState<BillingSubTab>(initialBillingTab);
+
+  const handleBillingTabChange = (tab: BillingSubTab) => {
+    setBillingTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "History") {
+      params.delete("billingTab");
+    } else {
+      params.set("billingTab", tab);
+    }
+    // Make sure the outer ?tab=Billing sticks so a refresh on this sub-tab
+    // doesn't bounce the user back to Profile.
+    params.set("tab", "Billing");
+    router.replace(`/dashboard/settings?${params.toString()}`, { scroll: false });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tab strip — mirrors the pattern admin/settings uses for its
+          internal nested tabs (Roles / Personal info). Sits inside the
+          outer Billing tab so the page reads as one product. */}
+      <div className="flex gap-2 p-1 rounded-xl bg-[#0d1117] border border-white/5 w-fit">
+        {(["History", "Subscription"] as const).map((key) => (
+          <button
+            key={key}
+            onClick={() => handleBillingTabChange(key)}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
+              billingTab === key
+                ? "bg-orange-500 text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            {key === "History" ? "Billing history" : "Subscription"}
+          </button>
+        ))}
+      </div>
+
+      {billingTab === "History" ? <BillingHistoryView /> : <SubscriptionManageView />}
+    </div>
+  );
+}
+
+function BillingHistoryView() {
   const [latestPlan, setLatestPlan] = useState("2A - Strategic Scan");
   
   // Billing history state
@@ -953,11 +1074,12 @@ function BillingSettings() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          Billing & Subscription
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+          Billing history
         </h1>
         <p className="text-sm text-gray-400">
-          Review your organizational plan purchases and transaction history across the PICA ecosystem. All plans are one-time purchase with lifetime access.
+          Review your organizational plan purchases and transaction history
+          across the PICA ecosystem.
         </p>
       </div>
 
@@ -1089,6 +1211,341 @@ function BillingSettings() {
             )}
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SUBSCRIPTION MANAGE VIEW — lifted verbatim from /dashboard/plans
+// ─────────────────────────────────────────────────────────────────────────
+// The same JSX shape that used to live as ManageView under /dashboard/plans.
+// Lives here now so the plans page can stay a pure picker. The cancel modal
+// is local to this sub-tab — no shared cross-page modal state.
+
+function SubscriptionManageView() {
+  const [sub, setSub] = useState<MySubscriptionPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const refresh = async () => {
+    const res = await getMySubscription();
+    if (res.data) setSub(res.data.subscription);
+  };
+
+  useEffect(() => {
+    (async () => {
+      await refresh();
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleCancel = async () => {
+    setCancelBusy(true);
+    setCancelError(null);
+    const res = await cancelMySubscription();
+    setCancelBusy(false);
+    if (res.error || !res.data) {
+      setCancelError(res.error?.message ?? "Could not cancel subscription.");
+      return;
+    }
+    setCancelOpen(false);
+    await refresh();
+  };
+
+  if (loading) {
+    return (
+      <div className="py-16 flex items-center justify-center">
+        <Loader className="w-6 h-6 animate-spin text-teal-400" />
+      </div>
+    );
+  }
+
+  if (!sub) {
+    return (
+      <div className="rounded-2xl bg-[#111827] border border-white/5 p-10 text-center">
+        <p className="text-sm text-gray-400 mb-5">
+          You don&apos;t have an active subscription yet.
+        </p>
+        <Link
+          href="/dashboard/plans"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
+        >
+          See plans <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+    );
+  }
+
+  const status = SUBSCRIPTION_STATUS_COPY[sub.status] ?? {
+    label: sub.status,
+    tone: "bg-gray-500/15 text-gray-300",
+  };
+  // Subscriptions are billed in the wire currency the user signed up with —
+  // surface that exact currency on the management view rather than re-running
+  // the resolver, so refund/billing amounts always match what we actually
+  // captured.
+  const wireCurrency: Currency = sub.currency === "NGN" ? "NGN" : "USD";
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-2">
+            Your subscription
+          </p>
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight">
+            {sub.plan.name}
+          </h1>
+        </div>
+        <span
+          className={`px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest ${status.tone}`}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      {cancelError && (
+        <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300">
+          {cancelError}
+        </div>
+      )}
+
+      {sub.cancelAtPeriodEnd && (
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 text-sm text-amber-300 flex items-start gap-3">
+          <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>
+            Your subscription is set to end on{" "}
+            <span className="font-bold">
+              {formatSubscriptionDate(sub.currentPeriodEnd)}
+            </span>
+            . You&apos;ll keep your remaining quota until then. After that
+            you&apos;ll be on pay-per-use unless you resubscribe.
+          </span>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-[#111827] border border-white/5 rounded-2xl p-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+            Quota usage this period
+          </p>
+          <div className="space-y-5">
+            <QuotaMeter
+              label="Phase 2A diagnostics"
+              used={sub.usage.phase2aUsed}
+              total={sub.plan.phase2aPerMonth}
+            />
+            <QuotaMeter
+              label="Phase 2B deep dives"
+              used={sub.usage.phase2bUsed}
+              total={sub.plan.phase2bPerMonth}
+            />
+            <QuotaMeter
+              label="Expert consultations"
+              used={sub.usage.consultationsUsed}
+              total={sub.plan.consultationsPerMonth}
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-6 leading-relaxed">
+            Quotas reset at the start of every billing period. Unused tests
+            don&apos;t roll over. When a quota is exhausted, the matching test
+            falls back to pay-per-use automatically.
+          </p>
+        </div>
+
+        <div className="bg-[#111827] border border-white/5 rounded-2xl p-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+            Billing
+          </p>
+          <p className="text-2xl font-extrabold text-white mb-1">
+            {formatMoney(sub.plan.priceUsd, wireCurrency)}
+          </p>
+          <p className="text-xs text-gray-500 mb-5">billed monthly</p>
+
+          <div className="border-t border-white/5 pt-4 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-500">Period started</span>
+              <span className="text-white font-medium">
+                {formatSubscriptionDate(sub.currentPeriodStart)}
+              </span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-gray-500">Next renewal</span>
+              <span className="text-white font-medium">
+                {sub.cancelAtPeriodEnd
+                  ? "—"
+                  : formatSubscriptionDate(sub.currentPeriodEnd)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-[#111827] border border-white/5 rounded-2xl p-6">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+          Card on file
+        </p>
+        {sub.card ? (
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
+              <CreditCard className="w-5 h-5 text-orange-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                {sub.card.brand ? `${sub.card.brand} ` : ""}
+                <span className="font-mono tracking-wider">
+                  •••• {sub.card.last4}
+                </span>
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {sub.card.bank ? `${sub.card.bank} · ` : ""}
+                {sub.card.expMonth && sub.card.expYear
+                  ? `Expires ${sub.card.expMonth}/${sub.card.expYear.slice(-2)}`
+                  : "Expiry unknown"}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Card details will appear here after your first successful payment.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link
+          href="/dashboard/plans"
+          className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition flex items-center justify-center gap-2"
+        >
+          View plans <ArrowRight className="w-4 h-4" />
+        </Link>
+        {!sub.cancelAtPeriodEnd && sub.status === "ACTIVE" && (
+          <button
+            onClick={() => setCancelOpen(true)}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 transition flex items-center justify-center gap-2"
+          >
+            <XCircle className="w-4 h-4" />
+            Cancel subscription
+          </button>
+        )}
+      </div>
+
+      {cancelOpen && (
+        <CancelConfirmModal
+          periodEnd={sub.currentPeriodEnd}
+          busy={cancelBusy}
+          onConfirm={handleCancel}
+          onClose={() => setCancelOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function QuotaMeter({
+  label,
+  used,
+  total,
+}: {
+  label: string;
+  used: number;
+  total: number;
+}) {
+  const ratio = total > 0 ? Math.min(used / total, 1) : 0;
+  const remaining = Math.max(total - used, 0);
+  const exhausted = remaining === 0 && total > 0;
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2 gap-3">
+        <span className="text-sm font-medium text-white">{label}</span>
+        <span
+          className={`text-xs font-mono ${
+            exhausted ? "text-rose-300" : "text-gray-400"
+          }`}
+        >
+          {used} / {total}
+          {exhausted && " · falls back to pay-per-use"}
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${
+            exhausted
+              ? "bg-rose-500"
+              : ratio > 0.75
+                ? "bg-amber-500"
+                : "bg-emerald-500"
+          }`}
+          style={{ width: `${ratio * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CancelConfirmModal({
+  periodEnd,
+  busy,
+  onConfirm,
+  onClose,
+}: {
+  periodEnd: string;
+  busy: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-4">
+          <XCircle className="w-5 h-5 text-rose-400" />
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">
+          Cancel subscription?
+        </h2>
+        <p className="text-sm text-gray-400 mb-5">
+          You&apos;ll keep your remaining quota and continue with full access
+          until{" "}
+          <span className="text-white font-semibold">
+            {formatSubscriptionDate(periodEnd)}
+          </span>
+          . After that, you&apos;ll be on pay-per-use. You can resubscribe any
+          time.
+        </p>
+
+        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300 flex items-start gap-2 mb-5">
+          <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>
+            Unused tests do not roll over — they expire when the period ends.
+          </span>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-60"
+          >
+            Keep subscription
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 py-3 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white transition flex items-center justify-center gap-2 disabled:opacity-60"
+          >
+            {busy && <Loader className="w-4 h-4 animate-spin" />}
+            Confirm cancel
+          </button>
+        </div>
       </div>
     </div>
   );
