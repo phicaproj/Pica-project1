@@ -41,10 +41,12 @@ const couponSelect = {
   usedCount: true,
   plan: true,
   pillarId: true,
+  subscriptionPlanId: true,
   userId: true,
   createdAt: true,
   user: { select: { email: true } },
   pillar: { select: { code: true, name: true } },
+  subscriptionPlan: { select: { name: true, tier: true } },
 } satisfies Prisma.DiscountSelect;
 
 type RawCoupon = Prisma.DiscountGetPayload<{ select: typeof couponSelect }>;
@@ -65,6 +67,10 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   pillarId: coupon.pillarId,
   pillarCode: coupon.pillar?.code ?? null,
   pillarName: coupon.pillar?.name ?? null,
+  // null on both = "any subscription tier"; the FE shows the tier name when
+  // present so admins can see at a glance which promo is tier-scoped.
+  subscriptionPlanId: coupon.subscriptionPlanId,
+  subscriptionPlanName: coupon.subscriptionPlan?.name ?? null,
   userId: coupon.userId,
   userEmail: coupon.user?.email ?? null,
   createdAt: coupon.createdAt,
@@ -73,6 +79,11 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
 export async function createCouponService(input: CreateCouponInput): Promise<CouponDetailResponse> {
   const plan = input.plan ?? null;
   const pillarId = plan === Plan.PHASE2B_PILLAR ? (input.pillarId ?? null) : null;
+  // SUBSCRIPTION coupons can optionally narrow to one tier. The Zod refinement
+  // already rejects subscriptionPlanId set on non-SUBSCRIPTION plans; we still
+  // null-coalesce here so the column is never set on the wrong shape of coupon.
+  const subscriptionPlanId =
+    plan === Plan.SUBSCRIPTION ? (input.subscriptionPlanId ?? null) : null;
   // User-scoped coupons are single-use by definition; otherwise honour the
   // admin's cap (Zod already defaulted it to 1 when omitted).
   const maxUses = input.userId ? 1 : input.maxUses;
@@ -93,6 +104,17 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
       select: { id: true, isActive: true },
     });
     if (!pillar || !pillar.isActive) throw new AppError('Pillar not found', NOT_FOUND);
+  }
+
+  // Validate the optional subscription-tier target. Reject inactive plans so
+  // an admin doesn't accidentally tie a promo to a retired tier.
+  if (subscriptionPlanId) {
+    const targetPlan = await prisma.subscriptionPlan.findUnique({
+      where: { id: subscriptionPlanId },
+      select: { id: true, isActive: true },
+    });
+    if (!targetPlan || !targetPlan.isActive)
+      throw new AppError('Subscription plan not found', NOT_FOUND);
   }
 
   // Both columns are always stored (schema requires both). The admin supplies
@@ -129,6 +151,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           userId: input.userId ?? null,
           plan,
           pillarId,
+          subscriptionPlanId,
           maxUses,
         },
         select: couponSelect,
@@ -156,6 +179,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           userId: input.userId ?? null,
           plan,
           pillarId,
+          subscriptionPlanId,
           maxUses,
         },
         select: couponSelect,
@@ -277,7 +301,7 @@ export async function validateAndPriceCoupon(
   code: string,
   userId: string,
   basePrice: number,
-  target: { plan: Plan; pillarId?: string | null }
+  target: { plan: Plan; pillarId?: string | null; subscriptionPlanId?: string | null }
 ): Promise<CouponPricing> {
   const normalizedCode = code.trim().toUpperCase();
   const coupon = await prisma.discount.findUnique({
@@ -293,6 +317,8 @@ export async function validateAndPriceCoupon(
       userId: true,
       plan: true,
       pillarId: true,
+      subscriptionPlanId: true,
+      subscriptionPlan: { select: { name: true } },
     },
   });
 
@@ -328,6 +354,18 @@ export async function validateAndPriceCoupon(
 
   if (coupon.pillarId && coupon.pillarId !== target.pillarId) {
     throw new AppError('This coupon is not valid for the selected pillar', UNPROCESSABLE_CONTENT);
+  }
+
+  // SUBSCRIPTION-tier narrowing. coupon.subscriptionPlanId null = applies to
+  // any tier (back-compat with coupons created before the column existed).
+  // When set, the targeted tier must match. Surface the tier name in the
+  // error so the user can switch plans or pick a different coupon.
+  if (coupon.subscriptionPlanId && coupon.subscriptionPlanId !== target.subscriptionPlanId) {
+    const planLabel = coupon.subscriptionPlan?.name ?? 'a different';
+    throw new AppError(
+      `This coupon is only valid for the ${planLabel} plan`,
+      UNPROCESSABLE_CONTENT
+    );
   }
 
   const percentOff = coupon.percentOff.toNumber();

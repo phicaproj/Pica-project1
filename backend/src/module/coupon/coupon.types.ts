@@ -28,6 +28,15 @@ export const createCouponSchema = z
     userId: z.string().uuid('userId must be a valid UUID').optional(),
     plan: couponPlanSchema.optional().nullable(),
     pillarId: z.string().uuid('pillarId must be a valid UUID').optional().nullable(),
+    // Optional tier-narrowing for SUBSCRIPTION coupons. null = applies to any
+    // tier; set = only valid for that specific subscription plan. Mirrors the
+    // pillarId story for PHASE2B_PILLAR but is *optional* here so an admin can
+    // still author a coupon that covers every tier in one promo.
+    subscriptionPlanId: z
+      .string()
+      .uuid('subscriptionPlanId must be a valid UUID')
+      .optional()
+      .nullable(),
     // How many distinct users may redeem this code. Defaults to 1 so a
     // forgotten field can never produce an unlimited promo. User-scoped
     // coupons are forced to 1 (enforced below + in the service).
@@ -55,6 +64,10 @@ export const createCouponSchema = z
   .refine((data) => data.plan === 'PHASE2B_PILLAR' || !data.pillarId, {
     path: ['pillarId'],
     message: 'pillarId can only be set for PHASE2B_PILLAR coupons',
+  })
+  .refine((data) => data.plan === 'SUBSCRIPTION' || !data.subscriptionPlanId, {
+    path: ['subscriptionPlanId'],
+    message: 'subscriptionPlanId can only be set for SUBSCRIPTION coupons',
   });
 
 export const updateCouponSchema = z
@@ -83,12 +96,16 @@ export const listCouponsQuerySchema = z.object({
 
 // User-facing validation at checkout. basePrice is the pre-discount amount the
 // frontend intends to charge (major NGN units) so we can compute the discount.
+// subscriptionPlanId carries the tier the user is subscribing to when
+// plan = SUBSCRIPTION; the validator uses it to enforce coupon.subscriptionPlanId
+// when set.
 export const validateCouponSchema = z
   .object({
     code: z.string().trim().min(1, 'code is required'),
     basePrice: z.coerce.number().min(0, 'basePrice cannot be negative'),
     plan: couponPlanSchema,
     pillarId: z.string().uuid().optional(),
+    subscriptionPlanId: z.string().uuid().optional(),
   })
   .refine((data) => data.plan !== 'PHASE2B_PILLAR' || !!data.pillarId, {
     path: ['pillarId'],
@@ -124,6 +141,9 @@ export type CouponResponse = {
   pillarId: string | null;
   pillarCode: string | null;
   pillarName: string | null;
+  // SUBSCRIPTION-tier targeting. Both null = coupon applies to any tier.
+  subscriptionPlanId: string | null;
+  subscriptionPlanName: string | null;
   userId: string | null;
   userEmail: string | null;
   createdAt: Date;

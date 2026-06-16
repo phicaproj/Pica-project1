@@ -21,9 +21,11 @@ import {
   updateAdminCoupon,
   getAdminPillars,
   getAllUsers,
+  getSubscriptionPlans,
   type AdminCoupon,
   type PillarMeta,
   type AdminUserRow,
+  type SubscriptionPlanPublic,
 } from "@/lib/authClient";
 import { formatMoney } from "@/lib/utils";
 
@@ -36,8 +38,12 @@ type CouponDraft = {
   discountMode: DiscountMode;
   discountValue: string;
   isActive: boolean;
-  plan: "PHASE2A" | "PHASE2B_PILLAR" | "";
+  plan: "PHASE2A" | "PHASE2B_PILLAR" | "SUBSCRIPTION" | "";
   pillarId: string;
+  // Optional tier-narrowing when plan = SUBSCRIPTION. Empty string = applies
+  // to any subscription tier (the admin can still author tier-agnostic
+  // promos). Reset whenever plan changes away from SUBSCRIPTION.
+  subscriptionPlanId: string;
   // How many people can use the code. Defaults to 1 so a forgotten field
   // can't create an unlimited promo; locked to 1 while a user is selected.
   maxUses: string;
@@ -52,6 +58,7 @@ const initialDraft: CouponDraft = {
   isActive: true,
   plan: "",
   pillarId: "",
+  subscriptionPlanId: "",
   maxUses: "1",
 };
 
@@ -89,6 +96,9 @@ export default function CouponsPage() {
   const [draft, setDraft] = useState<CouponDraft>(initialDraft);
 
   const [pillars, setPillars] = useState<PillarMeta[]>([]);
+  // Subscription tiers, loaded once on mount. Used to populate the optional
+  // "target tier" picker that appears when the SUBSCRIPTION plan is selected.
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlanPublic[]>([]);
   const [usersSearch, setUsersSearch] = useState("");
   const [searchResults, setSearchResults] = useState<AdminUserRow[]>([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
@@ -136,6 +146,24 @@ export default function CouponsPage() {
       }
     }
     void loadPillars();
+  }, []);
+
+  // Load subscription tiers on mount (powers the optional SUBSCRIPTION coupon
+  // tier picker). Public listing endpoint — the admin doesn't need a special
+  // route here. If subscriptions are disabled storefront-side the list comes
+  // back empty and the picker degrades gracefully.
+  useEffect(() => {
+    async function loadPlans() {
+      try {
+        const res = await getSubscriptionPlans();
+        if (res.data) {
+          setSubscriptionPlans(res.data.plans);
+        }
+      } catch {
+        // ignore — picker just shows "Any subscription tier"
+      }
+    }
+    void loadPlans();
   }, []);
 
   // Search users effect
@@ -245,6 +273,13 @@ export default function CouponsPage() {
         : { amountOff: value }),
       plan: draft.plan || null,
       pillarId: draft.plan === "PHASE2B_PILLAR" ? draft.pillarId : null,
+      // SUBSCRIPTION coupons may target one tier (subscriptionPlanId set) or
+      // any tier (subscriptionPlanId null). On any other plan the field is
+      // forced to null so the BE refinement doesn't reject the request.
+      subscriptionPlanId:
+        draft.plan === "SUBSCRIPTION" && draft.subscriptionPlanId
+          ? draft.subscriptionPlanId
+          : null,
       maxUses,
     });
 
@@ -472,10 +507,24 @@ export default function CouponsPage() {
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         {coupon.plan ? (
-                          <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                            coupon.plan === "PHASE2A" ? "bg-blue-500/10 text-blue-300 border border-blue-500/20" : "bg-purple-500/10 text-purple-300 border border-purple-500/20"
-                          }`}>
-                            {coupon.plan === "PHASE2A" ? "Phase 2A" : `Phase 2B (${coupon.pillarCode || "Pillar"})`}
+                          <span
+                            className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                              coupon.plan === "PHASE2A"
+                                ? "bg-blue-500/10 text-blue-300 border border-blue-500/20"
+                                : coupon.plan === "PHASE2B_PILLAR"
+                                  ? "bg-purple-500/10 text-purple-300 border border-purple-500/20"
+                                  : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                            }`}
+                          >
+                            {coupon.plan === "PHASE2A"
+                              ? "Phase 2A"
+                              : coupon.plan === "PHASE2B_PILLAR"
+                                ? `Phase 2B (${coupon.pillarCode || "Pillar"})`
+                                : `Subscription${
+                                    coupon.subscriptionPlanName
+                                      ? ` (${coupon.subscriptionPlanName})`
+                                      : " (Any tier)"
+                                  }`}
                           </span>
                         ) : (
                           <span className="inline-block rounded bg-white/5 px-2 py-0.5 text-[10px] font-bold text-gray-400">
@@ -666,22 +715,32 @@ export default function CouponsPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                    Target Phase (Optional)
+                    Target Plan (Optional)
                   </label>
                   <select
                     value={draft.plan}
                     onChange={(e) =>
                       setDraft({
                         ...draft,
-                        plan: e.target.value as "PHASE2A" | "PHASE2B_PILLAR" | "",
-                        pillarId: "", // reset pillar
+                        plan: e.target.value as
+                          | "PHASE2A"
+                          | "PHASE2B_PILLAR"
+                          | "SUBSCRIPTION"
+                          | "",
+                        // Reset both narrowing fields whenever plan changes —
+                        // the BE rejects pillarId/subscriptionPlanId on the
+                        // wrong plan, and stale values from a prior selection
+                        // shouldn't carry over.
+                        pillarId: "",
+                        subscriptionPlanId: "",
                       })
                     }
                     className={fieldClass}
                   >
-                    <option value="">Any Phase (Global)</option>
+                    <option value="">Any Plan (Global)</option>
                     <option value="PHASE2A">Phase 2A (Strategic Scan)</option>
                     <option value="PHASE2B_PILLAR">Phase 2B (Deep Dive Pillar)</option>
+                    <option value="SUBSCRIPTION">Subscription Plan</option>
                   </select>
                 </div>
                 {draft.plan === "PHASE2B_PILLAR" && (
@@ -701,6 +760,31 @@ export default function CouponsPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+                {draft.plan === "SUBSCRIPTION" && (
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                      Target Tier (Optional)
+                    </label>
+                    <select
+                      value={draft.subscriptionPlanId}
+                      onChange={(e) =>
+                        setDraft({ ...draft, subscriptionPlanId: e.target.value })
+                      }
+                      className={fieldClass}
+                    >
+                      <option value="">Any subscription tier</option>
+                      {subscriptionPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name} (${plan.priceUsd}/mo)
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[11px] text-gray-500">
+                      Leave on &quot;Any subscription tier&quot; to allow the
+                      code on every tier; pick a tier to lock it to that one.
+                    </p>
                   </div>
                 )}
               </div>

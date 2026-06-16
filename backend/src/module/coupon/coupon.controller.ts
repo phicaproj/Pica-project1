@@ -54,6 +54,10 @@ export const validateCoupon = asyncHandler(async (req: Request, res: Response) =
   const pricing = await validateAndPriceCoupon(input.code, req.user.id, input.basePrice, {
     plan: input.plan,
     pillarId: input.pillarId,
+    // Forwarded for SUBSCRIPTION coupons; null/undefined for the one-off
+    // plans. The validator only enforces a match when coupon.subscriptionPlanId
+    // is also set.
+    subscriptionPlanId: input.subscriptionPlanId,
   });
   return res.status(OK).json({ message: 'Coupon applied', pricing });
 });

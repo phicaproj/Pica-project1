@@ -670,15 +670,23 @@ model Discount {
   userId      String? @map("user_id") // optional link to a User for user-specific discounts
   plan        Plan? // optional target plan; null = usable on any paid plan
   pillarId    String? @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons
+  // SUBSCRIPTION-plan tier target. Only meaningful when plan = SUBSCRIPTION.
+  // null = coupon applies to any subscription tier; set = coupon only valid
+  // for that specific tier (mirrors how pillarId narrows PHASE2B_PILLAR
+  // coupons). Existing SUBSCRIPTION coupons keep working because null means
+  // "any tier" — no backfill required.
+  subscriptionPlanId String? @map("subscription_plan_id")
 
-  user User? @relation(fields: [userId], references: [id])
-  pillar Pillar? @relation(fields: [pillarId], references: [id])
+  user             User?             @relation(fields: [userId], references: [id])
+  pillar           Pillar?           @relation(fields: [pillarId], references: [id])
+  subscriptionPlan SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([plan, pillarId])
+  @@index([plan, subscriptionPlanId])
   @@map("discounts")
 }
 
@@ -738,6 +746,10 @@ model SubscriptionPlan {
   displayOrder Int     @default(0)    @map("display_order")
 
   subscriptions UserSubscription[]
+  // Reverse side of Discount.subscriptionPlan — coupons that target this
+  // specific tier. Read-only from the plan side; admins manage targeting
+  // from the coupon create/edit screen.
+  discounts     Discount[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -321,10 +321,16 @@ export type AdminCoupon = {
 	status: string
 	maxUses: number
 	usedCount: number
-	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
+	// SUBSCRIPTION joined the set when monthly plans got coupon support. null
+	// means the coupon is global (works on any paid plan).
+	plan: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION' | null
 	pillarId: string | null
 	pillarCode: string | null
 	pillarName: string | null
+	// Tier-narrowing for SUBSCRIPTION coupons. Both null = applies to any
+	// subscription tier. Set = only valid for that specific plan.
+	subscriptionPlanId: string | null
+	subscriptionPlanName: string | null
 	userId: string | null
 	userEmail: string | null
 	createdAt: string
@@ -348,8 +354,11 @@ export type CreateAdminCouponPayload = {
 	percentOff?: number
 	isActive: boolean
 	userId?: string
-	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | null
+	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION' | null
 	pillarId?: string | null
+	// Optional tier-narrowing for SUBSCRIPTION coupons. null/omitted = any
+	// tier. The backend rejects this field on non-SUBSCRIPTION plans.
+	subscriptionPlanId?: string | null
 	// How many distinct users may redeem the code. Backend defaults to 1;
 	// forced to 1 when userId is set.
 	maxUses?: number
@@ -364,7 +373,7 @@ export type UpdateAdminCouponPayload = {
 export const getAdminCoupons = async (params: {
 	userId?: string
 	isActive?: boolean
-	plan?: 'PHASE2A' | 'PHASE2B_PILLAR'
+	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION'
 	pillarId?: string
 } = {}) => {
 	const qs = new URLSearchParams()

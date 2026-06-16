@@ -275,9 +275,15 @@ export async function subscribeService(
   let appliedCouponCode: string | null = null;
   let discountUsd = 0;
   if (options.couponCode) {
+    // Pass the tier the user is subscribing to so the validator can enforce
+    // coupon.subscriptionPlanId when the admin scoped the promo to one tier.
+    // Tier-agnostic coupons (subscriptionPlanId null) keep working — the
+    // validator only rejects when the coupon has a target AND it doesn't
+    // match.
     const pricing = await validateAndPriceCoupon(options.couponCode, user.id, priceUsd, {
       plan: Plan.SUBSCRIPTION,
       pillarId: null,
+      subscriptionPlanId: planId,
     });
     chargeUsd = pricing.finalAmount;
     appliedCouponCode = pricing.code;
