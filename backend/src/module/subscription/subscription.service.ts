@@ -153,14 +153,21 @@ export async function listPlansService(): Promise<ListPlansResponse> {
 // "user is on the free tier" and shows the plan picker.
 
 export async function getMySubscriptionService(userId: string): Promise<MySubscriptionResponse> {
-  const sub = await prisma.userSubscription.findFirst({
-    where: {
-      userId,
-      status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
-    },
-    orderBy: { createdAt: 'desc' },
-    include: { plan: true },
-  });
+  // Parallelise the subscription lookup with the FX-rate read — the rate is
+  // a cached settings value, so the join is essentially free. Including
+  // usdToNgn on the payload lets the FE render the NGN-billed amount without
+  // a second round-trip (mirrors listPlansService).
+  const [sub, usdToNgn] = await Promise.all([
+    prisma.userSubscription.findFirst({
+      where: {
+        userId,
+        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { plan: true },
+    }),
+    getUsdToNgnRate(),
+  ]);
 
   if (!sub) {
     return { message: 'No active subscription', subscription: null };
@@ -183,6 +190,7 @@ export async function getMySubscriptionService(userId: string): Promise<MySubscr
     status: sub.status,
     plan: toPublicPlan(sub.plan),
     currency: sub.currency === 'NGN' ? 'NGN' : 'USD',
+    usdToNgn,
     currentPeriodStart: sub.currentPeriodStart.toISOString(),
     currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
     cancelAtPeriodEnd: sub.cancelAtPeriodEnd,

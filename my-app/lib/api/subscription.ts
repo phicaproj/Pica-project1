@@ -44,6 +44,10 @@ export type MySubscriptionPayload = {
 	status: SubscriptionStatus
 	plan: SubscriptionPlanPublic
 	currency: 'USD' | 'NGN'
+	// USD→NGN rate captured at fetch time so the Billing card can render the
+	// wire-currency amount (priceUsd * usdToNgn for NGN users) instead of
+	// showing the ₦ symbol next to the unconverted USD figure.
+	usdToNgn: number
 	currentPeriodStart: string
 	currentPeriodEnd: string
 	cancelAtPeriodEnd: boolean

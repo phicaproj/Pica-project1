@@ -46,11 +46,17 @@ export type CardOnFile = {
 // Snapshot of the authenticated user's active subscription. `usage` reflects
 // the current billing period; quotas are inlined so the FE doesn't need a
 // second round-trip to the plan endpoint to render the meter.
+//
+// usdToNgn mirrors the rate returned by listPlansService so the FE can
+// compute the wire-currency display price without an extra fetch. Plan
+// prices are stored in USD; for NGN-billed subscriptions the FE multiplies
+// priceUsd by usdToNgn before formatting with the ₦ symbol.
 export type MySubscriptionPayload = {
   id: string;
   status: SubscriptionStatus;
   plan: SubscriptionPlanPublic;
   currency: 'USD' | 'NGN';
+  usdToNgn: number;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;

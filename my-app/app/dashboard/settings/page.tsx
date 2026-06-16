@@ -1288,6 +1288,12 @@ function SubscriptionManageView() {
   // the resolver, so refund/billing amounts always match what we actually
   // captured.
   const wireCurrency: Currency = sub.currency === "NGN" ? "NGN" : "USD";
+  // Plan prices live in USD; the Billing card needs the converted figure when
+  // the user is billed in NGN. Without this conversion the card showed
+  // "₦{priceUsd}" — the right symbol with the wrong number. The BE includes
+  // usdToNgn on the payload so we don't need a second fetch for the rate.
+  const billedPrice =
+    wireCurrency === "NGN" ? sub.plan.priceUsd * sub.usdToNgn : sub.plan.priceUsd;
 
   return (
     <div className="space-y-6">
@@ -1361,7 +1367,7 @@ function SubscriptionManageView() {
             Billing
           </p>
           <p className="text-2xl font-extrabold text-white mb-1">
-            {formatMoney(sub.plan.priceUsd, wireCurrency)}
+            {formatMoney(billedPrice, wireCurrency)}
           </p>
           <p className="text-xs text-gray-500 mb-5">billed monthly</p>
 

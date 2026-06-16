@@ -187,22 +187,27 @@ function ProfileStep({
 }) {
 	const d = dark
 	const [industryOpen, setIndustryOpen] = useState(false)
-	// Note: countriesnow.space returns city-level data under the `cities` key,
-	// but per client request we surface it to users as "State". The API key
-	// stays `cities` (we don't own the upstream schema); our local state vars
-	// use `state` to match the UI label.
-	const [countriesData, setCountriesData] = useState<{country: string, cities: string[]}[]>([])
-	const [countryOpen, setCountryOpen] = useState(false)
-	const [stateOpen, setStateOpen] = useState(false)
+	// countriesnow.space's /countries/states endpoint returns real state /
+	// province arrays per country (the previous /countries endpoint returned
+	// city lists under a `cities` key — that's why the State picker was
+	// listing cities). Mirror the Business Info page (dashboard/settings) so
+	// the two flows surface the same data.
+	const [countriesData, setCountriesData] = useState<
+		{ name: string; states: { name: string }[] }[]
+	>([])
 	const [selectedCountry, setSelectedCountry] = useState('')
 	const [selectedState, setSelectedState] = useState('')
 
 	useEffect(() => {
-		fetch('https://countriesnow.space/api/v0.1/countries')
+		fetch('https://countriesnow.space/api/v0.1/countries/states')
 			.then((res) => res.json())
 			.then((data) => {
-				if (!data.error) {
-					setCountriesData(data.data)
+				if (data && !data.error && Array.isArray(data.data)) {
+					const sorted = [...data.data].sort(
+						(a: { name: string }, b: { name: string }) =>
+							a.name.localeCompare(b.name)
+					)
+					setCountriesData(sorted)
 				}
 			})
 			.catch((err) => console.error('Failed to load countries', err))
@@ -353,10 +358,14 @@ function ProfileStep({
 					</div>
 				</div>
 
-				{/* Row 3 (Years + Country/State). When Country or State dropdown
-				    opens, lift this row above the action buttons below so the
-				    absolute panels aren't clipped on mobile. */}
-				<div className={`grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6 ${countryOpen || stateOpen ? 'relative z-40' : ''}`}>
+				{/* Row 3 (Years + Country/State). Country and State are native
+				    <select> elements — same pattern as the Business Info page in
+				    dashboard/settings. Native selects render as OS-level popovers
+				    that escape every stacking context, so the row-level z-lift
+				    we needed for the custom Industry dropdown isn't required
+				    here. The /countries/states endpoint returns real state arrays
+				    per country (not city lists), matching the dashboard. */}
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -382,33 +391,29 @@ function ProfileStep({
 							>
 								Country
 							</label>
-							<div className={`relative ${countryOpen ? 'z-30' : ''}`}>
-								<button
-									onClick={() => { setCountryOpen(!countryOpen); setStateOpen(false); }}
-									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+							<div className='relative'>
+								<select
+									value={selectedCountry}
+									onChange={(e) => {
+										setSelectedCountry(e.target.value)
+										setSelectedState('')
+									}}
+									className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
 								>
-									<span className="truncate mr-2">{selectedCountry || 'Country'}</span>
-									<ChevronDown className='w-4 h-4 text-gray-400 flex-shrink-0' />
-								</button>
-								{countryOpen && (
-									<div
-										className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-y-auto max-h-48 ${d ? 'bg-[#1a2235] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
-									>
-										{countriesData.map((c) => (
-											<button
-												key={c.country}
-												onClick={() => {
-													setSelectedCountry(c.country)
-													setSelectedState('')
-													setCountryOpen(false)
-												}}
-												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
-											>
-												{c.country}
-											</button>
-										))}
-									</div>
-								)}
+									<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
+										Country
+									</option>
+									{countriesData.map((c) => (
+										<option
+											key={c.name}
+											value={c.name}
+											className={d ? 'bg-[#0d1117] text-white' : ''}
+										>
+											{c.name}
+										</option>
+									))}
+								</select>
+								<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
 							</div>
 						</div>
 						<div>
@@ -417,32 +422,29 @@ function ProfileStep({
 							>
 								State
 							</label>
-							<div className={`relative ${stateOpen ? 'z-30' : ''}`}>
-								<button
-									onClick={() => selectedCountry && setStateOpen(!stateOpen)}
-									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${!selectedCountry ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+							<div className='relative'>
+								<select
+									value={selectedState}
+									onChange={(e) => setSelectedState(e.target.value)}
+									disabled={!selectedCountry}
+									className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
 								>
-									<span className="truncate mr-2">{selectedState || 'State'}</span>
-									<ChevronDown className='w-4 h-4 text-gray-400 flex-shrink-0' />
-								</button>
-								{stateOpen && selectedCountry && (
-									<div
-										className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-y-auto max-h-48 ${d ? 'bg-[#1a2235] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
-									>
-										{countriesData.find(c => c.country === selectedCountry)?.cities?.map((s) => (
-											<button
-												key={s}
-												onClick={() => {
-													setSelectedState(s)
-													setStateOpen(false)
-												}}
-												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
+									<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
+										State
+									</option>
+									{countriesData
+										.find((c) => c.name === selectedCountry)
+										?.states?.map((s) => (
+											<option
+												key={s.name}
+												value={s.name}
+												className={d ? 'bg-[#0d1117] text-white' : ''}
 											>
-												{s}
-											</button>
+												{s.name}
+											</option>
 										))}
-									</div>
-								)}
+								</select>
+								<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
 							</div>
 						</div>
 					</div>
