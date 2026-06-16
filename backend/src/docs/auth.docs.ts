@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { registry, errorResponse } from './registry';
 import {
+  acceptInviteSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  verifyAdminOTPSchema,
   verifyResetOtpSchema,
 } from '../module/auth/auth.types';
 
@@ -189,6 +191,104 @@ registry.registerPath({
     },
     400: errorResponse('Validation error'),
     401: errorResponse('Invalid or expired password token'),
+  },
+});
+
+// ----- POST /api/auth/admin/login -------------------------------------------
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/auth/admin/login',
+  tags: ['Auth'],
+  summary: 'Stage 1 of admin login (password) — issues an OTP token',
+  description:
+    'Public. Admin accounts use a two-stage login. Stage 1 validates the password and (on success) emails a 5-digit OTP to the admin; the response carries a short-lived `otpToken` to be sent to /admin/verify-otp.',
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: loginSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'OTP issued',
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string(),
+            requiresOtp: z.literal(true),
+            otpToken: z.string(),
+            role: z.literal('ADMIN'),
+            email: z.string().email(),
+          }),
+        },
+      },
+    },
+    400: errorResponse('Validation error'),
+    401: errorResponse('Invalid credentials or not an admin account'),
+  },
+});
+
+// ----- POST /api/auth/admin/verify-otp --------------------------------------
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/auth/admin/verify-otp',
+  tags: ['Auth'],
+  summary: 'Stage 2 of admin login (OTP) — returns access + refresh tokens',
+  description:
+    'Public. Exchanges the `otpToken` (from /admin/login) + 5-digit OTP for the admin\'s JWT pair.',
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: verifyAdminOTPSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Admin authenticated',
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string(),
+            user: AuthUserSchema,
+            accessToken: z.string(),
+            refreshToken: z.string(),
+          }),
+        },
+      },
+    },
+    400: errorResponse('Validation error or wrong OTP'),
+    401: errorResponse('Invalid or expired OTP token'),
+  },
+});
+
+// ----- POST /api/auth/accept-invite -----------------------------------------
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/auth/accept-invite',
+  tags: ['Auth'],
+  summary: 'Accept a staff invite and set the initial password',
+  description:
+    'Public. Consumes a 24-hour invite token (emailed when an admin runs POST /api/admin/invite), sets the initial password, marks the account verified, and clears the invite token. The user can then sign in via /admin/login.',
+  request: {
+    body: {
+      required: true,
+      content: { 'application/json': { schema: acceptInviteSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Invite accepted',
+      content: {
+        'application/json': {
+          schema: z.object({ message: z.string() }),
+        },
+      },
+    },
+    400: errorResponse('Validation error'),
+    401: errorResponse('Invalid or expired invite token'),
   },
 });
 
