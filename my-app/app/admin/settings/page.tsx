@@ -20,6 +20,9 @@ import {
   Pencil,
   Mail,
   UserPlus,
+  DollarSign,
+  Save,
+  Clock,
 } from "lucide-react";
 import {
   getAllUsers,
@@ -30,9 +33,12 @@ import {
   getScoringSettings,
   updateScoringSettings,
   getAdminPillarsDetailed,
+  getAdminAppSettings,
+  updateAdminAppSettings,
   type AdminUserRow,
   type AdminPillarDetailed,
   type ScoringSettings,
+  type AppSettingsPayload,
 } from "@/lib/authClient";
 
 // ─── Taxonomy of Granular Permissions ──────────────────────────────
@@ -1179,11 +1185,202 @@ function PersonalInfoTab() {
   );
 }
 
+// ─── App Settings Tab — FX rate editor ────────────────────────────
+// Compact form for the singleton USD→NGN exchange rate (singleton row
+// owned by `AppSettings`). The rate flows into every NGN-rendered price
+// (public pricing page, /dashboard/plans, subscription + consultation
+// tiers, checkout init) so the live three-card preview gives admins a
+// concrete sense of what they're about to change.
+function AppSettingsTab() {
+  const [settings, setSettings] = useState<AppSettingsPayload | null>(null);
+  const [draftRate, setDraftRate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await getAdminAppSettings();
+    setLoading(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not load app settings.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftRate(String(res.data.settings.usdToNgn));
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const parsedRate = Number(draftRate);
+  const rateValid =
+    Number.isFinite(parsedRate) && parsedRate > 0 && parsedRate <= 1_000_000;
+  const dirty = settings ? Math.abs(parsedRate - settings.usdToNgn) > 0.0001 : false;
+
+  const formatNgnPreview = (usd: number) => {
+    if (!Number.isFinite(usd) || !Number.isFinite(parsedRate)) return "—";
+    const ngn = usd * parsedRate;
+    return `₦${ngn.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  };
+
+  const formatUpdatedAt = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const handleSave = async () => {
+    if (!rateValid) {
+      setError("Enter a rate between 0 and 1,000,000.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({ usdToNgn: parsedRate });
+    setSaving(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not save app settings.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftRate(String(res.data.settings.usdToNgn));
+    setSuccess(`Rate updated — $1 = ₦${res.data.settings.usdToNgn.toLocaleString()}.`);
+  };
+
+  if (loading) {
+    return (
+      <div className="py-16 flex items-center justify-center">
+        <Loader className="w-6 h-6 text-blue-400 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl">
+      {error && (
+        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-emerald-300 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <DollarSign className="w-4 h-4 text-blue-300" />
+          <h2 className="text-base font-bold text-white">USD → NGN exchange rate</h2>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          Used wherever the platform quotes a Naira charge. Keep it close to
+          the live Paystack rate — large drifts will under-collect or refund-loop.
+        </p>
+
+        <label className="block mb-5">
+          <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+            1 USD =
+          </span>
+          <div className="flex items-stretch max-w-xs">
+            <span className="inline-flex items-center px-3 rounded-l-lg bg-[#111318] border border-white/10 border-r-0 text-sm text-gray-400">
+              ₦
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={draftRate}
+              disabled={saving}
+              onChange={(e) => setDraftRate(e.target.value)}
+              className="flex-1 bg-[#111318] border border-white/10 rounded-r-lg px-3 py-2 text-sm text-white"
+            />
+          </div>
+          {!rateValid && (
+            <span className="block text-[10px] text-rose-300 mt-1">
+              Rate must be a positive number ≤ 1,000,000.
+            </span>
+          )}
+        </label>
+
+        {/* Live preview against three recognisable catalogue prices so admins
+            see the effect of their typing before they save. */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5">
+          {[
+            { usd: 50, label: "Quick Consult" },
+            { usd: 100, label: "Strategy Session" },
+            { usd: 1200, label: "Phase 2A" },
+          ].map((p) => (
+            <div
+              key={p.label}
+              className="rounded-lg bg-[#111318] border border-white/5 px-3 py-2.5"
+            >
+              <p className="text-[10px] uppercase tracking-widest text-gray-500">
+                {p.label}
+              </p>
+              <p className="text-sm font-semibold text-white mt-0.5">
+                ${p.usd.toLocaleString()}{" "}
+                <span className="text-gray-500 font-normal">→</span>{" "}
+                <span className="text-blue-300">{formatNgnPreview(p.usd)}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {settings && (
+          <p className="text-[11px] text-gray-500 mb-5 flex items-center gap-1.5">
+            <Clock className="w-3 h-3" />
+            Last updated {formatUpdatedAt(settings.updatedAt)}
+            {settings.updatedBy ? ` by ${settings.updatedBy}` : ""}
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (settings) {
+                setDraftRate(String(settings.usdToNgn));
+                setError(null);
+              }
+            }}
+            disabled={saving || !dirty}
+            className="px-4 py-2.5 rounded-lg border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !dirty || !rateValid}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition disabled:opacity-60"
+          >
+            {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save rate
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Settings Page ───────────────────────────────────────────
 const TABS = [
   { key: "roles", label: "Roles & Permissions" },
   { key: "pillars", label: "Pillar Management" },
   { key: "personal", label: "Personal Information" },
+  { key: "app", label: "App Settings" },
 ];
 
 export default function SettingsPage() {
@@ -1239,10 +1436,21 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {activeTab === "app" && (
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-white mb-2">App Settings</h1>
+          <p className="text-gray-400 text-sm max-w-lg">
+            Platform-wide configuration. Today this is the live USD → NGN rate
+            used to convert USD catalogue prices for Nigerian users.
+          </p>
+        </div>
+      )}
+
       {/* Tab content */}
       {activeTab === "roles" && <RolesTab />}
       {activeTab === "pillars" && <PillarTab />}
       {activeTab === "personal" && <PersonalInfoTab />}
+      {activeTab === "app" && <AppSettingsTab />}
     </div>
   );
 }

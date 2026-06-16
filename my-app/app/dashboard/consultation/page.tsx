@@ -1,18 +1,23 @@
 "use client";
 
-// Real consultation booking surface — replaces the prior mock-consultant
-// landing page. Two layers in one route:
-//   - Bookings list (top): the user's existing requests with status badges
-//   - Request form (bottom, expanding): tier select + topic + notes +
-//     preferred times + an optional "consult on a previous scan" dropdown
-//     populated from /consultation/me/results.
+// Polished consultation surface — Section E content rebuilt in the dashboard's
+// visual language (rounded-2xl cards, #111827 surfaces, white/5 borders,
+// orange accent on CTAs) so it slots in next to /dashboard/plans and
+// /dashboard/subscription.
 //
-// The backend decides quota vs paywall — single Book button. When the
-// response says coveredBySubscription=true, we show a success toast and
-// re-fetch. When the response carries a paystackAuthorizationUrl, we
-// redirect to Paystack hosted checkout (same UX as /dashboard/plans).
+// Layout:
+//   1. Hero strip — title + lead, optional subscription-credits badge,
+//      "Book another" CTA that anchors to the request form.
+//   2. Bookings strip — responsive card grid; each card is a self-contained
+//      status + tier + scheduled-time + meeting-link tile.
+//   3. Request form — two columns: form fields left, tier selector right.
+//      Footer carries the explainer copy + the Book button so the user
+//      always sees what's about to happen before they click.
+//
+// Data flow + API calls + quota-vs-paywall branching are unchanged from the
+// Section E build — only the markup and class names move.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -22,6 +27,7 @@ import {
   Crown,
   ExternalLink,
   Loader,
+  MessageSquare,
   Plus,
   Sparkles,
   XCircle,
@@ -43,6 +49,8 @@ import {
   resolveDisplayCurrency,
   type Currency,
 } from "@/lib/utils";
+
+// ─── Formatters ──────────────────────────────────────────────────────────
 
 const formatDateTime = (iso: string | null) => {
   if (!iso) return "—";
@@ -68,10 +76,7 @@ const formatDate = (iso: string | null) => {
   });
 };
 
-const STATUS_COPY: Record<
-  string,
-  { label: string; tone: string }
-> = {
+const STATUS_COPY: Record<string, { label: string; tone: string }> = {
   REQUESTED: { label: "Requested", tone: "bg-amber-500/15 text-amber-300" },
   CONFIRMED: { label: "Confirmed", tone: "bg-emerald-500/15 text-emerald-300" },
   ATTENDED: { label: "Attended", tone: "bg-blue-500/15 text-blue-300" },
@@ -88,11 +93,14 @@ const bandColor = (band: string) => {
 
 const labelForResult = (r: CompletedResultOption) => {
   const phase = r.phase === "PHASE2B" ? "Phase 2B" : "Phase 2A";
-  const pillar = r.pillarName ?? (r.phase === "PHASE2B" ? r.pillarCode ?? "Pillar" : "All pillars");
+  const pillar =
+    r.pillarName ?? (r.phase === "PHASE2B" ? r.pillarCode ?? "Pillar" : "All pillars");
   const date = formatDate(r.generatedAt);
   const score = Math.round(r.totalScore);
   return `${pillar} • ${phase} • ${date} • ${score} ${r.colorBand}`;
 };
+
+// ─── Page ────────────────────────────────────────────────────────────────
 
 export default function ConsultationPage() {
   const [me, setMe] = useState<MeUser | null>(null);
@@ -102,8 +110,9 @@ export default function ConsultationPage() {
   const [results, setResults] = useState<CompletedResultOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   const displayCurrency: Currency = useMemo(
     () => resolveDisplayCurrency(me?.country ?? null),
@@ -141,27 +150,26 @@ export default function ConsultationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // No active bookings → form expanded by default so the page isn't empty.
-  useEffect(() => {
-    if (!loading && bookings.length === 0) setShowForm(true);
-  }, [loading, bookings.length]);
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
-        <Loader className="w-8 h-8 text-orange-500 animate-spin" />
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader className="h-8 w-8 animate-spin text-orange-500" />
       </div>
     );
   }
 
   if (error || !me) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117] px-6">
+      <div className="flex min-h-[60vh] items-center justify-center px-6">
         <div className="max-w-md text-center">
-          <p className="text-red-400 mb-4">{error ?? "Account unavailable"}</p>
+          <p className="mb-4 text-red-400">{error ?? "Account unavailable"}</p>
           <Link
             href="/Auth/login"
-            className="inline-block px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
+            className="inline-block rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
           >
             Go to Login
           </Link>
@@ -171,82 +179,99 @@ export default function ConsultationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white pb-20">
-      <section className="max-w-5xl mx-auto px-4 pt-12 mb-10">
-        <div className="flex items-start justify-between flex-wrap gap-3 mb-2">
-          <h1 className="text-3xl md:text-4xl font-extrabold leading-tight">
-            Book a consultation
-          </h1>
-          {bookings.length > 0 && !showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition"
-            >
-              <Plus className="w-4 h-4" />
-              Book another
-            </button>
-          )}
+    <div className="space-y-10">
+      {/* ── Hero ────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-white/5 bg-gradient-to-br from-[#1a2030] to-[#111827] p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+              <MessageSquare className="h-3 w-3" />
+              Talk to an expert
+            </div>
+            <h1 className="text-3xl font-extrabold leading-tight md:text-4xl">
+              Book a consultation
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-gray-400 md:text-base">
+              Pick a tier, tell us what you want to talk about, and we&apos;ll
+              confirm a time by email. Subscribers use a consultation credit
+              automatically — otherwise you&apos;ll go through a secure checkout.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={scrollToForm}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600"
+          >
+            <Plus className="h-4 w-4" />
+            {bookings.length === 0 ? "Book your first" : "Book another"}
+          </button>
         </div>
-        <p className="text-gray-400 text-sm md:text-base max-w-2xl">
-          Pick a tier, tell us what you want to talk about, and we&apos;ll
-          confirm a time by email. Subscribers use a consultation credit
-          automatically — otherwise you&apos;ll be sent to a secure checkout.
-        </p>
       </section>
 
       {toast && (
-        <div className="max-w-5xl mx-auto px-4 mb-6">
-          <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-emerald-300 flex items-start gap-2">
-            <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span className="flex-1">{toast}</span>
-            <button
-              onClick={() => setToast(null)}
-              className="text-emerald-300 hover:text-emerald-100"
-            >
-              <XCircle className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="flex items-start gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span className="flex-1">{toast}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="text-emerald-300 hover:text-emerald-100"
+            aria-label="Dismiss"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
         </div>
       )}
 
-      {bookings.length > 0 && (
-        <section className="max-w-5xl mx-auto px-4 mb-10">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
-            Your bookings
-          </p>
-          <div className="space-y-3">
+      {/* ── Bookings strip ──────────────────────────────────────── */}
+      {bookings.length > 0 ? (
+        <section>
+          <div className="mb-4 flex items-baseline justify-between">
+            <h2 className="text-lg font-bold text-white">Your consultations</h2>
+            <p className="text-xs text-gray-500">
+              {bookings.length} {bookings.length === 1 ? "request" : "requests"}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {bookings.map((b) => (
               <BookingCard key={b.id} booking={b} />
             ))}
           </div>
         </section>
-      )}
-
-      {showForm && (
-        <section className="max-w-5xl mx-auto px-4">
-          <BookingForm
-            me={me}
-            tiers={tiers}
-            usdToNgn={usdToNgn}
-            displayCurrency={displayCurrency}
-            results={results}
-            onBooked={async (msg) => {
-              setToast(msg);
-              setShowForm(false);
-              await refresh();
-              window.scrollTo({ top: 0, behavior: "smooth" });
-            }}
-            onCancel={() => bookings.length > 0 && setShowForm(false)}
-            canCancel={bookings.length > 0}
-          />
+      ) : (
+        <section className="rounded-2xl border border-dashed border-white/10 bg-[#111827]/40 p-10 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+            <MessageSquare className="h-5 w-5 text-gray-500" />
+          </div>
+          <p className="text-sm text-gray-400">
+            No consultations yet — fill the form below to book your first.
+          </p>
         </section>
       )}
+
+      {/* ── Request form ───────────────────────────────────────── */}
+      <section ref={formRef}>
+        <BookingForm
+          me={me}
+          tiers={tiers}
+          usdToNgn={usdToNgn}
+          displayCurrency={displayCurrency}
+          results={results}
+          onBooked={async (msg) => {
+            setToast(msg);
+            await refresh();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      </section>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// BOOKING CARD
+// BOOKING CARD — one card per request, with status, tier meta,
+// scheduled time + meeting CTA when confirmed, and a payment-pending CTA
+// when checkout was abandoned.
 // ─────────────────────────────────────────────────────────────────────────
 
 function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
@@ -258,48 +283,41 @@ function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
     booking.payment !== null && booking.payment.status !== "SUCCESS";
 
   return (
-    <div className="bg-[#111827] border border-white/5 rounded-2xl p-5">
-      <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${status.tone}`}
-            >
-              {status.label}
-            </span>
-            {booking.coveredBySubscription && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-orange-500/15 text-orange-300">
-                <Crown className="w-3 h-3" />
-                Subscription
-              </span>
-            )}
-            {paymentPending && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-amber-500/15 text-amber-300">
-                Payment pending
-              </span>
-            )}
-          </div>
-          <p className="text-base font-semibold text-white">{booking.topic}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {booking.tier.name} · {booking.tier.durationMinutes} min · Requested{" "}
-            {formatDate(booking.requestedAt)}
-          </p>
-        </div>
-
-        {paymentPending && booking.payment?.authorizationUrl && (
-          <a
-            href={booking.payment.authorizationUrl}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white transition"
-          >
-            Complete payment
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+    <div className="flex h-full flex-col rounded-2xl border border-white/5 bg-[#111827] p-5 transition hover:border-white/10">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest ${status.tone}`}
+        >
+          {status.label}
+        </span>
+        {booking.coveredBySubscription && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+            <Crown className="h-3 w-3" />
+            Subscription
+          </span>
+        )}
+        {paymentPending && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+            Payment pending
+          </span>
         )}
       </div>
 
+      <p className="text-base font-semibold leading-snug text-white">
+        {booking.topic}
+      </p>
+      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+        <span>{booking.tier.name}</span>
+        <span className="inline-flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          {booking.tier.durationMinutes} min
+        </span>
+        <span>· Requested {formatDate(booking.requestedAt)}</span>
+      </p>
+
       {booking.relatedResult && (
-        <p className="text-xs text-gray-400 mb-2 flex items-start gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 mt-0.5 text-orange-400 flex-shrink-0" />
+        <p className="mt-3 flex items-start gap-1.5 text-xs text-gray-400">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
           <span>
             Related to{" "}
             <span className={`font-semibold ${bandColor(booking.relatedResult.colorBand)}`}>
@@ -310,12 +328,12 @@ function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
       )}
 
       {booking.status === "CONFIRMED" && booking.scheduledAt && (
-        <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-          <p className="text-xs font-bold uppercase tracking-widest text-emerald-300 mb-1 flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5" />
+        <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+          <p className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            <Calendar className="h-3.5 w-3.5" />
             Scheduled
           </p>
-          <p className="text-sm text-white font-medium">
+          <p className="text-sm font-medium text-white">
             {formatDateTime(booking.scheduledAt)}
           </p>
           {booking.meetingLink && (
@@ -323,25 +341,35 @@ function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
               href={booking.meetingLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-emerald-300 hover:text-emerald-200"
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 hover:text-emerald-200"
             >
-              Join meeting <ExternalLink className="w-3 h-3" />
+              Join meeting <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
       )}
 
       {booking.notes && (
-        <p className="text-xs text-gray-500 mt-3 leading-relaxed">
+        <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-gray-500">
           <span className="font-semibold text-gray-400">Notes:</span> {booking.notes}
         </p>
+      )}
+
+      {paymentPending && booking.payment?.authorizationUrl && (
+        <a
+          href={booking.payment.authorizationUrl}
+          className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
+        >
+          Complete payment
+          <ExternalLink className="h-3.5 w-3.5" />
+        </a>
       )}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// BOOKING FORM
+// BOOKING FORM — two-column on desktop, stacked on mobile.
 // ─────────────────────────────────────────────────────────────────────────
 
 function BookingForm({
@@ -351,8 +379,6 @@ function BookingForm({
   displayCurrency,
   results,
   onBooked,
-  onCancel,
-  canCancel,
 }: {
   me: MeUser;
   tiers: ConsultationTierPublic[];
@@ -360,8 +386,6 @@ function BookingForm({
   displayCurrency: Currency;
   results: CompletedResultOption[];
   onBooked: (message: string) => void;
-  onCancel: () => void;
-  canCancel: boolean;
 }) {
   const [tierId, setTierId] = useState<string>(tiers[0]?.id ?? "");
   const [topic, setTopic] = useState("");
@@ -377,7 +401,7 @@ function BookingForm({
   );
 
   const priceDisplay = selectedTier
-    ? (convertFromUsd(selectedTier.priceUsd, displayCurrency, usdToNgn) ?? 0)
+    ? convertFromUsd(selectedTier.priceUsd, displayCurrency, usdToNgn) ?? 0
     : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -408,24 +432,24 @@ function BookingForm({
       return;
     }
 
-    // Quota path: success toast and refresh.
     if (res.data.coveredBySubscription) {
       onBooked(
         "Booking submitted from your subscription credits — we'll confirm by email.",
       );
+      // Reset so the form is ready for the next request.
+      setTopic("");
+      setNotes("");
+      setPreferredTimes("");
+      setRelatedSessionResultId("");
       return;
     }
 
-    // Paywall path: backend returned a Paystack auth URL on the booking's
-    // payment. Send the user straight to checkout.
     const auth = res.data.booking.payment?.authorizationUrl;
     if (auth) {
       window.location.href = auth;
       return;
     }
 
-    // Edge case — paywall booking with no auth URL yet. Toast and refresh so
-    // the user sees the "Complete payment" link on the card.
     onBooked(
       "Booking saved — finish payment from the card above to complete your request.",
     );
@@ -433,8 +457,8 @@ function BookingForm({
 
   if (tiers.length === 0) {
     return (
-      <div className="bg-[#111827] border border-white/5 rounded-2xl p-8 text-center">
-        <p className="text-gray-400 text-sm">
+      <div className="rounded-2xl border border-white/5 bg-[#111827] p-10 text-center">
+        <p className="text-sm text-gray-400">
           Consultations aren&apos;t available right now. Please check back later.
         </p>
       </div>
@@ -442,141 +466,149 @@ function BookingForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-[#111827] border border-white/5 rounded-2xl p-6">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
-        New consultation request
-      </p>
+    <div className="rounded-2xl border border-white/5 bg-[#111827]">
+      <div className="border-b border-white/5 px-6 py-5">
+        <h2 className="text-lg font-bold text-white">New request</h2>
+        <p className="mt-1 text-sm text-gray-400">
+          Pick the tier that fits, then tell us about the call.
+        </p>
+      </div>
 
-      {/* Tier picker as cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-        {tiers.map((t) => {
-          const tPriceDisplay =
-            convertFromUsd(t.priceUsd, displayCurrency, usdToNgn) ?? 0;
-          const selected = t.id === tierId;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTierId(t.id)}
-              className={`text-left rounded-xl p-4 border transition ${
-                selected
-                  ? "border-orange-500 bg-orange-500/5"
-                  : "border-white/5 hover:border-white/20 bg-[#0d1117]"
-              }`}
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-5">
+        {/* ── Tier selector (right column on desktop, top on mobile) ── */}
+        <div className="space-y-3 lg:order-2 lg:col-span-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Choose a tier
+          </p>
+          <div className="space-y-3">
+            {tiers.map((t) => {
+              const tPriceDisplay =
+                convertFromUsd(t.priceUsd, displayCurrency, usdToNgn) ?? 0;
+              const selected = t.id === tierId;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTierId(t.id)}
+                  className={`block w-full rounded-xl border p-4 text-left transition ${
+                    selected
+                      ? "border-orange-500 bg-orange-500/5 ring-1 ring-orange-500/30"
+                      : "border-white/5 bg-[#0d1117] hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                        <Clock className="h-3 w-3" />
+                        {t.durationMinutes} min session
+                      </p>
+                    </div>
+                    <p className="text-lg font-extrabold text-white">
+                      {formatMoney(tPriceDisplay, displayCurrency)}
+                    </p>
+                  </div>
+                  {t.description && (
+                    <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                      {t.description}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Form fields (left column on desktop) ── */}
+        <div className="space-y-4 lg:order-1 lg:col-span-3">
+          <Field label="What do you want to talk about?" required>
+            <input
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              maxLength={200}
+              placeholder="e.g. go-to-market plan for Q3"
+              className="w-full rounded-lg border border-white/10 bg-[#0d1117] px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500/50"
+            />
+          </Field>
+
+          {results.length > 0 && (
+            <Field
+              label="Consult on a previous scan (optional)"
+              hint="The consultant will read the result before the call."
             >
-              <p className="text-sm font-bold text-white mb-1">{t.name}</p>
-              <p className="text-xs text-gray-400 flex items-center gap-1.5 mb-2">
-                <Clock className="w-3 h-3" />
-                {t.durationMinutes} min
-              </p>
-              <p className="text-lg font-extrabold text-white">
-                {formatMoney(tPriceDisplay, displayCurrency)}
-              </p>
-              {t.description && (
-                <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                  {t.description}
-                </p>
+              <select
+                value={relatedSessionResultId}
+                onChange={(e) => setRelatedSessionResultId(e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-[#0d1117] px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500/50"
+              >
+                <option value="">— No related scan —</option>
+                {results.map((r) => (
+                  <option key={r.sessionResultId} value={r.sessionResultId}>
+                    {labelForResult(r)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          <Field label="Notes / context (optional)">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+              maxLength={2000}
+              placeholder="Anything the consultant should know going in"
+              className="w-full resize-none rounded-lg border border-white/10 bg-[#0d1117] px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500/50"
+            />
+          </Field>
+
+          <Field
+            label="Preferred times (optional)"
+            hint="Free-form — we'll match one of these or propose a time near them."
+          >
+            <input
+              value={preferredTimes}
+              onChange={(e) => setPreferredTimes(e.target.value)}
+              maxLength={500}
+              placeholder="e.g. Mon/Wed AM, weekday afternoons"
+              className="w-full rounded-lg border border-white/10 bg-[#0d1117] px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500/50"
+            />
+          </Field>
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer: explainer + submit ── */}
+        <div className="lg:order-3 lg:col-span-5">
+          <div className="-mx-6 -mb-6 mt-2 flex flex-col-reverse gap-3 border-t border-white/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-gray-500">
+              {selectedTier && priceDisplay !== null && (
+                <>
+                  You&apos;ll be charged{" "}
+                  <span className="font-semibold text-white">
+                    {formatMoney(priceDisplay, displayCurrency)}
+                  </span>{" "}
+                  unless you have an active subscription credit.
+                </>
               )}
-            </button>
-          );
-        })}
-      </div>
-
-      <Field label="What do you want to talk about?" required>
-        <input
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          maxLength={200}
-          placeholder="e.g. go-to-market plan for Q3"
-          className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white"
-        />
-      </Field>
-
-      {results.length > 0 && (
-        <Field
-          label="Consult on a previous scan (optional)"
-          hint="The consultant will read the result before the call."
-        >
-          <select
-            value={relatedSessionResultId}
-            onChange={(e) => setRelatedSessionResultId(e.target.value)}
-            className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white"
-          >
-            <option value="">— No related scan —</option>
-            {results.map((r) => (
-              <option key={r.sessionResultId} value={r.sessionResultId}>
-                {labelForResult(r)}
-              </option>
-            ))}
-          </select>
-        </Field>
-      )}
-
-      <Field label="Notes / context (optional)">
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          maxLength={2000}
-          placeholder="Anything the consultant should know going in"
-          className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white resize-none"
-        />
-      </Field>
-
-      <Field
-        label="Preferred times (optional)"
-        hint="Free-form — we'll match one of these or propose a time near them."
-      >
-        <input
-          value={preferredTimes}
-          onChange={(e) => setPreferredTimes(e.target.value)}
-          maxLength={500}
-          placeholder="e.g. Mon/Wed AM, weekday afternoons"
-          className="w-full bg-[#0d1117] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white"
-        />
-      </Field>
-
-      {error && (
-        <div className="mt-2 rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div className="mt-6 flex flex-col-reverse sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="text-xs text-gray-500">
-          {selectedTier && priceDisplay !== null && (
-            <span>
-              You&apos;ll be charged{" "}
-              <span className="text-white font-semibold">
-                {formatMoney(priceDisplay, displayCurrency)}
-              </span>{" "}
-              if you don&apos;t have an active subscription credit.
-            </span>
-          )}
-        </div>
-        <div className="flex gap-3">
-          {canCancel && (
+            </p>
             <button
-              type="button"
-              onClick={onCancel}
+              type="submit"
               disabled={busy}
-              className="px-4 py-2.5 rounded-xl border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:opacity-60"
             >
-              Cancel
+              {busy && <Loader className="h-4 w-4 animate-spin" />}
+              Book consultation
             </button>
-          )}
-          <button
-            type="submit"
-            disabled={busy}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition disabled:opacity-60"
-          >
-            {busy && <Loader className="w-4 h-4 animate-spin" />}
-            Book consultation
-          </button>
+          </div>
         </div>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }
 
@@ -592,15 +624,13 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block mb-4">
-      <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
         {label}
-        {required && <span className="text-orange-400 ml-1">*</span>}
+        {required && <span className="ml-1 text-orange-400">*</span>}
       </span>
       {children}
-      {hint && (
-        <span className="block text-[10px] text-gray-600 mt-1">{hint}</span>
-      )}
+      {hint && <span className="mt-1 block text-[10px] text-gray-600">{hint}</span>}
     </label>
   );
 }

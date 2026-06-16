@@ -1,13 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { Suspense, useCallback, useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
   CreditCard,
   Edit3,
+  Inbox,
   Layers3,
   Loader,
+  MessageSquare,
   RefreshCw,
   Save,
   Trash2,
@@ -24,6 +27,11 @@ import {
   type PricingRow,
 } from "@/lib/authClient";
 import { formatMoney } from "@/lib/utils";
+import {
+  ConsultationTiersTab,
+  ConsultationsInboxTab,
+  SubscriptionTiersTab,
+} from "./_tabs";
 
 const FEATURE_STORAGE_KEY = "pica.admin.subscriptionFeatures";
 
@@ -95,7 +103,13 @@ function readStoredFeatures(): Record<PricingPlan, string[]> {
   }
 }
 
-export default function SubscriptionPage() {
+// ═════════════════════════════════════════════════════════════════════════
+// Pay-per-use tab — the original SubscriptionPage logic, lifted intact.
+// This is the existing PHASE2A + PHASE2B_PILLAR pricing UI; no behaviour
+// changes. Subscription + Consultation tier management now live below in
+// their own tabs.
+// ═════════════════════════════════════════════════════════════════════════
+function PayPerUseTab() {
   const [prices, setPrices] = useState<PricingRow[]>([]);
   const [pillars, setPillars] = useState<PillarMeta[]>([]);
   const [features, setFeatures] = useState<Record<PricingPlan, string[]>>(
@@ -359,13 +373,13 @@ export default function SubscriptionPage() {
   );
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-8">
+    <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Subscription Pricing</h1>
+          <h2 className="text-xl font-bold text-white">Pay-per-use pricing</h2>
           <p className="mt-2 max-w-2xl text-sm text-gray-400">
-            Manage the two paid diagnostics. Plan 2A has one global price, while
-            Plan 2B is priced per pillar.
+            One-off charges. Plan 2A has a single global price; Plan 2B is
+            priced per pillar.
           </p>
         </div>
         <button
@@ -682,5 +696,89 @@ export default function SubscriptionPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Tab shell — switches between Pay-per-use, Subscription tiers, Consultation
+// tiers, and Consultations inbox. Persists the active tab via ?tab=...
+// so refreshes and shared links land on the right pane. Mirrors the strip
+// pattern used on /admin/settings.
+// ═════════════════════════════════════════════════════════════════════════
+
+const TABS = [
+  { key: "pay-per-use", label: "Pay-per-use", icon: Layers3 },
+  { key: "subscription", label: "Subscription Tiers", icon: CreditCard },
+  { key: "consultation", label: "Consultation Tiers", icon: MessageSquare },
+  { key: "bookings", label: "Consultations", icon: Inbox },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+function PageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as TabKey | null;
+  const activeTab: TabKey = TABS.some((t) => t.key === tabParam)
+    ? (tabParam as TabKey)
+    : "pay-per-use";
+
+  const setActiveTab = (key: TabKey) => {
+    // Preserves any other query params the page might pick up later.
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "pay-per-use") params.delete("tab");
+    else params.set("tab", key);
+    const qs = params.toString();
+    router.replace(qs ? `/admin/subscription?${qs}` : "/admin/subscription", {
+      scroll: false,
+    });
+  };
+
+  return (
+    <div className="mx-auto max-w-[1400px]">
+      <div className="mb-8 -mt-2 flex gap-6 border-b border-white/5">
+        {TABS.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`relative whitespace-nowrap pb-3 text-sm font-semibold transition-colors ${
+                active ? "text-white" : "text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <tab.icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </span>
+              {active && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-blue-500" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "pay-per-use" && <PayPerUseTab />}
+      {activeTab === "subscription" && <SubscriptionTiersTab />}
+      {activeTab === "consultation" && <ConsultationTiersTab />}
+      {activeTab === "bookings" && <ConsultationsInboxTab />}
+    </div>
+  );
+}
+
+export default function SubscriptionPage() {
+  // useSearchParams needs a Suspense boundary in Next 13+ App Router.
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center text-gray-400">
+          <Loader className="mr-3 h-5 w-5 animate-spin" />
+          Loading
+        </div>
+      }
+    >
+      <PageInner />
+    </Suspense>
   );
 }
