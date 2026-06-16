@@ -97,18 +97,22 @@ export default function PricingPage() {
 
   return (
     <div className={`min-h-screen ${d ? "bg-[#111111] text-white" : "bg-white text-gray-900"}`}>
-      {/* Hero pinned to one viewport so the heading + scale toggle don't
-          sit above a vast empty band before the actual cards. */}
-      <section className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
+      {/* Hero — no min-h-screen / justify-center anywhere. The hero block on
+          this page is short (headline + subtitle + 2 toggle buttons), so
+          centering inside one full viewport left a large empty band before
+          the pricing cards below on mobile AND desktop. Natural top-anchored
+          flow with breathing-room padding solves both. (HomeView keeps the
+          full-viewport centering because its hero is tall enough to fill it.) */}
+      <section className={`px-4 sm:px-6 md:px-8 pt-6 pb-8 md:pt-12 md:pb-12 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-xs font-semibold uppercase tracking-widest text-gray-300 mb-6">
+          <div className="inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-xs font-semibold uppercase tracking-widest text-gray-300 mb-4 md:mb-6">
             Strategic Intelligence
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4 max-w-xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-xl mx-auto">
             Architectural Pricing for<br />
             <span className="text-[#00ffaa]">African Enterprise.</span>
           </h1>
-          <p className={`text-sm leading-relaxed mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
+          <p className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
             Choose a framework designed to scale with your organizational complexity. Pricing is served from the platform backend.
           </p>
 

@@ -220,7 +220,7 @@ function ProfileStep({
 
 	return (
 		<div
-			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-12 ${d ? 'bg-black' : 'bg-gray-50'}`}
+			className={`min-h-screen flex flex-col items-center justify-start md:justify-center px-4 sm:px-6 md:px-8 pt-6 pb-8 md:py-12 ${d ? 'bg-black' : 'bg-gray-50'}`}
 		>
 			<h1
 				className={`text-2xl sm:text-3xl md:text-5xl font-extrabold text-center mb-2 md:mb-4 ${d ? 'text-white' : 'text-gray-900'}`}
@@ -230,7 +230,7 @@ function ProfileStep({
 				Business
 			</h1>
 			<p
-				className={`text-sm sm:text-base text-center mb-6 md:mb-12 max-w-lg ${d ? 'text-gray-400' : 'text-gray-600'}`}
+				className={`text-sm sm:text-base text-center mb-4 md:mb-12 max-w-lg ${d ? 'text-gray-400' : 'text-gray-600'}`}
 			>
 				Help our intelligence systems categorize your operation for a
 				personalized assessment journey.
@@ -253,7 +253,10 @@ function ProfileStep({
 					</p>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
+				{/* Row 1 (Business Name + Industry). When Industry dropdown is
+				    open, lift this row's stacking context so the absolute panel
+				    isn't clipped by Email/Staff/Years rows below it. */}
+				<div className={`grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6 ${industryOpen ? 'relative z-40' : ''}`}>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -350,7 +353,10 @@ function ProfileStep({
 					</div>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
+				{/* Row 3 (Years + Country/State). When Country or State dropdown
+				    opens, lift this row above the action buttons below so the
+				    absolute panels aren't clipped on mobile. */}
+				<div className={`grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6 ${countryOpen || stateOpen ? 'relative z-40' : ''}`}>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
