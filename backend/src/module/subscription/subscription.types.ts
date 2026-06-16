@@ -77,6 +77,23 @@ export const subscribeSchema = z.object({
 
 export type SubscribeInput = z.infer<typeof subscribeSchema>;
 
+// Section R-2 — cheap read-only quota probe. FE calls this before initPayment
+// so it can short-circuit the checkout UI on a quota-covered action without
+// the side effect of creating a PENDING Payment row.
+export const quotaCheckQuerySchema = z.object({
+  kind: z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'CONSULTATION']),
+});
+
+export type QuotaCheckQuery = z.infer<typeof quotaCheckQuerySchema>;
+
+export type QuotaCheckResponse = {
+  message: string;
+  hasQuota: boolean;
+  // Echoed back so a slow-network caller can correlate the response with the
+  // request it issued. Cheap; the service already knows it.
+  kind: 'PHASE2A' | 'PHASE2B_PILLAR' | 'CONSULTATION';
+};
+
 // Shape mirrors InitPaymentResponse so the FE can reuse the same coupon UI
 // across pay-per-use and subscription checkout. `authorizationUrl`/`accessCode`
 // are null on free-coupon settlements; FE must branch on `free`.

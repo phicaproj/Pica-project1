@@ -629,7 +629,14 @@ model PlanPrice {
   plan     Plan
   // null for PHASE2A; the specific Pillar for PHASE2B_PILLAR (per-pillar pricing).
   pillarId String? @map("pillar_id")
-  price    Decimal @db.Decimal(12, 2) // in MAJOR units (NGN)
+  price    Decimal @db.Decimal(12, 2) // in MAJOR units (USD post-Slice 2)
+
+  // Feature bullets shown on the public pricing card. Stored as text[] so the
+  // admin can re-order them; mirrors SubscriptionPlan.features. Seeded by the
+  // 20260617000000_plan_price_features migration with the bullets the FE used
+  // to hardcode in admin/subscription/page.tsx, so no visible change on
+  // rollout.
+  features String[] @default([])
 
   pillar Pillar? @relation(fields: [pillarId], references: [id])
 

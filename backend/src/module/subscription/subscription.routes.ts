@@ -5,6 +5,7 @@ import {
   getMySubscription,
   subscribe,
   cancelSubscription,
+  checkQuota,
 } from './subscription.controller';
 
 // Public + auth-protected user routes. The plan catalogue is public so the
@@ -14,6 +15,9 @@ const subscriptionRouter = Router();
 subscriptionRouter.get('/plans', listPlans);
 
 subscriptionRouter.get('/me', authenticate, getMySubscription);
+// Cheap quota probe — FE calls this before initPayment so it can avoid creating
+// a PENDING Payment row for non-free outcomes. Read-only.
+subscriptionRouter.get('/quota-check', authenticate, checkQuota);
 subscriptionRouter.post('/subscribe', authenticate, subscribe);
 subscriptionRouter.post('/cancel', authenticate, cancelSubscription);
 

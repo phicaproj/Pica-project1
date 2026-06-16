@@ -24,6 +24,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
+import { ReportsListSkeleton } from "@/components/ui/skeleton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -208,11 +209,7 @@ export default function ReportsPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader className="w-6 h-6 animate-spin text-teal-400" />
-      </div>
-    );
+    return <ReportsListSkeleton />;
   }
 
   // ─── METRIC COMPUTATIONS ───────────────────────────────────────────────────

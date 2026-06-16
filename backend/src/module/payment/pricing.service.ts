@@ -18,6 +18,7 @@ const pricingSelect = {
   plan: true,
   pillarId: true,
   price: true,
+  features: true,
   createdAt: true,
   updatedAt: true,
   pillar: {
@@ -44,6 +45,7 @@ const toPricingRow = (row: RawPricingRow): PricingRow => ({
   pillarName: row.pillar?.name ?? null,
   price: row.price.toNumber(),
   currency: 'USD',
+  features: row.features,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
@@ -185,6 +187,7 @@ export async function createPricingService(
       plan: input.plan,
       pillarId,
       price: new Prisma.Decimal(input.price),
+      ...(input.features !== undefined ? { features: input.features } : {}),
     },
     select: pricingSelect,
   });
@@ -236,6 +239,7 @@ export async function updatePricingService(
       ...(existing.plan === Plan.PHASE2B_PILLAR && input.pillarId !== undefined
         ? { pillarId: nextPillarId }
         : {}),
+      ...(input.features !== undefined ? { features: input.features } : {}),
     },
     select: pricingSelect,
   });

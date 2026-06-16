@@ -755,6 +755,10 @@ async function handleSubscriptionChargeSuccess(
   const meta = verifyData.metadata as Record<string, unknown> | null;
   const userId = typeof meta?.userId === 'string' ? meta.userId : null;
   const planId = typeof meta?.planId === 'string' ? meta.planId : null;
+  // Section R-1 — couponCode flows through Paystack metadata when subscribeService
+  // applies a partial-discount coupon. The free-coupon short-circuit increments
+  // Discount.usedCount directly (no Paystack); the paid-coupon path lives here.
+  const couponCode = typeof meta?.couponCode === 'string' ? meta.couponCode : null;
   if (!userId || !planId) {
     throw new AppError('Subscription charge missing userId/planId metadata', BAD_REQUEST);
   }
@@ -832,6 +836,12 @@ async function handleSubscriptionChargeSuccess(
       paidAt: verifyData.paid_at ? new Date(verifyData.paid_at) : new Date(),
       customerEmail: user?.email ?? verifyData.customer?.email ?? 'unknown',
       customerBusinessName: user?.businessName ?? null,
+      // Section R-1 — stamp the redeemed coupon on the first-charge Payment row
+      // so the admin transactions view shows which subscription invoices used a
+      // coupon. Renewal charges will not carry couponCode in metadata, so the
+      // column stays null on renewals (correct: only the initial charge applied
+      // the discount).
+      appliedCouponCode: couponCode,
       verifyPayload: verifyData as unknown as Prisma.InputJsonValue,
     },
     update: {}, // duplicate delivery — leave row alone
@@ -842,6 +852,18 @@ async function handleSubscriptionChargeSuccess(
     // We've already accounted for this reference. Period-roll already
     // happened on the original delivery; don't double it.
     return;
+  }
+
+  // Section R-1 — bump the coupon's redemption counter. Gated on isFirstDelivery
+  // so Paystack retries (same reference, same coupon) don't inflate usedCount.
+  // We use updateMany to swallow the case where the coupon was deleted between
+  // the subscribe call and the webhook delivery — better to under-count by one
+  // than to crash the webhook on a missing FK.
+  if (couponCode) {
+    await prisma.discount.updateMany({
+      where: { code: couponCode },
+      data: { usedCount: { increment: 1 } },
+    });
   }
 
   await activateSubscriptionFromWebhook({

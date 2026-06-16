@@ -43,6 +43,7 @@ import {
   type ConsultationTierPublic,
   type MeUser,
 } from "@/lib/authClient";
+import { ConsultationSkeleton } from "@/components/ui/skeleton";
 import {
   convertFromUsd,
   formatMoney,
@@ -155,11 +156,7 @@ export default function ConsultationPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader className="h-8 w-8 animate-spin text-orange-500" />
-      </div>
-    );
+    return <ConsultationSkeleton />;
   }
 
   if (error || !me) {

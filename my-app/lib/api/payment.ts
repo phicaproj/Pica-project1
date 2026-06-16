@@ -80,6 +80,10 @@ export type PricingRow = {
 	pillarName: string | null
 	price: number
 	currency: 'USD'
+	// Feature bullets seeded by the 20260617000000_plan_price_features migration.
+	// Admin edits on /admin/subscription now persist to PlanPrice.features (was
+	// localStorage-only); the public pricing card reads from here.
+	features: string[]
 	createdAt: string
 	updatedAt: string
 }

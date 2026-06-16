@@ -2,7 +2,8 @@
 
 > Scope captured from the Friday client meeting + codebase audit on 2026-06-14.
 > Last updated 2026-06-16 — Sections A–F shipped, plus the post-Section-F
-> subscription flow refactor. Open items live in Section R at the bottom.
+> subscription flow refactor + the deferred-items close-out pass (I, P, Q,
+> R-1, R-2). Only the Section K mobile audit remains open in Section S.
 > Split into **Backend** and **Frontend** sections for the two developers.
 > Each item notes the files/areas it touches so work can start immediately.
 
@@ -264,12 +265,12 @@ User testing surfaced four flaws in how subscriptions actually behave end-to-end
 The big shippable items still open:
 
 - [x] **BE-0** — Paystack USD charging is live on the account (confirmed 2026-06-16). Currency split no longer blocked.
-- [ ] **Section I — Landing-page pricing rebuild.** Replace the Small/Medium toggle in `View/PricingView.tsx` with a Pay-Per-Use / Subscription Plan toggle that exposes the subscription tiers (rendered from the public API) alongside the existing pay-per-use cards.
-- [ ] **Landing-page country picker** (Section H follow-up). Anonymous visitors currently see USD; we need a Nigeria/Other picker so NG visitors can convert via the live `usdToNgn` rate.
-- [ ] **Section K mobile audit** — sweep dashboard pages for mobile spacing + tap-target sizing. Question-screen and auth-screen fixes already landed.
-- [ ] **Section P — Pay-per-use feature bullets in DB.** Currently localStorage; needs a real table so admin sessions share state.
-- [ ] **Section Q — Loading skeletons.** Replace the centered-spinner pattern with proper skeleton states on the dashboard list pages so the Render free-tier cold-start feels smoother.
-- [ ] **Section R follow-ups** (above): webhook coupon-redemption tracking + cheap quota-check endpoint.
+- [x] **Section I — Landing-page pricing rebuild.** `View/PricingView.tsx` now has a Pay Per Use / Subscription Plan toggle. PPU side keeps the existing Free Scan / Plan 2A / Plan 2B cards (now reading `features` from the DB); Subscription side fetches the public subscription tiers and renders 3 cards mirroring the dashboard's SubscriptionCard layout. Anonymous CTAs go to `/Auth/signup`.
+- [x] ~~**Landing-page country picker**~~ — **Cancelled by client decision (2026-06-16).** Anonymous visitors stay on USD by design; the helper functions for NGN conversion already exist for logged-in users via `me.country`.
+- [ ] **Section K mobile audit** — sweep dashboard pages for mobile spacing + tap-target sizing. Question-screen and auth-screen fixes already landed; the 2026-06-16 spacing pass covered hero + form responsiveness. **Remaining**: a full sweep of every dashboard list page for tap-target sizing on small phones.
+- [x] **Section P — Pay-per-use feature bullets in DB.** Added `PlanPrice.features String[]` column (migration `20260617000000_plan_price_features`) seeded with the prior FE defaults. Pricing service + admin CRUD wired to forward features. Admin UI (`/admin/subscription` Pay-Per-Use tab) writes the column on save; localStorage path removed. Public `PricingView` + `dashboard/subscription` read from the new column with a defensive fallback list.
+- [x] **Section Q — Loading skeletons.** Built `components/ui/skeleton.tsx` with a `Skeleton` primitive and four per-page compositions (`ReportsListSkeleton`, `ConsultationSkeleton`, `PlansSkeleton`, `SubscriptionPickerSkeleton`). Replaced the centered-spinner full-page loaders on `dashboard/reports`, `dashboard/consultation`, `dashboard/plans`, and the cold-start branch of `dashboard/subscription`. Transient busy states (verify, quota probe) keep the spinner since they need progress narration.
+- [x] **Section R follow-ups** — Webhook coupon-redemption tracking landed (`handleSubscriptionChargeSuccess` now reads `couponCode` from Paystack metadata, stamps `Payment.appliedCouponCode`, and increments `Discount.usedCount` gated on `isFirstDelivery`). Cheap quota-check endpoint live at `GET /api/subscription/quota-check?kind=…`; FE `tryFreeShortCircuit` now probes that first and only calls `initPayment` when quota is confirmed, eliminating wasted PENDING Payment rows.
 
 # Open items to confirm with client / between devs
 - [x] Exact subscription tier quotas & prices — seeded as Starter (2/2/1 @ $40) / Growth (4/4/2 @ $80) / Scale (6/6/3 @ $120).

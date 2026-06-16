@@ -45,6 +45,7 @@ import {
   resolveDisplayCurrency,
   type Currency,
 } from "@/lib/utils";
+import { PlansSkeleton } from "@/components/ui/skeleton";
 
 // Paystack inline-widget shape — kept in this file so plans/page is
 // self-contained (the pay-per-use checkout has its own copy).
@@ -131,11 +132,7 @@ export default function PlansPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
-        <Loader className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
+    return <PlansSkeleton />;
   }
 
   if (meError || !me) {

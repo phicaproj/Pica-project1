@@ -21,6 +21,10 @@ export const createPricingSchema = z
     plan: planSchema,
     pillarId: z.string().uuid().optional().nullable(),
     price: z.coerce.number().positive('price must be greater than 0').max(10_000_000),
+    // Feature bullets shown on the public pricing card. Optional on create so
+    // existing admin UIs that don't yet send the field keep working; defaults
+    // to the column-level [] when omitted.
+    features: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.plan === 'PHASE2A' && data.pillarId) {
@@ -43,6 +47,9 @@ export const updatePricingSchema = z
   .object({
     price: z.coerce.number().positive('price must be greater than 0').max(10_000_000).optional(),
     pillarId: z.string().uuid().nullable().optional(),
+    // Whole-array replacement, not a partial merge — the admin form sends the
+    // textarea contents as a fresh array on every save.
+    features: z.array(z.string().trim().min(1).max(200)).max(20).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -64,6 +71,7 @@ export type PricingRow = {
   pillarName: string | null;
   price: number;
   currency: 'USD';
+  features: string[];
   createdAt: Date;
   updatedAt: Date;
 };

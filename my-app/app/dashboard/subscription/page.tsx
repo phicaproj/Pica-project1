@@ -33,6 +33,7 @@ import {
   getMySubscription,
   getPublicPricing,
   initPayment,
+  quotaCheck,
   validateCoupon,
   verifyPayment,
   getAllPillars,
@@ -46,6 +47,7 @@ import {
   type VerifyPaymentResponse,
 } from "@/lib/authClient";
 import { convertFromUsd, formatMoney, resolveDisplayCurrency, type Currency } from "@/lib/utils";
+import { SubscriptionPickerSkeleton } from "@/components/ui/skeleton";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -153,11 +155,19 @@ function buildPlans(
       price: formatMoney(phase2APriceDisplay, display),
       amount: phase2APriceDisplay,
       currency: display,
-      features: [
-        "Full Phase 2A diagnostic",
-        businessSize === "MEDIUM" ? "Medium-business question set" : "Pillar-by-pillar findings",
-        "Downloadable PDF report",
-      ],
+      // Section P — bullets come from PlanPrice.features (admin-edited);
+      // fall back to a sensible default + the size-specific quip if the row
+      // somehow has no features.
+      features:
+        pricing?.phase2A?.features?.length
+          ? pricing.phase2A.features
+          : [
+              "Full Phase 2A diagnostic",
+              businessSize === "MEDIUM"
+                ? "Medium-business question set"
+                : "Pillar-by-pillar findings",
+              "Downloadable PDF report",
+            ],
       buttonLabel: "Unlock Plan 2A",
       buttonVariant: "filled",
       recommended: true,
@@ -170,11 +180,14 @@ function buildPlans(
       price: phase2BLabel,
       amount: phase2BStartPriceDisplay,
       currency: display,
-      features: [
-        "Targeted Pillar Analysis",
-        "Granular scoring",
-        "Actionable insights per pillar",
-      ],
+      features:
+        phase2BPrices[0]?.features?.length
+          ? phase2BPrices[0].features
+          : [
+              "Targeted Pillar Analysis",
+              "Granular scoring",
+              "Actionable insights per pillar",
+            ],
       buttonLabel: "Buy a Module",
       buttonVariant: "filled",
       backendPlan: "PHASE2B_PILLAR",
@@ -575,6 +588,16 @@ function SubscriptionPageInner() {
     }
     setQuotaInFlight(true);
     try {
+      // Section R-2 — cheap read-only probe first. If the user has no
+      // quota for this kind we skip initPayment entirely, which means no
+      // PENDING Payment row is written for paid outcomes. The probe
+      // failing (network blip, etc.) falls through to the original
+      // initPayment path so the user can still complete the purchase.
+      const probe = await quotaCheck(plan.backendPlan);
+      if (probe.error || !probe.data?.hasQuota) {
+        return false;
+      }
+
       const res = await initPayment({
         plan: plan.backendPlan,
         sessionId: args.sessionId,
@@ -586,12 +609,9 @@ function SubscriptionPageInner() {
         return false;
       }
       if (!res.data.free) {
-        // No quota — user must pay. Don't open the modal here; the
-        // checkout screen will issue its own initPayment (which may pick
-        // up a coupon the user enters). Two init calls is fine because
-        // each reference is single-use and the second call gets a fresh
-        // reference; we just discard the pending PENDING row from the
-        // first call.
+        // Defence in depth — the probe said hasQuota=true but the BE
+        // disagreed at consume time (race between probe and init, or a
+        // mis-mapped kind). Treat as "user must pay" and fall through.
         return false;
       }
       // Quota covered it. Verify (BE returns "already settled") and jump
@@ -683,7 +703,16 @@ function SubscriptionPageInner() {
     setView("success");
   };
 
-  if (meLoading || pricingLoading || verifyingReturn || quotaInFlight) {
+  // The cold-start (meLoading + pricingLoading) gets the picker-shaped
+  // skeleton so the page doesn't flash blank. The transient busy states
+  // (verifyingReturn, quotaInFlight) keep the spinner + status copy
+  // because they're explicit user-initiated actions where progress
+  // narration matters more than layout continuity.
+  if (meLoading || pricingLoading) {
+    return <SubscriptionPickerSkeleton />;
+  }
+
+  if (verifyingReturn || quotaInFlight) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
         <div className="flex flex-col items-center gap-3 text-center px-6">

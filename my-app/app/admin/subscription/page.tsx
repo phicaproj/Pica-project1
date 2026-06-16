@@ -28,9 +28,12 @@ import {
 import { formatMoney } from "@/lib/utils";
 import { ConsultationTiersTab, SubscriptionTiersTab } from "./_tabs";
 
-const FEATURE_STORAGE_KEY = "pica.admin.subscriptionFeatures";
-
-const DEFAULT_FEATURES: Record<PricingPlan, string[]> = {
+// Section P — feature bullets now live on PlanPrice.features (DB-backed).
+// The fallback list below renders only when a row has an empty features array
+// (e.g. a freshly seeded PHASE2B_PILLAR row before any admin touch). Seeded
+// rows from the 20260617000000_plan_price_features migration already carry
+// the same defaults, so this is a defensive UX fallback, not a source of truth.
+const FALLBACK_FEATURES: Record<PricingPlan, string[]> = {
   PHASE2A: [
     "Full Phase 2A strategic diagnostic",
     "Scored report and recommendations",
@@ -75,27 +78,20 @@ function sortPrices(rows: PricingRow[]) {
   });
 }
 
-function readStoredFeatures(): Record<PricingPlan, string[]> {
-  if (typeof window === "undefined") return DEFAULT_FEATURES;
-
-  try {
-    const raw = window.localStorage.getItem(FEATURE_STORAGE_KEY);
-    if (!raw) return DEFAULT_FEATURES;
-    const parsed = JSON.parse(raw) as Partial<Record<PricingPlan, string[]>>;
-
-    return {
-      PHASE2A:
-        Array.isArray(parsed.PHASE2A) && parsed.PHASE2A.length > 0
-          ? parsed.PHASE2A
-          : DEFAULT_FEATURES.PHASE2A,
-      PHASE2B_PILLAR:
-        Array.isArray(parsed.PHASE2B_PILLAR) && parsed.PHASE2B_PILLAR.length > 0
-          ? parsed.PHASE2B_PILLAR
-          : DEFAULT_FEATURES.PHASE2B_PILLAR,
-    };
-  } catch {
-    return DEFAULT_FEATURES;
-  }
+// Pull the features list off the row's own column with a graceful fallback.
+// For PHASE2B_PILLAR we display the *first* row's features in the summary
+// cards — every PHASE2B row should carry the same bullet list, edited
+// together by the admin form.
+function featuresForPlan(
+  plan: PricingPlan,
+  rows: PricingRow[],
+): string[] {
+  const row =
+    plan === "PHASE2A"
+      ? rows.find((r) => r.plan === "PHASE2A")
+      : rows.find((r) => r.plan === "PHASE2B_PILLAR");
+  const live = row?.features ?? [];
+  return live.length > 0 ? live : FALLBACK_FEATURES[plan];
 }
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -107,8 +103,14 @@ function readStoredFeatures(): Record<PricingPlan, string[]> {
 function PayPerUseTab() {
   const [prices, setPrices] = useState<PricingRow[]>([]);
   const [pillars, setPillars] = useState<PillarMeta[]>([]);
-  const [features, setFeatures] = useState<Record<PricingPlan, string[]>>(
-    DEFAULT_FEATURES,
+  // Derived per-plan features map for rendering the summary cards. The actual
+  // edit state lives in `featureDraft` and is sent on every save.
+  const features = useMemo<Record<PricingPlan, string[]>>(
+    () => ({
+      PHASE2A: featuresForPlan("PHASE2A", prices),
+      PHASE2B_PILLAR: featuresForPlan("PHASE2B_PILLAR", prices),
+    }),
+    [prices],
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -171,7 +173,6 @@ function PayPerUseTab() {
   }, []);
 
   useEffect(() => {
-    setFeatures(readStoredFeatures());
     void loadData();
   }, [loadData]);
 
@@ -229,10 +230,7 @@ function PayPerUseTab() {
     setSaving(true);
     setError(null);
 
-    const nextFeatures = {
-      ...features,
-      [activePlan]: parseFeatureDraft(featureDraft),
-    };
+    const nextFeatures = parseFeatureDraft(featureDraft);
 
     const existing =
       activePlan === "PHASE2A" ? phase2APrice : selectedPillarPrice;
@@ -240,6 +238,7 @@ function PayPerUseTab() {
     const response = existing
       ? await updateAdminPricing(existing.id, {
           price: amount,
+          features: nextFeatures,
           ...(activePlan === "PHASE2B_PILLAR"
             ? { pillarId: selectedPillarId }
             : {}),
@@ -247,6 +246,7 @@ function PayPerUseTab() {
       : await createAdminPricing({
           plan: activePlan,
           price: amount,
+          features: nextFeatures,
           ...(activePlan === "PHASE2B_PILLAR"
             ? { pillarId: selectedPillarId }
             : { pillarId: null }),
@@ -260,11 +260,24 @@ function PayPerUseTab() {
 
     if (response.data) {
       upsertPrice(response.data.price);
-      setFeatures(nextFeatures);
-      window.localStorage.setItem(
-        FEATURE_STORAGE_KEY,
-        JSON.stringify(nextFeatures),
-      );
+      // For PHASE2B_PILLAR, the admin form edits one pillar at a time but the
+      // bullets are conceptually shared across all 2B rows (same product card
+      // on the storefront). Mirror the new feature list onto the other 2B
+      // rows in local state so the next openEditor() seeds the textarea
+      // consistently. A future cleanup could replace this with a dedicated
+      // BE endpoint that updates all 2B rows in one call.
+      if (activePlan === "PHASE2B_PILLAR" && response.data.price) {
+        const savedId = response.data.price.id;
+        setPrices((current) =>
+          sortPrices(
+            current.map((p) =>
+              p.plan === "PHASE2B_PILLAR" && p.id !== savedId
+                ? { ...p, features: nextFeatures }
+                : p,
+            ),
+          ),
+        );
+      }
     }
 
     setSaving(false);

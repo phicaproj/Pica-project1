@@ -22,11 +22,15 @@ export type AdminPricingPayload = {
 	plan: PricingPlan
 	price: number
 	pillarId?: string | null
+	features?: string[]
 }
 
 export type AdminPricingUpdatePayload = {
 	price?: number
 	pillarId?: string | null
+	// Feature bullets — whole-array replacement, not a partial merge. Send
+	// `[]` to clear all bullets.
+	features?: string[]
 }
 
 export type PillarMeta = {

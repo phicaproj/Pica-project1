@@ -150,6 +150,26 @@ export const cancelMySubscription = async () => {
 	})
 }
 
+// Section R-2 — cheap, read-only quota probe used by the dashboard checkout
+// flow. The old path called initPayment just to learn whether the user's
+// subscription covered the action; that created PENDING Payment rows for
+// every paid outcome. This endpoint writes nothing and returns the same
+// hasQuota verdict the assertSubscriptionQuota service already computes.
+export type QuotaCheckKind = 'PHASE2A' | 'PHASE2B_PILLAR' | 'CONSULTATION'
+
+export type QuotaCheckResponse = {
+	message: string
+	hasQuota: boolean
+	kind: QuotaCheckKind
+}
+
+export const quotaCheck = async (kind: QuotaCheckKind) => {
+	return authedFetch<QuotaCheckResponse>(
+		`/subscription/quota-check?kind=${encodeURIComponent(kind)}`,
+		{ method: 'GET' },
+	)
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Admin — tier CRUD (gated by hasPermission('ledger:*') on the server)
 // ──────────────────────────────────────────────────────────────────────────
