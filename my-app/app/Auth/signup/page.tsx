@@ -56,19 +56,16 @@ export default function SignUpPage() {
 
   const router = useRouter();
 
+  // Signup captures only what's needed to create the account: business name,
+  // email, phone, password. The full business profile (staff size, industry,
+  // country, state, years) is filled in from the dashboard's profile/settings
+  // page after signup. Staff size is still required before paid tests run but
+  // the user gets that gate from the dashboard, not from this form.
   const [form, setForm] = useState({
     businessName: "",
     email: "",
     phone: "",
     password: "",
-    // Optional profile fields — if the user fills them at signup the
-    // dashboard's "Complete your profile" banner stays hidden. Staff size
-    // is the only one that actually unlocks Phase 2A/2B; the rest are
-    // captured here for convenience.
-    staffSize: "",
-    industry: "",
-    country: "",
-    operatingYears: "",
   });
   const [submitError, setSubmitError] = useState("");
 
@@ -212,50 +209,10 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              {/* Optional profile fields — fill now or later from the
-                  dashboard. Staff size is the only one that unlocks paid
-                  tests; the others just round out the profile. */}
-              <div className="rounded-xl border border-white/10 bg-[#0d1117]/60 p-4 space-y-3">
-                <p className="text-xs uppercase tracking-widest text-gray-500">
-                  Business profile (optional)
-                </p>
-                <input
-                  type="text"
-                  placeholder="Staff size (e.g. 25)"
-                  value={form.staffSize}
-                  onChange={(e) => handleChange("staffSize", e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
-                />
-                <p className="text-[11px] text-gray-500 -mt-1">
-                  50 or fewer = Small · more than 50 = Medium. Required before
-                  taking paid tests.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Industry"
-                    value={form.industry}
-                    onChange={(e) => handleChange("industry", e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Country"
-                    value={form.country}
-                    onChange={(e) => handleChange("country", e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Years in operation (e.g. 3-10)"
-                  value={form.operatingYears}
-                  onChange={(e) =>
-                    handleChange("operatingYears", e.target.value)
-                  }
-                  className="w-full px-4 py-3 rounded-lg border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition"
-                />
-              </div>
+              {/* Business profile fields (staff size, industry, country,
+                  years) live in the dashboard profile page now — users finish
+                  signup with just the essentials and complete their profile
+                  before they take paid tests. */}
 
               {/* Password with tooltip */}
               <div className="relative">
@@ -370,13 +327,21 @@ export default function SignUpPage() {
             </p>
           </div>
 
-          {/* Right — Image */}
-          <div className="hidden md:block relative rounded-r-2xl overflow-hidden">
+          {/* Right — Image. Uses object-contain (not cover) so the source
+              image is shown at its native aspect ratio without crop + zoom.
+              The previous fill+cover combo stretched the image when the
+              panel was wider than the source's aspect, which softened the
+              rendered pixels. sizes hints Next.js to serve a width-appropriate
+              variant; quality:90 keeps detail at the auth-page size. */}
+          <div className="hidden md:flex relative rounded-r-2xl overflow-hidden bg-[#0d1117] items-center justify-center p-6">
             <Image
               src="/images/assessques.png"
               alt="Create Account"
               fill
-              className="object-cover"
+              sizes="(min-width: 768px) 50vw, 0px"
+              quality={90}
+              className="object-contain"
+              priority
             />
           </div>
         </div>
