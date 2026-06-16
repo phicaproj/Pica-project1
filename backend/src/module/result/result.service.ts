@@ -1,4 +1,11 @@
-import { Phase, SessionStatus } from '@prisma/client';
+import {
+  PaymentProvider,
+  PaymentStatus,
+  Phase,
+  Plan,
+  Prisma,
+  SessionStatus,
+} from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
@@ -6,6 +13,10 @@ import { generateReportPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
 import { APP_URL } from '../../Config/env';
+import {
+  assertSubscriptionQuota,
+  consumeSubscriptionQuota,
+} from '../subscription/subscription.service';
 import type { ScoringResultPayload } from '../scoring/scoring.types';
 import type { GetResultResponse, ResultPillarScoreResponse, ResultResponse } from './result.types';
 
@@ -192,7 +203,7 @@ export async function downloadResultPdfService(
     );
   }
 
-  const result = await prisma.sessionResult.findUnique({
+  let result = await prisma.sessionResult.findUnique({
     where: { sessionId },
     select: { insightPayload: true, isPaid: true, reportPdfUrl: true },
   });
@@ -206,6 +217,84 @@ export async function downloadResultPdfService(
     if (!authenticatedUserId || session.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to download this report', FORBIDDEN);
     }
+
+    // Subscription-quota short-circuit (Phase 2A only). Phase 2B is gated on
+    // Phase2BPillarUnlock.isPaid which is set at unlock-create time, so the
+    // SessionResult.isPaid flip already happened during the Phase 2B submit
+    // (when the unlock was consumed). Here we cover the Phase 2A case: the
+    // user took the assessment freely, and at download time we now check
+    // whether their subscription covers the unlock — if yes, consume one
+    // slot, mark the result paid, and write the same $0 audit Payment row
+    // the initPayment path creates. Behaviour matches paid Phase 2A: a
+    // single SUCCESS Payment row + isPaid=true on the result.
+    //
+    // session.userId is the auth gate we already passed above, so it's
+    // guaranteed non-null here — narrow into a const so the Payment.create
+    // call below typechecks without an `!`.
+    const ownerUserId = session.userId;
+    if (session.phase === Phase.PHASE2A && !result.isPaid && ownerUserId) {
+      const verdict = await assertSubscriptionQuota(ownerUserId, 'phase2a');
+      if (verdict.hasQuota) {
+        const paidAt = new Date();
+        await prisma.$transaction(async (tx) => {
+          // Re-read period end inside the tx so we never race a renewal
+          // landing between the quota check and the consume.
+          const sub = await tx.userSubscription.findUnique({
+            where: { id: verdict.subscriptionId },
+            select: { currentPeriodEnd: true, user: { select: { email: true, businessName: true } } },
+          });
+
+          const created = await tx.payment.create({
+            data: {
+              userId: ownerUserId,
+              sessionId,
+              userSubscriptionId: verdict.subscriptionId,
+              plan: Plan.PHASE2A,
+              provider: PaymentProvider.PAYSTACK,
+              // Reference must be unique; mirror the format initPaymentService
+              // uses for quota grants so admin tooling can identify them.
+              providerReference: `sub-quota-${session.id}-${Date.now()}`,
+              amount: new Prisma.Decimal(0),
+              amountUsd: new Prisma.Decimal(0),
+              currency: 'USD',
+              status: PaymentStatus.SUCCESS,
+              paymentMethod: 'subscription',
+              paidAt,
+              customerEmail: sub?.user?.email ?? 'unknown',
+              customerBusinessName: sub?.user?.businessName ?? null,
+            },
+            select: { id: true },
+          });
+
+          await consumeSubscriptionQuota(tx, {
+            subscriptionId: verdict.subscriptionId,
+            periodStart: verdict.periodStart,
+            periodEnd: sub?.currentPeriodEnd ?? new Date(),
+            kind: 'phase2a',
+          });
+
+          await tx.sessionResult.update({
+            where: { sessionId },
+            data: {
+              isPaid: true,
+              paidAt,
+              paidByPaymentId: created.id,
+            },
+          });
+        });
+
+        // Re-read so downstream code (PDF generation, R2 upload) sees the
+        // freshly-paid state.
+        result = await prisma.sessionResult.findUnique({
+          where: { sessionId },
+          select: { insightPayload: true, isPaid: true, reportPdfUrl: true },
+        });
+        if (!result?.insightPayload) {
+          throw new AppError('Report data not found for this session', NOT_FOUND);
+        }
+      }
+    }
+
     if (!result.isPaid) {
       throw new AppError(`Payment is required to download the ${session.phase} report`, FORBIDDEN);
     }

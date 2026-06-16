@@ -194,11 +194,10 @@ export default function ReportDetailPage() {
 
   const handleDownloadPdf = useCallback(async () => {
     if (!resultData) return;
-    if (resultData.paywalled) {
-      const sid = resultData.result.sessionId || id;
-      router.push(`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`);
-      return;
-    }
+    // Always attempt the download — the BE now consumes a subscription
+    // Phase 2A slot at download time when one is available. We only fall
+    // back to the paid checkout if the BE returns 402/403, which means
+    // the user has no subscription quota AND no prior paid Payment row.
     try {
       const token = getAccessToken();
       const headers: Record<string, string> = {};

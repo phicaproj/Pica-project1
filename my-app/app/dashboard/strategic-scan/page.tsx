@@ -882,12 +882,11 @@ export default function StrategicScanPage() {
 	const handleDownloadPdf = useCallback(async () => {
 		if (!resultData) return
 		const sid = resultData.result.sessionId
-		if (resultData.paywalled) {
-			router.push(
-				`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`,
-			)
-			return
-		}
+		// Always attempt the download — the BE now consumes a subscription
+		// Phase 2A slot at download time when one is available, so a result
+		// that's flagged paywalled by /result GET can still settle for free
+		// on /result/:id/pdf if the user is a subscriber with open quota.
+		// Only fall back to the paid checkout if the BE returns 402/403.
 		try {
 			const token = getAccessToken()
 			const headers: Record<string, string> = {}

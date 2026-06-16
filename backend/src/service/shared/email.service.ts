@@ -378,6 +378,141 @@ export async function sendCouponEmail({
   });
 }
 
+// ── Subscription lifecycle emails ───────────────────────────────────────────
+// Three transactional emails that mirror the Paystack subscription lifecycle:
+//   • renewal failed (charge.failed webhook → PAST_DUE) — "update your card"
+//   • cancelled (user clicked Cancel) — "you're cancelled, here's how to come back"
+//   • auto-renewed (renewal charge.success after the first delivery) — receipt
+//
+// All three are fired best-effort (caller uses `void X(...).catch(...)`).
+// Subjects/copy intentionally stay short and action-oriented; subscriptions
+// generate enough email noise already.
+
+export async function sendSubscriptionRenewalFailedEmail({
+  toEmail,
+  businessName,
+  planName,
+  currency,
+  amount,
+  manageUrl,
+  failureReason,
+}: {
+  toEmail: string;
+  businessName: string | null;
+  planName: string;
+  currency: string;
+  amount: number;
+  manageUrl: string;
+  failureReason: string | null;
+}): Promise<SendEmailResponse> {
+  const greetingName = businessName ?? 'there';
+  const reasonLine = failureReason
+    ? `<p style="margin:0 0 16px 0; color:${MUTED_COLOR}; font-size:13px;">Reason from your bank: <em>${failureReason}</em></p>`
+    : '';
+
+  const html = renderEmail({
+    heading: `We couldn't renew your ${planName}`,
+    preheader: `Update your card to keep your ${BRAND} subscription active.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">We tried to renew your <strong>${planName}</strong> subscription for <strong>${currency} ${amount.toLocaleString()}</strong>, but the charge didn't go through.</p>
+      <p style="margin:0 0 16px 0;">Your subscription is now <strong>past due</strong>. You'll keep your current quota until the end of this billing period — but to avoid losing access, please update your card and retry the charge.</p>
+      ${reasonLine}
+      ${ctaButton(manageUrl, 'Update payment method')}
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">If you've already fixed this, you can safely ignore this email — the next renewal attempt will reconcile automatically.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Action needed: your ${BRAND} ${planName} renewal failed`,
+    htmlContent: html,
+  });
+}
+
+export async function sendSubscriptionCancelledEmail({
+  toEmail,
+  businessName,
+  planName,
+  currentPeriodEnd,
+  resubscribeUrl,
+}: {
+  toEmail: string;
+  businessName: string | null;
+  planName: string;
+  currentPeriodEnd: Date;
+  resubscribeUrl: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = businessName ?? 'there';
+  const endsOn = currentPeriodEnd.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const html = renderEmail({
+    heading: `Your ${planName} is cancelled`,
+    preheader: `You'll keep access until ${endsOn}.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">We've cancelled your <strong>${planName}</strong> subscription. You won't be billed again.</p>
+      <p style="margin:0 0 16px 0;">You'll keep full access to your current quota until <strong>${endsOn}</strong>. After that, your account stays — only the subscription benefits go away.</p>
+      <p style="margin:0 0 16px 0;">We'd love to have you back. If anything wasn't working for you, just reply to this email — we read every reply. And if you change your mind, you can resubscribe in one click:</p>
+      ${ctaButton(resubscribeUrl, 'Resubscribe to ' + BRAND)}
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">Thanks for trying ${BRAND}. We appreciate it.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your ${BRAND} ${planName} subscription is cancelled`,
+    htmlContent: html,
+  });
+}
+
+export async function sendSubscriptionRenewedEmail({
+  toEmail,
+  businessName,
+  planName,
+  currency,
+  amount,
+  reference,
+  nextBillingDate,
+  manageUrl,
+}: {
+  toEmail: string;
+  businessName: string | null;
+  planName: string;
+  currency: string;
+  amount: number;
+  reference: string;
+  nextBillingDate: Date | null;
+  manageUrl: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = businessName ?? 'there';
+  const nextLine = nextBillingDate
+    ? `<p style="margin:0 0 16px 0;">Your next renewal is scheduled for <strong>${nextBillingDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>`
+    : '';
+
+  const html = renderEmail({
+    heading: `Your ${planName} renewed`,
+    preheader: `Receipt for your ${BRAND} subscription renewal.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">We've successfully charged <strong>${currency} ${amount.toLocaleString()}</strong> for your <strong>${planName}</strong> subscription. Your quota for this period has been refreshed.</p>
+      ${nextLine}
+      ${ctaButton(manageUrl, 'View your subscription')}
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">Reference: <code style="background-color:${BG_COLOR}; padding:2px 6px; border-radius:4px;">${reference}</code></p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Receipt: your ${BRAND} ${planName} renewed`,
+    htmlContent: html,
+  });
+}
+
 // Booking-confirmation email — fired by the admin confirm flow. Carries the
 // scheduled time + the meeting link. Kept simple: a heading, the details, and
 // a CTA. Errors are swallowed by the caller (sendConsultationConfirmedEmailBestEffort).

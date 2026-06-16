@@ -24,9 +24,11 @@ import {
   getMyCompletedResults,
   getAllPillars,
   getPublicPricing,
+  initPayment,
   Phase2BPillarSession,
   PricingRow,
   getSessionResponses,
+  quotaCheck,
   startPhase2B,
   type MeUser,
 } from "@/lib/authClient";
@@ -160,8 +162,45 @@ export default function DeepDivePage() {
 
   const topFindings = allFindings.slice(0, 3);
 
-  const handlePillarSelect = (pillarId: string) => {
-    router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
+  // When the user picks a pillar from the modal: try the subscription-quota
+  // path inline first. If they have an open Phase 2B slot the BE grants the
+  // unlock + creates the session under the covers and we skip the checkout
+  // page entirely — straight into answering. Only when there's no quota
+  // (no sub, or this period's quota is spent) do we redirect to the paid
+  // checkout. Matches the dashboard/subscription tryFreeShortCircuit pattern.
+  const handlePillarSelect = async (pillarId: string) => {
+    setStartingPillarId(pillarId);
+    try {
+      // Cheap read-only probe. Cuts off the wasteful PENDING-row creation
+      // for non-subscribers — initPayment is only called when we have
+      // reason to believe it'll come back free:true.
+      const probe = await quotaCheck("PHASE2B_PILLAR");
+      if (!probe.error && probe.data?.hasQuota) {
+        const init = await initPayment({
+          plan: "PHASE2B_PILLAR",
+          pillarId,
+        });
+        if (!init.error && init.data?.free) {
+          // Subscription quota covered the unlock. Open the assessment
+          // session and navigate — the BE already created the
+          // Phase2BPillarUnlock row inside initPaymentService.
+          const start = await startPhase2B({ pillarId });
+          if (!start.error && start.data) {
+            router.push(`/dashboard/deep-dive/${start.data.sessionId}`);
+            return;
+          }
+        }
+      }
+      // Fall through to the legacy paid checkout — same destination as before.
+      router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
+    } catch (err) {
+      // Probe / start crashed — let the user complete the purchase manually
+      // via the checkout page, where the same logic runs with full UI.
+      console.error("Phase 2B quota short-circuit failed", err);
+      router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
+    } finally {
+      setStartingPillarId(null);
+    }
   };
 
   const handlePillarAction = async (session: Phase2BPillarSession) => {

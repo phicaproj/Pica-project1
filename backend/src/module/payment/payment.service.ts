@@ -5,6 +5,7 @@ import {
   PaymentProvider,
   PaymentStatus,
   SessionStatus,
+  SubscriptionStatus,
   WebhookProcessingStatus,
 } from '@prisma/client';
 import prisma from '../../Config/db';
@@ -22,7 +23,11 @@ import {
   verifyTransaction,
   type PaystackVerifyData,
 } from '../../service/shared/paystack.service';
-import { sendPaymentSuccessEmail } from '../../service/shared/email.service';
+import {
+  sendPaymentSuccessEmail,
+  sendSubscriptionRenewalFailedEmail,
+  sendSubscriptionRenewedEmail,
+} from '../../service/shared/email.service';
 import { APP_URL } from '../../Config/env';
 import type {
   AdminPaymentRow,
@@ -594,6 +599,48 @@ export async function handleWebhookService(params: {
     }
   }
 
+  // charge.failed / invoice.payment_failed — Paystack fires this on every
+  // failed renewal attempt (and on failed one-off charges, but those are
+  // handled by the verify endpoint). For subscription-flavoured failures we
+  // flip UserSubscription to PAST_DUE and email the user so they can update
+  // their card before subscription.disable lands (which Paystack only sends
+  // after retries are exhausted). One-off failures fall through to IGNORED
+  // because the verify path already wrote PaymentStatus.FAILED for them.
+  if (
+    parsedBody.event === 'charge.failed' ||
+    parsedBody.event === 'invoice.payment_failed'
+  ) {
+    try {
+      const handled = await handleSubscriptionChargeFailed(parsedBody);
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: handled
+            ? WebhookProcessingStatus.PROCESSED
+            : WebhookProcessingStatus.IGNORED,
+          processedAt: new Date(),
+        },
+      });
+      return {
+        message: handled ? 'Subscription failure processed' : 'Non-subscription failure ignored',
+        processingStatus: handled
+          ? WebhookProcessingStatus.PROCESSED
+          : WebhookProcessingStatus.IGNORED,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.FAILED,
+          processingError: message,
+          processedAt: new Date(),
+        },
+      });
+      throw error;
+    }
+  }
+
   // Only charge.success carries actionable state for us. Everything else is logged
   // and ignored — Paystack retries 'transfer.*' events too which we don't use.
   if (parsedBody.event !== 'charge.success') {
@@ -892,6 +939,128 @@ async function handleSubscriptionChargeSuccess(
       });
     }
   }
+
+  // Renewal-success email. existingSub is non-null iff subscription.create
+  // already landed before this charge — that's exactly the renewal case. The
+  // first-charge case has existingSub=null (subscription.create fires alongside
+  // the first charge.success and may even arrive after), so we skip the email
+  // there and let the dashboard "your subscription is active" UX cover it.
+  // Best-effort: failures don't block webhook ack.
+  if (existingSub && user?.email) {
+    void sendSubscriptionRenewedEmail({
+      toEmail: user.email,
+      businessName: user.businessName,
+      planName: (
+        await prisma.subscriptionPlan.findUnique({
+          where: { id: planId },
+          select: { name: true },
+        })
+      )?.name ?? 'PICA Subscription',
+      currency,
+      amount: round2(chargedMajor),
+      reference: verifyData.reference,
+      nextBillingDate: periodEnd ?? null,
+      manageUrl: `${APP_URL}/dashboard/settings?tab=Billing&billingTab=Subscription`,
+    }).catch((error) => {
+      console.error('[webhook:subscription.renewal] email failed:', error);
+    });
+  }
+}
+
+// Renewal failure dispatch. Paystack fires charge.failed on every failed
+// renewal attempt. We only care about subscription-flavoured failures here:
+//   1. Flip the UserSubscription to PAST_DUE so the dashboard reflects it.
+//      The user keeps quota until period end; if Paystack ultimately gives
+//      up, subscription.disable lands and markSubscriptionCancelled() runs.
+//   2. Email the user with "update your card" CTA so they can self-recover
+//      before Paystack stops retrying.
+// Returns true if the failure was a subscription charge we handled, false if
+// it was a one-off (the caller logs IGNORED in that case).
+async function handleSubscriptionChargeFailed(
+  parsedBody: WebhookEnvelope
+): Promise<boolean> {
+  // For failed charges Paystack DOESN'T let us re-verify by reference (verify
+  // only returns success/abandoned/failed for completed flows; this charge
+  // never produced a transaction we can fetch). We read straight off the
+  // webhook envelope. Metadata.kind is set by us at subscribe init time so
+  // we trust it to discriminate.
+  const data = parsedBody.data as unknown as PaystackVerifyData & {
+    subscription?: { subscription_code?: string } | string;
+  };
+  const meta = data.metadata as Record<string, unknown> | null;
+  if (meta?.kind !== 'subscription') {
+    return false;
+  }
+
+  const userId = typeof meta?.userId === 'string' ? meta.userId : null;
+  const planId = typeof meta?.planId === 'string' ? meta.planId : null;
+  if (!userId || !planId) {
+    console.warn('[webhook:charge.failed] subscription metadata missing userId/planId');
+    return false;
+  }
+
+  // Resolve the subscription row. Renewal failures carry subscription_code on
+  // the envelope; first-charge failures may not, so we fall back to the user's
+  // most recent ACTIVE/PAST_DUE row for the plan.
+  const subscriptionCode =
+    typeof data.subscription === 'object' && data.subscription?.subscription_code
+      ? data.subscription.subscription_code
+      : null;
+
+  const sub = subscriptionCode
+    ? await prisma.userSubscription.findUnique({
+        where: { paystackSubscriptionCode: subscriptionCode },
+        select: {
+          id: true,
+          status: true,
+          plan: { select: { name: true } },
+          user: { select: { email: true, businessName: true } },
+        },
+      })
+    : await prisma.userSubscription.findFirst({
+        where: {
+          userId,
+          planId,
+          status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          plan: { select: { name: true } },
+          user: { select: { email: true, businessName: true } },
+        },
+      });
+
+  if (!sub) {
+    console.warn('[webhook:charge.failed] no matching UserSubscription row');
+    return false;
+  }
+
+  // Idempotent — repeat charge.failed events leave the row at PAST_DUE.
+  if (sub.status !== SubscriptionStatus.PAST_DUE) {
+    await prisma.userSubscription.update({
+      where: { id: sub.id },
+      data: { status: SubscriptionStatus.PAST_DUE },
+    });
+  }
+
+  // Fire-and-forget email. amount is Paystack minor units; / 100 → major.
+  const currency: 'USD' | 'NGN' = data.currency === 'NGN' ? 'NGN' : 'USD';
+  const amountMajor = data.amount ? data.amount / 100 : 0;
+  void sendSubscriptionRenewalFailedEmail({
+    toEmail: sub.user.email,
+    businessName: sub.user.businessName,
+    planName: sub.plan.name,
+    currency,
+    amount: amountMajor,
+    manageUrl: `${APP_URL}/dashboard/settings?tab=Billing&billingTab=Subscription`,
+    failureReason: data.gateway_response ?? null,
+  }).catch((error) => {
+    console.error('[webhook:charge.failed] renewal-failed email failed:', error);
+  });
+
+  return true;
 }
 
 // ==============================================================

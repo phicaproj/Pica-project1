@@ -16,6 +16,8 @@ import {
   type PaystackCurrency,
 } from '../../service/shared/paystack.service';
 import { getUsdToNgnRate } from '../settings/settings.service';
+import { sendSubscriptionCancelledEmail } from '../../service/shared/email.service';
+import { APP_URL } from '../../Config/env';
 import type {
   AdminListPlansResponse,
   AdminPlanResponse,
@@ -415,6 +417,10 @@ export async function cancelSubscriptionService(
       status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
     },
     orderBy: { createdAt: 'desc' },
+    include: {
+      plan: { select: { name: true } },
+      user: { select: { email: true, businessName: true } },
+    },
   });
 
   if (!sub) {
@@ -438,6 +444,18 @@ export async function cancelSubscriptionService(
     where: { id: sub.id },
     data: { cancelAtPeriodEnd: true },
     select: { currentPeriodEnd: true },
+  });
+
+  // Fire-and-forget: "you're cancelled, you'll keep access until X, come back".
+  // Failures don't block the cancel response — the DB flip is the source of truth.
+  void sendSubscriptionCancelledEmail({
+    toEmail: sub.user.email,
+    businessName: sub.user.businessName,
+    planName: sub.plan.name,
+    currentPeriodEnd: updated.currentPeriodEnd,
+    resubscribeUrl: `${APP_URL}/dashboard/subscription`,
+  }).catch((error) => {
+    console.error('[subscription:cancel] email failed:', error);
   });
 
   return {

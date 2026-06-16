@@ -220,26 +220,31 @@ function ProfileStep({
 
 	return (
 		<div
-			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? 'bg-black' : 'bg-gray-50'}`}
+			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-4 sm:py-6 md:py-12 ${d ? 'bg-black' : 'bg-gray-50'}`}
 		>
 			<h1
-				className={`text-3xl md:text-5xl font-extrabold text-center mb-4 ${d ? 'text-white' : 'text-gray-900'}`}
+				className={`text-2xl sm:text-3xl md:text-5xl font-extrabold text-center mb-2 md:mb-4 ${d ? 'text-white' : 'text-gray-900'}`}
 			>
 				Tell Us About Your
 				<br />
 				Business
 			</h1>
 			<p
-				className={`text-base text-center mb-12 max-w-lg ${d ? 'text-gray-400' : 'text-gray-600'}`}
+				className={`text-sm sm:text-base text-center mb-6 md:mb-12 max-w-lg ${d ? 'text-gray-400' : 'text-gray-600'}`}
 			>
 				Help our intelligence systems categorize your operation for a
 				personalized assessment journey.
 			</p>
 
+			{/* z-0 anchors a stacking context on the card so dropdowns inside
+			    (z-30 wrapper + z-50 panel) layer above sibling form rows
+			    instead of getting overlapped by later DOM siblings on mobile. */}
 			<div
-				className={`w-full max-w-2xl rounded-3xl p-4 sm:p-6 md:p-8 border relative ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
+				className={`w-full max-w-2xl rounded-3xl p-4 sm:p-6 md:p-8 border relative z-0 ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
 			>
-				<div className='absolute top-6 right-6 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs'>
+				{/* Smart Classification badge — hidden on mobile because it
+				    overlaps the headline at narrow widths. Reappears at sm+. */}
+				<div className='hidden sm:block absolute top-6 right-6 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs'>
 					<p className='text-gray-400 uppercase tracking-wider text-[10px] mb-0.5'>
 						Smart Classification
 					</p>
@@ -248,7 +253,7 @@ function ProfileStep({
 					</p>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -272,7 +277,10 @@ function ProfileStep({
 						>
 							Industry
 						</label>
-						<div className='relative'>
+						{/* When open, raise this wrapper above sibling form rows so
+						    the absolute z-50 panel below it isn't visually clipped
+						    by inputs lower in the DOM that paint after it. */}
+						<div className={`relative ${industryOpen ? 'z-30' : ''}`}>
 							<button
 								onClick={() => setIndustryOpen(!industryOpen)}
 								className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
@@ -302,7 +310,7 @@ function ProfileStep({
 					</div>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -342,7 +350,7 @@ function ProfileStep({
 					</div>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -368,7 +376,7 @@ function ProfileStep({
 							>
 								Country
 							</label>
-							<div className='relative'>
+							<div className={`relative ${countryOpen ? 'z-30' : ''}`}>
 								<button
 									onClick={() => { setCountryOpen(!countryOpen); setStateOpen(false); }}
 									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
@@ -403,7 +411,7 @@ function ProfileStep({
 							>
 								State
 							</label>
-							<div className='relative'>
+							<div className={`relative ${stateOpen ? 'z-30' : ''}`}>
 								<button
 									onClick={() => selectedCountry && setStateOpen(!stateOpen)}
 									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${!selectedCountry ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}

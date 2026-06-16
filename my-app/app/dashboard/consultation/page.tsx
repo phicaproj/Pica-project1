@@ -38,10 +38,12 @@ import {
   getMe,
   getMyConsultationResults,
   getMyConsultations,
+  getMySubscription,
   type CompletedResultOption,
   type ConsultationBookingPayload,
   type ConsultationTierPublic,
   type MeUser,
+  type MySubscriptionPayload,
 } from "@/lib/authClient";
 import { ConsultationSkeleton } from "@/components/ui/skeleton";
 import {
@@ -109,6 +111,8 @@ export default function ConsultationPage() {
   const [usdToNgn, setUsdToNgn] = useState(1);
   const [bookings, setBookings] = useState<ConsultationBookingPayload[]>([]);
   const [results, setResults] = useState<CompletedResultOption[]>([]);
+  // Pre-select-by-subscription depends on this; null = no active sub.
+  const [mySub, setMySub] = useState<MySubscriptionPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -121,11 +125,14 @@ export default function ConsultationPage() {
   );
 
   const refresh = async () => {
-    const [meRes, tiersRes, bookingsRes, resultsRes] = await Promise.all([
+    const [meRes, tiersRes, bookingsRes, resultsRes, subRes] = await Promise.all([
       getMe(),
       getConsultationTiers(),
       getMyConsultations(),
       getMyConsultationResults(),
+      // Pulled here so a refresh after booking also re-reads the usage
+      // counter — the BE has just decremented `consultationsUsed`.
+      getMySubscription(),
     ]);
     if (meRes.data) setMe(meRes.data.user);
     if (tiersRes.data) {
@@ -134,6 +141,14 @@ export default function ConsultationPage() {
     }
     if (bookingsRes.data) setBookings(bookingsRes.data.bookings);
     if (resultsRes.data) setResults(resultsRes.data.results);
+    // Only treat ACTIVE/PAST_DUE as "covered" — cancelled/expired subs don't
+    // grant quota. The BE quota check applies the same rule.
+    if (subRes.data?.subscription) {
+      const s = subRes.data.subscription;
+      setMySub(s.status === "ACTIVE" || s.status === "PAST_DUE" ? s : null);
+    } else {
+      setMySub(null);
+    }
     if (meRes.error && !me) {
       setError(meRes.error.message ?? "Could not load your account.");
     }
@@ -254,6 +269,7 @@ export default function ConsultationPage() {
           usdToNgn={usdToNgn}
           displayCurrency={displayCurrency}
           results={results}
+          mySub={mySub}
           onBooked={async (msg) => {
             setToast(msg);
             await refresh();
@@ -375,6 +391,7 @@ function BookingForm({
   usdToNgn,
   displayCurrency,
   results,
+  mySub,
   onBooked,
 }: {
   me: MeUser;
@@ -382,15 +399,43 @@ function BookingForm({
   usdToNgn: number;
   displayCurrency: Currency;
   results: CompletedResultOption[];
+  mySub: MySubscriptionPayload | null;
   onBooked: (message: string) => void;
 }) {
-  const [tierId, setTierId] = useState<string>(tiers[0]?.id ?? "");
+  // The tier that the user's subscription plan covers, joined by tier number.
+  // SubscriptionPlan.tier and ConsultationTier.tier are both 1/2/3, so this is
+  // a direct match. When the user has no active sub `coveredTier` is null and
+  // the form behaves like the legacy free-pick UI.
+  const coveredTier = useMemo(() => {
+    if (!mySub) return null;
+    return tiers.find((t) => t.tier === mySub.plan.tier) ?? null;
+  }, [mySub, tiers]);
+
+  const consultationsRemaining = mySub
+    ? Math.max(0, mySub.plan.consultationsPerMonth - mySub.usage.consultationsUsed)
+    : 0;
+  const subCoversBooking = Boolean(coveredTier) && consultationsRemaining > 0;
+
+  // Default selection: the subscription-covered tier when one exists, even
+  // if quota is spent (the user can still see/pick it; they just pay).
+  // Otherwise fall back to the first tier in the catalogue.
+  const [tierId, setTierId] = useState<string>(
+    coveredTier?.id ?? tiers[0]?.id ?? "",
+  );
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
   const [preferredTimes, setPreferredTimes] = useState("");
   const [relatedSessionResultId, setRelatedSessionResultId] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Re-sync the default when the covered tier resolves after first render
+  // (the subscription endpoint can land slightly after the tiers endpoint).
+  useEffect(() => {
+    if (coveredTier && !tierId) {
+      setTierId(coveredTier.id);
+    }
+  }, [coveredTier, tierId]);
 
   const selectedTier = useMemo(
     () => tiers.find((t) => t.id === tierId) ?? null,
@@ -400,6 +445,15 @@ function BookingForm({
   const priceDisplay = selectedTier
     ? convertFromUsd(selectedTier.priceUsd, displayCurrency, usdToNgn) ?? 0
     : null;
+
+  // Selected tier is "free under subscription" when it's the covered tier AND
+  // there's at least one slot left this period. Used to swap the price label,
+  // submit-button copy, and footer messaging.
+  const selectedCoveredFree =
+    selectedTier !== null &&
+    coveredTier !== null &&
+    selectedTier.id === coveredTier.id &&
+    consultationsRemaining > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -482,6 +536,12 @@ function BookingForm({
               const tPriceDisplay =
                 convertFromUsd(t.priceUsd, displayCurrency, usdToNgn) ?? 0;
               const selected = t.id === tierId;
+              // This tier is the one the user's subscription plan covers
+              // (matched by integer tier number). When there's still quota,
+              // show the green "Included" treatment; when quota is spent,
+              // show a muted "Quota exhausted" line and revert to price.
+              const isCovered = coveredTier?.id === t.id;
+              const hasQuotaLeft = isCovered && consultationsRemaining > 0;
               return (
                 <button
                   key={t.id}
@@ -489,22 +549,51 @@ function BookingForm({
                   onClick={() => setTierId(t.id)}
                   className={`block w-full rounded-xl border p-4 text-left transition ${
                     selected
-                      ? "border-orange-500 bg-orange-500/5 ring-1 ring-orange-500/30"
-                      : "border-white/5 bg-[#0d1117] hover:border-white/20"
+                      ? hasQuotaLeft
+                        ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/30"
+                        : "border-orange-500 bg-orange-500/5 ring-1 ring-orange-500/30"
+                      : isCovered && hasQuotaLeft
+                        ? "border-emerald-500/40 bg-[#0d1117] hover:border-emerald-500/70"
+                        : "border-white/5 bg-[#0d1117] hover:border-white/20"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-white">{t.name}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-bold text-white">{t.name}</p>
+                        {hasQuotaLeft && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+                            <Crown className="h-3 w-3" />
+                            Included
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
                         <Clock className="h-3 w-3" />
                         {t.durationMinutes} min session
                       </p>
                     </div>
-                    <p className="text-lg font-extrabold text-white">
-                      {formatMoney(tPriceDisplay, displayCurrency)}
-                    </p>
+                    {hasQuotaLeft ? (
+                      <div className="text-right">
+                        <p className="text-base font-extrabold text-emerald-300">
+                          Free
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-gray-500">
+                          {mySub!.usage.consultationsUsed} of{" "}
+                          {mySub!.plan.consultationsPerMonth} used
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-lg font-extrabold text-white">
+                        {formatMoney(tPriceDisplay, displayCurrency)}
+                      </p>
+                    )}
                   </div>
+                  {isCovered && !hasQuotaLeft && (
+                    <p className="mt-2 text-[11px] font-semibold text-amber-300">
+                      Quota exhausted this period — pay to book this tier.
+                    </p>
+                  )}
                   {t.description && (
                     <p className="mt-2 text-xs leading-relaxed text-gray-500">
                       {t.description}
@@ -584,15 +673,23 @@ function BookingForm({
         <div className="lg:order-3 lg:col-span-5">
           <div className="-mx-6 -mb-6 mt-2 flex flex-col-reverse gap-3 border-t border-white/5 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-gray-500">
-              {selectedTier && priceDisplay !== null && (
+              {selectedCoveredFree ? (
+                <span className="text-emerald-300">
+                  <span className="font-semibold">Included with your subscription</span>{" "}
+                  — booking will use 1 of {consultationsRemaining} remaining
+                  consultations this period.
+                </span>
+              ) : selectedTier && priceDisplay !== null ? (
                 <>
                   You&apos;ll be charged{" "}
                   <span className="font-semibold text-white">
                     {formatMoney(priceDisplay, displayCurrency)}
-                  </span>{" "}
-                  unless you have an active subscription credit.
+                  </span>
+                  {subCoversBooking
+                    ? " — your subscription covers a different tier."
+                    : "."}
                 </>
-              )}
+              ) : null}
             </p>
             <button
               type="submit"
