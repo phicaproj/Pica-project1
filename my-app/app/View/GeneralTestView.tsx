@@ -187,11 +187,15 @@ function ProfileStep({
 }) {
 	const d = dark
 	const [industryOpen, setIndustryOpen] = useState(false)
+	// Note: countriesnow.space returns city-level data under the `cities` key,
+	// but per client request we surface it to users as "State". The API key
+	// stays `cities` (we don't own the upstream schema); our local state vars
+	// use `state` to match the UI label.
 	const [countriesData, setCountriesData] = useState<{country: string, cities: string[]}[]>([])
 	const [countryOpen, setCountryOpen] = useState(false)
-	const [cityOpen, setCityOpen] = useState(false)
+	const [stateOpen, setStateOpen] = useState(false)
 	const [selectedCountry, setSelectedCountry] = useState('')
-	const [selectedCity, setSelectedCity] = useState('')
+	const [selectedState, setSelectedState] = useState('')
 
 	useEffect(() => {
 		fetch('https://countriesnow.space/api/v0.1/countries')
@@ -205,10 +209,10 @@ function ProfileStep({
 	}, [])
 
 	useEffect(() => {
-		if (selectedCountry && selectedCity) {
-			setProfile((prev: ProfileData) => ({ ...prev, location: `${selectedCity}, ${selectedCountry}` }))
+		if (selectedCountry && selectedState) {
+			setProfile((prev: ProfileData) => ({ ...prev, location: `${selectedState}, ${selectedCountry}` }))
 		}
-	}, [selectedCountry, selectedCity])
+	}, [selectedCountry, selectedState])
 
 	const update = (field: keyof ProfileData, value: string) => {
 		setProfile({ ...profile, [field]: value })
@@ -216,7 +220,7 @@ function ProfileStep({
 
 	return (
 		<div
-			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? 'bg-black' : 'bg-gray-50'}`}
+			className={`min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? 'bg-black' : 'bg-gray-50'}`}
 		>
 			<h1
 				className={`text-3xl md:text-5xl font-extrabold text-center mb-4 ${d ? 'text-white' : 'text-gray-900'}`}
@@ -233,7 +237,7 @@ function ProfileStep({
 			</p>
 
 			<div
-				className={`w-full max-w-2xl rounded-3xl p-8 border relative ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
+				className={`w-full max-w-2xl rounded-3xl p-4 sm:p-6 md:p-8 border relative ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
 			>
 				<div className='absolute top-6 right-6 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs'>
 					<p className='text-gray-400 uppercase tracking-wider text-[10px] mb-0.5'>
@@ -357,7 +361,7 @@ function ProfileStep({
 							))}
 						</div>
 					</div>
-					<div className='grid grid-cols-2 gap-3'>
+					<div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
 						<div>
 							<label
 								className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -366,7 +370,7 @@ function ProfileStep({
 							</label>
 							<div className='relative'>
 								<button
-									onClick={() => { setCountryOpen(!countryOpen); setCityOpen(false); }}
+									onClick={() => { setCountryOpen(!countryOpen); setStateOpen(false); }}
 									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
 								>
 									<span className="truncate mr-2">{selectedCountry || 'Country'}</span>
@@ -381,7 +385,7 @@ function ProfileStep({
 												key={c.country}
 												onClick={() => {
 													setSelectedCountry(c.country)
-													setSelectedCity('')
+													setSelectedState('')
 													setCountryOpen(false)
 												}}
 												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
@@ -397,30 +401,30 @@ function ProfileStep({
 							<label
 								className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
 							>
-								City
+								State
 							</label>
 							<div className='relative'>
 								<button
-									onClick={() => selectedCountry && setCityOpen(!cityOpen)}
+									onClick={() => selectedCountry && setStateOpen(!stateOpen)}
 									className={`w-full px-4 py-3 rounded-xl border text-sm flex items-center justify-between transition ${!selectedCountry ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
 								>
-									<span className="truncate mr-2">{selectedCity || 'City'}</span>
+									<span className="truncate mr-2">{selectedState || 'State'}</span>
 									<ChevronDown className='w-4 h-4 text-gray-400 flex-shrink-0' />
 								</button>
-								{cityOpen && selectedCountry && (
+								{stateOpen && selectedCountry && (
 									<div
 										className={`absolute top-full left-0 right-0 mt-1 rounded-xl border z-50 overflow-y-auto max-h-48 ${d ? 'bg-[#1a2235] border-white/10' : 'bg-white border-gray-200 shadow-lg'}`}
 									>
-										{countriesData.find(c => c.country === selectedCountry)?.cities?.map((city) => (
+										{countriesData.find(c => c.country === selectedCountry)?.cities?.map((s) => (
 											<button
-												key={city}
+												key={s}
 												onClick={() => {
-													setSelectedCity(city)
-													setCityOpen(false)
+													setSelectedState(s)
+													setStateOpen(false)
 												}}
 												className={`w-full text-left px-4 py-2.5 text-sm transition truncate ${d ? 'text-gray-300 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'}`}
 											>
-												{city}
+												{s}
 											</button>
 										))}
 									</div>
@@ -436,17 +440,17 @@ function ProfileStep({
 					</div>
 				)}
 
-				<div className='flex items-center justify-between'>
+				<div className='flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3'>
 					<button
 						onClick={onBack}
-						className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border transition ${d ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+						className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border transition ${d ? 'border-white/10 text-gray-400 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
 					>
 						<ArrowLeft className='w-4 h-4' /> Previous
 					</button>
 					<button
 						onClick={onContinue}
 						disabled={loading}
-						className='flex items-center gap-2 px-8 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-gray-900 text-sm font-bold transition disabled:opacity-50'
+						className='flex items-center justify-center gap-2 px-6 sm:px-8 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-gray-900 text-sm font-bold transition disabled:opacity-50'
 					>
 						{loading ? (
 							<>
@@ -842,7 +846,11 @@ function ProcessingStep({ dark }: { dark: boolean }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function GeneralTestPage() {
 	const { dark } = useTheme()
-	const [step, setStep] = useState<Step>('intro')
+	// Skip the redundant "Let's Understand Your Business" intro screen — users
+	// click "Start Free Scan" from the landing page and should land directly on
+	// the profile form. The IntroStep component below is kept in case a future
+	// onboarding flow wants to reintroduce it behind a flag.
+	const [step, setStep] = useState<Step>('profile')
 	const [currentIndex, setCurrentIndex] = useState(0)
 
 	// Backend state
@@ -1068,8 +1076,6 @@ export default function GeneralTestPage() {
 		if (currentIndex > 0) setCurrentIndex(currentIndex - 1)
 	}
 
-	if (step === 'intro')
-		return <IntroStep dark={dark} onStart={() => setStep('profile')} />
 	if (step === 'profile')
 		return (
 			<ProfileStep
@@ -1077,7 +1083,10 @@ export default function GeneralTestPage() {
 				profile={profile}
 				setProfile={setProfile}
 				onContinue={handleStartAssessment}
-				onBack={() => setStep('intro')}
+				onBack={() => {
+					/* Intro step removed — Back returns to home instead. */
+					if (typeof window !== 'undefined') window.location.href = '/'
+				}}
 				loading={loading}
 				error={error}
 			/>

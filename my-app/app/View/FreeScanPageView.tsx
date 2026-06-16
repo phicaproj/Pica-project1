@@ -18,7 +18,9 @@ export default function FreeScanPage() {
     <div className={`antialiased min-h-screen ${d ? "bg-[#111111] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
+      {/* Hero fills one viewport so the "Start Quick Scan" CTA + hero image
+          land in the same frame instead of below a tall empty band. */}
+      <section className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/20 text-[#f97316] text-xs font-semibold uppercase tracking-wider mb-6">
@@ -33,9 +35,9 @@ export default function FreeScanPage() {
             <p className={`text-sm leading-relaxed mb-8 max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
               Experience the precision of the Clinical Architect Framework at zero cost. Designed for individual professionals seeking immediate baseline visibility into their operational health.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <Link href="/pages/generaltest"
-                className="flex items-center gap-2 px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
                 Start Quick Scan <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -55,7 +57,7 @@ export default function FreeScanPage() {
       </section>
 
       {/* ── Quick Scan Toolkit ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
+      <section className={`px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
         <div className="max-w-6xl mx-auto">
           <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>The Quick Scan Toolkit</h2>
           <p className={`text-sm mb-10 ${d ? "text-gray-400" : "text-gray-600"}`}>Essential diagnostics for the modern architect.</p>
@@ -75,7 +77,7 @@ export default function FreeScanPage() {
             {/* Health Score metric card */}
             <div className="rounded-2xl p-5 md:p-8 bg-[#00ffaa] flex flex-col items-center justify-center text-center">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-4">Current Metric</p>
-              <p className="text-5xl md:text-8xl font-extrabold text-gray-900 leading-none mb-2">84</p>
+              <p className="text-4xl sm:text-5xl md:text-8xl font-extrabold text-gray-900 leading-none mb-2">84</p>
               <p className="text-xl font-bold text-gray-900 mb-3">Health Score</p>
               <p className="text-xs text-gray-700 max-w-xs">
                 A singular, authoritative metric reflecting your overall alignment with the Clinical Architect Framework.
@@ -86,7 +88,7 @@ export default function FreeScanPage() {
       </section>
 
       {/* ── Risk Priority Matrix + Report Overview ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-16 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
+      <section className={`px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 
           {/* Risk Priority Matrix */}
@@ -138,7 +140,7 @@ export default function FreeScanPage() {
       </section>
 
       {/* ── CTA Section ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-12 md:py-20 text-center ${d ? "bg-[#111111]" : "bg-white"}`}>
+      <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-14 text-center ${d ? "bg-[#111111]" : "bg-white"}`}>
         <div className="max-w-2xl mx-auto">
           <h2 className={`text-2xl md:text-4xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>
             Ready for a Clinical Appraisal?

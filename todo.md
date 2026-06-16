@@ -1,6 +1,8 @@
 # PICA — Post-Meeting Implementation Plan (Friday client meeting)
 
 > Scope captured from the Friday client meeting + codebase audit on 2026-06-14.
+> Last updated 2026-06-16 — Sections A–F shipped, plus the post-Section-F
+> subscription flow refactor. Open items live in Section R at the bottom.
 > Split into **Backend** and **Frontend** sections for the two developers.
 > Each item notes the files/areas it touches so work can start immediately.
 
@@ -37,7 +39,7 @@
   - *Files:* `payment.service.ts`, `service/shared/paystack.service.ts` (accepts `currency: 'NGN' | 'USD'`), `prisma/schema.prisma` (`Payment.amountUsd`, `currency` default → `'USD'`).
 - [x] **Public pricing endpoint returns both views.** `/api/payment/pricing` returns `{ currency: 'USD', usdToNgn, phase2A, phase2B }` — FE picks display currency from `me.country`. No `?country=` param added; derived client-side.
 - [x] **Coupons/discounts**: `Discount.amountOff` re-baselined to USD by the same migration. `coupon.service` math is currency-agnostic (just a number); `initPaymentService` runs coupon math in USD, then converts the discount to wire currency before persisting.
-- [ ] **Admin transactions/analytics**: `Payment.amountUsd` now back-fills every row, but admin services (`payment.admin.service.ts`, `admin.service.ts` analytics) still aggregate `amount` not `amountUsd`. **TODO:** flip the sums to `amountUsd` so revenue reporting is in one currency.
+- [x] **Admin transactions/analytics flipped to `amountUsd`** (2026-06-16). The K-suffix bug ("$541.0k" on pending payments) was the visible symptom — fixed by switching aggregates in `payment.admin.service.ts` + `admin.service.ts` to roll `amountUsd`, narrowing the report-service formatter to USD ('en-US' / no ₦ prefix), and bumping the compactAmount threshold from `>= 1_000` to `>= 10_000`.
 
 ## FE counterparts to Section A ✅ DONE (2026-06-15)
 
@@ -82,26 +84,33 @@
 
   *Files added:* `module/subscription/{types,service,controller,routes}.ts`, three migrations under `prisma/migrations/2026061520*`–`2026061522*`, helpers added to `paystack.service.ts`. Webhook dispatch lives in `payment.service.ts`.
 
-## E. Consultation (manual scheduling)
+## E. Consultation (manual scheduling) ✅ DONE (2026-06-16)
 
-- [ ] **New Prisma models** (+ migration):
-  - `ConsultationTier` (admin pricing): `tier (1|2|3)`, `name`, `priceUsd Decimal`, `durationMinutes Int`, `isActive`, `displayOrder`.
-  - `ConsultationBooking`: `userId`, `tierId`, `status (REQUESTED|CONFIRMED|ATTENDED|CANCELLED|NO_SHOW)`, `requestedAt`, `scheduledAt?`, `meetingLink?`, `paymentId?` (null when covered by subscription quota), `coveredBySubscription Boolean`, form fields (topic, notes, preferred times).
-- [ ] **Booking flow** (`POST /api/consultation/book`):
-  1. Validate the submitted form.
-  2. If user has an ACTIVE subscription **and** consultation quota remaining → create booking `coveredBySubscription=true`, decrement quota, status `REQUESTED`. No charge.
-  3. Else → **paywall**: create a `Payment` for the chosen `ConsultationTier` price (USD/NGN per country) and return Paystack auth URL; booking is created `REQUESTED` only after payment success (verify/webhook).
-- [ ] **Consultation pricing admin endpoints** (CRUD on `ConsultationTier`).
-- [ ] **Admin consultation management endpoints**: list bookings (filter by status), confirm + set `scheduledAt`/`meetingLink`, mark attended/no-show, cancel. Email the user on confirm (reuse `email.service`).
-- [ ] **User consultation endpoints**: `GET /api/consultation/me` (their bookings for the dashboard card), book-another reuses the book flow.
+- [x] **New Prisma models** (`20260616000000_consultation_bookings`):
+  - `ConsultationTier`: `tier (1|2|3)`, `name`, `description`, `priceUsd Decimal`, `durationMinutes Int`, `isActive`, `displayOrder`. Seeded with three default tiers.
+  - `ConsultationBooking`: `userId`, `tierId`, `status (REQUESTED|CONFIRMED|ATTENDED|CANCELLED|NO_SHOW)`, `requestedAt`, `scheduledAt?`, `meetingLink?`, `paymentId?`, `coveredBySubscription Boolean`, `topic`, `notes`, `preferredTimes`, `relatedResultId?`.
+  - `Plan` enum extended with `CONSULTATION` so consultation payments roll through the same idempotent `Payment` table.
+- [x] **Booking flow** — `POST /api/consultation/book`:
+  - Always creates a REQUESTED row first (this was a meeting decision so users can see their booking immediately regardless of payment outcome).
+  - If `assertSubscriptionQuota(userId, 'consultation')` returns `hasQuota`, decrements consultation quota and marks `coveredBySubscription=true` — no charge.
+  - Otherwise initialises Paystack and returns the auth URL; webhook back-fills `paymentId` + flips booking to CONFIRMED on success.
+- [x] **Consultation tier admin CRUD** at `/api/admin/consultation-tiers` (GET/POST/PATCH/DELETE) under `consultations:read`/`consultations:write`. Soft-delete only.
+- [x] **Admin booking management endpoints** under `consultations:write`:
+  - `GET /api/admin/consultation-bookings` — list with status filter + pagination.
+  - `PATCH /api/admin/consultation-bookings/:id/confirm` — sets `scheduledAt` + `meetingLink`, emails the user.
+  - `PATCH /api/admin/consultation-bookings/:id/status` — mark ATTENDED / NO_SHOW / CANCELLED.
+- [x] **User endpoints**: `GET /api/consultation/me` (their bookings), `GET /api/consultation/tiers` (public catalogue with USD prices + live `usdToNgn`).
+- [x] **Permission keys**: `consultations:read` / `consultations:write` are distinct from `ledger:*` so ops staff can manage bookings without revenue access.
 
-## F. Pricing-page plan activation toggles (admin)
+  *Files:* `module/consultation/{types,service,controller,routes}.ts`, admin endpoints in `module/admin/consultation.admin.{service,controller,routes}.ts`, migration `prisma/migrations/20260616000000_consultation_bookings`, email template added to `email.service.ts`.
 
-- [ ] **Section + tier activation flags.**
-  - Add `isActive` to `SubscriptionPlan` (above) and `ConsultationTier`.
-  - Add a **section-level** toggle for the two storefront sections: **Pay-Per-Use** and **Subscription**. Store as two booleans in the settings/config model (e.g. `payPerUseActive`, `subscriptionActive`).
-- [ ] **Invariant: at least one section must stay live.** Enforce in the admin service — reject a request that would deactivate both Pay-Per-Use and Subscription simultaneously (`AppError(... one pricing section must remain active ...)`).
-- [ ] **Public pricing filters deactivated items.** `getPublicPricingService` must hide deactivated tiers and any deactivated section so users never see them. Pay-per-use (`PlanPrice`) visibility now also respects the section toggle.
+## F. Pricing-page plan activation toggles (admin) ✅ DONE (2026-06-16)
+
+- [x] **Section + tier activation flags.** `isActive` already lived on `SubscriptionPlan` + `ConsultationTier` from Sections D/E. Added two booleans on `AppSettings` for the storefront sections: `payPerUseActive` + `subscriptionActive` (`prisma/migrations/20260616000000_storefront_section_toggles`).
+- [x] **Invariant: at least one section must stay live.** Enforced in `updateAppSettingsService` — rejects with `AppError('At least one pricing section ... must stay active.', UNPROCESSABLE_CONTENT)` when both would flip off.
+- [x] **Public pricing filters deactivated items.** `getPublicPricingService` zeros `phase2A`/`phase2B` when `payPerUseActive=false`; `listPlansService` returns an empty `plans` array when `subscriptionActive=false`. Both responses include a new `sections: { payPerUse, subscription }` field so the FE can branch.
+- [x] **FE admin toggles** in Settings → App Settings tab: two `SectionToggleRow`s with "Last live" copy on the only-active row to prevent the user from disabling both.
+- [x] **FE public surfaces respect the toggles**: `View/PricingView.tsx` (landing), `/dashboard/plans` (subscription picker), `/dashboard/subscription` (pay-per-use checkout) all default to "live" when `sections` is missing (graceful during rollout) and render a paused state when their section is off.
 
 ## G. Cross-cutting / housekeeping
 
@@ -134,15 +143,13 @@
 **Pay Per Use** (buy one test at a time) and **Subscription Plan** (pay monthly, get a quota of tests).
 
 - [ ] **Replace the Small/Medium toggle with a "Pay Per Use" vs "Subscription Plan" switch.**
-  - *Where:* `View/PricingView.tsx` (the toggle is near the top of the file).
+  - *Where:* `View/PricingView.tsx` (the toggle is near the top of the file). Currently still shows the legacy Small/Medium toggle — the Section F section gating is wired underneath (`payPerUseActive` / `subscriptionActive`), but the top-of-page toggle hasn't been rebuilt.
 - [ ] **Pay Per Use section = the existing cards** (Free Scan, Plan 2A, Plan 2B).
   - *How:* keep the current cards; just make sure prices come from the pricing API and show in the right currency (task H).
 - [ ] **Subscription section = the 3 new monthly tiers.**
   - *How:* show each tier's monthly price and what you get (e.g. "3 Phase 2A tests, 2 Phase 2B, 1 consultation per month"). Pull these from the new subscription API.
-  - **Needs backend:** subscription plans endpoint.
-- [ ] **Only show what the admin has turned on.**
-  - *Why:* the admin can switch off individual tiers or a whole section. Users must never see something that's turned off.
-  - *How:* just render whatever the API returns — don't hardcode tiers. If the API doesn't return a tier/section, it shouldn't appear.
+  - **Needs backend:** subscription plans endpoint — already shipped in Section D.
+- [x] **Only show what the admin has turned on.** Section F landed: `View/PricingView.tsx` already gates the pay-per-use grid on `pricing.sections.payPerUse` and shows a "One-off purchases paused" fallback when off.
 - [ ] `pages/pricing/page.tsx` already just renders `PricingView` — no change needed there.
 
 ## J. Remove "Annual Revenue" from the free-test form ✅ DONE (2026-06-15)
@@ -205,41 +212,26 @@ The new recurring monthly tiers live at `/dashboard/plans` so the two flows stay
 - [x] **Pay-per-use stays linked** — a footer line on the picker view points back to `/dashboard/subscription` ("Already exhausted your quota? You can still pay per use").
 - [x] **API helpers** added in `lib/api/subscription.ts` and re-exported through `authClient.ts`: `getSubscriptionPlans`, `getMySubscription`, `subscribeToPlan`, `cancelMySubscription`, plus the admin trio.
 
-## O. Rebuild the consultation page
+## O. Rebuild the consultation page ✅ DONE (2026-06-16)
 
-**Background:** `dashboard/consultation/page.tsx` currently shows fake "consultant" cards and
-has no real functionality. The client wants it to be a **form** the user fills in to request a
-consultation. When they submit, if they're a subscriber with consultations left this month it's
-free; otherwise they hit a paywall and must pay for the consultation before it's booked.
-
-- [ ] **Remove the fake consultant cards and replace with a request form.**
-  - *Where:* `dashboard/consultation/page.tsx` — delete the `consultants` mock array and its cards (around lines 37–90).
-  - *How:* the form should collect things like topic, notes, and preferred times, plus which consultation tier they want.
-- [ ] **On submit, check whether they need to pay.**
-  - *How:* if they have an active subscription with a consultation left this month → submit the request for free. Otherwise → send them to Paystack to pay for the chosen consultation tier, and the booking is created once payment succeeds.
-  - **Needs backend:** the booking endpoint handles this check and returns either "booked" or a Paystack payment link.
-- [ ] **Show the user their consultation bookings + a "Book another" button.**
-  - *Why:* the page currently makes no API calls at all — they can't see past/upcoming sessions.
-  - *How:* list their bookings with status (requested / confirmed / attended) and add a button to start a new request.
-- [ ] **Add the API helper functions** in `lib/authClient.ts`: `getConsultationTiers`, `bookConsultation`, `getMyConsultations`.
+- [x] **Replaced fake consultant cards with a real request form.** `dashboard/consultation/page.tsx` was completely rewritten with a hero strip + bookings grid + two-column request form (notes/topic/preferred times/related result on the left, three tier cards on the right). Matches the dashboard's `gap-6 / rounded-2xl / bg-[#111827]` spacing scale.
+- [x] **Quota-vs-paywall branching on submit.** `bookConsultation` returns either `{ free: true }` (subscription credit consumed; booking immediately REQUESTED) or a Paystack auth URL (booking REQUESTED but pending; webhook flips to CONFIRMED on payment success).
+- [x] **Bookings panel on the dashboard.** Lists current and past bookings with status chips (REQUESTED / CONFIRMED / ATTENDED / etc.), tier name, scheduled time, meeting-link button when CONFIRMED, related-result chip.
+- [x] **API helpers** added in `lib/api/consultation.ts` and re-exported through `authClient.ts`: `getConsultationTiers`, `bookConsultation`, `getMyConsultations`, plus the admin trio.
 
 ## P. Build the admin pricing & management screens
 
 **Background:** Admins need to control all of the above: subscription tiers, consultation
 tiers, what's turned on/off, the exchange rate, and consultation bookings.
 
-- [x] **Subscription tier CRUD page** — new page at `admin/subscription-tiers/page.tsx` (distinct from `admin/subscription/page.tsx` which still owns the one-off pay-per-use pricing rows). Inline editor for price (USD), quotas, name, description, bonus features (newline-separated textarea), active flag, display order. Tier number is locked once a row is saved. Each row surfaces its Paystack USD/NGN plan code sync state. Soft-delete via "Deactivate" — existing subscribers keep working.
-- [ ] **Admin sidebar link.** Add a sidebar entry for the new tier page in `admin/layout.tsx` (the page exists, but isn't yet linked from the nav).
-- [ ] **Consultation tiers (3):** create/edit/delete each tier's price (USD) and duration (minutes/hours).
-- [ ] **Section on/off switches.** Big toggles for "Pay Per Use" vs "Subscription" sections + the BE invariant ("at least one section must stay live"). Per-tier `isActive` is already in place.
-- [ ] **Exchange rate editor in the admin UI.** BE endpoint `/api/admin/app-settings` already exists from Section A; the admin page still needs a small form to GET/PATCH the rate.
-- [ ] **Move pay-per-use feature list out of localStorage** — today `admin/subscription/page.tsx` stores it under `FEATURE_STORAGE_KEY`. Should move to BE so it's shared and persistent.
-- [ ] **Create a new admin "Consultation Management" page.**
-  - *What it does:* lists all consultation requests by status (requested / confirmed / attended / cancelled). Admin confirms a request, sets the date/time and pastes a meeting link, marks attended or no-show.
-  - *How:* add the page under `admin/`, link from sidebar (`admin/layout.tsx`). Will also need a permission key like the other admin pages.
-  - **Needs backend:** consultation management endpoints (Section E).
-- [x] **Admin subscription API helpers** added in `lib/api/subscription.ts`: `adminListSubscriptionPlans`, `adminCreateSubscriptionPlan`, `adminUpdateSubscriptionPlan`, `adminDeleteSubscriptionPlan`.
-- [ ] **Add remaining admin helpers** in `lib/authClient.ts` for consultation tiers, consultation bookings, and the exchange rate (the rate endpoint already exists in `lib/api/admin.ts`? — verify and add if missing).
+- [x] **Subscription tier CRUD lives as a tab on `/admin/subscription`** (post-Section-F polish merged the four scattered pages into tabs). Inline editor for price (USD), quotas, name, description, bonus features, active flag, display order. Tier number locked once saved. Soft-delete only. Cards re-styled to match the pay-per-use PlanCard shape — same `bg-[#1C1F2E]` shell, Crown icon, chip + title + price block + ticked feature list.
+- [x] **Admin sidebar IA cleaned up.** No standalone `/admin/subscription-tiers` link — the four originally-planned new pages are now tabs on `/admin/subscription` (pay-per-use / subscription tiers / consultation tiers) and `/admin/settings` (app settings). Consultations Inbox moved to its own top-level `/admin/consultations` sidebar entry (2026-06-16) gated by `consultations:read`.
+- [x] **Consultation tier CRUD** as a tab on `/admin/subscription`, mirroring the subscription tier card shape. Price (USD) + duration (minutes) + active flag.
+- [x] **Section on/off switches** under Settings → App Settings (Section F).
+- [x] **Exchange rate editor in the admin UI.** Lives under Settings → App Settings with a USD→NGN input, live three-card preview, and an audit line showing who last updated the rate.
+- [ ] **Move pay-per-use feature list out of localStorage.** Today `admin/subscription/page.tsx` still stores feature bullets under `FEATURE_STORAGE_KEY`. Needs a `PricingFeature` table (or a `features String[]` column on `PlanPrice`) so the bullets are shared across admin sessions and persistent.
+- [x] **Admin Consultations Inbox** at `/admin/consultations` (own sidebar slot from 2026-06-16). Status filter (All / Requested / Confirmed / Attended / No-show / Cancelled), confirm modal with `scheduledAt` + `meetingLink`, mark attended / no-show / cancel actions.
+- [x] **Admin API helpers** added in `lib/api/{subscription,consultation,admin}.ts`: tier CRUD, booking CRUD, FX-rate GET/PATCH. All re-exported through `authClient.ts`.
 
 ## Q. General notes
 
@@ -248,10 +240,41 @@ tiers, what's turned on/off, the exchange rate, and consultation bookings.
 
 ---
 
+## R. Subscription flow refactor (post-F smoke-test fixes) ✅ DONE (2026-06-16)
+
+User testing surfaced four flaws in how subscriptions actually behave end-to-end. All fixed in one slice:
+
+**Backend**
+- [x] **Coupons extend to subscriptions.** `Plan` enum already had `SUBSCRIPTION`; widened the public-facing coupon-plan union in `coupon.types.ts` + `coupon.service.ts` (response cast). Existing `validateAndPriceCoupon` was already plan-agnostic so no rule changes needed.
+- [x] **Inline subscription checkout with coupon support.** `subscribeService(userId, planId, { couponCode })` now runs the same USD-first coupon math as `initPaymentService`. A 100%-off coupon short-circuits Paystack entirely — creates a `UserSubscription` (status ACTIVE, period now → +30d) + a $0 `Payment` row + bumps `Discount.usedCount` inside one transaction. Returns `{ free: true, ... }` mirroring `InitPaymentResponse`.
+- [x] **No "payment received" email for $0 settlements.** Dropped the `sendSuccessEmailBestEffort` calls from the subscription-quota path (line 248) and the free-coupon path (line 351) in `payment.service.ts`. Same gate on the new free-subscription path. The $0 Payment row still exists for audit and billing-history.
+
+**Frontend**
+- [x] **`/dashboard/plans` rewritten as a pure picker.** ManageView dropped from this page. Current plan gets a green "Your plan" chip + disabled "Current plan" CTA; non-current plans on an active sub show "Cancel current to switch". Clicking opens `<SubscriptionCheckoutModal>` with coupon input, total breakdown, and inline Paystack popup (no full-page redirect). Free-coupon path skips Paystack and jumps to verify+success.
+- [x] **Settings → Billing now has History / Subscription sub-tabs.** `BillingSettings` got a secondary tab strip and ported the old ManageView verbatim into the Subscription sub-tab (quota meters, billing card, card-on-file, cancel). Deep-link `?tab=Billing&billingTab=Subscription` is honored, and the "Manage subscription →" link on the plans page targets that URL.
+- [x] **Pre-init quota probe on `/dashboard/subscription`.** `tryFreeShortCircuit` runs `initPayment` in `handlePickLockedScan` / `handlePickPillar` / the auto-pick branch *before* `setView("checkout")`. If the BE returns `free: true`, the user jumps straight to the success screen — never sees a checkout UI, never gets an email. Gated on having an active subscription so we don't accumulate orphaned PENDING rows for non-subscribers.
+- [x] **Consultations Inbox moved out of `/admin/subscription`.** Now lives at `/admin/consultations` with its own sidebar slot (`NAV_MAIN`, gated by `consultations:read`). The subscription page keeps the Pay-per-use, Subscription Tiers, and Consultation Tiers tabs.
+
+**Follow-ups deferred from this slice**
+- [ ] **Webhook coupon-redemption for Paystack-paid subscriptions.** Free-coupon subs bump `Discount.usedCount` directly; paid-coupon subs pass `couponCode` through Paystack metadata, but `handleSubscriptionChargeSuccess` doesn't yet read it to increment `usedCount` or stamp `appliedCouponCode` onto the first-charge `Payment` row. Means a partial-discount coupon could be reused. Small follow-up.
+- [ ] **Cheaper quota check.** `tryFreeShortCircuit` calls full `initPayment`, which creates a PENDING `Payment` row for non-free outcomes. Harmless but wasteful. Future cleanup: add `GET /subscription/quota-check?kind=PHASE2A` returning `{ hasQuota: bool }` with no row write.
+
+## S. What's left (consolidated)
+
+The big shippable items still open:
+
+- [x] **BE-0** — Paystack USD charging is live on the account (confirmed 2026-06-16). Currency split no longer blocked.
+- [ ] **Section I — Landing-page pricing rebuild.** Replace the Small/Medium toggle in `View/PricingView.tsx` with a Pay-Per-Use / Subscription Plan toggle that exposes the subscription tiers (rendered from the public API) alongside the existing pay-per-use cards.
+- [ ] **Landing-page country picker** (Section H follow-up). Anonymous visitors currently see USD; we need a Nigeria/Other picker so NG visitors can convert via the live `usdToNgn` rate.
+- [ ] **Section K mobile audit** — sweep dashboard pages for mobile spacing + tap-target sizing. Question-screen and auth-screen fixes already landed.
+- [ ] **Section P — Pay-per-use feature bullets in DB.** Currently localStorage; needs a real table so admin sessions share state.
+- [ ] **Section Q — Loading skeletons.** Replace the centered-spinner pattern with proper skeleton states on the dashboard list pages so the Render free-tier cold-start feels smoother.
+- [ ] **Section R follow-ups** (above): webhook coupon-redemption tracking + cheap quota-check endpoint.
+
 # Open items to confirm with client / between devs
-- [ ] Exact **subscription tier quotas & prices** (numbers per tier) — needed before seeding plans.
-- [ ] Exact **consultation tier prices & durations** (3 tiers).
-- [ ] **USD→NGN starting rate** + who maintains it.
-- [ ] Whether deactivated **pay-per-use** also hides the Free Scan, or Free Scan always stays available.
-- [ ] Copy for the profile-completion prompt and the SMALL/MEDIUM size hint.
-- [ ] Confirm Paystack USD capability (BE-0) before building the currency split.
+- [x] Exact subscription tier quotas & prices — seeded as Starter (2/2/1 @ $40) / Growth (4/4/2 @ $80) / Scale (6/6/3 @ $120).
+- [x] Consultation tier prices & durations — three tiers seeded by Section E migration.
+- [x] USD→NGN starting rate + who maintains it — admin-owned via Settings → App Settings; seeded at 1500.
+- [x] Free Scan always stays available — it's a lead magnet, not a paid product. When `payPerUseActive=false`, only Plan 2A + Plan 2B cards hide; the Free Scan card stays on screen.
+- [x] Copy for the profile-completion prompt and SMALL/MEDIUM size hint — both shipped in Sections B + M.
+- [x] Confirmed Paystack USD capability (2026-06-16) — see BE-0.

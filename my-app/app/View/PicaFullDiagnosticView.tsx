@@ -53,8 +53,10 @@ function IntelligenceProductPage({
       }`}
     >
       {/* ── Hero ── */}
+      {/* Centered in one viewport so the headline + tagline + CTAs read as a
+          single first impression rather than scrolling through padding. */}
       <section
-        className={`px-4 sm:px-6 md:px-12 py-10 md:py-16 ${
+        className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-12 py-8 md:py-12 ${
           d ? "bg-[#0d1117]" : "bg-gray-50"
         }`}
       >
@@ -248,7 +250,7 @@ function IntelligenceProductPage({
 
       {/* ── Refined Section ── */}
       <section
-        className={`px-4 sm:px-6 md:px-12 py-10 md:py-16 ${
+        className={`px-4 sm:px-6 md:px-12 py-8 md:py-12 ${
           d ? "bg-[#0d1117]" : "bg-white"
         }`}
       >

@@ -28,7 +28,9 @@ export default function AboutPage() {
     <div className={`antialiased ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative pt-10 md:pt-16 pb-6 md:pb-10 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      {/* Anchored to one viewport so the headline + framework illustration
+          sit together without trailing whitespace. */}
+      <section className={`relative min-h-screen flex flex-col justify-center py-8 md:py-12 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-20 right-1/4 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div>
@@ -42,11 +44,11 @@ export default function AboutPage() {
             <p className={`text-sm leading-relaxed mb-8 max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA is a structured diagnostic system designed to replace guesswork with analytical clarity. Scale on a foundation of truth, not assumptions.
             </p>
-            <div className="flex items-center gap-4">
-              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition text-center">
                 Start Assessment
               </Link>
-              <Link href="#pica-ecosystem" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="#pica-ecosystem" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition text-center ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 View Framework
               </Link>
             </div>
@@ -102,7 +104,7 @@ export default function AboutPage() {
               <div className="w-8 h-8 rounded-full bg-[#f97316] flex items-center justify-center text-white text-xs font-bold mx-auto mb-2">01</div>
               <p className={`text-xs font-semibold uppercase tracking-widest ${d ? "text-gray-400" : "text-gray-600"}`}>Clarity Before Strategy</p>
             </div>
-            <div className="w-px h-8 bg-gray-600" />
+            <div className="hidden sm:block w-px h-8 bg-gray-600" />
             <div className="text-center">
               <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold mx-auto mb-2">02</div>
               <p className={`text-xs font-semibold uppercase tracking-widest ${d ? "text-gray-400" : "text-gray-600"}`}>Diagnosis Before Growth</p>

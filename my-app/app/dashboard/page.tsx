@@ -445,7 +445,7 @@ function ActiveState({
 			) : null}
 
 			{/* Stats + AI Insight */}
-			<div className='grid grid-cols-1 lg:grid-cols-4 gap-4'>
+			<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
 				<div className='rounded-xl bg-[#111827] border border-white/5 p-5'>
 					<p className='text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2'>
 						Overall Score

@@ -30,7 +30,10 @@ export default function HomePage() {
     <div className={`antialiased ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative pt-10 md:pt-16 pb-6 md:pb-10 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      {/* min-h-screen + flex-justify-center anchors the hero to one viewport
+          instead of letting padding pile up. Vertical centering keeps the
+          dashboard mockup balanced against the headline on tall monitors. */}
+      <section className={`relative min-h-screen flex flex-col justify-center py-8 md:py-12 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
         {d && <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center">
@@ -48,11 +51,11 @@ export default function HomePage() {
             <p className={`text-sm leading-relaxed mb-8 max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA provides Nigerian founders with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
-            <div className="flex items-center gap-4">
-              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition text-center">
                 Start Free Scan
               </Link>
-              <Link href="/pages/about" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="/pages/about" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition text-center ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 PICA Onboarding Guide
               </Link>
             </div>
@@ -182,7 +185,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Data You Can Actually Use ── */}
-      <section className={`py-10 md:py-16 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+      <section className={`py-8 md:py-12 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
           <div>
             <p className="text-xs font-semibold tracking-widest text-teal-400 uppercase mb-3">Output Quality</p>
@@ -238,7 +241,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Economy Section ── */}
-      <section className={`py-10 md:py-16 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`py-8 md:py-12 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
           {/* Image placeholder */}
           <div className={`rounded-2xl overflow-hidden relative ${d ? "bg-[#161b22] border border-white/10" : "bg-gray-100 border border-gray-200"}`} style={{ minHeight: "280px" }}>
@@ -267,7 +270,7 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="py-10 md:py-16 px-4 sm:px-6 md:px-8 bg-gradient-to-br from-[#f97316] via-[#f59e0b] to-[#fbbf24]">
+      <section className="py-8 md:py-12 px-4 sm:px-6 md:px-8 bg-gradient-to-br from-[#f97316] via-[#f59e0b] to-[#fbbf24]">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-4xl font-extrabold text-gray-900 mb-3">Get Instant Clarity on Your Business</h2>
           <p className="text-sm text-gray-800 mb-8">Join 500+ Nigerian founders who stopped guessing and started scaling with precision.</p>

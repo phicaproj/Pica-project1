@@ -1372,7 +1372,7 @@ function CheckoutView({
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-white">
-      <div className="max-w-6xl mx-auto px-4 py-12 md:py-20 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
+      <div className="max-w-6xl mx-auto px-4 py-10 md:py-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10 lg:gap-16">
         <div>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
             Complete your{" "}
@@ -1455,7 +1455,7 @@ function CheckoutView({
         </div>
 
         <div>
-          <div className="flex border-b border-white/10 mb-8">
+          <div className="flex flex-wrap gap-2 border-b border-white/10 mb-8">
             {tabs.map((tab) => (
               <button
                 key={tab.label}
@@ -1770,7 +1770,7 @@ function SuccessView({
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               {plan?.backendPlan === "PHASE2B_PILLAR" ? (
                 <Link
                   href="/dashboard/deep-dive"

@@ -27,7 +27,9 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
     <div className={`min-h-screen ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`px-4 sm:px-6 md:px-12 py-10 md:py-16 ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      {/* Anchored to one viewport so the diagnostic overview and visual sit
+          together without trailing padding bands. */}
+      <section className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-12 py-8 md:py-12 ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-16 items-stretch">
           {/* Left */}
           <div className="flex flex-col justify-center">
@@ -90,7 +92,7 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
       </section>
 
       {/* ── Methodology ── */}
-      <section className={`px-4 sm:px-6 md:px-12 py-10 md:py-16 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+      <section className={`px-4 sm:px-6 md:px-12 py-8 md:py-12 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-8 items-start">
           <div className="col-span-1">
             <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-3">Methodology</p>

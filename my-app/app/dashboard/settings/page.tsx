@@ -125,7 +125,7 @@ function DashboardSettingsPageInner() {
     <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 text-white bg-[#0d1117] min-h-screen">
       {/* Centralized Tabs */}
       <div className="flex justify-center border-b border-white/5 pb-4 mb-8 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-8 justify-center">
+        <div className="flex gap-3 sm:gap-8 justify-center">
           {TABS.map((tab) => (
             <button
               key={tab}

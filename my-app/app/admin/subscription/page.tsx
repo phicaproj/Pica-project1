@@ -733,7 +733,7 @@ function PageInner() {
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <div className="mb-8 -mt-2 flex gap-6 border-b border-white/5">
+      <div className="mb-8 -mt-2 flex flex-wrap gap-3 sm:gap-6 border-b border-white/5">
         {TABS.map((tab) => {
           const active = activeTab === tab.key;
           return (
