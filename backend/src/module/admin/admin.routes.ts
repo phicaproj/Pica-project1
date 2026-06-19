@@ -116,11 +116,12 @@ adminRouter.patch('/pillars/weights', hasPermission('questions:write'), savePill
 adminRouter.get('/scoring-settings', hasPermission('scoring:read'), getScoringSettings);
 adminRouter.patch('/scoring-settings', hasPermission('scoring:write'), updateScoringSettings);
 
-// App-wide settings — currently just the USD→NGN exchange rate. Singleton row,
-// admin-editable. Settings is the natural permission bucket (this is config
-// rather than score interpretation).
-adminRouter.get('/app-settings', hasPermission('settings:read'), getAppSettings);
-adminRouter.patch('/app-settings', hasPermission('settings:write'), updateAppSettings);
+// App-wide settings — USD→NGN rate, storefront toggles, and the Phase 2B
+// bundle discount. Singleton row, admin-editable. Gated under the payments
+// bucket (ledger:*) since this is payment/pricing config and the editor UI
+// now lives in the /admin/subscription "App Settings" tab.
+adminRouter.get('/app-settings', hasPermission('ledger:read'), getAppSettings);
+adminRouter.patch('/app-settings', hasPermission('ledger:write'), updateAppSettings);
 adminRouter.get('/questions', hasPermission('questions:read'), listAdminQuestions);
 adminRouter.post('/questions', hasPermission('questions:write'), createQuestion);
 adminRouter.get('/questions/:id', hasPermission('questions:read'), getAdminQuestion);

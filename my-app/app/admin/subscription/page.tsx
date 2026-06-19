@@ -12,6 +12,7 @@ import {
   MessageSquare,
   RefreshCw,
   Save,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
@@ -26,7 +27,7 @@ import {
   type PricingRow,
 } from "@/lib/authClient";
 import { formatMoney } from "@/lib/utils";
-import { ConsultationTiersTab, SubscriptionTiersTab } from "./_tabs";
+import { AppSettingsTab, ConsultationTiersTab, SubscriptionTiersTab } from "./_tabs";
 
 // Section P — feature bullets now live on PlanPrice.features (DB-backed).
 // The fallback list below renders only when a row has an empty features array
@@ -721,6 +722,7 @@ const TABS = [
   { key: "pay-per-use", label: "Pay-per-use", icon: Layers3 },
   { key: "subscription", label: "Subscription Tiers", icon: CreditCard },
   { key: "consultation", label: "Consultation Tiers", icon: MessageSquare },
+  { key: "app-settings", label: "App Settings", icon: Settings2 },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -772,6 +774,7 @@ function PageInner() {
       {activeTab === "pay-per-use" && <PayPerUseTab />}
       {activeTab === "subscription" && <SubscriptionTiersTab />}
       {activeTab === "consultation" && <ConsultationTiersTab />}
+      {activeTab === "app-settings" && <AppSettingsTab />}
     </div>
   );
 }

@@ -26,6 +26,21 @@ export const updateAppSettingsSchema = z
     // incoming patch with the persisted row.
     payPerUseActive: z.boolean().optional(),
     subscriptionActive: z.boolean().optional(),
+    // BE-1 — Phase 2B multi-pillar bundle discount. `pctPerPillar` is the % off
+    // the bundle total per EXTRA pillar; `maxPillars` caps how many pillars
+    // count toward the discount.
+    phase2bDiscountPctPerPillar: z
+      .number()
+      .int('phase2bDiscountPctPerPillar must be an integer')
+      .min(0, 'phase2bDiscountPctPerPillar cannot be negative')
+      .max(100, 'phase2bDiscountPctPerPillar cannot exceed 100')
+      .optional(),
+    phase2bDiscountMaxPillars: z
+      .number()
+      .int('phase2bDiscountMaxPillars must be an integer')
+      .min(1, 'phase2bDiscountMaxPillars must be at least 1')
+      .max(7, 'phase2bDiscountMaxPillars cannot exceed 7')
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -37,6 +52,8 @@ export type AppSettingsPayload = {
   usdToNgn: number;
   payPerUseActive: boolean;
   subscriptionActive: boolean;
+  phase2bDiscountPctPerPillar: number;
+  phase2bDiscountMaxPillars: number;
   updatedBy: string | null;
   updatedAt: string;
 };

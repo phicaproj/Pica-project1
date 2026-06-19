@@ -891,14 +891,19 @@ export async function consumeSubscriptionQuota(
     periodStart: Date;
     periodEnd: Date;
     kind: SubscriptionQuotaKind;
+    // How many credits to consume. Defaults to 1; a Phase 2B multi-pillar
+    // bundle consumes one credit per pillar (BE-1). Caller must have confirmed
+    // `remaining >= count` via assertSubscriptionQuota first.
+    count?: number;
   }
 ): Promise<void> {
+  const count = input.count ?? 1;
   const incField =
     input.kind === 'phase2a'
-      ? { phase2aUsed: { increment: 1 } }
+      ? { phase2aUsed: { increment: count } }
       : input.kind === 'phase2b'
-        ? { phase2bUsed: { increment: 1 } }
-        : { consultationsUsed: { increment: 1 } };
+        ? { phase2bUsed: { increment: count } }
+        : { consultationsUsed: { increment: count } };
 
   await tx.subscriptionUsage.upsert({
     where: {
@@ -911,9 +916,9 @@ export async function consumeSubscriptionQuota(
       userSubscriptionId: input.subscriptionId,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
-      phase2aUsed: input.kind === 'phase2a' ? 1 : 0,
-      phase2bUsed: input.kind === 'phase2b' ? 1 : 0,
-      consultationsUsed: input.kind === 'consultation' ? 1 : 0,
+      phase2aUsed: input.kind === 'phase2a' ? count : 0,
+      phase2bUsed: input.kind === 'phase2b' ? count : 0,
+      consultationsUsed: input.kind === 'consultation' ? count : 0,
     },
     update: incField,
   });

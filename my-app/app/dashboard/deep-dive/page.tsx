@@ -50,6 +50,12 @@ export default function DeepDivePage() {
   const [pillarsData, setPillarsData] = useState<Phase2BPillarSession[]>([]);
   const [resultsData, setResultsData] = useState<any[]>([]);
   const [allPillars, setAllPillars] = useState<any[]>([]);
+  // BE-1 — bundle discount schedule from public pricing; drives the picker's
+  // live savings preview. Defaults match the seeded AppSettings values.
+  const [discount, setDiscount] = useState<{ pctPerPillar: number; maxPillars: number }>({
+    pctPerPillar: 5,
+    maxPillars: 5,
+  });
   // `me.profileComplete` mirrors the BE's Phase 2B gate (needs a resolved
   // businessSize). When false we keep the "Start" / picker triggers disabled
   // and surface a banner pointing at settings.
@@ -90,6 +96,9 @@ export default function DeepDivePage() {
         let usdToNgn = 1;
         if (pricingRes.data) {
           usdToNgn = pricingRes.data.usdToNgn ?? 1;
+          if (pricingRes.data.phase2bDiscount) {
+            setDiscount(pricingRes.data.phase2bDiscount);
+          }
           for (const row of pricingRes.data.phase2B) {
             if (row.pillarId) priceMap.set(row.pillarId, row);
           }
@@ -168,39 +177,41 @@ export default function DeepDivePage() {
   // page entirely — straight into answering. Only when there's no quota
   // (no sub, or this period's quota is spent) do we redirect to the paid
   // checkout. Matches the dashboard/subscription tryFreeShortCircuit pattern.
-  const handlePillarSelect = async (pillarId: string) => {
-    setStartingPillarId(pillarId);
-    try {
-      // Cheap read-only probe. Cuts off the wasteful PENDING-row creation
-      // for non-subscribers — initPayment is only called when we have
-      // reason to believe it'll come back free:true.
-      const probe = await quotaCheck("PHASE2B_PILLAR");
-      if (!probe.error && probe.data?.hasQuota) {
-        const init = await initPayment({
-          plan: "PHASE2B_PILLAR",
-          pillarId,
-        });
-        if (!init.error && init.data?.free) {
-          // Subscription quota covered the unlock. Open the assessment
-          // session and navigate — the BE already created the
-          // Phase2BPillarUnlock row inside initPaymentService.
-          const start = await startPhase2B({ pillarId });
-          if (!start.error && start.data) {
-            router.push(`/dashboard/deep-dive/${start.data.sessionId}`);
-            return;
+  const handleBundleConfirm = async (pillarIds: string[]) => {
+    if (pillarIds.length === 0) return;
+    setShowPicker(false);
+
+    // Single-pillar quota short-circuit: if the user has subscription quota we
+    // can grant + start the session inline, skipping the checkout page. For a
+    // multi-pillar bundle there's no single session to auto-start, so we always
+    // route to checkout (which handles the bundle quota path too).
+    if (pillarIds.length === 1) {
+      const pillarId = pillarIds[0];
+      setStartingPillarId(pillarId);
+      try {
+        const probe = await quotaCheck("PHASE2B_PILLAR");
+        if (!probe.error && probe.data?.hasQuota) {
+          const init = await initPayment({ plan: "PHASE2B_PILLAR", pillarIds });
+          if (!init.error && init.data?.free) {
+            const start = await startPhase2B({ pillarId });
+            if (!start.error && start.data) {
+              router.push(`/dashboard/deep-dive/${start.data.sessionId}`);
+              return;
+            }
           }
         }
+      } catch (err) {
+        console.error("Phase 2B quota short-circuit failed", err);
+      } finally {
+        setStartingPillarId(null);
       }
-      // Fall through to the legacy paid checkout — same destination as before.
-      router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
-    } catch (err) {
-      // Probe / start crashed — let the user complete the purchase manually
-      // via the checkout page, where the same logic runs with full UI.
-      console.error("Phase 2B quota short-circuit failed", err);
-      router.push(`/dashboard/subscription?plan=PHASE2B_PILLAR&pillarId=${pillarId}&autoCheckout=1`);
-    } finally {
-      setStartingPillarId(null);
     }
+
+    // Paid (or multi-pillar) path → checkout with the full pillar set.
+    const csv = encodeURIComponent(pillarIds.join(","));
+    router.push(
+      `/dashboard/subscription?plan=PHASE2B_PILLAR&pillarIds=${csv}&autoCheckout=1`,
+    );
   };
 
   const handlePillarAction = async (session: Phase2BPillarSession) => {
@@ -480,8 +491,9 @@ export default function DeepDivePage() {
         <PillarPickerModal
           pillars={allPillars}
           ownedPillarIds={ownedPillarIds}
+          discount={discount}
           onClose={() => setShowPicker(false)}
-          onSelect={handlePillarSelect}
+          onConfirm={handleBundleConfirm}
         />
       )}
 

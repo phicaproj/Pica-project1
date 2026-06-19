@@ -20,9 +20,7 @@ import {
   Pencil,
   Mail,
   UserPlus,
-  DollarSign,
   Save,
-  Clock,
 } from "lucide-react";
 import {
   getAllUsers,
@@ -33,12 +31,9 @@ import {
   getScoringSettings,
   updateScoringSettings,
   getAdminPillarsDetailed,
-  getAdminAppSettings,
-  updateAdminAppSettings,
   type AdminUserRow,
   type AdminPillarDetailed,
   type ScoringSettings,
-  type AppSettingsPayload,
 } from "@/lib/authClient";
 
 // ─── Taxonomy of Granular Permissions ──────────────────────────────
@@ -1185,320 +1180,11 @@ function PersonalInfoTab() {
   );
 }
 
-// ─── App Settings Tab — FX rate editor ────────────────────────────
-// Compact form for the singleton USD→NGN exchange rate (singleton row
-// owned by `AppSettings`). The rate flows into every NGN-rendered price
-// (public pricing page, /dashboard/plans, subscription + consultation
-// tiers, checkout init) so the live three-card preview gives admins a
-// concrete sense of what they're about to change.
-function AppSettingsTab() {
-  const [settings, setSettings] = useState<AppSettingsPayload | null>(null);
-  const [draftRate, setDraftRate] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  // Section F — separate inflight flag for the storefront toggles so flipping
-  // a switch doesn't dim the FX rate save button.
-  const [togglingSection, setTogglingSection] = useState<
-    "payPerUse" | "subscription" | null
-  >(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const res = await getAdminAppSettings();
-    setLoading(false);
-    if (res.error || !res.data) {
-      setError(res.error?.message ?? "Could not load app settings.");
-      return;
-    }
-    setSettings(res.data.settings);
-    setDraftRate(String(res.data.settings.usdToNgn));
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const parsedRate = Number(draftRate);
-  const rateValid =
-    Number.isFinite(parsedRate) && parsedRate > 0 && parsedRate <= 1_000_000;
-  const dirty = settings ? Math.abs(parsedRate - settings.usdToNgn) > 0.0001 : false;
-
-  const formatNgnPreview = (usd: number) => {
-    if (!Number.isFinite(usd) || !Number.isFinite(parsedRate)) return "—";
-    const ngn = usd * parsedRate;
-    return `₦${ngn.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-  };
-
-  const formatUpdatedAt = (iso: string) => {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString(undefined, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
-
-  const handleSave = async () => {
-    if (!rateValid) {
-      setError("Enter a rate between 0 and 1,000,000.");
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
-    const res = await updateAdminAppSettings({ usdToNgn: parsedRate });
-    setSaving(false);
-    if (res.error || !res.data) {
-      setError(res.error?.message ?? "Could not save app settings.");
-      return;
-    }
-    setSettings(res.data.settings);
-    setDraftRate(String(res.data.settings.usdToNgn));
-    setSuccess(`Rate updated — $1 = ₦${res.data.settings.usdToNgn.toLocaleString()}.`);
-  };
-
-  // Section F — flip a single storefront section toggle. The BE rejects the
-  // patch if it would zero both sections, but we additionally disable the
-  // active toggle when it's the last one live so the user never sees the
-  // error in the first place.
-  const handleToggleSection = async (
-    key: "payPerUseActive" | "subscriptionActive",
-    next: boolean,
-  ) => {
-    if (!settings) return;
-    setTogglingSection(key === "payPerUseActive" ? "payPerUse" : "subscription");
-    setError(null);
-    setSuccess(null);
-    const res = await updateAdminAppSettings({ [key]: next });
-    setTogglingSection(null);
-    if (res.error || !res.data) {
-      setError(res.error?.message ?? "Could not update section toggle.");
-      return;
-    }
-    setSettings(res.data.settings);
-    const label = key === "payPerUseActive" ? "Pay-per-use" : "Subscription";
-    setSuccess(`${label} section ${next ? "enabled" : "disabled"}.`);
-  };
-
-  if (loading) {
-    return (
-      <div className="py-16 flex items-center justify-center">
-        <Loader className="w-6 h-6 text-blue-400 animate-spin" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-2xl">
-      {error && (
-        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300 flex items-start gap-2">
-          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-      {success && (
-        <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-emerald-300 flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <DollarSign className="w-4 h-4 text-blue-300" />
-          <h2 className="text-base font-bold text-white">USD → NGN exchange rate</h2>
-        </div>
-        <p className="text-xs text-gray-500 mb-5">
-          Used wherever the platform quotes a Naira charge. Keep it close to
-          the live Paystack rate — large drifts will under-collect or refund-loop.
-        </p>
-
-        <label className="block mb-5">
-          <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-            1 USD =
-          </span>
-          <div className="flex items-stretch max-w-xs">
-            <span className="inline-flex items-center px-3 rounded-l-lg bg-[#111318] border border-white/10 border-r-0 text-sm text-gray-400">
-              ₦
-            </span>
-            <input
-              type="number"
-              step="0.01"
-              min={0}
-              value={draftRate}
-              disabled={saving}
-              onChange={(e) => setDraftRate(e.target.value)}
-              className="flex-1 bg-[#111318] border border-white/10 rounded-r-lg px-3 py-2 text-sm text-white"
-            />
-          </div>
-          {!rateValid && (
-            <span className="block text-[10px] text-rose-300 mt-1">
-              Rate must be a positive number ≤ 1,000,000.
-            </span>
-          )}
-        </label>
-
-        {/* Live preview against three recognisable catalogue prices so admins
-            see the effect of their typing before they save. */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5">
-          {[
-            { usd: 50, label: "Quick Consult" },
-            { usd: 100, label: "Strategy Session" },
-            { usd: 1200, label: "Phase 2A" },
-          ].map((p) => (
-            <div
-              key={p.label}
-              className="rounded-lg bg-[#111318] border border-white/5 px-3 py-2.5"
-            >
-              <p className="text-[10px] uppercase tracking-widest text-gray-500">
-                {p.label}
-              </p>
-              <p className="text-sm font-semibold text-white mt-0.5">
-                ${p.usd.toLocaleString()}{" "}
-                <span className="text-gray-500 font-normal">→</span>{" "}
-                <span className="text-blue-300">{formatNgnPreview(p.usd)}</span>
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {settings && (
-          <p className="text-[11px] text-gray-500 mb-5 flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
-            Last updated {formatUpdatedAt(settings.updatedAt)}
-            {settings.updatedBy ? ` by ${settings.updatedBy}` : ""}
-          </p>
-        )}
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              if (settings) {
-                setDraftRate(String(settings.usdToNgn));
-                setError(null);
-              }
-            }}
-            disabled={saving || !dirty}
-            className="px-4 py-2.5 rounded-lg border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-40"
-          >
-            Reset
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !dirty || !rateValid}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition disabled:opacity-60"
-          >
-            {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save rate
-          </button>
-        </div>
-      </div>
-
-      {/* ── Storefront sections (Section F) ───────────────────────── */}
-      {settings && (
-        <div className="mt-5 rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
-          <div className="flex items-center gap-2 mb-1">
-            <Settings2 className="w-4 h-4 text-blue-300" />
-            <h2 className="text-base font-bold text-white">Storefront sections</h2>
-          </div>
-          <p className="text-xs text-gray-500 mb-5">
-            Hide an entire section from the public pricing page. At least one
-            section must stay live — the toggle for the last active section is
-            locked.
-          </p>
-
-          <div className="space-y-3">
-            <SectionToggleRow
-              label="Pay-per-use"
-              caption="One-off Phase 2A and Phase 2B charges."
-              active={settings.payPerUseActive}
-              busy={togglingSection === "payPerUse"}
-              // Lock the toggle when it's the only section still live.
-              locked={settings.payPerUseActive && !settings.subscriptionActive}
-              onToggle={(next) =>
-                void handleToggleSection("payPerUseActive", next)
-              }
-            />
-            <SectionToggleRow
-              label="Subscription"
-              caption="Recurring monthly plans (Starter / Growth / Scale)."
-              active={settings.subscriptionActive}
-              busy={togglingSection === "subscription"}
-              locked={settings.subscriptionActive && !settings.payPerUseActive}
-              onToggle={(next) =>
-                void handleToggleSection("subscriptionActive", next)
-              }
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SectionToggleRow({
-  label,
-  caption,
-  active,
-  busy,
-  locked,
-  onToggle,
-}: {
-  label: string;
-  caption: string;
-  active: boolean;
-  busy: boolean;
-  locked: boolean;
-  onToggle: (next: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-lg border border-white/5 bg-[#111318] px-4 py-3.5">
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-white">{label}</p>
-          {locked && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
-              Last live
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 text-xs text-gray-500">{caption}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => onToggle(!active)}
-        disabled={busy || locked}
-        aria-pressed={active}
-        aria-label={`${active ? "Disable" : "Enable"} ${label}`}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
-          active ? "bg-emerald-500" : "bg-white/10"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-            active ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-        {busy && (
-          <Loader className="absolute -right-6 top-1 h-4 w-4 animate-spin text-blue-300" />
-        )}
-      </button>
-    </div>
-  );
-}
-
 // ─── Main Settings Page ───────────────────────────────────────────
 const TABS = [
   { key: "roles", label: "Roles & Permissions" },
   { key: "pillars", label: "Pillar Management" },
   { key: "personal", label: "Personal Information" },
-  { key: "app", label: "App Settings" },
 ];
 
 export default function SettingsPage() {
@@ -1554,21 +1240,10 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {activeTab === "app" && (
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">App Settings</h1>
-          <p className="text-gray-400 text-sm max-w-lg">
-            Platform-wide configuration. Today this is the live USD → NGN rate
-            used to convert USD catalogue prices for Nigerian users.
-          </p>
-        </div>
-      )}
-
       {/* Tab content */}
       {activeTab === "roles" && <RolesTab />}
       {activeTab === "pillars" && <PillarTab />}
       {activeTab === "personal" && <PersonalInfoTab />}
-      {activeTab === "app" && <AppSettingsTab />}
     </div>
   );
 }

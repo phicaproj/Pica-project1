@@ -22,6 +22,8 @@ type SettingsRow = {
   usdToNgn: Prisma.Decimal;
   payPerUseActive: boolean;
   subscriptionActive: boolean;
+  phase2bDiscountPctPerPillar: number;
+  phase2bDiscountMaxPillars: number;
   updatedBy: string | null;
   updatedAt: Date;
 };
@@ -30,6 +32,8 @@ const toPayload = (row: SettingsRow): AppSettingsPayload => ({
   usdToNgn: Number(row.usdToNgn),
   payPerUseActive: row.payPerUseActive,
   subscriptionActive: row.subscriptionActive,
+  phase2bDiscountPctPerPillar: row.phase2bDiscountPctPerPillar,
+  phase2bDiscountMaxPillars: row.phase2bDiscountMaxPillars,
   updatedBy: row.updatedBy,
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -60,6 +64,22 @@ async function getOrCreateSettings(): Promise<SettingsRow> {
 export async function getUsdToNgnRate(): Promise<number> {
   const settings = await getOrCreateSettings();
   return Number(settings.usdToNgn);
+}
+
+/**
+ * Cheap read for the Phase 2B bundle-discount knobs. Used by the bundle pricing
+ * helper and the public pricing endpoint. Falls back to the seeded defaults if
+ * the singleton row is somehow missing.
+ */
+export async function getPhase2BDiscountConfig(): Promise<{
+  pctPerPillar: number;
+  maxPillars: number;
+}> {
+  const settings = await getOrCreateSettings();
+  return {
+    pctPerPillar: settings.phase2bDiscountPctPerPillar,
+    maxPillars: settings.phase2bDiscountMaxPillars,
+  };
 }
 
 export async function getAppSettingsService(): Promise<AppSettingsResponse> {
@@ -98,6 +118,12 @@ export async function updateAppSettingsService(
         : {}),
       ...(input.subscriptionActive !== undefined
         ? { subscriptionActive: input.subscriptionActive }
+        : {}),
+      ...(input.phase2bDiscountPctPerPillar !== undefined
+        ? { phase2bDiscountPctPerPillar: input.phase2bDiscountPctPerPillar }
+        : {}),
+      ...(input.phase2bDiscountMaxPillars !== undefined
+        ? { phase2bDiscountMaxPillars: input.phase2bDiscountMaxPillars }
         : {}),
       updatedBy,
     },

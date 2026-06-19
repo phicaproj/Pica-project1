@@ -196,6 +196,31 @@ function buildPlans(
   ];
 }
 
+// BE-1 — price a Phase 2B bundle in the user's display currency. Sums the
+// per-pillar catalogue prices (converted from USD), then applies the
+// admin-configured compound discount. Mirrors backend resolvePhase2BBundlePrice.
+function resolveBundleAmount(
+  pillarIds: string[],
+  pricing: PublicPricingResponse | null,
+  display: Currency,
+): { base: number; total: number; discountPct: number; savings: number; anyMissing: boolean } {
+  const usdToNgn = pricing?.usdToNgn ?? 1;
+  const byId = new Map((pricing?.phase2B ?? []).filter((r) => r.pillarId).map((r) => [r.pillarId!, r]));
+  let baseUsd = 0;
+  let anyMissing = false;
+  for (const id of pillarIds) {
+    const row = byId.get(id);
+    if (!row) anyMissing = true;
+    else baseUsd += row.price;
+  }
+  const cfg = pricing?.phase2bDiscount ?? { pctPerPillar: 5, maxPillars: 5 };
+  const extra = Math.max(0, Math.min(pillarIds.length, cfg.maxPillars) - 1);
+  const discountPct = Math.min(100, extra * cfg.pctPerPillar);
+  const base = convertFromUsd(baseUsd, display, usdToNgn) ?? 0;
+  const total = Math.round(base * (1 - discountPct / 100) * 100) / 100;
+  return { base, total, discountPct, savings: Math.round((base - total) * 100) / 100, anyMissing };
+}
+
 export default function SubscriptionPage() {
   return (
     <Suspense
@@ -214,6 +239,8 @@ function SubscriptionPageInner() {
   const searchParams = useSearchParams();
   const urlSessionId = searchParams?.get("sessionId") ?? null;
   const urlPillarId = searchParams?.get("pillarId") ?? null;
+  // BE-1 — comma-separated pillar set for a multi-pillar bundle.
+  const urlPillarIdsRaw = searchParams?.get("pillarIds") ?? null;
   const urlPlan = searchParams?.get("plan") ?? null;
   const urlAutoCheckout = searchParams?.get("autoCheckout") === "1";
 
@@ -224,6 +251,11 @@ function SubscriptionPageInner() {
   const [selectedPlan, setSelectedPlan] = useState<PlanCard | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [checkoutPillarId, setCheckoutPillarId] = useState<string | null>(null);
+  // BE-1 — full pillar set for a multi-pillar bundle checkout. For a
+  // single-pillar purchase this holds one id (mirrors checkoutPillarId).
+  const [checkoutPillarIds, setCheckoutPillarIds] = useState<string[]>([]);
+  // Pillar display names for the bundle, for the success screen list.
+  const [checkoutPillarNames, setCheckoutPillarNames] = useState<string[]>([]);
   const [verifyResult, setVerifyResult] =
     useState<VerifyPaymentResponse | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -392,27 +424,35 @@ function SubscriptionPageInner() {
     if (meLoading || pricingLoading || !me || verifyResult) return;
     if (!urlAutoCheckout) return;
 
-    if (urlPlan === "PHASE2B_PILLAR" && urlPillarId) {
+    // Multi-pillar bundle (BE-1) — `pillarIds` csv takes precedence over a
+    // single `pillarId`. A single id in the csv resolves to a 0%-discount
+    // bundle, i.e. the plain pillar price.
+    const bundleIds = urlPillarIdsRaw
+      ? urlPillarIdsRaw.split(",").map((s) => s.trim()).filter(Boolean)
+      : urlPillarId
+        ? [urlPillarId]
+        : [];
+
+    if (urlPlan === "PHASE2B_PILLAR" && bundleIds.length > 0) {
       const phase2bPlan = plans.find(
         (p) => p.backendPlan === "PHASE2B_PILLAR",
       );
       if (!phase2bPlan) return;
-      const pillarPrice = pricingByPillarId.get(urlPillarId);
-      // Catalogue prices are USD; convert to the display currency before
-      // surfacing them as the checkout amount.
-      const usdToNgn = pricing?.usdToNgn ?? 1;
-      const pillarPriceDisplay = convertFromUsd(pillarPrice?.price ?? null, displayCurrency, usdToNgn);
-      const fallbackAmount = phase2bPlan.amount;
-      const checkoutAmount = pillarPriceDisplay ?? fallbackAmount;
+      const { total, anyMissing } = resolveBundleAmount(bundleIds, pricing, displayCurrency);
+      const names = bundleIds
+        .map((id) => pricingByPillarId.get(id)?.pillarName)
+        .filter((n): n is string => Boolean(n));
       setPaymentError(null);
       setSelectedPlan({
         ...phase2bPlan,
-        price: formatMoney(checkoutAmount, displayCurrency),
-        amount: checkoutAmount,
+        price: formatMoney(total, displayCurrency),
+        amount: total,
         currency: displayCurrency,
-        priceMissing: !pillarPrice,
+        priceMissing: anyMissing,
       });
-      setCheckoutPillarId(urlPillarId);
+      setCheckoutPillarId(bundleIds.length === 1 ? bundleIds[0] : null);
+      setCheckoutPillarIds(bundleIds);
+      setCheckoutPillarNames(names);
       setView("checkout");
       return;
     }
@@ -436,6 +476,7 @@ function SubscriptionPageInner() {
     verifyResult,
     urlSessionId,
     urlPillarId,
+    urlPillarIdsRaw,
     urlPlan,
     urlAutoCheckout,
   ]);
@@ -577,7 +618,7 @@ function SubscriptionPageInner() {
   // the purchase manually — the BE will re-check quota at the real init.
   const tryFreeShortCircuit = async (
     plan: PlanCard,
-    args: { sessionId?: string; pillarId?: string },
+    args: { sessionId?: string; pillarId?: string; pillarIds?: string[] },
   ): Promise<boolean> => {
     if (!plan.backendPlan) return false;
     // Skip the probe entirely if the user has no active subscription.
@@ -602,6 +643,7 @@ function SubscriptionPageInner() {
         plan: plan.backendPlan,
         sessionId: args.sessionId,
         pillarId: args.pillarId,
+        pillarIds: args.pillarIds,
       });
       if (res.error || !res.data) {
         // Couldn't pre-check — fall through to the normal checkout path
@@ -641,36 +683,30 @@ function SubscriptionPageInner() {
     }
   };
 
-  const handlePickPillar = async (pillarId: string) => {
-    if (!pendingPlan) return;
+  const handlePickPillars = async (pillarIds: string[]) => {
+    if (!pendingPlan || pillarIds.length === 0) return;
     setShowPillarPicker(false);
-    const pillarPrice = pricingByPillarId.get(pillarId);
-    // Same USD→display conversion as the auto-checkout branch above.
-    const usdToNgn = pricing?.usdToNgn ?? 1;
-    const pillarPriceDisplay = convertFromUsd(pillarPrice?.price ?? null, displayCurrency, usdToNgn);
-    const checkoutAmount = pillarPriceDisplay ?? pendingPlan.amount;
+    const { total, anyMissing } = resolveBundleAmount(pillarIds, pricing, displayCurrency);
+    const names = pillarIds
+      .map((id) => pricingByPillarId.get(id)?.pillarName)
+      .filter((n): n is string => Boolean(n));
     const planForCheckout: PlanCard = {
       ...pendingPlan,
-      price: formatMoney(checkoutAmount, displayCurrency),
-      amount: checkoutAmount,
+      price: formatMoney(total, displayCurrency),
+      amount: total,
       currency: displayCurrency,
-      priceMissing: !pillarPrice,
+      priceMissing: anyMissing,
     };
     // Pre-check quota before opening the checkout screen. If the user's
-    // subscription covers it, the helper jumps straight to success.
-    const shortCircuited = await tryFreeShortCircuit(planForCheckout, {
-      pillarId,
-    });
-    if (shortCircuited) {
-      // We need a selectedPlan so the success view can label the purchase.
-      setSelectedPlan(planForCheckout);
-      setCheckoutSessionId(null);
-      setCheckoutPillarId(pillarId);
-      return;
-    }
+    // subscription covers the whole bundle, the helper jumps straight to
+    // success (the BE grants one unlock per pillar).
+    const shortCircuited = await tryFreeShortCircuit(planForCheckout, { pillarIds });
     setSelectedPlan(planForCheckout);
     setCheckoutSessionId(null);
-    setCheckoutPillarId(pillarId);
+    setCheckoutPillarId(pillarIds.length === 1 ? pillarIds[0] : null);
+    setCheckoutPillarIds(pillarIds);
+    setCheckoutPillarNames(names);
+    if (shortCircuited) return;
     setView("checkout");
   };
 
@@ -773,6 +809,8 @@ function SubscriptionPageInner() {
           me={me}
           sessionId={checkoutSessionId}
           pillarId={checkoutPillarId}
+          pillarIds={checkoutPillarIds}
+          pillarNames={checkoutPillarNames}
           onChangePlan={() => setView("plans")}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -783,6 +821,7 @@ function SubscriptionPageInner() {
           plan={selectedPlan}
           verifyResult={verifyResult}
           chargedAmount={chargedAmount}
+          pillarNames={checkoutPillarNames}
         />
       )}
 
@@ -800,11 +839,12 @@ function SubscriptionPageInner() {
           <PillarPickerModal
             pillars={allPillars}
             ownedPillarIds={ownedPillarIds}
+            discount={pricing?.phase2bDiscount ?? { pctPerPillar: 5, maxPillars: 5 }}
             onClose={() => {
               setShowPillarPicker(false);
               setPendingPlan(null);
             }}
-            onSelect={handlePickPillar}
+            onConfirm={handlePickPillars}
           />
         </div>
       )}
@@ -1169,6 +1209,8 @@ function CheckoutView({
   me,
   sessionId: explicitSessionId,
   pillarId: explicitPillarId,
+  pillarIds: explicitPillarIds,
+  pillarNames,
   onChangePlan,
   onPaymentSuccess,
 }: {
@@ -1176,6 +1218,10 @@ function CheckoutView({
   me: MeUser;
   sessionId: string | null;
   pillarId: string | null;
+  // BE-1 — full pillar set for a multi-pillar bundle. Single-pillar purchases
+  // pass a one-element array (or fall back to explicitPillarId).
+  pillarIds: string[];
+  pillarNames: string[];
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse, amount: number | null) => void;
 }) {
@@ -1257,7 +1303,9 @@ function CheckoutView({
       code,
       basePrice: baseAmount,
       plan: plan.backendPlan,
-      pillarId: explicitPillarId ?? undefined,
+      // For a bundle the coupon validates against the first pillar; the BE
+      // applies the coupon to the already-discounted bundle total.
+      pillarId: explicitPillarId ?? explicitPillarIds[0] ?? undefined,
     });
     setCouponBusy(false);
 
@@ -1303,7 +1351,14 @@ function CheckoutView({
       }
 
       const sessionId = explicitSessionId ?? getLastSessionId() ?? undefined;
-      const pillarId = explicitPillarId ?? undefined;
+      // Normalize the pillar set: prefer the bundle array, fall back to the
+      // single id. Empty for PHASE2A.
+      const pillarIds =
+        explicitPillarIds.length > 0
+          ? explicitPillarIds
+          : explicitPillarId
+            ? [explicitPillarId]
+            : [];
 
       if (plan.backendPlan === "PHASE2A" && !sessionId) {
         setError(
@@ -1312,8 +1367,8 @@ function CheckoutView({
         setBusy(false);
         return;
       }
-      
-      if (plan.backendPlan === "PHASE2B_PILLAR" && !pillarId) {
+
+      if (plan.backendPlan === "PHASE2B_PILLAR" && pillarIds.length === 0) {
         setError("No pillar selected. Please select a Deep Dive module to unlock.");
         setBusy(false);
         return;
@@ -1328,7 +1383,7 @@ function CheckoutView({
       const init = await initPayment({
         plan: plan.backendPlan!,
         sessionId,
-        pillarId,
+        ...(pillarIds.length > 0 ? { pillarIds } : {}),
         ...(couponPricing ? { couponCode: couponPricing.code } : {}),
       });
 
@@ -1715,35 +1770,53 @@ function SuccessView({
   plan,
   verifyResult,
   chargedAmount,
+  pillarNames,
 }: {
   me: MeUser;
   plan: PlanCard | null;
   verifyResult: VerifyPaymentResponse;
   chargedAmount: number | null;
+  // BE-1 — names of every pillar unlocked in this (possibly multi-pillar) purchase.
+  pillarNames: string[];
 }) {
   const displayAmount = chargedAmount !== null ? formatPrice(chargedAmount) : (plan?.price ?? "Paid");
-  const capabilities = [
-    {
-      icon: <BarChart2 className="w-5 h-5 text-[#f97316]" />,
-      title: "Full Phase 2A Diagnostic",
-      desc: "Pillar-level findings, scoring, and risk markers.",
-    },
-    {
-      icon: <Users className="w-5 h-5 text-[#f97316]" />,
-      title: `Tailored for ${me.businessSize === "MEDIUM" ? "Medium" : "Small"} Business`,
-      desc: "Question set chosen based on your business size.",
-    },
-    {
-      icon: <Zap className="w-5 h-5 text-[#f97316]" />,
-      title: "Downloadable Report",
-      desc: "PDF copy delivered to your inbox and dashboard.",
-    },
-    {
-      icon: <Star className="w-5 h-5 text-[#f97316]" />,
-      title: "Lifetime Access",
-      desc: "Re-run the assessment any time - no further charges.",
-    },
-  ];
+  const isBundle = plan?.backendPlan === "PHASE2B_PILLAR";
+  const capabilities = isBundle
+    ? [
+        // One "module unlocked" row per purchased pillar, then the shared perks.
+        ...pillarNames.map((name) => ({
+          icon: <CircleDot className="w-5 h-5 text-[#f97316]" />,
+          title: `${name} Deep Dive`,
+          desc: "Module unlocked — ready to start whenever you are.",
+        })),
+        {
+          icon: <Zap className="w-5 h-5 text-[#f97316]" />,
+          title: "Downloadable Report",
+          desc: "PDF copy delivered to your inbox and dashboard.",
+        },
+      ]
+    : [
+        {
+          icon: <BarChart2 className="w-5 h-5 text-[#f97316]" />,
+          title: "Full Phase 2A Diagnostic",
+          desc: "Pillar-level findings, scoring, and risk markers.",
+        },
+        {
+          icon: <Users className="w-5 h-5 text-[#f97316]" />,
+          title: `Tailored for ${me.businessSize === "MEDIUM" ? "Medium" : "Small"} Business`,
+          desc: "Question set chosen based on your business size.",
+        },
+        {
+          icon: <Zap className="w-5 h-5 text-[#f97316]" />,
+          title: "Downloadable Report",
+          desc: "PDF copy delivered to your inbox and dashboard.",
+        },
+        {
+          icon: <Star className="w-5 h-5 text-[#f97316]" />,
+          title: "Lifetime Access",
+          desc: "Re-run the assessment any time - no further charges.",
+        },
+      ];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0d1117] text-white">
@@ -1757,7 +1830,9 @@ function SuccessView({
         </h1>
         <p className="text-base text-center mb-12 max-w-lg text-gray-400">
           {plan?.backendPlan === "PHASE2B_PILLAR"
-            ? "Plan 2B Module is now active. Your deep dive is ready."
+            ? pillarNames.length > 1
+              ? `${pillarNames.length} deep-dive modules are now active. Start whenever you're ready.`
+              : "Plan 2B Module is now active. Your deep dive is ready."
             : "Plan 2A is now active on your account. Your full diagnostic is ready."}
         </p>
 

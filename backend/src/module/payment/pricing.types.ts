@@ -102,6 +102,12 @@ export type PublicPricingResponse = {
     payPerUse: boolean;
     subscription: boolean;
   };
+  // BE-1 — Phase 2B multi-pillar bundle discount schedule. The FE uses these
+  // to render the live discounted total and the anonymous savings ladder.
+  phase2bDiscount: {
+    pctPerPillar: number;
+    maxPillars: number;
+  };
   phase2A: PricingRow | null;
   phase2B: PricingRow[];
 };

@@ -170,7 +170,7 @@ const detailSelect = {
   createdAt: true,
   updatedAt: true,
   pillar: { select: { name: true } },
-  phase2bUnlock: {
+  phase2bUnlocks: {
     select: { id: true, unlockedAt: true, consumedAt: true, sessionId: true },
   },
   webhookEvents: {
@@ -226,7 +226,10 @@ async function toDetail(row: DetailRecord): Promise<AdminPaymentDetail> {
     authorizationUrl: row.authorizationUrl,
     updatedAt: row.updatedAt,
     resultIsPaid,
-    unlock: row.phase2bUnlock,
+    // Admin detail surfaces a single unlock today; for a multi-pillar bundle
+    // we show the first (all share this payment). A future enhancement can
+    // list every pillar unlock if needed.
+    unlock: row.phase2bUnlocks[0] ?? null,
     webhookEvents: row.webhookEvents,
   };
 }
@@ -335,6 +338,7 @@ export async function adminUpdatePaymentStatusService(
       userId: true,
       sessionId: true,
       pillarId: true,
+      pillarIds: true,
       plan: true,
       status: true,
       amount: true,

@@ -783,6 +783,11 @@ export type AppSettingsPayload = {
 	// toggle that would zero everything so the user can't even try.
 	payPerUseActive: boolean
 	subscriptionActive: boolean
+	// BE-1 — Phase 2B multi-pillar bundle discount. `pctPerPillar` is the %
+	// shaved off the bundle total per extra pillar; `maxPillars` caps how many
+	// pillars count toward the discount.
+	phase2bDiscountPctPerPillar: number
+	phase2bDiscountMaxPillars: number
 	updatedBy: string | null
 	updatedAt: string
 }
@@ -800,6 +805,8 @@ export const updateAdminAppSettings = async (input: {
 	usdToNgn?: number
 	payPerUseActive?: boolean
 	subscriptionActive?: boolean
+	phase2bDiscountPctPerPillar?: number
+	phase2bDiscountMaxPillars?: number
 }) => {
 	return authedFetch<AppSettingsResponse>('/admin/app-settings', {
 		method: 'PATCH',

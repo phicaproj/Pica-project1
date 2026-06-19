@@ -40,7 +40,7 @@ import type {
   UserPaymentHistoryResponse,
   UserPaymentRow,
 } from './payment.types';
-import { resolvePlanPrice } from './pricing.service';
+import { resolvePhase2BBundlePrice, resolvePlanPrice } from './pricing.service';
 import { validateAndPriceCoupon } from '../coupon/coupon.service';
 import { getUsdToNgnRate } from '../settings/settings.service';
 import {
@@ -109,6 +109,10 @@ export async function initPaymentService(
   // (Phase2BPillarUnlock) which is later redeemed via /assessment/phase2b/start.
   let paymentSessionId: string | null = null;
   let paymentPillarId: string | null = null;
+  // BE-1 — the full set of pillars for a multi-pillar bundle. Empty for
+  // PHASE2A / subscription; one entry for a single-pillar purchase; many for a
+  // bundle. Persisted on Payment.pillarIds and consumed by grantSuccessEntitlements.
+  let paymentPillarIds: string[] = [];
   // Backend-owned base price (major USD units after Slice 2). Converted to NGN
   // at the bottom of this function if the user's country resolves to Nigeria.
   let basePrice: number;
@@ -157,34 +161,48 @@ export async function initPaymentService(
     paymentSessionId = session.id;
     basePrice = await resolvePlanPrice({ plan: Plan.PHASE2A });
   } else {
-    // PHASE2B_PILLAR — validate the pillar and reject if an open (unconsumed)
-    // unlock already exists. "One open unlock per (user, pillar)" is enforced
+    // PHASE2B_PILLAR — single pillar or a multi-pillar bundle (BE-1). Normalize
+    // to a distinct id list (single `pillarId` → `[pillarId]`).
+    const requestedIds = input.pillarIds?.length
+      ? Array.from(new Set(input.pillarIds))
+      : input.pillarId
+        ? [input.pillarId]
+        : [];
+    if (requestedIds.length === 0) {
+      throw new AppError('At least one pillar is required', UNPROCESSABLE_CONTENT);
+    }
+
+    // Validate every pillar exists + is active, and reject if any has an open
+    // (unconsumed) unlock. "One open unlock per (user, pillar)" is enforced
     // here in app code rather than via a DB partial-unique index, since users
     // can hold many historical CONSUMED unlocks for the same pillar over time.
-    const pillar = await prisma.pillar.findUnique({
-      where: { id: input.pillarId },
-      select: { id: true, code: true, isActive: true },
-    });
-    if (!pillar || !pillar.isActive) {
-      throw new AppError('Pillar not found', NOT_FOUND);
+    for (const pillarId of requestedIds) {
+      const pillar = await prisma.pillar.findUnique({
+        where: { id: pillarId },
+        select: { id: true, name: true, isActive: true },
+      });
+      if (!pillar || !pillar.isActive) {
+        throw new AppError('Pillar not found', NOT_FOUND);
+      }
+      const openUnlock = await prisma.phase2BPillarUnlock.findFirst({
+        where: { userId: user.id, pillarId: pillar.id, consumedAt: null },
+        select: { id: true, sessionId: true },
+      });
+      if (openUnlock) {
+        throw new AppError(
+          openUnlock.sessionId
+            ? `You already started a Phase 2B session for ${pillar.name} — finish it before purchasing again.`
+            : `You already have an unclaimed Phase 2B unlock for ${pillar.name}.`,
+          CONFLICT
+        );
+      }
     }
-    const openUnlock = await prisma.phase2BPillarUnlock.findFirst({
-      where: { userId: user.id, pillarId: pillar.id, consumedAt: null },
-      select: { id: true, sessionId: true },
-    });
-    if (openUnlock) {
-      throw new AppError(
-        openUnlock.sessionId
-          ? 'You already started a Phase 2B session for this pillar — finish it before purchasing again.'
-          : 'You already have an unclaimed Phase 2B unlock for this pillar.',
-        CONFLICT
-      );
-    }
-    paymentPillarId = pillar.id;
-    basePrice = await resolvePlanPrice({
-      plan: Plan.PHASE2B_PILLAR,
-      pillarId: pillar.id,
-    });
+
+    paymentPillarIds = requestedIds;
+    // A single-pillar purchase keeps the legacy pillarId column populated for
+    // historic queries; a bundle leaves it null and relies on pillarIds.
+    paymentPillarId = requestedIds.length === 1 ? requestedIds[0] : null;
+    basePrice = (await resolvePhase2BBundlePrice(requestedIds)).finalPriceUsd;
   }
 
   const reference = newPaymentReference();
@@ -199,8 +217,13 @@ export async function initPaymentService(
   // the same transaction so a crash mid-flight can't grant without
   // decrementing (or vice versa).
   const quotaKind = input.plan === Plan.PHASE2A ? 'phase2a' : 'phase2b';
+  // A Phase 2B bundle needs one credit per pillar. We only take the quota path
+  // when the whole bundle fits in the remaining quota — partial consumption
+  // (free some pillars, charge the rest) is intentionally not supported as it's
+  // confusing on the receipt. Otherwise we fall through to the paid bundle.
+  const quotaUnits = input.plan === Plan.PHASE2A ? 1 : paymentPillarIds.length;
   const verdict = await assertSubscriptionQuota(user.id, quotaKind);
-  if (verdict.hasQuota) {
+  if (verdict.hasQuota && verdict.remaining >= quotaUnits) {
     const paidAt = new Date();
     const quotaPayment = await prisma.$transaction(async (tx) => {
       const created = await tx.payment.create({
@@ -208,6 +231,7 @@ export async function initPaymentService(
           userId: user.id,
           sessionId: paymentSessionId,
           pillarId: paymentPillarId,
+          pillarIds: paymentPillarIds,
           userSubscriptionId: verdict.subscriptionId,
           plan: input.plan,
           provider: PaymentProvider.PAYSTACK,
@@ -226,6 +250,7 @@ export async function initPaymentService(
           userId: true,
           sessionId: true,
           pillarId: true,
+          pillarIds: true,
           plan: true,
           amount: true,
           currency: true,
@@ -245,6 +270,7 @@ export async function initPaymentService(
         periodStart: verdict.periodStart,
         periodEnd: sub?.currentPeriodEnd ?? new Date(),
         kind: quotaKind,
+        count: quotaUnits,
       });
       await grantSuccessEntitlements(tx, created, paidAt, 'subscription-quota');
       return created;
@@ -326,6 +352,7 @@ export async function initPaymentService(
           userId: user.id,
           sessionId: paymentSessionId,
           pillarId: paymentPillarId,
+          pillarIds: paymentPillarIds,
           plan: input.plan,
           provider: PaymentProvider.PAYSTACK,
           providerReference: reference,
@@ -345,6 +372,7 @@ export async function initPaymentService(
           userId: true,
           sessionId: true,
           pillarId: true,
+          pillarIds: true,
           plan: true,
           amount: true,
           currency: true,
@@ -388,6 +416,7 @@ export async function initPaymentService(
       userId: user.id,
       sessionId: paymentSessionId,
       pillarId: paymentPillarId,
+      pillarIds: paymentPillarIds,
       plan: input.plan,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
@@ -1166,6 +1195,7 @@ export async function applyVerificationResult(
       userId: true,
       sessionId: true,
       pillarId: true,
+      pillarIds: true,
       plan: true,
       status: true,
       amount: true,
@@ -1217,6 +1247,9 @@ export type SuccessPaymentSnapshot = {
   userId: string;
   sessionId: string | null;
   pillarId: string | null;
+  // BE-1 — full pillar set for a multi-pillar bundle. Empty for single-pillar
+  // (use pillarId) / PHASE2A / subscription rows.
+  pillarIds: string[];
   plan: Plan;
   amount: Prisma.Decimal;
   currency: string;
@@ -1291,25 +1324,35 @@ export async function grantSuccessEntitlements(
     }
   }
 
-  // Phase 2B unlock: grant a redeemable credit for the pillar. The user
-  // claims it later via POST /api/assessment/phase2b/start. Idempotent via
-  // the paymentId @unique constraint — a webhook+verify race can't double-grant.
+  // Phase 2B unlock: grant a redeemable credit for each purchased pillar. The
+  // user claims them later via POST /api/assessment/phase2b/start. Idempotent
+  // via the composite (paymentId, pillarId) unique — a webhook+verify race
+  // can't double-grant. A single-pillar purchase falls back to pillarId; a
+  // multi-pillar bundle iterates pillarIds.
   if (payment.plan === Plan.PHASE2B_PILLAR) {
-    if (!payment.pillarId) {
+    const pillarIds =
+      payment.pillarIds.length > 0
+        ? payment.pillarIds
+        : payment.pillarId
+          ? [payment.pillarId]
+          : [];
+    if (pillarIds.length === 0) {
       console.warn(
-        `[payment:${source}] SUCCESS Phase 2B payment ${payment.id} has no pillarId — cannot grant unlock`
+        `[payment:${source}] SUCCESS Phase 2B payment ${payment.id} has no pillarId(s) — cannot grant unlock`
       );
     } else {
-      await tx.phase2BPillarUnlock.upsert({
-        where: { paymentId: payment.id },
-        create: {
-          userId: payment.userId,
-          pillarId: payment.pillarId,
-          paymentId: payment.id,
-          sessionId: null,
-        },
-        update: {}, // no-op on race — first writer wins
-      });
+      for (const pillarId of pillarIds) {
+        await tx.phase2BPillarUnlock.upsert({
+          where: { paymentId_pillarId: { paymentId: payment.id, pillarId } },
+          create: {
+            userId: payment.userId,
+            pillarId,
+            paymentId: payment.id,
+            sessionId: null,
+          },
+          update: {}, // no-op on race — first writer wins
+        });
+      }
     }
   }
 }

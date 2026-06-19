@@ -908,6 +908,12 @@ const AppSettingsPayloadSchema = registry.register(
       usdToNgn: z.number(),
       payPerUseActive: z.boolean(),
       subscriptionActive: z.boolean(),
+      phase2bDiscountPctPerPillar: z.number().int().openapi({
+        description: 'Phase 2B bundle: % off the total per extra pillar',
+      }),
+      phase2bDiscountMaxPillars: z.number().int().openapi({
+        description: 'Phase 2B bundle: max pillars that count toward the discount (cap)',
+      }),
       updatedBy: z.string().uuid().nullable(),
       updatedAt: z.string().datetime(),
     })
@@ -919,7 +925,7 @@ registry.registerPath({
   path: '/api/admin/app-settings',
   tags: ['Admin'],
   summary: 'Read app-wide settings',
-  description: 'Admin only — requires `settings:read`. Returns the singleton settings row (USD→NGN rate + storefront on/off toggles).',
+  description: 'Admin only — requires `ledger:read`. Returns the singleton settings row (USD→NGN rate, storefront on/off toggles, and the Phase 2B bundle discount config).',
   security: [{ bearerAuth: [] }],
   responses: {
     200: {
@@ -931,7 +937,7 @@ registry.registerPath({
       },
     },
     401: errorResponse('Missing or invalid token'),
-    403: errorResponse('Missing settings:read permission'),
+    403: errorResponse('Missing ledger:read permission'),
   },
 });
 
@@ -941,7 +947,7 @@ registry.registerPath({
   tags: ['Admin'],
   summary: 'Update app-wide settings',
   description:
-    'Admin only — requires `settings:write`. Every field is optional but the service enforces "at least one storefront section must remain live" after merging — disabling both pay-per-use and subscription in the same patch is rejected.',
+    'Admin only — requires `ledger:write`. Every field is optional but the service enforces "at least one storefront section must remain live" after merging — disabling both pay-per-use and subscription in the same patch is rejected. Also accepts the Phase 2B bundle discount knobs (`phase2bDiscountPctPerPillar`, `phase2bDiscountMaxPillars`).',
   security: [{ bearerAuth: [] }],
   request: {
     body: {
@@ -960,7 +966,7 @@ registry.registerPath({
     },
     400: errorResponse('Validation error'),
     401: errorResponse('Missing or invalid token'),
-    403: errorResponse('Missing settings:write permission'),
+    403: errorResponse('Missing ledger:write permission'),
     422: errorResponse('At least one storefront section must stay active'),
   },
 });

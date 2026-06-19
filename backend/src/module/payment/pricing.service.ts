@@ -2,7 +2,7 @@ import { Plan, Prisma } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
-import { getUsdToNgnRate } from '../settings/settings.service';
+import { getPhase2BDiscountConfig, getUsdToNgnRate } from '../settings/settings.service';
 import type {
   CreatePricingInput,
   ListPricingQuery,
@@ -106,6 +106,52 @@ export async function resolvePlanPrice(params: {
   return price.price.toNumber();
 }
 
+export type Phase2BBundleQuote = {
+  // USD major units. base = sum of per-pillar prices; final = base − discount.
+  basePriceUsd: number;
+  discountUsd: number;
+  finalPriceUsd: number;
+  // The effective discount percentage applied (0–100), after the cap.
+  discountPct: number;
+  perPillar: { pillarId: string; price: number }[];
+};
+
+/**
+ * Prices a Phase 2B multi-pillar bundle. Sums each pillar's configured
+ * PlanPrice, then applies the admin-configured compound discount:
+ *   discountPct = min(count - 1, maxPillars - 1) × pctPerPillar
+ * capped at 100%. A single-pillar bundle resolves to a 0% discount, i.e. the
+ * pillar's plain price. Throws if any pillar has no configured price.
+ */
+export async function resolvePhase2BBundlePrice(
+  pillarIds: string[]
+): Promise<Phase2BBundleQuote> {
+  if (pillarIds.length === 0) {
+    throw new AppError('At least one pillar is required for a bundle', UNPROCESSABLE_CONTENT);
+  }
+
+  const perPillar = await Promise.all(
+    pillarIds.map(async (pillarId) => ({
+      pillarId,
+      price: await resolvePlanPrice({ plan: Plan.PHASE2B_PILLAR, pillarId }),
+    }))
+  );
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const basePriceUsd = round2(perPillar.reduce((sum, p) => sum + p.price, 0));
+
+  const { pctPerPillar, maxPillars } = await getPhase2BDiscountConfig();
+  // The first pillar is full price; each extra pillar (up to the cap) adds
+  // pctPerPillar%. min() applies the cap; max(…, 0) guards a 1-pillar bundle.
+  const extraPillars = Math.max(0, Math.min(pillarIds.length, maxPillars) - 1);
+  const discountPct = Math.min(100, extraPillars * pctPerPillar);
+
+  const discountUsd = round2((basePriceUsd * discountPct) / 100);
+  const finalPriceUsd = round2(basePriceUsd - discountUsd);
+
+  return { basePriceUsd, discountUsd, finalPriceUsd, discountPct, perPillar };
+}
+
 export async function listPricingService(
   query: ListPricingQuery = {}
 ): Promise<ListPricingResponse> {
@@ -138,7 +184,12 @@ export async function getPublicPricingService(): Promise<PublicPricingResponse> 
     }),
     getUsdToNgnRate(),
     prisma.appSettings.findFirst({
-      select: { payPerUseActive: true, subscriptionActive: true },
+      select: {
+        payPerUseActive: true,
+        subscriptionActive: true,
+        phase2bDiscountPctPerPillar: true,
+        phase2bDiscountMaxPillars: true,
+      },
     }),
   ]);
 
@@ -165,6 +216,13 @@ export async function getPublicPricingService(): Promise<PublicPricingResponse> 
     sections: {
       payPerUse: payPerUseActive,
       subscription: subscriptionActive,
+    },
+    // BE-1 — the bundle discount knobs so the FE renders the savings ladder
+    // and live total without hardcoding the schedule. Defaults match the
+    // seeded AppSettings values when the row is missing.
+    phase2bDiscount: {
+      pctPerPillar: settings?.phase2bDiscountPctPerPillar ?? 5,
+      maxPillars: settings?.phase2bDiscountMaxPillars ?? 5,
     },
     phase2A,
     phase2B,

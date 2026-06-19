@@ -9,11 +9,26 @@ export const initPaymentSchema = z.discriminatedUnion('plan', [
     sessionId: z.string().uuid(),
     couponCode: z.string().trim().min(1).optional(),
   }),
-  z.object({
-    plan: z.literal('PHASE2B_PILLAR'),
-    pillarId: z.string().uuid(),
-    couponCode: z.string().trim().min(1).optional(),
-  }),
+  z
+    .object({
+      plan: z.literal('PHASE2B_PILLAR'),
+      // Single-pillar purchase (legacy / back-compat). Either this or
+      // `pillarIds` must be present; the service normalizes to an array.
+      pillarId: z.string().uuid().optional(),
+      // Multi-pillar bundle (BE-1): 1–7 distinct pillars in one checkout.
+      pillarIds: z.array(z.string().uuid()).min(1).max(7).optional(),
+      couponCode: z.string().trim().min(1).optional(),
+    })
+    .refine((data) => Boolean(data.pillarId) || Boolean(data.pillarIds?.length), {
+      message: 'Provide pillarId or a non-empty pillarIds array',
+      path: ['pillarIds'],
+    })
+    .refine(
+      (data) =>
+        !data.pillarIds ||
+        new Set(data.pillarIds).size === data.pillarIds.length,
+      { message: 'pillarIds must be distinct', path: ['pillarIds'] }
+    ),
 ]);
 
 export const verifyPaymentParams = z.object({

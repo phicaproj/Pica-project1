@@ -209,6 +209,15 @@ model AppSettings {
   payPerUseActive   Boolean @default(true) @map("pay_per_use_active")
   subscriptionActive Boolean @default(true) @map("subscription_active")
 
+  // Phase 2B multi-pillar bundle discount (BE-1). `pctPerPillar` is the
+  // percentage shaved off the bundle total for each EXTRA pillar beyond the
+  // first; `maxPillars` caps how many pillars count toward the discount (the
+  // customer is not told about the cap). Discount % =
+  //   min(count - 1, maxPillars - 1) × pctPerPillar.
+  // Defaults 5 / 5 give the agreed ladder 1→0%, 2→5%, … 5→20%, 6+→20%.
+  phase2bDiscountPctPerPillar Int @default(5) @map("phase2b_discount_pct_per_pillar")
+  phase2bDiscountMaxPillars   Int @default(5) @map("phase2b_discount_max_pillars")
+
   updatedBy String? @map("updated_by")
   updatedByUser User? @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
 
@@ -477,9 +486,14 @@ model Payment {
   // PHASE2A: required (set at init time, identifies the SessionResult being paid for).
   // PHASE2B_PILLAR: null (no session exists yet at payment time; pillarId is set instead).
   sessionId String? @map("session_id")
-  // PHASE2B_PILLAR: required (the pillar being unlocked).
-  // PHASE2A: null.
+  // PHASE2B_PILLAR: required for a single-pillar purchase (the pillar being
+  // unlocked). PHASE2A: null. For a multi-pillar bundle this is null and the
+  // full set lives on `pillarIds` below.
   pillarId  String? @map("pillar_id")
+  // PHASE2B_PILLAR multi-pillar bundle (BE-1): the full set of pillars bought
+  // in one transaction. Empty for PHASE2A / single-pillar / subscription rows.
+  // One bundle Payment grants one Phase2BPillarUnlock per entry here.
+  pillarIds String[] @map("pillar_ids")
   // SUBSCRIPTION: required (the UserSubscription this charge funds).
   // PHASE2A / PHASE2B_PILLAR: null.
   userSubscriptionId String? @map("user_subscription_id")
@@ -536,7 +550,9 @@ model Payment {
   userSubscription     UserSubscription?     @relation(fields: [userSubscriptionId], references: [id])
   consultationBooking  ConsultationBooking?  @relation(fields: [consultationBookingId], references: [id])
   webhookEvents        WebhookEvent[]
-  phase2bUnlock        Phase2BPillarUnlock?
+  // One row per pillar granted by this payment — a single-pillar purchase has
+  // one, a multi-pillar bundle has many (BE-1).
+  phase2bUnlocks       Phase2BPillarUnlock[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -605,7 +621,10 @@ model Phase2BPillarUnlock {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
   pillarId   String    @map("pillar_id")
-  paymentId  String    @unique @map("payment_id") // the SUCCESS Payment that granted this
+  // The SUCCESS Payment that granted this. No longer unique on its own: a
+  // single multi-pillar bundle Payment grants one unlock per pillar, so the
+  // uniqueness moved to the composite (paymentId, pillarId) index below.
+  paymentId  String    @map("payment_id")
   sessionId  String?   @unique @map("session_id") // null = unstarted; set when user starts test
   unlockedAt DateTime  @default(now()) @map("unlocked_at")
   consumedAt DateTime? @map("consumed_at") // set when the session is submitted
@@ -616,6 +635,11 @@ model Phase2BPillarUnlock {
   payment Payment            @relation(fields: [paymentId], references: [id])
   session AssessmentSession? @relation(fields: [sessionId], references: [id])
 
+  // One unlock per (payment, pillar). Single-pillar purchases still get a
+  // single row; multi-pillar bundles get one row per pillar under the same
+  // paymentId. The upsert in grantSuccessEntitlements keys on this so a
+  // webhook+verify race can't double-grant.
+  @@unique([paymentId, pillarId])
   // Open-unlock lookup is hot (every init payment + every start session
   // hits this index).
   @@index([userId, pillarId])

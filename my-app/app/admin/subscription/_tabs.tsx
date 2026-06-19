@@ -6,17 +6,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  AlertTriangle,
   Calendar,
   CheckCircle2,
   Clock,
   Crown,
+  DollarSign,
   Edit3,
   ExternalLink,
   Inbox,
   Loader,
   MessageSquare,
+  Percent,
   Plus,
   Save,
+  Settings2,
   Sparkles,
   Trash2,
   X,
@@ -34,7 +38,10 @@ import {
   adminUpdateConsultationBookingStatus,
   adminUpdateConsultationTier,
   adminUpdateSubscriptionPlan,
+  getAdminAppSettings,
+  updateAdminAppSettings,
   type AdminBookingRow,
+  type AppSettingsPayload,
   type CompletedResultOption,
   type ConsultationBookingStatus,
   type ConsultationTierAdmin,
@@ -1496,6 +1503,463 @@ function ConfirmBookingModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// App Settings tab — FX rate, storefront toggles, and the Phase 2B bundle
+// discount (BE-1). Moved here from /admin/settings because it's all payment
+// config; the page is gated by ledger:read/ledger:write.
+// ═════════════════════════════════════════════════════════════════════════
+
+export function AppSettingsTab() {
+  const [settings, setSettings] = useState<AppSettingsPayload | null>(null);
+  const [draftRate, setDraftRate] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [togglingSection, setTogglingSection] = useState<
+    "payPerUse" | "subscription" | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Phase 2B bundle discount drafts.
+  const [draftPct, setDraftPct] = useState("");
+  const [draftMax, setDraftMax] = useState("");
+  const [savingDiscount, setSavingDiscount] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await getAdminAppSettings();
+    setLoading(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not load app settings.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftRate(String(res.data.settings.usdToNgn));
+    setDraftPct(String(res.data.settings.phase2bDiscountPctPerPillar));
+    setDraftMax(String(res.data.settings.phase2bDiscountMaxPillars));
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const parsedRate = Number(draftRate);
+  const rateValid =
+    Number.isFinite(parsedRate) && parsedRate > 0 && parsedRate <= 1_000_000;
+  const rateDirty = settings ? Math.abs(parsedRate - settings.usdToNgn) > 0.0001 : false;
+
+  const parsedPct = Number(draftPct);
+  const parsedMax = Number(draftMax);
+  const pctValid = Number.isInteger(parsedPct) && parsedPct >= 0 && parsedPct <= 100;
+  const maxValid = Number.isInteger(parsedMax) && parsedMax >= 1 && parsedMax <= 7;
+  const discountDirty = settings
+    ? parsedPct !== settings.phase2bDiscountPctPerPillar ||
+      parsedMax !== settings.phase2bDiscountMaxPillars
+    : false;
+
+  const formatNgnPreview = (usd: number) => {
+    if (!Number.isFinite(usd) || !Number.isFinite(parsedRate)) return "—";
+    const ngn = usd * parsedRate;
+    return `₦${ngn.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  };
+
+  const formatUpdatedAt = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const handleSaveRate = async () => {
+    if (!rateValid) {
+      setError("Enter a rate between 0 and 1,000,000.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({ usdToNgn: parsedRate });
+    setSaving(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not save app settings.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftRate(String(res.data.settings.usdToNgn));
+    setSuccess(`Rate updated — $1 = ₦${res.data.settings.usdToNgn.toLocaleString()}.`);
+  };
+
+  const handleSaveDiscount = async () => {
+    if (!pctValid || !maxValid) {
+      setError("Discount must be 0–100% and the cap 1–7 pillars.");
+      return;
+    }
+    setSavingDiscount(true);
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({
+      phase2bDiscountPctPerPillar: parsedPct,
+      phase2bDiscountMaxPillars: parsedMax,
+    });
+    setSavingDiscount(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not save discount config.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftPct(String(res.data.settings.phase2bDiscountPctPerPillar));
+    setDraftMax(String(res.data.settings.phase2bDiscountMaxPillars));
+    setSuccess("Phase 2B bundle discount updated.");
+  };
+
+  const handleToggleSection = async (
+    key: "payPerUseActive" | "subscriptionActive",
+    next: boolean,
+  ) => {
+    if (!settings) return;
+    setTogglingSection(key === "payPerUseActive" ? "payPerUse" : "subscription");
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({ [key]: next });
+    setTogglingSection(null);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not update section toggle.");
+      return;
+    }
+    setSettings(res.data.settings);
+    const label = key === "payPerUseActive" ? "Pay-per-use" : "Subscription";
+    setSuccess(`${label} section ${next ? "enabled" : "disabled"}.`);
+  };
+
+  // Live discount ladder preview for the drafted pct/cap. The cap is the point
+  // beyond which the discount stops growing (not surfaced to customers).
+  const ladder = useMemo(() => {
+    if (!pctValid || !maxValid) return [];
+    return [1, 2, 3, 4, 5, 6, 7].map((count) => {
+      const extra = Math.max(0, Math.min(count, parsedMax) - 1);
+      const pct = Math.min(100, extra * parsedPct);
+      return { count, pct, capped: count > parsedMax };
+    });
+  }, [parsedPct, parsedMax, pctValid, maxValid]);
+
+  if (loading) {
+    return (
+      <div className="py-16 flex items-center justify-center">
+        <Loader className="w-6 h-6 text-blue-400 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl">
+      {error && (
+        <div className="mb-5 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-sm text-emerald-300 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {/* USD → NGN rate */}
+      <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <DollarSign className="w-4 h-4 text-blue-300" />
+          <h2 className="text-base font-bold text-white">USD → NGN exchange rate</h2>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          Used wherever the platform quotes a Naira charge. Keep it close to
+          the live Paystack rate — large drifts will under-collect or refund-loop.
+        </p>
+
+        <label className="block mb-5">
+          <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+            1 USD =
+          </span>
+          <div className="flex items-stretch max-w-xs">
+            <span className="inline-flex items-center px-3 rounded-l-lg bg-[#111318] border border-white/10 border-r-0 text-sm text-gray-400">
+              ₦
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={draftRate}
+              disabled={saving}
+              onChange={(e) => setDraftRate(e.target.value)}
+              className="flex-1 bg-[#111318] border border-white/10 rounded-r-lg px-3 py-2 text-sm text-white"
+            />
+          </div>
+          {!rateValid && (
+            <span className="block text-[10px] text-rose-300 mt-1">
+              Rate must be a positive number ≤ 1,000,000.
+            </span>
+          )}
+        </label>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5">
+          {[
+            { usd: 50, label: "Quick Consult" },
+            { usd: 100, label: "Strategy Session" },
+            { usd: 1200, label: "Phase 2A" },
+          ].map((p) => (
+            <div
+              key={p.label}
+              className="rounded-lg bg-[#111318] border border-white/5 px-3 py-2.5"
+            >
+              <p className="text-[10px] uppercase tracking-widest text-gray-500">
+                {p.label}
+              </p>
+              <p className="text-sm font-semibold text-white mt-0.5">
+                ${p.usd.toLocaleString()}{" "}
+                <span className="text-gray-500 font-normal">→</span>{" "}
+                <span className="text-blue-300">{formatNgnPreview(p.usd)}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {settings && (
+          <p className="text-[11px] text-gray-500 mb-5 flex items-center gap-1.5">
+            <Clock className="w-3 h-3" />
+            Last updated {formatUpdatedAt(settings.updatedAt)}
+            {settings.updatedBy ? ` by ${settings.updatedBy}` : ""}
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (settings) {
+                setDraftRate(String(settings.usdToNgn));
+                setError(null);
+              }
+            }}
+            disabled={saving || !rateDirty}
+            className="px-4 py-2.5 rounded-lg border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleSaveRate}
+            disabled={saving || !rateDirty || !rateValid}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition disabled:opacity-60"
+          >
+            {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save rate
+          </button>
+        </div>
+      </div>
+
+      {/* Phase 2B bundle discount (BE-1) */}
+      <div className="mt-5 rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Percent className="w-4 h-4 text-blue-300" />
+          <h2 className="text-base font-bold text-white">Phase 2B bundle discount</h2>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          When a user buys multiple Phase 2B pillars in one checkout, each extra
+          pillar shaves a percentage off the bundle total. The cap is the number
+          of pillars beyond which the discount stops growing — customers are not
+          told about it.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          <label className="block">
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+              % off per extra pillar
+            </span>
+            <div className="flex items-stretch">
+              <input
+                type="number"
+                step="1"
+                min={0}
+                max={100}
+                value={draftPct}
+                disabled={savingDiscount}
+                onChange={(e) => setDraftPct(e.target.value)}
+                className="flex-1 bg-[#111318] border border-white/10 rounded-l-lg px-3 py-2 text-sm text-white"
+              />
+              <span className="inline-flex items-center px-3 rounded-r-lg bg-[#111318] border border-white/10 border-l-0 text-sm text-gray-400">
+                %
+              </span>
+            </div>
+            {!pctValid && (
+              <span className="block text-[10px] text-rose-300 mt-1">
+                Must be an integer 0–100.
+              </span>
+            )}
+          </label>
+          <label className="block">
+            <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+              Cap (max pillars counted)
+            </span>
+            <input
+              type="number"
+              step="1"
+              min={1}
+              max={7}
+              value={draftMax}
+              disabled={savingDiscount}
+              onChange={(e) => setDraftMax(e.target.value)}
+              className="w-full bg-[#111318] border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+            />
+            {!maxValid && (
+              <span className="block text-[10px] text-rose-300 mt-1">
+                Must be an integer 1–7.
+              </span>
+            )}
+          </label>
+        </div>
+
+        {/* Live ladder preview */}
+        {ladder.length > 0 && (
+          <div className="mb-5 rounded-lg border border-white/5 bg-[#111318] p-3">
+            <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-2">
+              Discount ladder preview
+            </p>
+            <div className="grid grid-cols-7 gap-1.5 text-center">
+              {ladder.map(({ count, pct, capped }) => (
+                <div
+                  key={count}
+                  className={`rounded-md px-1 py-1.5 ${
+                    capped ? "bg-white/[0.02]" : "bg-white/5"
+                  }`}
+                  title={capped ? "Beyond the cap — discount no longer grows" : undefined}
+                >
+                  <p className="text-[10px] text-gray-500">{count}p</p>
+                  <p className={`text-sm font-bold ${capped ? "text-gray-500" : "text-emerald-300"}`}>
+                    {pct}%
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (settings) {
+                setDraftPct(String(settings.phase2bDiscountPctPerPillar));
+                setDraftMax(String(settings.phase2bDiscountMaxPillars));
+                setError(null);
+              }
+            }}
+            disabled={savingDiscount || !discountDirty}
+            className="px-4 py-2.5 rounded-lg border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleSaveDiscount}
+            disabled={savingDiscount || !discountDirty || !pctValid || !maxValid}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition disabled:opacity-60"
+          >
+            {savingDiscount ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save discount
+          </button>
+        </div>
+      </div>
+
+      {/* Storefront sections */}
+      {settings && (
+        <div className="mt-5 rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Settings2 className="w-4 h-4 text-blue-300" />
+            <h2 className="text-base font-bold text-white">Storefront sections</h2>
+          </div>
+          <p className="text-xs text-gray-500 mb-5">
+            Hide an entire section from the public pricing page. At least one
+            section must stay live — the toggle for the last active section is
+            locked.
+          </p>
+
+          <div className="space-y-3">
+            <SectionToggleRow
+              label="Pay-per-use"
+              caption="One-off Phase 2A and Phase 2B charges."
+              active={settings.payPerUseActive}
+              busy={togglingSection === "payPerUse"}
+              locked={settings.payPerUseActive && !settings.subscriptionActive}
+              onToggle={(next) => void handleToggleSection("payPerUseActive", next)}
+            />
+            <SectionToggleRow
+              label="Subscription"
+              caption="Recurring monthly plans (Starter / Growth / Scale)."
+              active={settings.subscriptionActive}
+              busy={togglingSection === "subscription"}
+              locked={settings.subscriptionActive && !settings.payPerUseActive}
+              onToggle={(next) => void handleToggleSection("subscriptionActive", next)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionToggleRow({
+  label,
+  caption,
+  active,
+  busy,
+  locked,
+  onToggle,
+}: {
+  label: string;
+  caption: string;
+  active: boolean;
+  busy: boolean;
+  locked: boolean;
+  onToggle: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-white/5 bg-[#111318] px-4 py-3.5">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-white">{label}</p>
+          {locked && (
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-amber-300">
+              Last live
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs text-gray-500">{caption}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onToggle(!active)}
+        disabled={busy || locked}
+        aria-pressed={active}
+        aria-label={`${active ? "Disable" : "Enable"} ${label}`}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          active ? "bg-emerald-500" : "bg-white/10"
+        }`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+            active ? "translate-x-6" : "translate-x-1"
+          }`}
+        />
+        {busy && (
+          <Loader className="absolute -right-6 top-1 h-4 w-4 animate-spin text-blue-300" />
+        )}
+      </button>
     </div>
   );
 }

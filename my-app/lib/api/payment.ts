@@ -27,6 +27,9 @@ export const initPayment = async (payload: {
 	plan: 'PHASE2A' | 'PHASE2B_PILLAR'
 	sessionId?: string
 	pillarId?: string
+	// Phase 2B multi-pillar bundle (BE-1): 1–7 distinct pillars in one checkout.
+	// Send this OR pillarId for PHASE2B_PILLAR.
+	pillarIds?: string[]
 	couponCode?: string
 }) => {
 	return authedFetch<InitPaymentResponse>('/payment/init', {
@@ -101,6 +104,13 @@ export type PublicPricingResponse = {
 	sections: {
 		payPerUse: boolean
 		subscription: boolean
+	}
+	// BE-1 — Phase 2B multi-pillar bundle discount schedule. Used to render the
+	// live discounted total in the picker/checkout and the savings ladder on
+	// the anonymous pricing page.
+	phase2bDiscount: {
+		pctPerPillar: number
+		maxPillars: number
 	}
 	phase2A: PricingRow | null
 	phase2B: PricingRow[]
