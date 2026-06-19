@@ -811,6 +811,16 @@ function SubscriptionPageInner() {
           pillarId={checkoutPillarId}
           pillarIds={checkoutPillarIds}
           pillarNames={checkoutPillarNames}
+          bundle={
+            checkoutPillarIds.length > 1
+              ? (() => {
+                  const b = resolveBundleAmount(checkoutPillarIds, pricing, displayCurrency);
+                  return b.discountPct > 0
+                    ? { base: b.base, total: b.total, discountPct: b.discountPct, savings: b.savings }
+                    : null;
+                })()
+              : null
+          }
           onChangePlan={() => setView("plans")}
           onPaymentSuccess={handlePaymentSuccess}
         />
@@ -1211,6 +1221,7 @@ function CheckoutView({
   pillarId: explicitPillarId,
   pillarIds: explicitPillarIds,
   pillarNames,
+  bundle,
   onChangePlan,
   onPaymentSuccess,
 }: {
@@ -1222,6 +1233,9 @@ function CheckoutView({
   // pass a one-element array (or fall back to explicitPillarId).
   pillarIds: string[];
   pillarNames: string[];
+  // Bundle discount breakdown (null for single-pillar / no-discount). Mirrors the
+  // selection modal's subtotal → discount → total strip on the checkout summary.
+  bundle: { base: number; total: number; discountPct: number; savings: number } | null;
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse, amount: number | null) => void;
 }) {
@@ -1498,12 +1512,42 @@ function CheckoutView({
               </p>
               <div className="flex items-baseline gap-3">
                 <p className="text-4xl font-black text-white">{displayTotal}</p>
-                {couponPricing && (
+                {couponPricing ? (
                   <span className="text-lg font-bold text-gray-500 line-through">
                     {formatPrice(couponPricing.basePrice, plan.currency)}
                   </span>
-                )}
+                ) : bundle ? (
+                  <span className="text-lg font-bold text-gray-500 line-through">
+                    {formatPrice(bundle.base, plan.currency)}
+                  </span>
+                ) : null}
               </div>
+              {!couponPricing && bundle && (
+                <div className="mt-4 space-y-2.5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 text-sm">
+                  <div className="flex justify-between gap-4 text-gray-200">
+                    <span className="font-semibold">
+                      {explicitPillarIds.length} modules · subtotal
+                    </span>
+                    <span className="font-bold text-white">
+                      {formatPrice(bundle.base, plan.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 text-teal-300">
+                    <span className="font-semibold">
+                      Bundle discount ({bundle.discountPct}% off)
+                    </span>
+                    <span className="font-extrabold">
+                      −{formatPrice(bundle.savings, plan.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-teal-500/20 pt-2.5 text-white">
+                    <span className="font-bold">Total</span>
+                    <span className="text-lg font-black text-[#00ffaa]">
+                      {formatPrice(bundle.total, plan.currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
               {couponPricing && (
                 <div className="mt-4 space-y-2.5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 text-sm">
                   <div className="flex justify-between gap-4 text-gray-200">
