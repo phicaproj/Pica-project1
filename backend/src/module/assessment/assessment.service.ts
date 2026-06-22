@@ -289,7 +289,15 @@ function deliverReportInBackground(params: {
 
   void (async () => {
     try {
-      const pdfBuffer = await generateReportPDF(result, businessName, phase);
+      const session = await prisma.assessmentSession.findUnique({
+        where: { id: sessionId },
+        select: { businessSize: true, completedAt: true },
+      });
+      const pdfBuffer = await generateReportPDF(result, businessName, phase, {
+        businessSize: session?.businessSize,
+        sessionId,
+        completedAt: session?.completedAt,
+      });
 
       // Upload to R2 under a stable per-session key — re-submitting/regenerating
       // overwrites the same object instead of leaving orphans.

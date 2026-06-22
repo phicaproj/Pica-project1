@@ -186,6 +186,8 @@ export async function downloadResultPdfService(
       userId: true,
       leadEmail: true,
       businessName: true,
+      businessSize: true,
+      completedAt: true,
       user: {
         select: { id: true, email: true },
       },
@@ -303,7 +305,11 @@ export async function downloadResultPdfService(
   const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;
   const businessName = session.businessName ?? 'Business';
 
-  const pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase);
+  const pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase, {
+    businessSize: session.businessSize,
+    sessionId: session.id,
+    completedAt: session.completedAt,
+  });
   const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
 
   // Persist the PDF to R2 on first download — subsequent downloads reuse the
