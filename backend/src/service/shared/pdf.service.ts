@@ -34,7 +34,7 @@ const COLORS = {
 
 const PAGE_MARGIN = 40;
 
-// Logo lives in the backend assets folder
+// Logo lives in the assets folder
 const LOGO_PATH = path.join(process.cwd(), 'assets', 'logo.png');
 const LOGO_BUFFER: Buffer | null = (() => {
   try {
@@ -44,11 +44,25 @@ const LOGO_BUFFER: Buffer | null = (() => {
   }
 })();
 
+// Cover Page Image
+const COVER_PATH = path.join(process.cwd(), 'assets', 'cover.jpg');
+const COVER_BUFFER: Buffer | null = (() => {
+  try {
+    return fs.readFileSync(COVER_PATH);
+  } catch {
+    try {
+      return fs.readFileSync(path.join(process.cwd(), '..', 'PDF report design', 'Cover page image.jpg'));
+    } catch {
+      return null;
+    }
+  }
+})();
+
 // Phase → human label shown on the cover + summary header.
 const phaseLabel = (phase: Phase): string => {
-  if (phase === Phase.PHASE2A) return 'Phase 2A · Structured Diagnosis';
-  if (phase === Phase.PHASE2B) return 'Phase 2B · Deep Dive';
-  return 'Phase 1 · Snapshot Assessment';
+  if (phase === Phase.PHASE2A) return 'PICA Level 2A – Structured Diagnosis';
+  if (phase === Phase.PHASE2B) return 'PICA Level 2B – Deep Dive';
+  return 'PICA Level 1 – Snapshot Assessment';
 };
 
 const bandInterpretation = (band: string): string => {
@@ -88,7 +102,7 @@ const getExecutiveNarrative = (score: number, band: string): string => {
     if (score >= 91) {
       return "Your business is Future-Proofed and scale-ready. You have built a highly adaptive operational architecture that matches global benchmarks, minimizing friction and enabling aggressive market expansion with high resilience.";
     }
-    return "You have built a solid and defensible business architecture. The core 'skeleton' of the organization is strong, with established systems and clear governance. While there are minor operational refinements needed to reach peak efficiency, your business demonstrates the stability required to support sustainable growth.";
+    return "You have built a solid and defensible business architecture. The core 'skeleton' of the organization is strong, with established systems and clear governance. While there are minor operational refinements needed to reach peak efficiency, your business demonstrates the stability required to support sustainable growth and handle increased institutional scrutiny.";
   }
   if (band === 'AMBER') {
     return "Your business is Foundational but structurally vulnerable in key areas. While core transaction processing is functional, key operational bottlenecks and governance gaps limit scalability and increase dependency on key individuals.";
@@ -106,7 +120,6 @@ const getCanonicalPillars = (pillars: ScoringPillarPayload[]) => {
 // ============================================================
 // VECTOR ICON DRAWERS
 // ============================================================
-
 const drawCheckIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: number) => {
   doc.save();
   doc.translate(x, y);
@@ -141,16 +154,6 @@ const drawShieldIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: num
      .closePath()
      .fillColor(color)
      .fill();
-  doc.restore();
-};
-
-const drawLockIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: number, color: string) => {
-  doc.save();
-  doc.translate(x, y);
-  doc.scale(size / 16);
-  doc.lineWidth(1.5).strokeColor(color);
-  doc.moveTo(4, 6).lineTo(4, 4).quadraticCurveTo(4, 1, 8, 1).quadraticCurveTo(12, 1, 12, 4).lineTo(12, 6).stroke();
-  roundedRect(doc, 2, 6, 12, 8, 2, color);
   doc.restore();
 };
 
@@ -338,68 +341,52 @@ const drawCoverPage = (
       align: 'center',
     });
 
-  // Centered Image / Vector abstract block
+  // Centered Image Card (Y = 250 to 520)
   const cardY = 250;
-  const cardH = 260;
-  roundedRect(doc, PAGE_MARGIN, cardY, COLORS.pageWidth, cardH, 10, COLORS.primary);
-  
-  // Draw abstract technological/network nodes inside the dark card
-  doc.save();
-  doc.lineWidth(1).strokeColor('#374151');
-  const nodes = [
-    { x: 100, y: 300 }, { x: 200, y: 350 }, { x: 150, y: 440 },
-    { x: 420, y: 320 }, { x: 380, y: 450 }, { x: 480, y: 400 }
-  ];
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      if (Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) < 180) {
-        doc.moveTo(nodes[i].x, nodes[i].y).lineTo(nodes[j].x, nodes[j].y).stroke();
-      }
-    }
-  }
-  doc.fillColor('#4B5563');
-  for (const n of nodes) {
-    doc.circle(n.x, n.y, 4).fill();
-  }
-  doc.restore();
+  const cardH = 340; // Increased height to make it more elegant
 
-  // Overlay badge in center
-  const badgeW = 200;
-  const badgeH = 80;
-  const bx = PAGE_MARGIN + (COLORS.pageWidth - badgeW) / 2;
-  const by = cardY + (cardH - badgeH) / 2;
-  roundedRect(doc, bx, by, badgeW, badgeH, 6, '#F3F4F6');
-  
-  if (LOGO_BUFFER) {
+  if (COVER_BUFFER) {
     try {
-      doc.image(LOGO_BUFFER, bx + (badgeW - 100) / 2, by + 18, { width: 100 });
+      doc.image(COVER_BUFFER, PAGE_MARGIN, cardY, {
+        fit: [COLORS.pageWidth, cardH],
+        align: 'center',
+        valign: 'center',
+      });
+      // Draw subtle border around image
+      doc.save().lineWidth(1).strokeColor(COLORS.borderGrey);
+      roundedRect(doc, PAGE_MARGIN, cardY, COLORS.pageWidth, cardH, 8, 'transparent', COLORS.borderGrey);
+      doc.restore();
     } catch {
-      doc
-        .fontSize(14)
-        .font('Helvetica-Bold')
-        .fillColor(COLORS.primary)
-        .text('BEAUVISION', bx, by + 22, { width: badgeW, align: 'center' });
+      // Fallback
+      roundedRect(doc, PAGE_MARGIN, cardY, COLORS.pageWidth, cardH, 10, COLORS.primary);
     }
   } else {
-    doc
-      .fontSize(14)
-      .font('Helvetica-Bold')
-      .fillColor(COLORS.primary)
-      .text('BEAUVISION', bx, by + 22, { width: badgeW, align: 'center' });
+    // Elegant fallback card
+    roundedRect(doc, PAGE_MARGIN, cardY, COLORS.pageWidth, cardH, 10, COLORS.primary);
+    
+    // Draw abstract technological/network nodes inside the dark card
+    doc.save();
+    doc.lineWidth(1).strokeColor('#374151');
+    const nodes = [
+      { x: 100, y: 300 }, { x: 200, y: 350 }, { x: 150, y: 440 },
+      { x: 420, y: 320 }, { x: 380, y: 450 }, { x: 480, y: 400 }
+    ];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        if (Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) < 180) {
+          doc.moveTo(nodes[i].x, nodes[i].y).lineTo(nodes[j].x, nodes[j].y).stroke();
+        }
+      }
+    }
+    doc.fillColor('#4B5563');
+    for (const n of nodes) {
+      doc.circle(n.x, n.y, 4).fill();
+    }
+    doc.restore();
   }
 
-  doc
-    .fontSize(8)
-    .font('Helvetica-Bold')
-    .fillColor(COLORS.mutedText)
-    .text('DIAGNOSTIC INTELLIGENCE', bx, by + 52, {
-      width: badgeW,
-      align: 'center',
-      characterSpacing: 1.5,
-    });
-
-  // Bottom Grid Details
-  const gridY = 600;
+  // Bottom Grid Details (Moved closer to the footer orange line at bottom)
+  const gridY = 675;
   hr(doc, gridY - 15);
 
   // Col 1: Strategic Partner
@@ -599,16 +586,19 @@ const drawExecutiveSummaryPage = (
 ) => {
   drawHeader(doc, businessName, date);
 
-  // Centered Dial Gauge
+  // Centered Dial Gauge - Bold, Big and spaced away from header
   const dialY = 120;
   const centerScoreX = PAGE_MARGIN + COLORS.pageWidth / 2;
-  drawDonutGauge(doc, centerScoreX, dialY + 45, 45, result.totalScore, result.colorBand, '');
+  const radius = 70; // Larger radius for a bold circular design
+  const ringW = 16;  // Wider ring width for a thick gauge
+  
+  drawDonutGauge(doc, centerScoreX, dialY + 75, radius, result.totalScore, result.colorBand, '', ringW);
 
   doc
     .fontSize(8)
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
-    .text('COMPOSITE HEALTH SCORE', PAGE_MARGIN, dialY + 104, {
+    .text('COMPOSITE HEALTH SCORE', PAGE_MARGIN, dialY + 160, {
       width: COLORS.pageWidth,
       align: 'center',
       characterSpacing: 1.5,
@@ -624,7 +614,7 @@ const drawExecutiveSummaryPage = (
     .fontSize(16)
     .font('Helvetica-Bold')
     .fillColor(colors.text)
-    .text(statusTitle, PAGE_MARGIN, dialY + 120, {
+    .text(statusTitle, PAGE_MARGIN, dialY + 176, {
       width: COLORS.pageWidth,
       align: 'center',
     });
@@ -637,7 +627,7 @@ const drawExecutiveSummaryPage = (
     .text(
       `"${getExecutiveNarrative(result.totalScore, result.colorBand)}"`,
       PAGE_MARGIN + 30,
-      dialY + 144,
+      dialY + 200,
       {
         width: COLORS.pageWidth - 60,
         align: 'center',
@@ -645,8 +635,8 @@ const drawExecutiveSummaryPage = (
       }
     );
 
-  // Three columns layout
-  const colY = 345;
+  // Three columns layout (Moved down to provide more space)
+  const colY = 415;
   const colW = 158;
   const colGap = 20;
 
@@ -690,7 +680,6 @@ const drawExecutiveSummaryPage = (
       roundedRect(doc, sx + 12, cursorY, colW - 24, 4, 2, COLORS.borderGrey);
       roundedRect(doc, sx + 12, cursorY, (colW - 24) * (pillar.weightedScore / 100), 4, 2, COLORS.greenBorder);
 
-      // Observation text snippet
       const obs = pillar.findings[0]?.observation ?? 'Optimal structure verified.';
       doc
         .fontSize(7.5)
@@ -770,59 +759,57 @@ const drawExecutiveSummaryPage = (
   // Legend under small radar chart
   doc.save();
   const legendY = colY + 190;
-  // Your Company
   doc.rect(col3X + 20, legendY, 8, 8).fillColor('#F59E0B').fill();
   doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.primary).text('YOUR COMPANY', col3X + 32, legendY + 1);
-  // Industry
+  
   doc.rect(col3X + 20, legendY + 15, 8, 8).fillColor('#EF4444').fill();
   doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.primary).text('INDUSTRY STANDARD', col3X + 32, legendY + 16);
   doc.restore();
 
-  // --- BOTTOM KNOCKOUT SYSTEM CARD ---
+  // --- BOTTOM KNOCKOUT SYSTEM CARD (Y = 660, fitting within the bottom boundary) ---
   if (result.hasAnyKnockout) {
-    const koY = 590;
-    roundedRect(doc, PAGE_MARGIN, koY, COLORS.pageWidth, 130, 8, COLORS.redBg, COLORS.redBorder);
+    const koY = 660;
+    roundedRect(doc, PAGE_MARGIN, koY, COLORS.pageWidth, 120, 8, COLORS.redBg, COLORS.redBorder);
 
-    drawShieldIcon(doc, PAGE_MARGIN + 16, koY + 16, 20, COLORS.red);
+    drawShieldIcon(doc, PAGE_MARGIN + 16, koY + 12, 16, COLORS.red);
     doc
-      .fontSize(12)
+      .fontSize(11)
       .font('Helvetica-Bold')
       .fillColor(COLORS.red)
-      .text('High-Priority Knockout Risks', PAGE_MARGIN + 46, koY + 16);
+      .text('High-Priority Knockout Risks', PAGE_MARGIN + 38, koY + 12);
     doc
       .fontSize(8)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
-      .text('Critical vulnerabilities requiring immediate remedial action.', PAGE_MARGIN + 46, koY + 32);
+      .text('Critical vulnerabilities requiring immediate remedial action.', PAGE_MARGIN + 38, koY + 26);
 
-    // Dynamic extraction of knockout details from responses
     const knockoutPillars = result.pillarScores.filter((p) => p.hasKnockout);
     const koW = (COLORS.pageWidth - 32 - (knockoutPillars.length - 1) * 12) / Math.max(1, knockoutPillars.length);
     
     let koCx = PAGE_MARGIN + 16;
     for (const pillar of knockoutPillars.slice(0, 3)) {
-      roundedRect(doc, koCx, koY + 52, koW, 64, 4, COLORS.white, COLORS.borderGrey);
-      roundedRect(doc, koCx, koY + 52, 3, 64, 2, COLORS.redBorder);
+      roundedRect(doc, koCx, koY + 44, koW, 64, 4, COLORS.white, COLORS.borderGrey);
+      roundedRect(doc, koCx, koY + 44, 3, 64, 2, COLORS.redBorder);
 
       doc
         .fontSize(8)
         .font('Helvetica-Bold')
         .fillColor(COLORS.primary)
-        .text(`${pillar.pillarName}`, koCx + 10, koY + 60, { width: koW - 20, ellipsis: true });
+        .text(`${pillar.pillarName}`, koCx + 10, koY + 50, { width: koW - 20, ellipsis: true });
 
       const detail = pillar.findings.find((f) => f.riskType === 'KNOCKOUT')?.observation ?? 'Kill-switch risk identified.';
       doc
         .fontSize(7)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(detail, koCx + 10, koY + 74, { width: koW - 20, height: 26, ellipsis: true, lineGap: 1 });
+        .text(detail, koCx + 10, koY + 62, { width: koW - 20, height: 26, ellipsis: true, lineGap: 1 });
 
-      roundedRect(doc, koCx + 10, koY + 102, 55, 10, 2, COLORS.redBorder);
+      roundedRect(doc, koCx + 10, koY + 92, 55, 10, 2, COLORS.redBorder);
       doc
         .fontSize(6)
         .font('Helvetica-Bold')
         .fillColor(COLORS.white)
-        .text('STATUS: CRITICAL', koCx + 10, koY + 104, { width: 55, align: 'center' });
+        .text('STATUS: CRITICAL', koCx + 10, koY + 94, { width: 55, align: 'center' });
 
       koCx += koW + 12;
     }
@@ -841,7 +828,6 @@ const drawPillarPage = (
   drawHeader(doc, businessName, date);
 
   const headY = doc.y;
-  const colors = bandColors(pillar.colorBand);
 
   // Pillar code badge
   roundedRect(doc, PAGE_MARGIN, headY, 36, 24, 4, COLORS.primary);
@@ -858,78 +844,86 @@ const drawPillarPage = (
     .fillColor(COLORS.primary)
     .text(pillar.pillarName, PAGE_MARGIN + 46, headY + 3);
 
-  // Status Badge
-  const statusLabel = pillar.hasKnockout ? 'KNOCKOUT OVERRIDE' : colors.label;
-  const statusBg = pillar.hasKnockout ? COLORS.red : colors.border;
-  roundedRect(doc, PAGE_MARGIN + COLORS.pageWidth - 110, headY, 110, 24, 4, statusBg);
-  doc
-    .fontSize(8)
-    .font('Helvetica-Bold')
-    .fillColor(COLORS.white)
-    .text(statusLabel, PAGE_MARGIN + COLORS.pageWidth - 110, headY + 8, { width: 110, align: 'center' });
+  // Top Right Donut Gauge for Pillar Score (matching design 3.jpg)
+  const scoreCx = PAGE_MARGIN + COLORS.pageWidth - 35;
+  const scoreCy = headY + 10;
+  const scoreRadius = 32;
+  const scoreRingW = 6;
+  drawDonutGauge(doc, scoreCx, scoreCy, scoreRadius, pillar.weightedScore, pillar.colorBand, 'Pillar Score', scoreRingW);
 
-  doc.y = headY + 38;
+  doc.y = headY + 54;
   hr(doc, doc.y);
   doc.moveDown(0.8);
 
-  // Middle section: Performance Analysis + Visual Chart
+  // Middle section: Full-width Performance Analysis card (No right visual block)
   const midY = doc.y;
-  const cardW = 248;
+  const cardW = COLORS.pageWidth;
   const cardH = 114;
-
-  // Left card: Performance Analysis
+  const colors = bandColors(pillar.colorBand);
   const finalBg = pillar.hasKnockout ? COLORS.redBg : colors.bg;
   const finalBorder = pillar.hasKnockout ? COLORS.redBorder : colors.border;
+
   roundedRect(doc, PAGE_MARGIN, midY, cardW, cardH, 6, finalBg, finalBorder);
   roundedRect(doc, PAGE_MARGIN, midY, 4, cardH, 2, finalBorder);
 
   doc
-    .fontSize(7.5)
+    .fontSize(8)
     .font('Helvetica-Bold')
     .fillColor(pillar.hasKnockout ? COLORS.red : colors.text)
-    .text('PERFORMANCE ANALYSIS', PAGE_MARGIN + 14, midY + 12);
+    .text('PERFORMANCE ANALYSIS', PAGE_MARGIN + 20, midY + 12, { align: 'center', width: cardW - 40 });
 
-  const explanation = pillar.hasKnockout
-    ? 'Critical override triggered. High risk exposure detected that overrides baseline operations.'
-    : bandInterpretation(pillar.colorBand);
+  // Dynamic recommendation based on actual user answer findings (matching 3.jpg request)
+  const findingsToRender = pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
+  const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
+  const recText = highestScored ? highestScored.recommendation : 'Leverage existing operational strengths to drive scaling.';
+  
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.colorBand === 'GREEN' ? 'strong' : pillar.colorBand === 'AMBER' ? 'foundational' : 'reactive'} level. Recommendation: ${recText}`;
 
+  // Centralized Text Inside Card
   doc
-    .fontSize(9)
+    .fontSize(9.5)
     .font('Helvetica')
     .fillColor(COLORS.bodyText)
-    .text(explanation, PAGE_MARGIN + 14, midY + 28, { width: cardW - 28, lineGap: 1.5 });
+    .text(explanation, PAGE_MARGIN + 20, midY + 28, {
+      width: cardW - 40,
+      align: 'center',
+      lineGap: 2.2,
+    });
 
-  // Sub-criteria progress bars (e.g. Resilience, Maturity)
+  // Centered sub-criteria progress bars (side-by-side)
   const ratings = getPillarSubCriteria(pillar.pillarCode);
   const ratingVal1 = Math.round(pillar.weightedScore);
   const ratingVal2 = Math.round(Math.max(20, pillar.weightedScore - 8));
 
+  const barW = 150;
+  const barGap = 40;
+  const totalW = barW * 2 + barGap;
+  const startX = PAGE_MARGIN + (COLORS.pageWidth - totalW) / 2;
+
+  // Rating 1
   doc
     .fontSize(7.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
-    .text(ratings[0].toUpperCase(), PAGE_MARGIN + 14, midY + 72);
-  roundedRect(doc, PAGE_MARGIN + 14, midY + 82, 100, 3, 1, COLORS.borderGrey);
-  roundedRect(doc, PAGE_MARGIN + 14, midY + 82, 100 * (ratingVal1 / 100), 3, 1, finalBorder);
+    .text(ratings[0].toUpperCase(), startX, midY + 70, { width: barW, align: 'center' });
+  roundedRect(doc, startX, midY + 80, barW, 4, 2, COLORS.borderGrey);
+  roundedRect(doc, startX, midY + 80, barW * (ratingVal1 / 100), 4, 2, finalBorder);
 
+  // Rating 2
   doc
     .fontSize(7.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
-    .text(ratings[1].toUpperCase(), PAGE_MARGIN + 130, midY + 72);
-  roundedRect(doc, PAGE_MARGIN + 130, midY + 82, 100, 3, 1, COLORS.borderGrey);
-  roundedRect(doc, PAGE_MARGIN + 130, midY + 82, 100 * (ratingVal2 / 100), 3, 1, finalBorder);
-
-  // Right card: Dynamic Illustrative Chart
-  drawPillarChart(doc, pillar.pillarCode, PAGE_MARGIN + cardW + 19, midY, cardW, cardH);
+    .text(ratings[1].toUpperCase(), startX + barW + barGap, midY + 70, { width: barW, align: 'center' });
+  roundedRect(doc, startX + barW + barGap, midY + 80, barW, 4, 2, COLORS.borderGrey);
+  roundedRect(doc, startX + barW + barGap, midY + 80, barW * (ratingVal2 / 100), 4, 2, finalBorder);
 
   doc.y = midY + cardH + 16;
 
   // Observations Section Title
   drawSectionTitle(doc, 'Observations & Audit Summary');
 
-  // Observations grid (up to 4 findings)
-  const findingsToRender = pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
+  // Observations grid (up to 4 findings in 2x2 grid)
   if (findingsToRender.length === 0) {
     const emptyY = doc.y;
     roundedRect(doc, PAGE_MARGIN, emptyY, COLORS.pageWidth, 40, 6, COLORS.greenBg, COLORS.greenBorder);
@@ -959,7 +953,6 @@ const drawPillarPage = (
       roundedRect(doc, ox, oy, obsW, obsH, 6, fBg, COLORS.borderGrey);
       roundedRect(doc, ox, oy, 3, obsH, 2, fColor);
 
-      // Icon
       if (isKo || isRisk) {
         drawWarningIcon(doc, ox + 10, oy + 10, 12, fColor);
       } else {
@@ -983,7 +976,7 @@ const drawPillarPage = (
     doc.y = obsY + (Math.ceil(Math.min(4, findingsToRender.length) / 2)) * (obsH + 10) + 10;
   }
 
-  // Strategic Road Map
+  // Strategic Road Map at the bottom
   const mapY = doc.y;
   roundedRect(doc, PAGE_MARGIN, mapY, COLORS.pageWidth, 125, 8, COLORS.lightGrey, COLORS.borderGrey);
   
@@ -998,11 +991,9 @@ const drawPillarPage = (
     .fillColor(COLORS.mutedText)
     .text('Tailored action plan designed to mitigate organizational bottlenecks.', PAGE_MARGIN + 16, mapY + 24);
 
-  // Draw 4 Road Map Steps
   const rx = PAGE_MARGIN + 16;
   const stepW = 230;
   const stepH = 34;
-
   const defaultSteps = getPillarDefaultSteps(pillar.pillarCode);
 
   for (let i = 0; i < 4; i++) {
@@ -1011,7 +1002,6 @@ const drawPillarPage = (
     const sx = rx + col * 250;
     const sy = mapY + 44 + row * 38;
 
-    // Number Badge (circle)
     doc.save();
     doc.circle(sx + 8, sy + 12, 8).fillColor(COLORS.primary).fill();
     doc
@@ -1021,7 +1011,6 @@ const drawPillarPage = (
       .text(`0${i + 1}`, sx + 4, sy + 8, { lineBreak: false });
     doc.restore();
 
-    // Recommendation text / fallback
     const recText = findingsToRender[i]?.recommendation ?? defaultSteps[i];
     const recTitle = extractFirstWords(recText, 4);
 
@@ -1113,7 +1102,7 @@ const extractFirstWords = (text: string, count: number): string => {
 };
 
 // ============================================================
-// STRATEGIC ROADMAP PAGE (PAGE 10)
+// NEXT STEPS & STRATEGIC EVOLUTION PAGE (PAGE 10) - Beautiful Spacing
 // ============================================================
 const drawNextStepsPageCustom = (
   doc: PDFKit.PDFDocument,
@@ -1125,13 +1114,14 @@ const drawNextStepsPageCustom = (
   drawHeader(doc, businessName, date);
   drawSectionTitle(doc, 'Next Steps & Strategic Evolution');
 
-  const topY = doc.y;
+  // Spaced layout matching 4.jpg
+  const topY = 135;
   doc
     .fontSize(18)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
     .text('You now have structural clarity (2A).', PAGE_MARGIN, topY)
-    .text('Execution strength requires deeper testing (2B).', PAGE_MARGIN, topY + 22);
+    .text('Execution strength requires deeper testing (2B).', PAGE_MARGIN, topY + 24);
 
   doc
     .fontSize(9.5)
@@ -1140,27 +1130,27 @@ const drawNextStepsPageCustom = (
     .text(
       "The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.",
       PAGE_MARGIN,
-      topY + 54,
-      { width: 290, lineGap: 2.5 }
+      topY + 58,
+      { width: 280, lineGap: 2.5 }
     );
 
   // Right card showing Projected Delta
-  const dx = PAGE_MARGIN + 305;
-  roundedRect(doc, dx, topY, 210, 116, 8, COLORS.primary);
-  drawCheckIcon(doc, dx + 20, topY + 24, 28);
+  const dx = PAGE_MARGIN + 300;
+  roundedRect(doc, dx, topY, 215, 100, 8, COLORS.primary);
+  drawCheckIcon(doc, dx + 20, topY + 18, 24);
   doc
-    .fontSize(9)
+    .fontSize(8.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
-    .text('EFFICIENCY DELTA', dx + 20, topY + 62, { characterSpacing: 1 });
+    .text('EFFICIENCY DELTA', dx + 20, topY + 50, { characterSpacing: 1 });
   doc
-    .fontSize(22)
+    .fontSize(18)
     .font('Helvetica-Bold')
     .fillColor(COLORS.white)
-    .text('+32.4% Projected', dx + 20, topY + 76);
+    .text('+32.4% Projected', dx + 20, topY + 66);
 
   // Upgrade Options section
-  const opY = topY + 144;
+  const opY = 265;
   doc
     .fontSize(11)
     .font('Helvetica-Bold')
@@ -1168,18 +1158,18 @@ const drawNextStepsPageCustom = (
     .text('Upgrade Options', PAGE_MARGIN, opY);
 
   const upgradeW = 248;
-  const upgradeH = 140;
+  const upgradeH = 135;
 
   // Card 1: Pillar-Specific Deep Dives
   const ux1 = PAGE_MARGIN;
   roundedRect(doc, ux1, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux1, opY + 16, 4, upgradeH, 2, COLORS.accent);
-  drawShieldIcon(doc, ux1 + 16, opY + 32, 16, COLORS.accent);
+  drawShieldIcon(doc, ux1 + 16, opY + 30, 14, COLORS.accent);
   doc
-    .fontSize(11)
+    .fontSize(10.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('Pillar-Specific Deep Dives', ux1 + 38, opY + 34);
+    .text('Pillar-Specific Deep Dives', ux1 + 36, opY + 32);
   doc
     .fontSize(8.5)
     .font('Helvetica')
@@ -1187,12 +1177,12 @@ const drawNextStepsPageCustom = (
     .text(
       "A comprehensive and vertical audit of your highest-impact pillars to extract actionable operational optimization nodes.",
       ux1 + 16,
-      opY + 56,
-      { width: upgradeW - 32, lineGap: 2 }
+      opY + 52,
+      { width: upgradeW - 32, lineGap: 1.8 }
     );
 
   const bulletList1 = ["Vertical Risk Mapping", "Operational Stress-Testing", "Performance Benchmarking"];
-  let bulletY1 = opY + 102;
+  let bulletY1 = opY + 94;
   for (const item of bulletList1) {
     drawCheckIcon(doc, ux1 + 16, bulletY1, 8);
     doc.fontSize(7.5).font('Helvetica-Bold').fillColor(COLORS.primary).text(item, ux1 + 28, bulletY1 + 1);
@@ -1203,12 +1193,12 @@ const drawNextStepsPageCustom = (
   const ux2 = PAGE_MARGIN + upgradeW + 19;
   roundedRect(doc, ux2, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux2, opY + 16, 4, upgradeH, 2, COLORS.accent);
-  drawShieldIcon(doc, ux2 + 16, opY + 32, 16, COLORS.accent);
+  drawShieldIcon(doc, ux2 + 16, opY + 30, 14, COLORS.accent);
   doc
-    .fontSize(11)
+    .fontSize(10.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('Targeted Intelligence', ux2 + 38, opY + 34);
+    .text('Targeted Intelligence', ux2 + 36, opY + 32);
   doc
     .fontSize(8.5)
     .font('Helvetica')
@@ -1216,12 +1206,12 @@ const drawNextStepsPageCustom = (
     .text(
       "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.",
       ux2 + 16,
-      opY + 56,
-      { width: upgradeW - 32, lineGap: 2 }
+      opY + 52,
+      { width: upgradeW - 32, lineGap: 1.8 }
     );
 
   const bulletList2 = ["Rapid Vulnerability Patching", "Efficiency Simulations", "Resource Allocation Modeling"];
-  let bulletY2 = opY + 102;
+  let bulletY2 = opY + 94;
   for (const item of bulletList2) {
     drawCheckIcon(doc, ux2 + 16, bulletY2, 8);
     doc.fontSize(7.5).font('Helvetica-Bold').fillColor(COLORS.primary).text(item, ux2 + 28, bulletY2 + 1);
@@ -1229,7 +1219,7 @@ const drawNextStepsPageCustom = (
   }
 
   // Strategic Support Section
-  const ssY = opY + upgradeH + 34;
+  const ssY = opY + upgradeH + 45;
   doc
     .fontSize(11)
     .font('Helvetica-Bold')
@@ -1256,8 +1246,8 @@ const drawNextStepsPageCustom = (
 
   for (let i = 0; i < 3; i++) {
     const sx = PAGE_MARGIN + i * (supportW + supportGap);
-    roundedRect(doc, sx, ssY + 16, supportW, 110, 6, COLORS.lightGrey, COLORS.borderGrey);
-    roundedRect(doc, sx, ssY + 16, 3, 110, 2, COLORS.primary);
+    roundedRect(doc, sx, ssY + 16, supportW, 120, 6, COLORS.lightGrey, COLORS.borderGrey);
+    roundedRect(doc, sx, ssY + 16, 3, 120, 2, COLORS.primary);
     
     doc
       .fontSize(9.5)
@@ -1268,12 +1258,12 @@ const drawNextStepsPageCustom = (
       .fontSize(8)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
-      .text(supportData[i].desc, sx + 12, ssY + 46, { width: supportW - 24, lineGap: 1.5 });
+      .text(supportData[i].desc, sx + 12, ssY + 50, { width: supportW - 24, lineGap: 1.8 });
   }
 };
 
 // ============================================================
-// LEGAL FRAMEWORK & METHODOLOGY PAGE (PAGE 11/12)
+// LEGAL FRAMEWORK & METHODOLOGY PAGE (PAGE 11/12) - Balanced Spacing
 // ============================================================
 const drawLegalPage = (
   doc: PDFKit.PDFDocument,
@@ -1283,7 +1273,8 @@ const drawLegalPage = (
   drawHeader(doc, businessName, date);
   drawSectionTitle(doc, 'Legal Framework & IP Ownership');
 
-  const topY = doc.y;
+  // Spaced out matching 5.jpg
+  const topY = 120;
   doc
     .fontSize(9.5)
     .font('Helvetica')
@@ -1295,12 +1286,12 @@ const drawLegalPage = (
       { width: COLORS.pageWidth, lineGap: 2.5 }
     );
 
-  const warnY = topY + 54;
+  const warnY = 185;
   roundedRect(doc, PAGE_MARGIN, warnY, COLORS.pageWidth, 75, 6, COLORS.amberBg, COLORS.amberBorder);
   roundedRect(doc, PAGE_MARGIN, warnY, 4, 75, 2, COLORS.amberBorder);
 
   doc
-    .fontSize(8)
+    .fontSize(8.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.amber)
     .text('NOTICE TO STAKEHOLDERS', PAGE_MARGIN + 16, warnY + 12);
@@ -1315,10 +1306,10 @@ const drawLegalPage = (
       { width: COLORS.pageWidth - 32, lineGap: 2 }
     );
 
-  doc.y = warnY + 95;
+  doc.y = 285;
   drawSectionTitle(doc, 'PICA Diagnostic Methodology');
 
-  const methY = doc.y;
+  const methY = doc.y + 10;
   // 7 Strategic Pillars list (small boxes)
   const pW = 68;
   const pGap = 6;
@@ -1326,7 +1317,7 @@ const drawLegalPage = (
   
   for (let i = 0; i < 7; i++) {
     const px = PAGE_MARGIN + i * (pW + pGap);
-    roundedRect(doc, px, methY, pW, 42, 4, COLORS.lightGrey, COLORS.borderGrey);
+    roundedRect(doc, px, methY, pW, 45, 4, COLORS.lightGrey, COLORS.borderGrey);
     doc
       .fontSize(6)
       .font('Helvetica-Bold')
@@ -1339,8 +1330,8 @@ const drawLegalPage = (
       .text(pNames[i], px + 6, methY + 16, { width: pW - 12, lineGap: 1 });
   }
 
-  // Weighted Scoring vs Knockout Logic
-  const colY = methY + 62;
+  // Weighted Scoring vs Knockout Logic (Spaced)
+  const colY = methY + 70;
   const colW = 248;
 
   // Col 1: Weighted Scoring
@@ -1361,7 +1352,6 @@ const drawLegalPage = (
       { width: colW - 28, lineGap: 1.5 }
     );
 
-  // 4-tier list
   const tiers = [
     { name: "Tier 1: STRONG", color: COLORS.greenBorder },
     { name: "Tier 2: EMERGING", color: '#3B82F6' },
@@ -1410,7 +1400,7 @@ const drawLegalPage = (
 };
 
 // ============================================================
-// VISUALIZATION PAGE / ANNEX (PAGE 13)
+// VISUALIZATION PAGE / ANNEX (PAGE 13) - Premium Spacing & Detail
 // ============================================================
 const drawVisualizationPage = (
   doc: PDFKit.PDFDocument,
@@ -1421,7 +1411,8 @@ const drawVisualizationPage = (
   drawHeader(doc, businessName, date);
   drawSectionTitle(doc, 'PICA Diagnostic Visualization');
 
-  const topY = doc.y;
+  // Executive Performance Summary
+  const topY = 120;
   roundedRect(doc, PAGE_MARGIN, topY, COLORS.pageWidth, 75, 6, COLORS.lightGrey, COLORS.borderGrey);
   roundedRect(doc, PAGE_MARGIN, topY, 4, 75, 2, '#3B82F6');
 
@@ -1441,16 +1432,16 @@ const drawVisualizationPage = (
       { width: COLORS.pageWidth - 32, lineGap: 2.2 }
     );
 
-  // Large Spider Graph
+  // Large Spider Graph - Spaced & Bold
   const graphCx = PAGE_MARGIN + COLORS.pageWidth / 2;
-  const graphCy = topY + 220;
+  const graphCy = topY + 230;
   const benchmarks = [70, 65, 60, 70, 65, 60, 55];
   drawRadarChart(doc, graphCx, graphCy, 95, result.pillarScores, benchmarks);
 
   // Big Radar Legend
   doc.save();
   const legX = PAGE_MARGIN + 30;
-  const legY = topY + 330;
+  const legY = topY + 345;
   doc.rect(legX, legY, 10, 10).fillColor('#F59E0B').fill();
   doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.primary).text('YOUR COMPANY PROFILE', legX + 16, legY + 1);
   
@@ -1459,7 +1450,7 @@ const drawVisualizationPage = (
   doc.restore();
 
   // Gap Analysis Logic Cards
-  const gapY = topY + 360;
+  const gapY = topY + 380;
   const cardW = 158;
   const cardGap = 20;
 
@@ -1500,6 +1491,21 @@ const drawVisualizationPage = (
       .fillColor(COLORS.mutedText)
       .text(gapData[i].desc, gx + 12, gapY + 30, { width: cardW - 24, lineGap: 1.5 });
   }
+
+  // Analyst Signature Block at bottom right (matching design 6.jpg)
+  const sigX = PAGE_MARGIN + COLORS.pageWidth - 140;
+  const sigY = gapY + 125;
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.mutedText)
+    .text('ANALYST SIGNATURE', sigX, sigY, { characterSpacing: 1 });
+  
+  doc
+    .fontSize(14)
+    .font('Helvetica-Oblique')
+    .fillColor('#1E3A8A')
+    .text('R. Beauvision', sigX, sigY + 10);
 };
 
 const drawSectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
@@ -1521,10 +1527,11 @@ const drawDonutGauge = (
   radius: number,
   score: number,
   band: string,
-  caption: string
+  caption: string,
+  customRingW?: number
 ) => {
   const colors = bandColors(band);
-  const ringW = Math.max(8, radius * 0.20);
+  const ringW = customRingW ?? Math.max(8, radius * 0.20);
   const pct = Math.max(0, Math.min(100, score)) / 100;
   const full = Math.PI * 2;
 
@@ -1542,11 +1549,21 @@ const drawDonutGauge = (
   const numH = doc.currentLineHeight();
   doc.text(numText, cx - numW / 2, cy - numH / 2 - radius * 0.06, { lineBreak: false });
 
-  // /100 caption
+  // /100 caption or inner caption
   doc.font('Helvetica').fontSize(radius * 0.2).fillColor(COLORS.mutedText);
   const subText = '/ 100';
   const subW = doc.widthOfString(subText);
   doc.text(subText, cx - subW / 2, cy + radius * 0.22, { lineBreak: false });
+
+  if (caption) {
+    doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.mutedText);
+    doc.text(caption.toUpperCase(), cx - radius, cy + radius + 8, {
+      width: radius * 2,
+      align: 'center',
+      characterSpacing: 0.5,
+      lineBreak: false,
+    });
+  }
 };
 
 const strokeArc = (
@@ -1590,73 +1607,6 @@ const strokeArc = (
     a0 = a1;
   }
   doc.stroke().restore();
-};
-
-const drawPillarChart = (doc: PDFKit.PDFDocument, code: string, x: number, y: number, w: number, h: number) => {
-  doc.save();
-  roundedRect(doc, x, y, w, h, 6, '#F9FAFB', '#E5E7EB');
-  
-  const cx = x + w / 2;
-  const cy = y + h / 2;
-  doc.lineWidth(1.5);
-  
-  if (code === 'FL') {
-    // Org Chart
-    doc.strokeColor('#F97316');
-    roundedRect(doc, cx - 15, cy - 25, 30, 14, 2, '#FFFFFF', '#1F2937');
-    roundedRect(doc, cx - 35, cy + 5, 25, 14, 2, '#FFFFFF', '#1F2937');
-    roundedRect(doc, cx + 10, cy + 5, 25, 14, 2, '#FFFFFF', '#1F2937');
-    doc.moveTo(cx, cy - 11).lineTo(cx, cy - 2).stroke();
-    doc.moveTo(cx - 22, cy - 2).lineTo(cx + 22, cy - 2).stroke();
-    doc.moveTo(cx - 22, cy - 2).lineTo(cx - 22, cy + 5).stroke();
-    doc.moveTo(cx + 22, cy - 2).lineTo(cx + 22, cy + 5).stroke();
-  } else if (code === 'FR') {
-    // Financial Chart
-    doc.strokeColor('#E5E7EB').lineWidth(0.5);
-    for (let i = 1; i <= 3; i++) {
-      doc.moveTo(x + 10, y + (h / 4) * i).lineTo(x + w - 10, y + (h / 4) * i).stroke();
-    }
-    doc.lineWidth(1.5).strokeColor('#10B981');
-    doc.moveTo(x + 15, y + h * 0.8)
-       .lineTo(x + w * 0.4, y + h * 0.6)
-       .lineTo(x + w * 0.7, y + h * 0.3)
-       .lineTo(x + w - 15, y + h * 0.15)
-       .stroke();
-    doc.circle(x + w - 15, y + h * 0.15, 3).fillColor('#10B981').fill();
-  } else if (code === 'BM') {
-    // Business Model blocks
-    doc.strokeColor('#F59E0B');
-    roundedRect(doc, cx - 30, cy - 25, 25, 20, 2, '#FFFFFF', '#F59E0B');
-    roundedRect(doc, cx + 5, cy - 25, 25, 20, 2, '#FFFFFF', '#F59E0B');
-    roundedRect(doc, cx - 30, cy + 5, 25, 20, 2, '#FFFFFF', '#F59E0B');
-    roundedRect(doc, cx + 5, cy + 5, 25, 20, 2, '#FFFFFF', '#F59E0B');
-  } else if (code === 'OP') {
-    // Operations process circle
-    doc.strokeColor('#3B82F6');
-    doc.circle(cx, cy - 15, 6).stroke();
-    doc.circle(cx - 15, cy + 12, 6).stroke();
-    doc.circle(cx + 15, cy + 12, 6).stroke();
-    doc.moveTo(cx - 4, cy - 8).lineTo(cx - 11, cy + 6).stroke();
-    doc.moveTo(cx - 8, cy + 12).lineTo(cx + 8, cy + 12).stroke();
-    doc.moveTo(cx + 11, cy + 6).lineTo(cx + 4, cy - 8).stroke();
-  } else if (code === 'MS') {
-    // Marketing funnel
-    doc.strokeColor('#EA580C');
-    doc.moveTo(cx - 24, cy - 22).lineTo(cx + 24, cy - 22).lineTo(cx + 12, cy - 4).lineTo(cx - 12, cy - 4).closePath().stroke();
-    doc.moveTo(cx - 12, cy - 1).lineTo(cx + 12, cy - 1).lineTo(cx + 6, cy + 14).lineTo(cx - 6, cy + 14).closePath().stroke();
-    doc.moveTo(cx - 6, cy + 17).lineTo(cx + 6, cy + 17).lineTo(cx + 3, cy + 28).lineTo(cx - 3, cy + 28).closePath().stroke();
-  } else if (code === 'GC') {
-    // Shield
-    drawShieldIcon(doc, cx - 12, cy - 15, 24, '#059669');
-  } else {
-    // Strategy & Scale growing bars
-    doc.fillColor('#6366F1');
-    doc.rect(cx - 20, cy + 10, 6, 12).fill();
-    doc.rect(cx - 10, cy - 2, 6, 24).fill();
-    doc.rect(cx, cy - 14, 6, 36).fill();
-    doc.rect(cx + 10, cy - 26, 6, 48).fill();
-  }
-  doc.restore();
 };
 
 // ============================================================
