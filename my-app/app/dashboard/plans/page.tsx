@@ -288,7 +288,7 @@ function PickerView({
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 mb-4">
           <Crown className="w-3.5 h-3.5 text-orange-400" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-orange-400">
-            Monthly Plans
+            Subscription Plans
           </span>
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold leading-tight mb-4">
@@ -318,34 +318,51 @@ function PickerView({
       </section>
 
       <section className="max-w-6xl mx-auto px-4">
-        {annualAvailable && (
-          <div className="mb-8 flex justify-center">
-            <div className="inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 p-1">
-              <button
-                type="button"
-                onClick={() => onIntervalChange("MONTHLY")}
-                className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition ${
-                  interval === "MONTHLY"
-                    ? "bg-white text-[#0d1117]"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => onIntervalChange("ANNUAL")}
-                className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition ${
-                  interval === "ANNUAL"
-                    ? "bg-white text-[#0d1117]"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Annual
-              </button>
-            </div>
+        {/* Billing cadence toggle. Bold, centred, always rendered so the
+            choice is discoverable even before an admin configures any
+            annual discount — `annualAvailable === false` just disables the
+            Annual side rather than hiding the whole control. The per-card
+            cadence pill (rendered inside SubscriptionCard) drives the same
+            global state, so clicking Annual on any tier swaps every tier. */}
+        <div className="mb-10 flex flex-col items-center gap-2">
+          <div className="inline-flex items-center gap-2 rounded-2xl bg-white/5 border border-white/10 p-1.5 shadow-lg shadow-black/20">
+            <button
+              type="button"
+              onClick={() => onIntervalChange("MONTHLY")}
+              className={`px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider rounded-xl transition ${
+                interval === "MONTHLY"
+                  ? "bg-orange-500 text-white shadow"
+                  : "text-gray-300 hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => annualAvailable && onIntervalChange("ANNUAL")}
+              disabled={!annualAvailable}
+              className={`px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider rounded-xl transition flex items-center gap-2 ${
+                interval === "ANNUAL"
+                  ? "bg-orange-500 text-white shadow"
+                  : annualAvailable
+                    ? "text-gray-300 hover:text-white"
+                    : "text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              Annual
+              {annualAvailable && (
+                <span className="inline-flex items-center rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
+                  Save
+                </span>
+              )}
+            </button>
           </div>
-        )}
+          {!annualAvailable && (
+            <p className="text-[11px] text-gray-500">
+              Annual billing not yet enabled — contact support if you&apos;d like to commit yearly.
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {plans.map((plan, idx) => {
             // Annual price falls back to monthly when the tier has no annual
@@ -370,6 +387,9 @@ function PickerView({
                 priceDisplay={priceDisplay}
                 displayCurrency={displayCurrency}
                 interval={effectiveInterval}
+                globalInterval={interval}
+                annualAvailable={annualAvailable}
+                onIntervalChange={onIntervalChange}
                 recommended={isRecommended}
                 current={isCurrent}
                 hasActiveSub={hasActiveSub}
@@ -399,6 +419,9 @@ function SubscriptionCard({
   priceDisplay,
   displayCurrency,
   interval,
+  globalInterval,
+  annualAvailable,
+  onIntervalChange,
   recommended,
   current,
   hasActiveSub,
@@ -408,6 +431,9 @@ function SubscriptionCard({
   priceDisplay: number;
   displayCurrency: Currency;
   interval: BillingInterval;
+  globalInterval: BillingInterval;
+  annualAvailable: boolean;
+  onIntervalChange: (next: BillingInterval) => void;
   recommended: boolean;
   current: boolean;
   hasActiveSub: boolean;
@@ -452,7 +478,51 @@ function SubscriptionCard({
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
           Tier {plan.tier}
         </p>
-        <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
+        <h3 className="text-3xl font-extrabold text-white mb-3">{plan.name}</h3>
+
+        {/* Per-card cadence pill — clear, bold, in the middle of each tier
+            box per client direction. Drives the page-level interval so all
+            three cards stay in sync. The Annual button is disabled (and
+            visually muted) when this tier has no annual price configured. */}
+        <div className="mb-4 flex justify-center">
+          <div className="inline-flex items-center gap-1 rounded-xl bg-black/30 border border-white/10 p-1">
+            <button
+              type="button"
+              onClick={() => onIntervalChange("MONTHLY")}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
+                globalInterval === "MONTHLY"
+                  ? "bg-white text-[#0d1117]"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                annualAvailable && plan.annualDiscountPct > 0
+                  ? onIntervalChange("ANNUAL")
+                  : undefined
+              }
+              disabled={!annualAvailable || plan.annualDiscountPct === 0}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
+                globalInterval === "ANNUAL" && plan.annualDiscountPct > 0
+                  ? "bg-white text-[#0d1117]"
+                  : annualAvailable && plan.annualDiscountPct > 0
+                    ? "text-gray-400 hover:text-white"
+                    : "text-gray-600 cursor-not-allowed"
+              }`}
+              title={
+                plan.annualDiscountPct === 0
+                  ? "Annual billing not available on this tier"
+                  : undefined
+              }
+            >
+              Annual
+            </button>
+          </div>
+        </div>
+
         <p className="text-gray-400 text-sm mb-2">
           <span className="text-3xl font-bold text-white">
             {formatMoney(priceDisplay, displayCurrency)}
@@ -739,7 +809,9 @@ function SubscriptionCheckoutModal({
         {/* Plan summary */}
         <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 mb-4">
           <div className="flex justify-between items-baseline gap-3 text-sm">
-            <span className="text-gray-400">Monthly price</span>
+            <span className="text-gray-400">
+              {effectiveInterval === "ANNUAL" ? "Annual price" : "Monthly price"}
+            </span>
             <span className="text-white font-semibold">
               {formatMoney(basePriceDisplay, displayCurrency)}
             </span>
@@ -829,8 +901,8 @@ function SubscriptionCheckoutModal({
             </span>
           </div>
           <p className="text-[10px] text-gray-500 mt-2">
-            Then {formatMoney(basePriceDisplay, displayCurrency)} every month.
-            Cancel anytime.
+            Then {formatMoney(basePriceDisplay, displayCurrency)} every{" "}
+            {effectiveInterval === "ANNUAL" ? "year" : "month"}. Cancel anytime.
           </p>
         </div>
 

@@ -7,6 +7,7 @@ import { Check, CheckCircle, Globe, Loader, Shield, Sparkles } from "lucide-reac
 import {
   getPublicPricing,
   getSubscriptionPlans,
+  type BillingInterval,
   type PublicPricingResponse,
   type SubscriptionPlanPublic,
 } from "@/lib/authClient";
@@ -41,6 +42,10 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<PricingMode>("payPerUse");
+  // Anonymous-side billing cadence. Mirrors /dashboard/plans: the toggle is
+  // always rendered; the Annual side disables itself when no live tier has
+  // annualDiscountPct > 0.
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>("MONTHLY");
   const d = dark;
 
   useEffect(() => {
@@ -343,12 +348,62 @@ export default function PricingPage() {
                     No subscription tiers have been configured yet. Please check back soon.
                   </p>
                 </div>
-              ) : (
+              ) : (() => {
+                const anonAnnualAvailable = sortedPlans.some(
+                  (p) => p.annualDiscountPct > 0,
+                );
+                return (
+                <>
+                  {/* Bold, centred billing-cadence toggle. Always rendered for
+                      discoverability — the Annual button is disabled until at
+                      least one tier has annualDiscountPct > 0 on the live BE. */}
+                  <div className="mb-8 md:mb-10 flex flex-col items-center gap-2">
+                    <div className={`inline-flex items-center gap-2 rounded-2xl p-1.5 border shadow ${d ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200"}`}>
+                      <button
+                        type="button"
+                        onClick={() => setBillingInterval("MONTHLY")}
+                        className={`px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider rounded-xl transition ${
+                          billingInterval === "MONTHLY"
+                            ? "bg-[#f97316] text-white shadow"
+                            : d ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        Monthly
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => anonAnnualAvailable && setBillingInterval("ANNUAL")}
+                        disabled={!anonAnnualAvailable}
+                        className={`px-6 py-2.5 text-sm font-extrabold uppercase tracking-wider rounded-xl transition flex items-center gap-2 ${
+                          billingInterval === "ANNUAL"
+                            ? "bg-[#f97316] text-white shadow"
+                            : anonAnnualAvailable
+                              ? d ? "text-gray-300 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                              : d ? "text-gray-600 cursor-not-allowed" : "text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Annual
+                        {anonAnnualAvailable && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/20 border border-emerald-500/40 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
+                            Save
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start">
                   {sortedPlans.map((plan, idx) => {
                     // Middle tier picks up the "Most Popular" badge by
                     // convention — same heuristic the dashboard uses.
                     const recommended = idx === 1 && sortedPlans.length >= 3;
+                    const effectiveInterval: BillingInterval =
+                      billingInterval === "ANNUAL" && plan.annualDiscountPct > 0
+                        ? "ANNUAL"
+                        : "MONTHLY";
+                    const displayPrice =
+                      effectiveInterval === "ANNUAL"
+                        ? plan.priceUsdAnnual
+                        : plan.priceUsd;
                     return (
                       <div
                         key={plan.id}
@@ -371,15 +426,69 @@ export default function PricingPage() {
                           <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${d ? "text-gray-500" : "text-gray-400"}`}>
                             Tier {plan.tier}
                           </p>
-                          <h3 className={`text-2xl md:text-3xl font-extrabold mb-1 ${d ? "text-white" : "text-gray-900"}`}>
+                          <h3 className={`text-2xl md:text-3xl font-extrabold mb-3 ${d ? "text-white" : "text-gray-900"}`}>
                             {plan.name}
                           </h3>
-                          <p className={`text-sm mb-4 ${d ? "text-gray-400" : "text-gray-500"}`}>
+
+                          {/* Per-card cadence pill — bold and centred per
+                              client direction. Clicking it drives the page-
+                              level interval state so all cards stay in sync.
+                              Annual is disabled per-tier when this tier has
+                              no annualDiscountPct configured. */}
+                          <div className="mb-3 flex justify-center">
+                            <div className={`inline-flex items-center gap-1 rounded-xl p-1 border ${d ? "bg-black/30 border-white/10" : "bg-gray-100 border-gray-200"}`}>
+                              <button
+                                type="button"
+                                onClick={() => setBillingInterval("MONTHLY")}
+                                className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
+                                  billingInterval === "MONTHLY"
+                                    ? d ? "bg-white text-[#0d1117]" : "bg-[#f97316] text-white"
+                                    : d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                                }`}
+                              >
+                                Monthly
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  anonAnnualAvailable && plan.annualDiscountPct > 0
+                                    ? setBillingInterval("ANNUAL")
+                                    : undefined
+                                }
+                                disabled={!anonAnnualAvailable || plan.annualDiscountPct === 0}
+                                className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
+                                  billingInterval === "ANNUAL" && plan.annualDiscountPct > 0
+                                    ? d ? "bg-white text-[#0d1117]" : "bg-[#f97316] text-white"
+                                    : anonAnnualAvailable && plan.annualDiscountPct > 0
+                                      ? d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
+                                      : d ? "text-gray-600 cursor-not-allowed" : "text-gray-400 cursor-not-allowed"
+                                }`}
+                                title={
+                                  plan.annualDiscountPct === 0
+                                    ? "Annual billing not available on this tier"
+                                    : undefined
+                                }
+                              >
+                                Annual
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className={`text-sm mb-1 ${d ? "text-gray-400" : "text-gray-500"}`}>
                             <span className={`text-3xl md:text-4xl font-extrabold ${d ? "text-white" : "text-gray-900"}`}>
-                              {formatMoney(plan.priceUsd, "USD")}
+                              {formatMoney(displayPrice, "USD")}
                             </span>
-                            <span className="text-gray-500"> / month</span>
+                            <span className="text-gray-500">
+                              {" "}/ {effectiveInterval === "ANNUAL" ? "year" : "month"}
+                            </span>
                           </p>
+                          {effectiveInterval === "ANNUAL" && plan.annualDiscountPct > 0 ? (
+                            <p className="mb-4 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+                              Save {plan.annualDiscountPct}% vs monthly
+                            </p>
+                          ) : (
+                            <div className="mb-4" />
+                          )}
                           {plan.description && (
                             <p className={`text-sm leading-relaxed mb-5 ${d ? "text-gray-400" : "text-gray-600"}`}>
                               {plan.description}
@@ -416,7 +525,9 @@ export default function PricingPage() {
                     );
                   })}
                 </div>
-              )
+                </>
+                );
+              })()
             ) : (
               <div className={`rounded-2xl p-8 md:p-12 text-center border ${d ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
                 <h3 className={`text-2xl md:text-3xl font-extrabold mb-3 ${d ? "text-white" : "text-gray-900"}`}>
