@@ -198,7 +198,9 @@ function buildPlans(
 
 // BE-1 — price a Phase 2B bundle in the user's display currency. Sums the
 // per-pillar catalogue prices (converted from USD), then applies the
-// admin-configured compound discount. Mirrors backend resolvePhase2BBundlePrice.
+// admin-configured compound discount. Mirrors backend resolvePhase2BBundlePrice:
+// the percentage applies only to the first `maxPillars` entries by selection
+// order; extras beyond the cap pay full price so the savings line plateaus.
 function resolveBundleAmount(
   pillarIds: string[],
   pricing: PublicPricingResponse | null,
@@ -206,19 +208,28 @@ function resolveBundleAmount(
 ): { base: number; total: number; discountPct: number; savings: number; anyMissing: boolean } {
   const usdToNgn = pricing?.usdToNgn ?? 1;
   const byId = new Map((pricing?.phase2B ?? []).filter((r) => r.pillarId).map((r) => [r.pillarId!, r]));
-  let baseUsd = 0;
+  const pricesUsdInOrder: number[] = [];
   let anyMissing = false;
   for (const id of pillarIds) {
     const row = byId.get(id);
     if (!row) anyMissing = true;
-    else baseUsd += row.price;
+    else pricesUsdInOrder.push(row.price);
   }
   const cfg = pricing?.phase2bDiscount ?? { pctPerPillar: 5, maxPillars: 5 };
-  const extra = Math.max(0, Math.min(pillarIds.length, cfg.maxPillars) - 1);
-  const discountPct = Math.min(100, extra * cfg.pctPerPillar);
+  const baseUsd = pricesUsdInOrder.reduce((s, p) => s + p, 0);
+  const discountedCount = Math.min(pricesUsdInOrder.length, cfg.maxPillars);
+  const discountedBaseUsd = pricesUsdInOrder
+    .slice(0, discountedCount)
+    .reduce((s, p) => s + p, 0);
+  const discountPct = Math.min(
+    100,
+    Math.max(0, discountedCount - 1) * cfg.pctPerPillar,
+  );
   const base = convertFromUsd(baseUsd, display, usdToNgn) ?? 0;
-  const total = Math.round(base * (1 - discountPct / 100) * 100) / 100;
-  return { base, total, discountPct, savings: Math.round((base - total) * 100) / 100, anyMissing };
+  const discountedBase = convertFromUsd(discountedBaseUsd, display, usdToNgn) ?? 0;
+  const savings = Math.round(((discountedBase * discountPct) / 100) * 100) / 100;
+  const total = Math.round((base - savings) * 100) / 100;
+  return { base, total, discountPct, savings, anyMissing };
 }
 
 export default function SubscriptionPage() {

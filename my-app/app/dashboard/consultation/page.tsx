@@ -594,6 +594,13 @@ function BookingForm({
                       Quota exhausted this period — pay to book this tier.
                     </p>
                   )}
+                  {t.freeP2ARuns > 0 && (
+                    <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                      + {t.freeP2ARuns} free Strategic Scan
+                      {t.freeP2ARuns > 1 ? "s" : ""} ({t.freeP2ACreditWindowDays}
+                      d)
+                    </p>
+                  )}
                   {t.description && (
                     <p className="mt-2 text-xs leading-relaxed text-gray-500">
                       {t.description}

@@ -36,12 +36,26 @@ function formatPrice(amount: number | null | undefined, currency: string = "USD"
 
 // Mirror of the backend resolvePhase2BBundlePrice formula:
 //   discountPct = min(count - 1, maxPillars - 1) × pctPerPillar  (capped 100)
-// The cap is intentionally not surfaced in copy — the customer just sees the
-// resulting total.
-function bundleDiscountPct(count: number, discount: DiscountConfig): number {
-  if (count <= 0) return 0;
-  const extra = Math.max(0, Math.min(count, discount.maxPillars) - 1);
-  return Math.min(100, extra * discount.pctPerPillar);
+// applied ONLY to the first maxPillars by selection order — extras pay full
+// price so the dollar savings plateau at the cap. The percentage cap is
+// intentionally not surfaced in copy — the customer just sees the result.
+function bundleQuote(
+  pricesInSelectionOrder: number[],
+  discount: DiscountConfig,
+): { pct: number; savings: number; total: number; base: number } {
+  const base =
+    Math.round(pricesInSelectionOrder.reduce((s, p) => s + p, 0) * 100) / 100;
+  if (pricesInSelectionOrder.length === 0) {
+    return { pct: 0, savings: 0, total: 0, base: 0 };
+  }
+  const discountedCount = Math.min(pricesInSelectionOrder.length, discount.maxPillars);
+  const discountedBase = pricesInSelectionOrder
+    .slice(0, discountedCount)
+    .reduce((s, p) => s + p, 0);
+  const pct = Math.min(100, Math.max(0, discountedCount - 1) * discount.pctPerPillar);
+  const savings = Math.round(((discountedBase * pct) / 100) * 100) / 100;
+  const total = Math.round((base - savings) * 100) / 100;
+  return { pct, savings, total, base };
 }
 
 export function PillarPickerModal({
@@ -82,16 +96,23 @@ export function PillarPickerModal({
   };
 
   const { count, base, discountPct, total, savings } = useMemo(() => {
-    const chosen = pillars.filter((p) => selected.has(p.id));
-    const base = chosen.reduce((sum, p) => sum + (p.price ?? 0), 0);
-    const discountPct = bundleDiscountPct(chosen.length, discount);
-    const total = Math.round(base * (1 - discountPct / 100) * 100) / 100;
+    // Iterate `selected` (a Set — insertion-order preserved) rather than the
+    // catalogue so the first N picks are the ones the discount applies to.
+    // That matches the backend rule: extras beyond `discount.maxPillars` are
+    // added at full price.
+    const byId = new Map(pillars.map((p) => [p.id, p]));
+    const pricesInOrder: number[] = [];
+    for (const id of selected) {
+      const p = byId.get(id);
+      if (p?.price != null) pricesInOrder.push(p.price);
+    }
+    const quote = bundleQuote(pricesInOrder, discount);
     return {
-      count: chosen.length,
-      base,
-      discountPct,
-      total,
-      savings: Math.round((base - total) * 100) / 100,
+      count: selected.size,
+      base: quote.base,
+      discountPct: quote.pct,
+      total: quote.total,
+      savings: quote.savings,
     };
   }, [pillars, selected, discount]);
 

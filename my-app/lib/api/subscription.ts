@@ -4,6 +4,8 @@ import { API_BASE_URL, authedFetch } from './config'
 // Shared shapes — wire types mirror backend src/module/subscription/types
 // ──────────────────────────────────────────────────────────────────────────
 
+export type BillingInterval = 'MONTHLY' | 'ANNUAL'
+
 export type SubscriptionPlanPublic = {
 	id: string
 	tier: number
@@ -15,11 +17,18 @@ export type SubscriptionPlanPublic = {
 	consultationsPerMonth: number
 	features: string[]
 	displayOrder: number
+	// Per-tier annual discount. `annualDiscountPct` of 0 means the tier has no
+	// annual option — the FE Monthly/Annual toggle hides the annual side for
+	// that card. `priceUsdAnnual` is the derived `priceUsd × 12 × (1 − pct/100)`.
+	annualDiscountPct: number
+	priceUsdAnnual: number
 }
 
 export type SubscriptionPlanAdmin = SubscriptionPlanPublic & {
 	paystackPlanCodeUsd: string | null
 	paystackPlanCodeNgn: string | null
+	paystackPlanCodeUsdAnnual: string | null
+	paystackPlanCodeNgnAnnual: string | null
 	isActive: boolean
 	createdAt: string
 	updatedAt: string
@@ -48,6 +57,7 @@ export type MySubscriptionPayload = {
 	// wire-currency amount (priceUsd * usdToNgn for NGN users) instead of
 	// showing the ₦ symbol next to the unconverted USD figure.
 	usdToNgn: number
+	billingInterval: BillingInterval
 	currentPeriodStart: string
 	currentPeriodEnd: string
 	cancelAtPeriodEnd: boolean
@@ -131,12 +141,13 @@ export type SubscribeResponse = {
 
 export const subscribeToPlan = async (
 	planId: string,
-	options: { couponCode?: string } = {},
+	options: { couponCode?: string; interval?: BillingInterval } = {},
 ) => {
 	return authedFetch<SubscribeResponse>('/subscription/subscribe', {
 		method: 'POST',
 		body: JSON.stringify({
 			planId,
+			...(options.interval ? { interval: options.interval } : {}),
 			...(options.couponCode ? { couponCode: options.couponCode } : {}),
 		}),
 	})
@@ -203,6 +214,8 @@ export type CreateSubscriptionPlanInput = {
 	phase2bPerMonth: number
 	consultationsPerMonth: number
 	features?: string[]
+	// 0–80 (%). 0 disables the annual option for this tier.
+	annualDiscountPct?: number
 	isActive?: boolean
 	displayOrder?: number
 }

@@ -30,6 +30,7 @@ import {
   getMySubscription,
   getSubscriptionPlans,
   subscribeToPlan,
+  type BillingInterval,
   type MeUser,
   type MySubscriptionPayload,
   type SubscriptionPlanPublic,
@@ -84,6 +85,9 @@ export default function PlansPage() {
   const [checkoutPlan, setCheckoutPlan] = useState<SubscriptionPlanPublic | null>(
     null,
   );
+  // Monthly/Annual pill — local state, defaults to MONTHLY. The toggle is
+  // only shown when at least one tier has annualDiscountPct > 0.
+  const [interval, setIntervalState] = useState<BillingInterval>("MONTHLY");
 
   const displayCurrency: Currency = useMemo(
     () => resolveDisplayCurrency(me?.country ?? null),
@@ -182,6 +186,8 @@ export default function PlansPage() {
         hasActiveSub={!!activePlanId}
         subscriptionSectionLive={sectionsLive.subscription}
         payPerUseSectionLive={sectionsLive.payPerUse}
+        interval={interval}
+        onIntervalChange={setIntervalState}
         onSelectPlan={(plan) => {
           setPageError(null);
           setCheckoutPlan(plan);
@@ -192,6 +198,7 @@ export default function PlansPage() {
         <Suspense fallback={null}>
           <SubscriptionCheckoutModal
             plan={checkoutPlan}
+            interval={interval}
             me={me}
             displayCurrency={displayCurrency}
             usdToNgn={usdToNgn}
@@ -220,6 +227,8 @@ function PickerView({
   hasActiveSub,
   subscriptionSectionLive,
   payPerUseSectionLive,
+  interval,
+  onIntervalChange,
   onSelectPlan,
 }: {
   plans: SubscriptionPlanPublic[];
@@ -229,8 +238,13 @@ function PickerView({
   hasActiveSub: boolean;
   subscriptionSectionLive: boolean;
   payPerUseSectionLive: boolean;
+  interval: BillingInterval;
+  onIntervalChange: (next: BillingInterval) => void;
   onSelectPlan: (plan: SubscriptionPlanPublic) => void;
 }) {
+  // Show the toggle only when at least one tier has annual enabled — keeps the
+  // UI honest on a fresh DB where no admin has set annualDiscountPct yet.
+  const annualAvailable = plans.some((p) => p.annualDiscountPct > 0);
   // Section F — admin paused subscriptions. The BE returns an empty array;
   // we show a friendlier paused-state copy than the generic empty.
   if (!subscriptionSectionLive) {
@@ -284,9 +298,10 @@ function PickerView({
           </span>
         </h1>
         <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">
-          Every plan renews monthly. Quotas reset at the start of each billing
-          period and don&apos;t roll over — once a period ends, unused tests
-          expire. Need more for a one-off scan? Pay-per-use is always available.
+          Pick monthly or annual billing. Quotas reset at the start of each
+          billing period and don&apos;t roll over — once a period ends, unused
+          tests expire. Need more for a one-off scan? Pay-per-use is always
+          available.
         </p>
         {hasActiveSub && (
           // Anchor to /dashboard/settings with the deep-link param the
@@ -303,10 +318,49 @@ function PickerView({
       </section>
 
       <section className="max-w-6xl mx-auto px-4">
+        {annualAvailable && (
+          <div className="mb-8 flex justify-center">
+            <div className="inline-flex items-center gap-1 rounded-full bg-white/5 border border-white/10 p-1">
+              <button
+                type="button"
+                onClick={() => onIntervalChange("MONTHLY")}
+                className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition ${
+                  interval === "MONTHLY"
+                    ? "bg-white text-[#0d1117]"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => onIntervalChange("ANNUAL")}
+                className={`px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-full transition ${
+                  interval === "ANNUAL"
+                    ? "bg-white text-[#0d1117]"
+                    : "text-gray-400 hover:text-white"
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {plans.map((plan, idx) => {
+            // Annual price falls back to monthly when the tier has no annual
+            // option — the toggle is hidden in that case so users never see
+            // a misleading "save 0%" badge.
+            const effectiveInterval: BillingInterval =
+              interval === "ANNUAL" && plan.annualDiscountPct > 0
+                ? "ANNUAL"
+                : "MONTHLY";
+            const priceUsd =
+              effectiveInterval === "ANNUAL"
+                ? plan.priceUsdAnnual
+                : plan.priceUsd;
             const priceDisplay =
-              convertFromUsd(plan.priceUsd, displayCurrency, usdToNgn) ?? 0;
+              convertFromUsd(priceUsd, displayCurrency, usdToNgn) ?? 0;
             const isRecommended = idx === 1;
             const isCurrent = activePlanId === plan.id;
             return (
@@ -315,6 +369,7 @@ function PickerView({
                 plan={plan}
                 priceDisplay={priceDisplay}
                 displayCurrency={displayCurrency}
+                interval={effectiveInterval}
                 recommended={isRecommended}
                 current={isCurrent}
                 hasActiveSub={hasActiveSub}
@@ -343,6 +398,7 @@ function SubscriptionCard({
   plan,
   priceDisplay,
   displayCurrency,
+  interval,
   recommended,
   current,
   hasActiveSub,
@@ -351,6 +407,7 @@ function SubscriptionCard({
   plan: SubscriptionPlanPublic;
   priceDisplay: number;
   displayCurrency: Currency;
+  interval: BillingInterval;
   recommended: boolean;
   current: boolean;
   hasActiveSub: boolean;
@@ -396,12 +453,20 @@ function SubscriptionCard({
           Tier {plan.tier}
         </p>
         <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
-        <p className="text-gray-400 text-sm mb-4">
+        <p className="text-gray-400 text-sm mb-2">
           <span className="text-3xl font-bold text-white">
             {formatMoney(priceDisplay, displayCurrency)}
           </span>{" "}
-          <span className="text-gray-500">/ month</span>
+          <span className="text-gray-500">
+            / {interval === "ANNUAL" ? "year" : "month"}
+          </span>
         </p>
+        {interval === "ANNUAL" && plan.annualDiscountPct > 0 && (
+          <p className="mb-4 inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-emerald-300">
+            Save {plan.annualDiscountPct}% vs monthly
+          </p>
+        )}
+        {interval !== "ANNUAL" && <div className="mb-4" />}
 
         {plan.description && (
           <p className="text-sm text-gray-400 mb-5 leading-relaxed">
@@ -463,6 +528,7 @@ function QuotaLine({ label, count }: { label: string; count: number }) {
 
 function SubscriptionCheckoutModal({
   plan,
+  interval,
   me,
   displayCurrency,
   usdToNgn,
@@ -471,6 +537,7 @@ function SubscriptionCheckoutModal({
   onError,
 }: {
   plan: SubscriptionPlanPublic;
+  interval: BillingInterval;
   me: MeUser;
   displayCurrency: Currency;
   usdToNgn: number;
@@ -478,6 +545,10 @@ function SubscriptionCheckoutModal({
   onSuccess: () => void;
   onError: (msg: string) => void;
 }) {
+  // Annual checkout only fires when the tier actually has an annual option —
+  // page-level effectiveInterval already collapses to MONTHLY otherwise.
+  const effectiveInterval: BillingInterval =
+    interval === "ANNUAL" && plan.annualDiscountPct > 0 ? "ANNUAL" : "MONTHLY";
   const [couponCode, setCouponCode] = useState("");
   const [couponPricing, setCouponPricing] = useState<CouponPricing | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -487,8 +558,11 @@ function SubscriptionCheckoutModal({
   const [verifying, setVerifying] = useState(false);
 
   // Coupon validation runs in USD — same as the BE. The display values below
-  // re-convert to whatever the user's wire currency is when rendering.
-  const basePriceUsd = plan.priceUsd;
+  // re-convert to whatever the user's wire currency is when rendering. The
+  // base price swaps to the discounted annual sticker when the user picked
+  // ANNUAL on the toggle.
+  const basePriceUsd =
+    effectiveInterval === "ANNUAL" ? plan.priceUsdAnnual : plan.priceUsd;
   const finalPriceUsd = couponPricing?.finalAmount ?? basePriceUsd;
   const discountUsd = couponPricing?.discountAmount ?? 0;
 
@@ -560,6 +634,7 @@ function SubscriptionCheckoutModal({
 
     const res = await subscribeToPlan(plan.id, {
       couponCode: couponPricing?.code,
+      interval: effectiveInterval,
     });
 
     if (res.error || !res.data) {

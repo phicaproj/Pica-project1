@@ -25,6 +25,11 @@ const ConsultationTierPublicSchema = registry.register(
       priceUsd: z.number(),
       durationMinutes: z.number().int(),
       displayOrder: z.number().int(),
+      // PICA 2A bonus: every confirmed booking on this tier grants
+      // `freeP2ARuns` credits valid for `freeP2ACreditWindowDays` days.
+      // 0 disables — the FE hides the chip and no credits are minted.
+      freeP2ARuns: z.number().int(),
+      freeP2ACreditWindowDays: z.number().int(),
     })
     .openapi('ConsultationTierPublic')
 );
@@ -173,6 +178,37 @@ registry.registerPath({
           schema: z.object({
             message: z.string(),
             results: z.array(CompletedResultOptionSchema),
+          }),
+        },
+      },
+    },
+    401: errorResponse('Missing or invalid token'),
+  },
+});
+
+// GET /api/consultation/phase2a-credits --------------------------------------
+registry.registerPath({
+  method: 'get',
+  path: '/api/consultation/phase2a-credits',
+  tags: ['Consultation'],
+  summary: 'List my unconsumed PICA 2A credits',
+  description:
+    'Returns the authenticated user\'s unconsumed, unexpired PICA 2A credits — granted by confirmed consultation bookings via `ConsultationTier.freeP2ARuns`. Ordered oldest-expiring first; the FE renders the earliest expiry on the strategic-scan landing banner. Consumed in FIFO order by `POST /api/payment/init` (plan PHASE2A) before the subscription quota.',
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: {
+      description: 'Available credits',
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string(),
+            credits: z.array(
+              z.object({
+                id: z.string().uuid(),
+                expiresAt: z.string().datetime(),
+                consultationBookingId: z.string().uuid(),
+              }),
+            ),
           }),
         },
       },

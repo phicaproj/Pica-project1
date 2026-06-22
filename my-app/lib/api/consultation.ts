@@ -12,6 +12,9 @@ export type ConsultationTierPublic = {
 	priceUsd: number
 	durationMinutes: number
 	displayOrder: number
+	// PICA 2A bonus per confirmed booking. 0 hides the bonus chip.
+	freeP2ARuns: number
+	freeP2ACreditWindowDays: number
 }
 
 export type ConsultationTierAdmin = ConsultationTierPublic & {
@@ -160,6 +163,8 @@ export type CreateConsultationTierInput = {
 	description?: string
 	priceUsd: number
 	durationMinutes: number
+	freeP2ARuns?: number
+	freeP2ACreditWindowDays?: number
 	isActive?: boolean
 	displayOrder?: number
 }
@@ -268,5 +273,28 @@ export const adminUpdateConsultationBookingStatus = async (
 			method: 'PATCH',
 			body: JSON.stringify({ status }),
 		},
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// User — unconsumed PICA 2A credits granted by paid consultation bookings.
+// Backs the strategic-scan CTA banner. Returns only unexpired, unconsumed.
+// ──────────────────────────────────────────────────────────────────────────
+
+export type MyPhase2ACreditPublic = {
+	id: string
+	expiresAt: string
+	consultationBookingId: string
+}
+
+export type MyPhase2ACreditsResponse = {
+	message: string
+	credits: MyPhase2ACreditPublic[]
+}
+
+export const getMyPhase2ACredits = async () => {
+	return authedFetch<MyPhase2ACreditsResponse>(
+		'/consultation/phase2a-credits',
+		{ method: 'GET' },
 	)
 }

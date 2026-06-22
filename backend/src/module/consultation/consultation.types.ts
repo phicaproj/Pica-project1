@@ -13,6 +13,11 @@ export type ConsultationTierPublic = {
   priceUsd: number;
   durationMinutes: number;
   displayOrder: number;
+  // Bonus: every confirmed booking on this tier grants `freeP2ARuns` PICA 2A
+  // credits valid for `freeP2ACreditWindowDays` days. Zero disables the bonus
+  // — the FE hides the chip when freeP2ARuns === 0.
+  freeP2ARuns: number;
+  freeP2ACreditWindowDays: number;
 };
 
 export type ConsultationTierAdmin = ConsultationTierPublic & {
@@ -80,6 +85,20 @@ export type MyConsultationsResponse = {
   bookings: ConsultationBookingPayload[];
 };
 
+// GET /api/consultation/phase2a-credits — surfaced on the strategic-scan page
+// so the FE can show "Your consultation credit covers this — no charge"
+// before the user clicks Start. Returns only unconsumed, unexpired credits.
+export type MyPhase2ACreditPublic = {
+  id: string;
+  expiresAt: string;
+  consultationBookingId: string;
+};
+
+export type MyPhase2ACreditsResponse = {
+  message: string;
+  credits: MyPhase2ACreditPublic[];
+};
+
 // Topic + tier are required; everything else optional so users can skip the
 // long-form context fields. preferredTimes is freeform (admin reads, manually
 // schedules).
@@ -123,6 +142,15 @@ export const createConsultationTierSchema = z.object({
     .int('durationMinutes must be an integer')
     .min(5, 'durationMinutes must be at least 5')
     .max(600, 'durationMinutes must not exceed 600'),
+  // 0 disables the bonus; non-zero grants `freeP2ARuns` credits per booking
+  // valid for `freeP2ACreditWindowDays`. Defaults match the PDF (5 / 90).
+  freeP2ARuns: nonNegativeInt.default(5),
+  freeP2ACreditWindowDays: z
+    .number()
+    .int('freeP2ACreditWindowDays must be an integer')
+    .min(1, 'freeP2ACreditWindowDays must be at least 1')
+    .max(365, 'freeP2ACreditWindowDays cannot exceed 365')
+    .default(90),
   isActive: z.boolean().default(true),
   displayOrder: nonNegativeInt.default(0),
 });
@@ -143,6 +171,13 @@ export const updateConsultationTierSchema = z
       .int('durationMinutes must be an integer')
       .min(5)
       .max(600)
+      .optional(),
+    freeP2ARuns: nonNegativeInt.optional(),
+    freeP2ACreditWindowDays: z
+      .number()
+      .int()
+      .min(1)
+      .max(365)
       .optional(),
     isActive: z.boolean().optional(),
     displayOrder: nonNegativeInt.optional(),

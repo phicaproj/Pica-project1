@@ -21,6 +21,7 @@ import {
   bookConsultationService,
   listMyCompletedResultsService,
   listMyConsultationsService,
+  listMyPhase2ACreditsService,
   listTiersService,
 } from './consultation.service';
 
@@ -55,6 +56,17 @@ export const listMyConsultations = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const result = await listMyConsultationsService(userId);
+    return res.status(OK).json(result);
+  },
+);
+
+// Unconsumed, unexpired PICA 2A credits — backs the strategic-scan CTA banner
+// that tells the user "your consultation credit covers this — no charge"
+// before they hit Start.
+export const listMyPhase2ACredits = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const result = await listMyPhase2ACreditsService(userId);
     return res.status(OK).json(result);
   },
 );

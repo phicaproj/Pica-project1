@@ -1292,8 +1292,11 @@ function SubscriptionManageView() {
   // the user is billed in NGN. Without this conversion the card showed
   // "₦{priceUsd}" — the right symbol with the wrong number. The BE includes
   // usdToNgn on the payload so we don't need a second fetch for the rate.
-  const billedPrice =
-    wireCurrency === "NGN" ? sub.plan.priceUsd * sub.usdToNgn : sub.plan.priceUsd;
+  // Annual subscribers see the discounted yearly figure (priceUsdAnnual).
+  const stickerUsd =
+    sub.billingInterval === "ANNUAL" ? sub.plan.priceUsdAnnual : sub.plan.priceUsd;
+  const billedPrice = wireCurrency === "NGN" ? stickerUsd * sub.usdToNgn : stickerUsd;
+  const cadenceLabel = sub.billingInterval === "ANNUAL" ? "billed annually" : "billed monthly";
 
   return (
     <div className="space-y-6">
@@ -1369,7 +1372,7 @@ function SubscriptionManageView() {
           <p className="text-2xl font-extrabold text-white mb-1">
             {formatMoney(billedPrice, wireCurrency)}
           </p>
-          <p className="text-xs text-gray-500 mb-5">billed monthly</p>
+          <p className="text-xs text-gray-500 mb-5">{cadenceLabel}</p>
 
           <div className="border-t border-white/5 pt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3">

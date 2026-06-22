@@ -14,6 +14,7 @@ import {
 	Save,
 } from 'lucide-react'
 import { getAccessToken, getMe, setLastSessionId, type MeUser } from '@/lib/authClient'
+import { getMyPhase2ACredits } from '@/lib/api/consultation'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const API_BASE =
@@ -210,6 +211,7 @@ function LandingState({
 	loading,
 	error,
 	profileIncomplete,
+	creditExpiresAt,
 }: {
 	onStart: () => void
 	loading: boolean
@@ -218,6 +220,10 @@ function LandingState({
 	// staffSize. When that's missing we keep the Start button disabled and
 	// point the user at /dashboard/settings — same gate the backend enforces.
 	profileIncomplete: boolean
+	// ISO timestamp of the earliest-expiring unconsumed PICA 2A credit. When
+	// set, render a "covered — no charge" banner so the user understands why
+	// the next start is free.
+	creditExpiresAt: string | null
 }) {
 	return (
 		<motion.div
@@ -296,6 +302,18 @@ function LandingState({
 						{error && (
 							<div className='mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300'>
 								{error}
+							</div>
+						)}
+
+						{creditExpiresAt && (
+							<div className='mb-6 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200'>
+								Your consultation credit covers this Strategic
+								Scan — no charge. Valid until{' '}
+								{new Date(creditExpiresAt).toLocaleDateString(
+									undefined,
+									{ year: 'numeric', month: 'short', day: 'numeric' },
+								)}
+								.
 							</div>
 						)}
 
@@ -662,15 +680,23 @@ export default function StrategicScanPage() {
 	// (today: staffSize set). The backend refuses Phase 2A start without it; we
 	// mirror that in the UI so the CTA reads as gated rather than failing late.
 	const [me, setMe] = useState<MeUser | null>(null)
+	// Earliest-expiring unconsumed PICA 2A credit, if any. Backs the
+	// "Your consultation credit covers this — no charge" banner on Landing.
+	const [creditExpiresAt, setCreditExpiresAt] = useState<string | null>(null)
 
 	const flat = useMemo(() => flattenPillars(pillars), [pillars])
 
 	useEffect(() => {
 		let cancelled = false
 		;(async () => {
-			const res = await getMe()
+			const [meRes, creditsRes] = await Promise.all([
+				getMe(),
+				getMyPhase2ACredits(),
+			])
 			if (cancelled) return
-			if (res.data) setMe(res.data.user)
+			if (meRes.data) setMe(meRes.data.user)
+			const earliest = creditsRes.data?.credits[0]?.expiresAt ?? null
+			setCreditExpiresAt(earliest)
 		})()
 		return () => {
 			cancelled = true
@@ -972,6 +998,7 @@ export default function StrategicScanPage() {
 				loading={loading}
 				error={error}
 				profileIncomplete={profileIncomplete}
+				creditExpiresAt={creditExpiresAt}
 			/>
 		</AnimatePresence>
 	)

@@ -117,6 +117,14 @@ enum SubscriptionStatus {
   EXPIRED    // no current period; user must resubscribe
 }
 
+// Subscribe cadence. Snapshot on UserSubscription at subscribe time so the
+// renewal period roll (30 vs 365 days) and FE "billed monthly/annually"
+// labels are stable across mid-stream plan edits.
+enum BillingInterval {
+  MONTHLY
+  ANNUAL
+}
+
 // The seven fixed pillar codes. Used as the canonical identifier for a Pillar
 // and as the prefix of every questionCode (e.g. "FL-001"). Keeping it an enum
 // guarantees consistent naming across pillars and admin-created questions.
@@ -327,6 +335,10 @@ model User {
   appSettingsUpdates AppSettings[]      @relation("AppSettingsUpdatedBy")
   subscriptions      UserSubscription[]
   consultations      ConsultationBooking[]
+  // PICA 2A credits granted by paid consultation bookings (see ConsultationTier
+  // .freeP2ARuns / .freeP2ACreditWindowDays). Consumed before the subscription
+  // quota path in initPaymentService.
+  phase2aCredits     Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -553,6 +565,10 @@ model Payment {
   // One row per pillar granted by this payment — a single-pillar purchase has
   // one, a multi-pillar bundle has many (BE-1).
   phase2bUnlocks       Phase2BPillarUnlock[]
+  // PICA 2A credits consumed by THIS payment (when the Phase 2A short-circuit
+  // resolves to free via a consultation-granted credit). Always 0 or 1 in
+  // practice; modelled as a list because the relation belongs to Phase2ACredit.
+  phase2aCreditsConsumed Phase2ACredit[] @relation("Phase2ACreditConsumedBy")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -766,6 +782,15 @@ model SubscriptionPlan {
   paystackPlanCodeUsd String? @map("paystack_plan_code_usd")
   paystackPlanCodeNgn String? @map("paystack_plan_code_ngn")
 
+  // Annual cadence. `annualDiscountPct` is the % shaved off `priceUsd × 12`
+  // when the user picks ANNUAL on subscribe; 0 means "no annual option" and
+  // the FE Monthly/Annual toggle hides the annual side. Annual Paystack plan
+  // codes mirror the monthly ones — created eagerly on admin save when
+  // discount > 0 (USD) and lazily on first NGN annual subscriber.
+  annualDiscountPct      Int     @default(0)  @map("annual_discount_pct")
+  paystackPlanCodeUsdAnnual String? @map("paystack_plan_code_usd_annual")
+  paystackPlanCodeNgnAnnual String? @map("paystack_plan_code_ngn_annual")
+
   isActive     Boolean @default(true) @map("is_active")
   displayOrder Int     @default(0)    @map("display_order")
 
@@ -805,6 +830,12 @@ model UserSubscription {
   // changing currency requires cancelling and resubscribing because Paystack
   // Plans are currency-specific.
   currency String @default("USD")
+
+  // Billing cadence snapshotted at subscribe time. Drives the 30 vs 365 day
+  // period roll on every charge.success webhook, and the "billed monthly /
+  // annually" label in Settings. Existing rows backfill to MONTHLY via the
+  // column default.
+  billingInterval BillingInterval @default(MONTHLY) @map("billing_interval")
 
   // Card-on-file snapshot for the Settings → Payments screen. Paystack
   // returns these on the first charge.success in `data.authorization`. We
@@ -897,6 +928,13 @@ model ConsultationTier {
   priceUsd     Decimal @map("price_usd") @db.Decimal(12, 2)
   durationMinutes Int  @map("duration_minutes")
 
+  // PICA 2A bonus: each confirmed booking on this tier grants the user
+  // `freeP2ARuns` credits valid for `freeP2ACreditWindowDays` days. Default
+  // 5 / 90 per the PDF; admin can edit per tier. Setting freeP2ARuns to 0
+  // disables the bonus for that tier without removing the column.
+  freeP2ARuns              Int @default(5) @map("free_p2a_runs")
+  freeP2ACreditWindowDays  Int @default(90) @map("free_p2a_credit_window_days")
+
   isActive     Boolean @default(true) @map("is_active")
   displayOrder Int     @default(0)    @map("display_order")
 
@@ -954,6 +992,10 @@ model ConsultationBooking {
   tier           ConsultationTier @relation(fields: [tierId], references: [id])
   relatedResult  SessionResult? @relation(fields: [relatedSessionResultId], references: [id])
   payment        Payment?
+  // PICA 2A credits granted when this booking was confirmed (see
+  // ConsultationTier.freeP2ARuns). Empty when the tier had freeP2ARuns=0 or
+  // the booking is still REQUESTED.
+  phase2aCredits Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -961,4 +1003,39 @@ model ConsultationBooking {
   @@index([userId, status])
   @@index([status, requestedAt])
   @@map("consultation_bookings")
+}
+
+/// One row per PICA 2A credit granted by a confirmed consultation booking.
+/// Tier-configurable count (`ConsultationTier.freeP2ARuns`) and validity
+/// window (`freeP2ACreditWindowDays`). Consumed by initPaymentService Phase 2A
+/// branch BEFORE the subscription quota path — so a user who has both a
+/// fresh credit and a subscription burns the credit first.
+///
+/// Uniqueness model: `(consultationBookingId, sequence)` is unique so the
+/// confirm flow can idempotently upsert N rows per booking. A re-confirm of
+/// the same booking yields the same rows.
+model Phase2ACredit {
+  id                      String   @id @default(uuid())
+  userId                  String   @map("user_id")
+  consultationBookingId   String   @map("consultation_booking_id")
+  // 1..freeP2ARuns at grant time. Used only as the second half of the
+  // (booking, sequence) uniqueness key so confirm is idempotent.
+  sequence                Int
+
+  expiresAt   DateTime  @map("expires_at")
+  // null = available; set when consumed by an initPaymentService short-circuit.
+  consumedAt        DateTime? @map("consumed_at")
+  consumedPaymentId String?   @map("consumed_payment_id")
+
+  user                User                @relation(fields: [userId], references: [id])
+  consultationBooking ConsultationBooking @relation(fields: [consultationBookingId], references: [id])
+  consumedPayment     Payment?            @relation("Phase2ACreditConsumedBy", fields: [consumedPaymentId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([consultationBookingId, sequence])
+  // Hot path: "does this user have an unconsumed, unexpired credit?"
+  @@index([userId, consumedAt, expiresAt])
+  @@map("phase2a_credits")
 }

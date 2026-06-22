@@ -4,6 +4,7 @@ import {
   bookConsultation,
   listMyCompletedResults,
   listMyConsultations,
+  listMyPhase2ACredits,
   listTiers,
 } from './consultation.controller';
 
@@ -15,6 +16,7 @@ consultationRouter.get('/tiers', listTiers);
 
 consultationRouter.get('/me', authenticate, listMyConsultations);
 consultationRouter.get('/me/results', authenticate, listMyCompletedResults);
+consultationRouter.get('/phase2a-credits', authenticate, listMyPhase2ACredits);
 consultationRouter.post('/book', authenticate, bookConsultation);
 
 // Admin endpoints are mounted from module/admin/admin.routes.ts under

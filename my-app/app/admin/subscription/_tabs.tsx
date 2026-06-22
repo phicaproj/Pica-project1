@@ -89,6 +89,9 @@ type SubDraft = {
   phase2bPerMonth: number;
   consultationsPerMonth: number;
   features: string;
+  // % off the monthly × 12 sticker when the user picks ANNUAL on the FE
+  // toggle. 0 disables the annual option for this tier.
+  annualDiscountPct: number;
   isActive: boolean;
   displayOrder: number;
 };
@@ -103,6 +106,7 @@ const subPlanToDraft = (p: SubscriptionPlanAdmin): SubDraft => ({
   phase2bPerMonth: p.phase2bPerMonth,
   consultationsPerMonth: p.consultationsPerMonth,
   features: p.features.join("\n"),
+  annualDiscountPct: p.annualDiscountPct,
   isActive: p.isActive,
   displayOrder: p.displayOrder,
 });
@@ -117,6 +121,7 @@ const emptySubDraft = (suggestedTier: number): SubDraft => ({
   phase2bPerMonth: 0,
   consultationsPerMonth: 0,
   features: "",
+  annualDiscountPct: 0,
   isActive: true,
   displayOrder: suggestedTier,
 });
@@ -158,6 +163,9 @@ export function SubscriptionTiersTab() {
 
     setSaving(true);
     setError(null);
+    if (editing.annualDiscountPct < 0 || editing.annualDiscountPct > 80) {
+      return setError("Annual discount must be between 0 and 80%.");
+    }
     const payload = {
       name: editing.name.trim(),
       description: editing.description.trim(),
@@ -166,6 +174,7 @@ export function SubscriptionTiersTab() {
       phase2bPerMonth: editing.phase2bPerMonth,
       consultationsPerMonth: editing.consultationsPerMonth,
       features: editing.features.split("\n").map((s) => s.trim()).filter(Boolean),
+      annualDiscountPct: editing.annualDiscountPct,
       isActive: editing.isActive,
       displayOrder: editing.displayOrder,
     };
@@ -490,6 +499,27 @@ function SubscriptionEditorModal({
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>
+            <ModalField
+              label="Annual discount (%)"
+              hint={
+                draft.annualDiscountPct > 0
+                  ? `Annual sticker: $${(draft.priceUsd * 12 * (1 - draft.annualDiscountPct / 100)).toFixed(2)}`
+                  : "0 hides the annual option for this tier"
+              }
+            >
+              <input
+                type="number"
+                step={1}
+                min={0}
+                max={80}
+                value={draft.annualDiscountPct}
+                disabled={saving}
+                onChange={(e) =>
+                  set("annualDiscountPct", parseInt(e.target.value || "0", 10))
+                }
+                className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
+              />
+            </ModalField>
           </div>
 
           <ModalField label="Description" hint="Renders inline above the feature list">
@@ -603,6 +633,9 @@ type ConsultDraft = {
   description: string;
   priceUsd: number;
   durationMinutes: number;
+  // PICA 2A bonus per confirmed booking — 0 disables.
+  freeP2ARuns: number;
+  freeP2ACreditWindowDays: number;
   isActive: boolean;
   displayOrder: number;
 };
@@ -614,6 +647,8 @@ const consultTierToDraft = (t: ConsultationTierAdmin): ConsultDraft => ({
   description: t.description,
   priceUsd: t.priceUsd,
   durationMinutes: t.durationMinutes,
+  freeP2ARuns: t.freeP2ARuns,
+  freeP2ACreditWindowDays: t.freeP2ACreditWindowDays,
   isActive: t.isActive,
   displayOrder: t.displayOrder,
 });
@@ -625,6 +660,8 @@ const emptyConsultDraft = (suggestedTier: number): ConsultDraft => ({
   description: "",
   priceUsd: 0,
   durationMinutes: 30,
+  freeP2ARuns: 5,
+  freeP2ACreditWindowDays: 90,
   isActive: true,
   displayOrder: suggestedTier,
 });
@@ -664,6 +701,10 @@ export function ConsultationTiersTab() {
     if (!editing.name.trim()) return setError("Name is required.");
     if (editing.priceUsd <= 0) return setError("Price must be greater than zero.");
     if (editing.durationMinutes < 5) return setError("Duration must be at least 5 minutes.");
+    if (editing.freeP2ARuns < 0) return setError("Free 2A runs cannot be negative.");
+    if (editing.freeP2ACreditWindowDays < 1 || editing.freeP2ACreditWindowDays > 365) {
+      return setError("Credit window must be between 1 and 365 days.");
+    }
 
     setSaving(true);
     setError(null);
@@ -672,6 +713,8 @@ export function ConsultationTiersTab() {
       description: editing.description.trim(),
       priceUsd: editing.priceUsd,
       durationMinutes: editing.durationMinutes,
+      freeP2ARuns: editing.freeP2ARuns,
+      freeP2ACreditWindowDays: editing.freeP2ACreditWindowDays,
       isActive: editing.isActive,
       displayOrder: editing.displayOrder,
     };
@@ -980,6 +1023,43 @@ function ConsultationEditorModal({
                 value={draft.durationMinutes}
                 disabled={saving}
                 onChange={(e) => set("durationMinutes", parseInt(e.target.value || "30", 10))}
+                className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
+              />
+            </ModalField>
+            <ModalField
+              label="Free PICA 2A runs per booking"
+              hint="0 disables the bonus for this tier"
+            >
+              <input
+                type="number"
+                min={0}
+                max={50}
+                step={1}
+                value={draft.freeP2ARuns}
+                disabled={saving}
+                onChange={(e) =>
+                  set("freeP2ARuns", parseInt(e.target.value || "0", 10))
+                }
+                className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
+              />
+            </ModalField>
+            <ModalField
+              label="Credit validity (days)"
+              hint="How long after confirm the credits last"
+            >
+              <input
+                type="number"
+                min={1}
+                max={365}
+                step={1}
+                value={draft.freeP2ACreditWindowDays}
+                disabled={saving}
+                onChange={(e) =>
+                  set(
+                    "freeP2ACreditWindowDays",
+                    parseInt(e.target.value || "90", 10),
+                  )
+                }
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>

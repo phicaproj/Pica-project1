@@ -25,6 +25,11 @@ const SubscriptionPlanPublicSchema = registry.register(
       consultationsPerMonth: z.number().int(),
       features: z.array(z.string()),
       displayOrder: z.number().int(),
+      // Annual cadence. `annualDiscountPct = 0` means the tier has no annual
+      // option and the FE Monthly/Annual toggle hides this side.
+      // `priceUsdAnnual` is the BE-derived `priceUsd × 12 × (1 − pct/100)`.
+      annualDiscountPct: z.number().int(),
+      priceUsdAnnual: z.number(),
     })
     .openapi('SubscriptionPlanPublic')
 );
@@ -36,6 +41,8 @@ const SubscriptionPlanAdminSchema = registry.register(
   SubscriptionPlanPublicSchema.extend({
     paystackPlanCodeUsd: z.string().nullable(),
     paystackPlanCodeNgn: z.string().nullable(),
+    paystackPlanCodeUsdAnnual: z.string().nullable(),
+    paystackPlanCodeNgnAnnual: z.string().nullable(),
     isActive: z.boolean(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -66,6 +73,9 @@ const MySubscriptionPayloadSchema = registry.register(
       plan: SubscriptionPlanPublicSchema,
       currency: z.enum(['USD', 'NGN']),
       usdToNgn: z.number(),
+      // Cadence snapshot — Settings reads this for "billed monthly" vs
+      // "billed annually" labelling. Snapshotted at subscribe time.
+      billingInterval: z.enum(['MONTHLY', 'ANNUAL']),
       currentPeriodStart: z.string().datetime(),
       currentPeriodEnd: z.string().datetime(),
       cancelAtPeriodEnd: z.boolean(),
@@ -174,7 +184,9 @@ registry.registerPath({
     '- **Paid**: returns `free = false`, `authorizationUrl` + `accessCode` + `reference` for the FE to open the Paystack inline widget. The subscription is created on `subscription.create` webhook receipt.',
     '- **Coupon-covered free**: when a coupon discounts the price to zero, the BE skips Paystack entirely, creates the subscription synchronously, and returns `free = true`.',
     '',
-    'Optional `couponCode` is validated against the same rules as POST /api/coupon/validate (including SUBSCRIPTION-tier targeting).',
+    'Optional `interval` (`MONTHLY` | `ANNUAL`, default `MONTHLY`). When `ANNUAL`, the price is `priceUsd × 12 × (1 − annualDiscountPct/100)` and the renewal period rolls in 365-day chunks. Plans with `annualDiscountPct = 0` reject `interval = ANNUAL` with 400.',
+    '',
+    'Optional `couponCode` is validated against the same rules as POST /api/coupon/validate (including SUBSCRIPTION-tier targeting). Coupons apply on top of the annual discount when both are present.',
   ].join('\n'),
   security: [{ bearerAuth: [] }],
   request: {

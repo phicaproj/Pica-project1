@@ -1,4 +1,11 @@
-import { PaymentProvider, PaymentStatus, Plan, Prisma, SubscriptionStatus } from '@prisma/client';
+import {
+  BillingInterval,
+  PaymentProvider,
+  PaymentStatus,
+  Plan,
+  Prisma,
+  SubscriptionStatus,
+} from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import {
@@ -64,24 +71,36 @@ type PlanRow = {
   features: string[];
   paystackPlanCodeUsd: string | null;
   paystackPlanCodeNgn: string | null;
+  annualDiscountPct: number;
+  paystackPlanCodeUsdAnnual: string | null;
+  paystackPlanCodeNgnAnnual: string | null;
   isActive: boolean;
   displayOrder: number;
   createdAt: Date;
   updatedAt: Date;
 };
 
+// `priceUsd × 12 × (1 − pct/100)`, rounded. Centralised so the public response
+// and the subscribe path agree to the cent.
+function computeAnnualPriceUsd(priceUsd: number, annualDiscountPct: number): number {
+  return round2(priceUsd * 12 * (1 - annualDiscountPct / 100));
+}
+
 function toPublicPlan(row: PlanRow): SubscriptionPlanPublic {
+  const priceUsd = Number(row.priceUsd);
   return {
     id: row.id,
     tier: row.tier,
     name: row.name,
     description: row.description,
-    priceUsd: Number(row.priceUsd),
+    priceUsd,
     phase2aPerMonth: row.phase2aPerMonth,
     phase2bPerMonth: row.phase2bPerMonth,
     consultationsPerMonth: row.consultationsPerMonth,
     features: row.features,
     displayOrder: row.displayOrder,
+    annualDiscountPct: row.annualDiscountPct,
+    priceUsdAnnual: computeAnnualPriceUsd(priceUsd, row.annualDiscountPct),
   };
 }
 
@@ -90,6 +109,8 @@ function toAdminPlan(row: PlanRow): SubscriptionPlanAdmin {
     ...toPublicPlan(row),
     paystackPlanCodeUsd: row.paystackPlanCodeUsd,
     paystackPlanCodeNgn: row.paystackPlanCodeNgn,
+    paystackPlanCodeUsdAnnual: row.paystackPlanCodeUsdAnnual,
+    paystackPlanCodeNgnAnnual: row.paystackPlanCodeNgnAnnual,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -104,6 +125,19 @@ function addOneMonth(start: Date): Date {
   const end = new Date(start);
   end.setUTCMonth(end.getUTCMonth() + 1);
   return end;
+}
+
+// Add exactly one year to `start`. Same fallback role as addOneMonth, picked
+// when `billingInterval === 'ANNUAL'`.
+function addOneYear(start: Date): Date {
+  const end = new Date(start);
+  end.setUTCFullYear(end.getUTCFullYear() + 1);
+  return end;
+}
+
+/** Centralised so handler + activation pick the same delta for an interval. */
+export function nextPeriodEnd(start: Date, interval: BillingInterval): Date {
+  return interval === BillingInterval.ANNUAL ? addOneYear(start) : addOneMonth(start);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -191,6 +225,7 @@ export async function getMySubscriptionService(userId: string): Promise<MySubscr
     plan: toPublicPlan(sub.plan),
     currency: sub.currency === 'NGN' ? 'NGN' : 'USD',
     usdToNgn,
+    billingInterval: sub.billingInterval,
     currentPeriodStart: sub.currentPeriodStart.toISOString(),
     currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
     cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
@@ -231,8 +266,10 @@ export async function getMySubscriptionService(userId: string): Promise<MySubscr
 export async function subscribeService(
   userId: string,
   planId: string,
-  options: { couponCode?: string } = {}
+  options: { couponCode?: string; interval?: BillingInterval } = {}
 ): Promise<SubscribeResponse> {
+  const interval = options.interval ?? BillingInterval.MONTHLY;
+
   const [user, plan] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
@@ -245,6 +282,13 @@ export async function subscribeService(
   if (!plan) throw new AppError('Plan not found', NOT_FOUND);
   if (!plan.isActive) {
     throw new AppError('This plan is no longer available', BAD_REQUEST);
+  }
+
+  // Annual cadence is gated on annualDiscountPct > 0 — a tier with no annual
+  // discount has no annual plan code on Paystack and the FE should never offer
+  // the toggle. Defensive check for direct API callers.
+  if (interval === BillingInterval.ANNUAL && plan.annualDiscountPct <= 0) {
+    throw new AppError('This plan does not offer an annual option', BAD_REQUEST);
   }
 
   // Block double-subscribe — if the user already has a live subscription we
@@ -266,7 +310,14 @@ export async function subscribeService(
 
   const chargeCurrency = resolveChargeCurrency(user.country);
   const usdToNgn = chargeCurrency === 'NGN' ? await getUsdToNgnRate() : 1;
-  const priceUsd = Number(plan.priceUsd);
+  // Resolved sticker price in USD. Annual is `monthly × 12 × (1 − pct/100)`
+  // — coupon math runs on top of that so a 10%-off coupon stacks with the
+  // annual discount instead of overriding it.
+  const monthlyUsd = Number(plan.priceUsd);
+  const priceUsd =
+    interval === BillingInterval.ANNUAL
+      ? computeAnnualPriceUsd(monthlyUsd, plan.annualDiscountPct)
+      : monthlyUsd;
 
   // Coupon math, like initPaymentService, runs in USD so a flat amountOff
   // means the same thing across NGN and USD users. We compute the discount
@@ -337,11 +388,12 @@ export async function subscribeService(
           planId: plan.id,
           status: SubscriptionStatus.ACTIVE,
           currency: chargeCurrency,
+          billingInterval: interval,
           paystackSubscriptionCode: null,
           paystackCustomerCode: null,
           paystackEmailToken: null,
           currentPeriodStart: now,
-          currentPeriodEnd: addOneMonth(now),
+          currentPeriodEnd: nextPeriodEnd(now, interval),
         },
       });
     });
@@ -360,25 +412,33 @@ export async function subscribeService(
     };
   }
 
-  // Need a Paystack plan code in the wire currency. If the admin saved the
-  // tier before USD/NGN was enabled, we lazily create it here so the first
-  // user to subscribe doesn't get blocked. Errors propagate.
-  let planCode = chargeCurrency === 'USD' ? plan.paystackPlanCodeUsd : plan.paystackPlanCodeNgn;
+  // Need a Paystack plan code in the wire currency AND interval. Four columns
+  // total (USD-monthly, USD-annual, NGN-monthly, NGN-annual); lazy-create the
+  // one we need if the admin saved the tier before this combination existed.
+  // Errors propagate.
+  const planCodeColumn = (() => {
+    if (interval === BillingInterval.ANNUAL) {
+      return chargeCurrency === 'USD'
+        ? ('paystackPlanCodeUsdAnnual' as const)
+        : ('paystackPlanCodeNgnAnnual' as const);
+    }
+    return chargeCurrency === 'USD'
+      ? ('paystackPlanCodeUsd' as const)
+      : ('paystackPlanCodeNgn' as const);
+  })();
+  let planCode: string | null = plan[planCodeColumn];
   if (!planCode) {
     const created = await createPaystackPlan({
-      name: `PICA ${plan.name} (${chargeCurrency})`,
+      name: `PICA ${plan.name} (${chargeCurrency}, ${interval.toLowerCase()})`,
       amount: chargeAmount,
       currency: chargeCurrency,
-      interval: 'monthly',
+      interval: interval === BillingInterval.ANNUAL ? 'annually' : 'monthly',
       description: plan.description,
     });
     planCode = created.plan_code;
     await prisma.subscriptionPlan.update({
       where: { id: plan.id },
-      data:
-        chargeCurrency === 'USD'
-          ? { paystackPlanCodeUsd: planCode }
-          : { paystackPlanCodeNgn: planCode },
+      data: { [planCodeColumn]: planCode },
     });
   }
 
@@ -393,6 +453,10 @@ export async function subscribeService(
       userId: user.id,
       planId: plan.id,
       currency: chargeCurrency,
+      // Snapshot the chosen cadence in metadata so the charge.success webhook
+      // can write it onto the new UserSubscription row (the user row doesn't
+      // exist yet — Paystack is the source of truth until the webhook lands).
+      interval,
       // Coupon code flows through metadata so the webhook can persist it on
       // the first-charge Payment row for audit/redemption tracking.
       ...(appliedCouponCode ? { couponCode: appliedCouponCode } : {}),
@@ -519,6 +583,7 @@ export async function adminCreatePlanService(
       phase2bPerMonth: input.phase2bPerMonth,
       consultationsPerMonth: input.consultationsPerMonth,
       features: input.features,
+      annualDiscountPct: input.annualDiscountPct,
       isActive: input.isActive,
       displayOrder: input.displayOrder,
     },
@@ -544,12 +609,39 @@ export async function adminCreatePlanService(
     );
   }
 
-  const finalRow = paystackPlanCodeUsd
-    ? await prisma.subscriptionPlan.update({
-        where: { id: created.id },
-        data: { paystackPlanCodeUsd },
-      })
-    : created;
+  // Eagerly mirror the annual variant too when the admin enabled an annual
+  // discount. NGN annual stays lazy (matches the monthly NGN flow — minted on
+  // first NG subscriber). Failures are non-blocking; lazy back-fill recovers.
+  let paystackPlanCodeUsdAnnual: string | null = null;
+  if (input.annualDiscountPct > 0) {
+    const annualUsd = computeAnnualPriceUsd(input.priceUsd, input.annualDiscountPct);
+    try {
+      const result = await createPaystackPlan({
+        name: `PICA ${input.name} (USD, annual)`,
+        amount: annualUsd,
+        currency: 'USD',
+        interval: 'annually',
+        description: input.description,
+      });
+      paystackPlanCodeUsdAnnual = result.plan_code;
+    } catch (error) {
+      console.warn(
+        `[subscription:create] Paystack USD-annual plan sync failed for ${created.id}:`,
+        error
+      );
+    }
+  }
+
+  const finalRow =
+    paystackPlanCodeUsd || paystackPlanCodeUsdAnnual
+      ? await prisma.subscriptionPlan.update({
+          where: { id: created.id },
+          data: {
+            ...(paystackPlanCodeUsd ? { paystackPlanCodeUsd } : {}),
+            ...(paystackPlanCodeUsdAnnual ? { paystackPlanCodeUsdAnnual } : {}),
+          },
+        })
+      : created;
 
   return {
     message: 'Plan created successfully',
@@ -578,6 +670,7 @@ export async function adminUpdatePlanService(
     data.consultationsPerMonth = input.consultationsPerMonth;
   }
   if (input.features !== undefined) data.features = input.features;
+  if (input.annualDiscountPct !== undefined) data.annualDiscountPct = input.annualDiscountPct;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.displayOrder !== undefined) data.displayOrder = input.displayOrder;
 
@@ -591,6 +684,9 @@ export async function adminUpdatePlanService(
   // unhappy we still persist the local edit and warn.
   const priceChanged = input.priceUsd !== undefined && Number(existing.priceUsd) !== input.priceUsd;
   const nameOrDescChanged = input.name !== undefined || input.description !== undefined;
+  const annualPctChanged =
+    input.annualDiscountPct !== undefined &&
+    existing.annualDiscountPct !== input.annualDiscountPct;
 
   if ((priceChanged || nameOrDescChanged) && existing.paystackPlanCodeUsd) {
     try {
@@ -618,6 +714,48 @@ export async function adminUpdatePlanService(
     } catch (error) {
       console.warn(
         `[subscription:update] Paystack NGN sync failed for ${planId}:`,
+        error
+      );
+    }
+  }
+
+  // Annual Paystack mirrors. The annual price moves whenever priceUsd OR
+  // annualDiscountPct changes, so resync on either. Name/desc edits propagate
+  // as well. NGN-annual stays lazy (no mint here); USD-annual we maintain
+  // because adminCreate mints it eagerly when pct > 0.
+  const annualPriceChanged = priceChanged || annualPctChanged;
+  if ((annualPriceChanged || nameOrDescChanged) && existing.paystackPlanCodeUsdAnnual) {
+    try {
+      const newMonthlyUsd = input.priceUsd ?? Number(existing.priceUsd);
+      const newPct = input.annualDiscountPct ?? existing.annualDiscountPct;
+      await updatePaystackPlan(existing.paystackPlanCodeUsdAnnual, {
+        name: input.name !== undefined ? `PICA ${input.name} (USD, annual)` : undefined,
+        amount: annualPriceChanged
+          ? computeAnnualPriceUsd(newMonthlyUsd, newPct)
+          : undefined,
+        description: input.description,
+      });
+    } catch (error) {
+      console.warn(
+        `[subscription:update] Paystack USD-annual sync failed for ${planId}:`,
+        error
+      );
+    }
+  }
+  if ((annualPriceChanged || nameOrDescChanged) && existing.paystackPlanCodeNgnAnnual) {
+    try {
+      const usdToNgn = await getUsdToNgnRate();
+      const newMonthlyUsd = input.priceUsd ?? Number(existing.priceUsd);
+      const newPct = input.annualDiscountPct ?? existing.annualDiscountPct;
+      const newAnnualUsd = computeAnnualPriceUsd(newMonthlyUsd, newPct);
+      await updatePaystackPlan(existing.paystackPlanCodeNgnAnnual, {
+        name: input.name !== undefined ? `PICA ${input.name} (NGN, annual)` : undefined,
+        amount: annualPriceChanged ? round2(newAnnualUsd * usdToNgn) : undefined,
+        description: input.description,
+      });
+    } catch (error) {
+      console.warn(
+        `[subscription:update] Paystack NGN-annual sync failed for ${planId}:`,
         error
       );
     }
@@ -689,16 +827,18 @@ export async function activateSubscriptionFromWebhook(input: {
   userId: string;
   planId: string;
   currency: 'USD' | 'NGN';
+  /** Cadence snapshot from the subscribe metadata. Drives the period roll. */
+  billingInterval: BillingInterval;
   paystackSubscriptionCode?: string | null;
   paystackCustomerCode?: string | null;
   paystackEmailToken?: string | null;
   /** Authoritative period start from Paystack, or `new Date()` as fallback. */
   periodStart: Date;
-  /** Authoritative period end from Paystack, or +1 month as fallback. */
+  /** Authoritative period end from Paystack, or +1 month/year as fallback. */
   periodEnd?: Date;
   authorization?: PaystackAuthorizationSnapshot | null;
 }): Promise<void> {
-  const periodEnd = input.periodEnd ?? addOneMonth(input.periodStart);
+  const periodEnd = input.periodEnd ?? nextPeriodEnd(input.periodStart, input.billingInterval);
   const cardFields = input.authorization
     ? {
         cardLast4: input.authorization.last4 ?? null,
@@ -740,6 +880,7 @@ export async function activateSubscriptionFromWebhook(input: {
       planId: input.planId,
       status: SubscriptionStatus.ACTIVE,
       currency: input.currency,
+      billingInterval: input.billingInterval,
       paystackSubscriptionCode: input.paystackSubscriptionCode ?? null,
       paystackCustomerCode: input.paystackCustomerCode ?? null,
       paystackEmailToken: input.paystackEmailToken ?? null,

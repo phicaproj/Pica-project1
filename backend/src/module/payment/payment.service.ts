@@ -1,4 +1,5 @@
 import {
+  BillingInterval,
   Phase,
   Plan,
   Prisma,
@@ -207,6 +208,91 @@ export async function initPaymentService(
 
   const reference = newPaymentReference();
   const round2Usd = (n: number) => Math.round(n * 100) / 100;
+
+  // ── Consultation 2A-credit short-circuit (Phase 2A only) ────────────────
+  // PICA 2A credits granted by a confirmed consultation booking burn before
+  // the subscription quota. Rationale: credits expire (90d window by default)
+  // while subscription quota refreshes monthly — consuming the expiring
+  // bucket first maximises the value the user gets out of both. Only Phase
+  // 2A; Phase 2B has its own pillar-unlock model.
+  if (input.plan === Plan.PHASE2A) {
+    const credit = await prisma.phase2ACredit.findFirst({
+      where: { userId: user.id, consumedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true },
+      orderBy: { expiresAt: 'asc' },
+    });
+    if (credit) {
+      const paidAt = new Date();
+      const creditPayment = await prisma.$transaction(async (tx) => {
+        const created = await tx.payment.create({
+          data: {
+            userId: user.id,
+            sessionId: paymentSessionId,
+            pillarId: null,
+            pillarIds: [],
+            plan: input.plan,
+            provider: PaymentProvider.PAYSTACK,
+            providerReference: reference,
+            amount: new Prisma.Decimal(0),
+            amountUsd: new Prisma.Decimal(0),
+            currency: 'USD',
+            status: PaymentStatus.SUCCESS,
+            paymentMethod: 'consultation-credit',
+            paidAt,
+            customerEmail: user.email,
+            customerBusinessName: user.businessName,
+          },
+          select: {
+            id: true,
+            userId: true,
+            sessionId: true,
+            pillarId: true,
+            pillarIds: true,
+            plan: true,
+            amount: true,
+            currency: true,
+            customerEmail: true,
+            customerBusinessName: true,
+            appliedCouponCode: true,
+          },
+        });
+        // Re-claim the credit inside the tx; the read above was outside it
+        // so a concurrent claim could have taken it. Using updateMany +
+        // consumedAt-null filter so a race resolves to "no credit found"
+        // rather than double-consume.
+        const claimed = await tx.phase2ACredit.updateMany({
+          where: { id: credit.id, consumedAt: null },
+          data: { consumedAt: paidAt, consumedPaymentId: created.id },
+        });
+        if (claimed.count === 0) {
+          // Lost the race — bail by throwing inside the tx so the Payment
+          // row rolls back; the outer catch falls through to the quota path.
+          throw new AppError('credit-race', CONFLICT);
+        }
+        await grantSuccessEntitlements(tx, created, paidAt, 'consultation-credit');
+        return created;
+      }).catch((err: unknown) => {
+        if (err instanceof AppError && err.message === 'credit-race') return null;
+        throw err;
+      });
+
+      if (creditPayment) {
+        return {
+          message: 'Granted from your consultation credit — no charge',
+          free: true,
+          authorizationUrl: null,
+          accessCode: null,
+          reference,
+          paymentId: creditPayment.id,
+          amount: 0,
+          baseAmount: round2Usd(basePrice),
+          discountAmount: round2Usd(basePrice),
+          currency: 'USD',
+          couponCode: null,
+        };
+      }
+    }
+  }
 
   // ── Subscription quota short-circuit ────────────────────────────────────
   // Auto-consume the user's subscription quota BEFORE any Paystack init.
@@ -809,10 +895,17 @@ async function handleSubscriptionEvent(parsedBody: WebhookEnvelope): Promise<voi
   const periodStart = data.createdAt ? new Date(data.createdAt) : new Date();
   const periodEnd = data.next_payment_date ? new Date(data.next_payment_date) : undefined;
 
+  // Cadence snapshot — set in subscribe metadata. Default MONTHLY for
+  // pre-annual subscriptions and safety on unknown values.
+  const intervalMeta = data.metadata?.interval ?? data.customer?.metadata?.interval;
+  const billingInterval: BillingInterval =
+    intervalMeta === 'ANNUAL' ? BillingInterval.ANNUAL : BillingInterval.MONTHLY;
+
   await activateSubscriptionFromWebhook({
     userId,
     planId: planIdMeta,
     currency,
+    billingInterval,
     paystackSubscriptionCode: subscriptionCode,
     paystackCustomerCode: data.customer?.customer_code ?? null,
     paystackEmailToken: data.email_token ?? null,
@@ -942,10 +1035,17 @@ async function handleSubscriptionChargeSuccess(
     });
   }
 
+  // Cadence snapshot from the original subscribe metadata. Defaults to MONTHLY
+  // so renewal charges on pre-existing monthly subs keep behaving identically.
+  const intervalMeta = meta?.interval;
+  const billingInterval: BillingInterval =
+    intervalMeta === 'ANNUAL' ? BillingInterval.ANNUAL : BillingInterval.MONTHLY;
+
   await activateSubscriptionFromWebhook({
     userId,
     planId,
     currency,
+    billingInterval,
     paystackSubscriptionCode: subscriptionCode,
     paystackCustomerCode: raw.customer?.customer_code ?? null,
     paystackEmailToken: raw.email_token ?? null,

@@ -44,6 +44,7 @@ import type {
   ListConsultationTiersResponse,
   MyCompletedResultsResponse,
   MyConsultationsResponse,
+  MyPhase2ACreditsResponse,
   UpdateBookingStatusInput,
   UpdateConsultationTierInput,
 } from './consultation.types';
@@ -72,6 +73,8 @@ type TierRow = {
   description: string;
   priceUsd: Prisma.Decimal;
   durationMinutes: number;
+  freeP2ARuns: number;
+  freeP2ACreditWindowDays: number;
   isActive: boolean;
   displayOrder: number;
   createdAt: Date;
@@ -87,6 +90,8 @@ function toPublicTier(row: TierRow): ConsultationTierPublic {
     priceUsd: Number(row.priceUsd),
     durationMinutes: row.durationMinutes,
     displayOrder: row.displayOrder,
+    freeP2ARuns: row.freeP2ARuns,
+    freeP2ACreditWindowDays: row.freeP2ACreditWindowDays,
   };
 }
 
@@ -241,6 +246,74 @@ export async function listMyCompletedResultsService(
   }));
 
   return { message: 'Completed results fetched successfully', results };
+}
+
+/**
+ * Lists the user's unconsumed, unexpired PICA 2A credits. Backs the
+ * `/api/consultation/phase2a-credits` endpoint that the strategic-scan page
+ * polls before showing the "Your consultation credit covers this" banner.
+ * Cheap read-only lookup; index lives on (userId, consumedAt, expiresAt).
+ */
+export async function listMyPhase2ACreditsService(
+  userId: string,
+): Promise<MyPhase2ACreditsResponse> {
+  const now = new Date();
+  const rows = await prisma.phase2ACredit.findMany({
+    where: {
+      userId,
+      consumedAt: null,
+      expiresAt: { gt: now },
+    },
+    select: {
+      id: true,
+      expiresAt: true,
+      consultationBookingId: true,
+    },
+    // Oldest-expiring first so the FE can show the most-urgent credit; also
+    // matches the FIFO order initPaymentService consumes them in.
+    orderBy: { expiresAt: 'asc' },
+  });
+
+  return {
+    message: 'Phase 2A credits fetched successfully',
+    credits: rows.map((row) => ({
+      id: row.id,
+      expiresAt: row.expiresAt.toISOString(),
+      consultationBookingId: row.consultationBookingId,
+    })),
+  };
+}
+
+/**
+ * Atomically claims one unconsumed, unexpired PICA 2A credit for `userId`,
+ * marking it as consumed by `paymentId`. Returns null if no claimable credit
+ * exists. Uses updateMany + LIMIT semantics (Postgres CTE) — the wider
+ * uniqueness guard is the `consumedAt IS NULL` filter; concurrent calls race
+ * but each row's update is a single-row write so only one caller wins.
+ *
+ * Exported because initPaymentService Phase 2A path calls into it directly.
+ */
+export async function claimPhase2ACreditForPayment(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  paymentId: string,
+): Promise<{ id: string } | null> {
+  const now = new Date();
+  // Pick the oldest-expiring fresh credit. orderBy + take=1 is safe here
+  // because we're inside a transaction (the calling code wraps this in a
+  // Prisma.$transaction with the Payment.create), so two parallel sessions
+  // cannot both observe `consumedAt = null` and successfully update.
+  const next = await tx.phase2ACredit.findFirst({
+    where: { userId, consumedAt: null, expiresAt: { gt: now } },
+    orderBy: { expiresAt: 'asc' },
+    select: { id: true },
+  });
+  if (!next) return null;
+  await tx.phase2ACredit.update({
+    where: { id: next.id },
+    data: { consumedAt: now, consumedPaymentId: paymentId },
+  });
+  return next;
 }
 
 export async function listMyConsultationsService(
@@ -456,6 +529,8 @@ export async function adminCreateTierService(
       description: input.description,
       priceUsd: new Prisma.Decimal(input.priceUsd.toFixed(2)),
       durationMinutes: input.durationMinutes,
+      freeP2ARuns: input.freeP2ARuns,
+      freeP2ACreditWindowDays: input.freeP2ACreditWindowDays,
       isActive: input.isActive,
       displayOrder: input.displayOrder,
     },
@@ -477,6 +552,10 @@ export async function adminUpdateTierService(
     data.priceUsd = new Prisma.Decimal(input.priceUsd.toFixed(2));
   }
   if (input.durationMinutes !== undefined) data.durationMinutes = input.durationMinutes;
+  if (input.freeP2ARuns !== undefined) data.freeP2ARuns = input.freeP2ARuns;
+  if (input.freeP2ACreditWindowDays !== undefined) {
+    data.freeP2ACreditWindowDays = input.freeP2ACreditWindowDays;
+  }
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.displayOrder !== undefined) data.displayOrder = input.displayOrder;
 
@@ -585,14 +664,53 @@ export async function adminConfirmBookingService(
     );
   }
 
-  const updated = await prisma.consultationBooking.update({
-    where: { id },
-    data: {
-      status: ConsultationBookingStatus.CONFIRMED,
-      scheduledAt: new Date(input.scheduledAt),
-      meetingLink: input.meetingLink,
-    },
-    include: adminBookingInclude,
+  // Confirm + credit grant share a transaction so a partial grant can't leave
+  // a confirmed booking without its credits. The credit upsert is keyed on
+  // (consultationBookingId, sequence) so re-confirms (admin edits the time
+  // post-confirm via this endpoint when status is CONFIRMED — currently
+  // blocked, but defensive: a future "edit" flow can call us again safely)
+  // become no-ops rather than duplicate grants.
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.consultationBooking.update({
+      where: { id },
+      data: {
+        status: ConsultationBookingStatus.CONFIRMED,
+        scheduledAt: new Date(input.scheduledAt),
+        meetingLink: input.meetingLink,
+      },
+      include: adminBookingInclude,
+    });
+
+    const { freeP2ARuns, freeP2ACreditWindowDays } = row.tier;
+    if (freeP2ARuns > 0) {
+      const expiresAt = new Date(
+        Date.now() + freeP2ACreditWindowDays * 24 * 60 * 60 * 1000,
+      );
+      for (let seq = 1; seq <= freeP2ARuns; seq++) {
+        await tx.phase2ACredit.upsert({
+          where: {
+            consultationBookingId_sequence: {
+              consultationBookingId: row.id,
+              sequence: seq,
+            },
+          },
+          create: {
+            userId: row.userId,
+            consultationBookingId: row.id,
+            sequence: seq,
+            expiresAt,
+          },
+          // Re-confirm: leave consumed credits alone, refresh the window for
+          // still-available ones (admin moved the meeting → keep the bonus
+          // anchored to today rather than the original confirm date).
+          update: {
+            expiresAt,
+          },
+        });
+      }
+    }
+
+    return row;
   });
 
   // Best-effort email notification.

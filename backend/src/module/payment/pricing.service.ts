@@ -120,8 +120,12 @@ export type Phase2BBundleQuote = {
  * Prices a Phase 2B multi-pillar bundle. Sums each pillar's configured
  * PlanPrice, then applies the admin-configured compound discount:
  *   discountPct = min(count - 1, maxPillars - 1) × pctPerPillar
- * capped at 100%. A single-pillar bundle resolves to a 0% discount, i.e. the
- * pillar's plain price. Throws if any pillar has no configured price.
+ * capped at 100%. The percentage is applied only to the FIRST `maxPillars`
+ * pillars (by selection order). Anything beyond the cap is added at full
+ * price, so once the customer crosses the cap the dollar discount is
+ * frozen — selecting a 6th or 7th pillar no longer grows the savings line.
+ * A single-pillar bundle resolves to a 0% discount, i.e. the pillar's
+ * plain price. Throws if any pillar has no configured price.
  */
 export async function resolvePhase2BBundlePrice(
   pillarIds: string[]
@@ -141,12 +145,16 @@ export async function resolvePhase2BBundlePrice(
   const basePriceUsd = round2(perPillar.reduce((sum, p) => sum + p.price, 0));
 
   const { pctPerPillar, maxPillars } = await getPhase2BDiscountConfig();
-  // The first pillar is full price; each extra pillar (up to the cap) adds
-  // pctPerPillar%. min() applies the cap; max(…, 0) guards a 1-pillar bundle.
-  const extraPillars = Math.max(0, Math.min(pillarIds.length, maxPillars) - 1);
-  const discountPct = Math.min(100, extraPillars * pctPerPillar);
+  // Apply the percentage only to the first `maxPillars` selected entries —
+  // remaining pillars are added at full price. The discount amount plateaus
+  // at the cap (5+ pillars → frozen $ savings) instead of growing with N.
+  const discountedCount = Math.min(perPillar.length, maxPillars);
+  const discountedBase = round2(
+    perPillar.slice(0, discountedCount).reduce((sum, p) => sum + p.price, 0)
+  );
+  const discountPct = Math.min(100, Math.max(0, discountedCount - 1) * pctPerPillar);
 
-  const discountUsd = round2((basePriceUsd * discountPct) / 100);
+  const discountUsd = round2((discountedBase * discountPct) / 100);
   const finalPriceUsd = round2(basePriceUsd - discountUsd);
 
   return { basePriceUsd, discountUsd, finalPriceUsd, discountPct, perPillar };

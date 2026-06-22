@@ -287,6 +287,13 @@ export default function PricingPage() {
                             </div>
                           ))}
                       </div>
+                      {bundleDiscount && (
+                        <p className="mt-3 text-[11px] text-gray-500">
+                          Bundle discount applies to your first{" "}
+                          {bundleDiscount.maxPillars} pillars; additional
+                          pillars are added at full price.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

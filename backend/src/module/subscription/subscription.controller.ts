@@ -65,6 +65,7 @@ export const subscribe = asyncHandler(async (req: Request, res: Response) => {
   const input = subscribeSchema.parse(req.body);
   const result = await subscribeService(userId, input.planId, {
     couponCode: input.couponCode,
+    interval: input.interval,
   });
   return res.status(OK).json(result);
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SubscriptionStatus } from '@prisma/client';
+import { BillingInterval, SubscriptionStatus } from '@prisma/client';
 
 // ============================================================
 // PUBLIC + USER-FACING TYPES
@@ -22,11 +22,19 @@ export type SubscriptionPlanPublic = {
   consultationsPerMonth: number;
   features: string[];
   displayOrder: number;
+  // Annual cadence. `annualDiscountPct` of 0 means "no annual option" — the FE
+  // hides the Monthly/Annual toggle for this tier. `priceUsdAnnual` is the
+  // derived `priceUsd * 12 * (1 - pct/100)` shipped server-side so the FE
+  // doesn't have to repeat the math.
+  annualDiscountPct: number;
+  priceUsdAnnual: number;
 };
 
 export type SubscriptionPlanAdmin = SubscriptionPlanPublic & {
   paystackPlanCodeUsd: string | null;
   paystackPlanCodeNgn: string | null;
+  paystackPlanCodeUsdAnnual: string | null;
+  paystackPlanCodeNgnAnnual: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +65,9 @@ export type MySubscriptionPayload = {
   plan: SubscriptionPlanPublic;
   currency: 'USD' | 'NGN';
   usdToNgn: number;
+  // Cadence snapshot. The FE labels the Settings panel "billed monthly /
+  // annually" off this and uses it to format the renewal date.
+  billingInterval: BillingInterval;
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
@@ -75,6 +86,10 @@ export type MySubscriptionPayload = {
 
 export const subscribeSchema = z.object({
   planId: z.string().uuid('planId must be a valid uuid'),
+  // Cadence pick. Defaults to MONTHLY so existing FE callers that don't yet
+  // send `interval` keep working untouched. ANNUAL applies the tier's
+  // annualDiscountPct and rolls the period in 365-day chunks.
+  interval: z.enum(['MONTHLY', 'ANNUAL']).default('MONTHLY'),
   // Optional discount code. When the discount covers 100% of the price the BE
   // skips Paystack entirely and returns `free: true` — the FE renders the
   // success state without ever opening the inline widget.
@@ -167,6 +182,13 @@ export const createPlanSchema = z.object({
   phase2bPerMonth: nonNegativeInt,
   consultationsPerMonth: nonNegativeInt,
   features: z.array(z.string().trim().min(1)).max(20).default([]),
+  // 0–80% off `priceUsd × 12` when the user picks ANNUAL. 0 disables annual.
+  annualDiscountPct: z
+    .number()
+    .int('annualDiscountPct must be an integer')
+    .min(0, 'annualDiscountPct must be zero or greater')
+    .max(80, 'annualDiscountPct cannot exceed 80')
+    .default(0),
   isActive: z.boolean().default(true),
   displayOrder: z.number().int().min(0).default(0),
 });
@@ -189,6 +211,12 @@ export const updatePlanSchema = z
     phase2bPerMonth: nonNegativeInt.optional(),
     consultationsPerMonth: nonNegativeInt.optional(),
     features: z.array(z.string().trim().min(1)).max(20).optional(),
+    annualDiscountPct: z
+      .number()
+      .int()
+      .min(0)
+      .max(80)
+      .optional(),
     isActive: z.boolean().optional(),
     displayOrder: z.number().int().min(0).optional(),
   })
