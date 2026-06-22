@@ -250,6 +250,8 @@ export async function downloadResultPdfService(
             data: {
               userId: ownerUserId,
               sessionId,
+              pillarId: null,
+              pillarIds: [],
               userSubscriptionId: verdict.subscriptionId,
               plan: Plan.PHASE2A,
               provider: PaymentProvider.PAYSTACK,

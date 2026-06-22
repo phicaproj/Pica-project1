@@ -357,6 +357,8 @@ export async function subscribeService(
       await tx.payment.create({
         data: {
           userId: user.id,
+          pillarId: null,
+          pillarIds: [],
           plan: Plan.SUBSCRIPTION,
           provider: PaymentProvider.PAYSTACK,
           providerReference: reference,

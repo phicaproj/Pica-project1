@@ -489,6 +489,8 @@ export async function bookConsultationService(
     data: {
       userId: user.id,
       consultationBookingId: booking.id,
+      pillarId: null,
+      pillarIds: [],
       plan: Plan.CONSULTATION,
       provider: PaymentProvider.PAYSTACK,
       providerReference: reference,
