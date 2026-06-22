@@ -61,6 +61,19 @@ export type ConsultationBookingPayload = {
     currency: string;
     authorizationUrl: string | null;
   } | null;
+  // Admin-authored client feedback. `adminNotes === null` means no notes yet;
+  // the FE hides the panel in that case. `adminNotesUpdatedBy` is the staff
+  // user who last edited — shown as "from <name>" on the user's dashboard.
+  // Note: `adminNotesNotifiedAt` is intentionally NOT exposed — it's an
+  // admin-internal single-shot email gate.
+  adminNotes: string | null;
+  adminNotesUpdatedAt: string | null;
+  adminNotesUpdatedBy: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
   requestedAt: string;
 };
 
@@ -251,7 +264,39 @@ export const updateBookingStatusSchema = z.object({
 
 export type UpdateBookingStatusInput = z.infer<typeof updateBookingStatusSchema>;
 
+// Admin notes save. Empty/whitespace-only string clears the notes (sets the
+// column back to NULL on the service side). 5k character cap is generous;
+// the textarea on the FE side enforces the same.
+export const updateAdminNotesSchema = z.object({
+  adminNotes: z
+    .string()
+    .max(5000, { message: 'adminNotes must be 5000 characters or fewer' }),
+});
+
+export type UpdateAdminNotesInput = z.infer<typeof updateAdminNotesSchema>;
+
 export type AdminBookingResponse = {
   message: string;
   booking: AdminBookingRow;
+};
+
+// Client-history modal payload. `results` carries the last N completed
+// Phase 2A/2B sessions for this booking's user with R2 PDF URLs so the
+// admin can render Download buttons. `user.createdAt` is the user's
+// signup date — surfaces "client since <date>" at the top of the modal.
+export type AdminClientHistoryResponse = {
+  message: string;
+  user: {
+    id: string;
+    email: string;
+    businessName: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    createdAt: string;
+  };
+  results: Array<
+    CompletedResultOption & {
+      reportPdfUrl: string | null;
+    }
+  >;
 };

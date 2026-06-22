@@ -7,6 +7,7 @@ import {
   confirmBookingSchema,
   createConsultationTierSchema,
   listAdminBookingsQuerySchema,
+  updateAdminNotesSchema,
   updateBookingStatusSchema,
   updateConsultationTierSchema,
 } from './consultation.types';
@@ -14,8 +15,10 @@ import {
   adminConfirmBookingService,
   adminCreateTierService,
   adminDeleteTierService,
+  adminGetClientHistoryService,
   adminListBookingsService,
   adminListTiersService,
+  adminUpdateBookingNotesService,
   adminUpdateBookingStatusService,
   adminUpdateTierService,
   bookConsultationService,
@@ -120,6 +123,31 @@ export const adminUpdateBookingStatus = asyncHandler(
   async (req: Request, res: Response) => {
     const input = updateBookingStatusSchema.parse(req.body);
     const result = await adminUpdateBookingStatusService(String(req.params.id), input);
+    return res.status(OK).json(result);
+  },
+);
+
+// Save admin-authored notes against a booking. The acting admin's user id
+// comes off the JWT (set by `authenticate` upstream on the admin router) so
+// the FE never has to send it — the audit trail is authoritative.
+export const adminUpdateBookingNotes = asyncHandler(
+  async (req: Request, res: Response) => {
+    const adminId = requireUserId(req);
+    const input = updateAdminNotesSchema.parse(req.body);
+    const result = await adminUpdateBookingNotesService(
+      String(req.params.id),
+      adminId,
+      input,
+    );
+    return res.status(OK).json(result);
+  },
+);
+
+// Pull the booking's user + their last 5 completed Phase 2A/2B results
+// (with R2 PDF URLs) — backs the ClientHistoryModal on the admin inbox.
+export const adminGetClientHistory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await adminGetClientHistoryService(String(req.params.id));
     return res.status(OK).json(result);
   },
 );

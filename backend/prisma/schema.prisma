@@ -332,13 +332,18 @@ model User {
   // Reverse side of AppSettings.updatedBy — kept here only so the relation
   // type-checks; admins shouldn't need to enumerate the AppSettings rows they
   // edited (there's only one row anyway).
-  appSettingsUpdates AppSettings[]      @relation("AppSettingsUpdatedBy")
-  subscriptions      UserSubscription[]
-  consultations      ConsultationBooking[]
+  appSettingsUpdates     AppSettings[]      @relation("AppSettingsUpdatedBy")
+  subscriptions          UserSubscription[]
+  consultations          ConsultationBooking[]
+  // Back-relation for ConsultationBooking.adminNotesUpdatedById — every
+  // staff edit on a client's booking notes points back at the staff user
+  // who last wrote it. Distinct from `consultations` (those are bookings
+  // the user OWNS).
+  consultationAdminNotes ConsultationBooking[] @relation("ConsultationAdminNotes")
   // PICA 2A credits granted by paid consultation bookings (see ConsultationTier
   // .freeP2ARuns / .freeP2ACreditWindowDays). Consumed before the subscription
   // quota path in initPaymentService.
-  phase2aCredits     Phase2ACredit[]
+  phase2aCredits         Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -976,6 +981,16 @@ model ConsultationBooking {
   scheduledAt DateTime? @map("scheduled_at")
   meetingLink String?   @map("meeting_link")
 
+  // Admin-authored client feedback on this booking. Single-row by design (no
+  // separate thread) — the textarea on the admin ClientHistoryModal writes
+  // straight into `adminNotes`. `adminNotesNotifiedAt` is a one-shot gate so
+  // the user only receives an email on the FIRST non-empty save; subsequent
+  // edits never fire another email.
+  adminNotes              String?   @map("admin_notes")
+  adminNotesUpdatedAt     DateTime? @map("admin_notes_updated_at")
+  adminNotesUpdatedById   String?   @map("admin_notes_updated_by_id")
+  adminNotesNotifiedAt    DateTime? @map("admin_notes_notified_at")
+
   // Quota path: true when a subscription consultation slot was consumed.
   // No Payment row exists in that case; the entitlement IS the
   // SubscriptionUsage decrement.
@@ -988,14 +1003,15 @@ model ConsultationBooking {
   requestedAt DateTime @default(now()) @map("requested_at")
 
   // Relations
-  user           User           @relation(fields: [userId], references: [id])
-  tier           ConsultationTier @relation(fields: [tierId], references: [id])
-  relatedResult  SessionResult? @relation(fields: [relatedSessionResultId], references: [id])
-  payment        Payment?
+  user                     User             @relation(fields: [userId], references: [id])
+  tier                     ConsultationTier @relation(fields: [tierId], references: [id])
+  relatedResult            SessionResult?   @relation(fields: [relatedSessionResultId], references: [id])
+  payment                  Payment?
+  adminNotesUpdatedByUser  User?            @relation("ConsultationAdminNotes", fields: [adminNotesUpdatedById], references: [id])
   // PICA 2A credits granted when this booking was confirmed (see
   // ConsultationTier.freeP2ARuns). Empty when the tier had freeP2ARuns=0 or
   // the booking is still REQUESTED.
-  phase2aCredits Phase2ACredit[]
+  phase2aCredits           Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

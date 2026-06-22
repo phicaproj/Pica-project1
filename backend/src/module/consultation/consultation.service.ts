@@ -25,10 +25,14 @@ import {
   assertSubscriptionQuota,
   consumeSubscriptionQuota,
 } from '../subscription/subscription.service';
-import { sendConsultationConfirmedEmailBestEffort } from './consultation.email';
+import {
+  sendConsultationConfirmedEmailBestEffort,
+  sendConsultationNoteUpdatedEmailBestEffort,
+} from './consultation.email';
 import type {
   AdminBookingResponse,
   AdminBookingRow,
+  AdminClientHistoryResponse,
   AdminConsultationTierResponse,
   AdminListBookingsResponse,
   AdminListConsultationTiersResponse,
@@ -45,6 +49,7 @@ import type {
   MyCompletedResultsResponse,
   MyConsultationsResponse,
   MyPhase2ACreditsResponse,
+  UpdateAdminNotesInput,
   UpdateBookingStatusInput,
   UpdateConsultationTierInput,
 } from './consultation.types';
@@ -132,6 +137,18 @@ const bookingInclude = {
       },
     },
   },
+  // Staff user who last edited the admin notes — surfaced to the user as
+  // "from <name>" on the dashboard note panel. Selected at include time so
+  // both the user-facing and admin-facing payload mappers can read it
+  // without a second round-trip.
+  adminNotesUpdatedByUser: {
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
 } satisfies Prisma.ConsultationBookingInclude;
 
 type BookingWithRelations = Prisma.ConsultationBookingGetPayload<{
@@ -175,6 +192,11 @@ function toBookingPayload(row: BookingWithRelations): ConsultationBookingPayload
           authorizationUrl: row.payment.authorizationUrl,
         }
       : null,
+    // Admin-authored client feedback. `adminNotesNotifiedAt` is admin-internal
+    // (single-shot email gate) — intentionally NOT leaked to the user payload.
+    adminNotes: row.adminNotes,
+    adminNotesUpdatedAt: row.adminNotesUpdatedAt?.toISOString() ?? null,
+    adminNotesUpdatedBy: row.adminNotesUpdatedByUser ?? null,
     requestedAt: row.requestedAt.toISOString(),
   };
 }
@@ -206,9 +228,17 @@ export async function listTiersService(): Promise<ListConsultationTiersResponse>
  * 2B result is unlocked when the user submits the pillar (the unlock IS the
  * payment, so isPaid is true on creation).
  */
-export async function listMyCompletedResultsService(
+/**
+ * Shared between the user-facing dropdown and the admin client-history modal —
+ * returns the user's completed-and-unlocked Phase 2A/2B results in newest-first
+ * order. `limit` caps the result set (omitted by the user endpoint, capped at 5
+ * by the admin modal). The R2 PDF URL lives on SessionResult and is selected
+ * separately by the admin endpoint when it wants to render Download buttons.
+ */
+async function listCompletedResultsForUser(
   userId: string,
-): Promise<MyCompletedResultsResponse> {
+  limit?: number,
+): Promise<CompletedResultOption[]> {
   const rows = await prisma.sessionResult.findMany({
     where: {
       isPaid: true,
@@ -232,9 +262,10 @@ export async function listMyCompletedResultsService(
       },
     },
     orderBy: [{ generatedAt: 'desc' }, { createdAt: 'desc' }],
+    ...(typeof limit === 'number' ? { take: limit } : {}),
   });
 
-  const results: CompletedResultOption[] = rows.map((row) => ({
+  return rows.map((row) => ({
     sessionResultId: row.id,
     sessionId: row.session.id,
     phase: row.session.phase === Phase.PHASE2B ? 'PHASE2B' : 'PHASE2A',
@@ -244,7 +275,12 @@ export async function listMyCompletedResultsService(
     colorBand: row.colorBand,
     generatedAt: row.generatedAt?.toISOString() ?? null,
   }));
+}
 
+export async function listMyCompletedResultsService(
+  userId: string,
+): Promise<MyCompletedResultsResponse> {
+  const results = await listCompletedResultsForUser(userId);
   return { message: 'Completed results fetched successfully', results };
 }
 
@@ -768,6 +804,116 @@ export async function adminUpdateBookingStatusService(
   return {
     message: `Booking marked ${input.status.toLowerCase().replace('_', ' ')}`,
     booking: toAdminBookingRow(updated),
+  };
+}
+
+/**
+ * Save admin-authored notes against a booking. Single-shot email gate: the
+ * user is emailed exactly once, on the FIRST save where the notes go from
+ * empty/null to non-empty. We set `adminNotesNotifiedAt` inside the same
+ * UPDATE so a concurrent save can't double-fire — Prisma's row-level write
+ * is atomic, and subsequent calls find `adminNotesNotifiedAt` already set
+ * and skip the email branch.
+ */
+export async function adminUpdateBookingNotesService(
+  id: string,
+  adminId: string,
+  input: UpdateAdminNotesInput,
+): Promise<AdminBookingResponse> {
+  const existing = await prisma.consultationBooking.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      topic: true,
+      adminNotesNotifiedAt: true,
+      user: {
+        select: { email: true, businessName: true },
+      },
+    },
+  });
+  if (!existing) throw new AppError('Booking not found', NOT_FOUND);
+
+  const trimmed = input.adminNotes.trim();
+  const shouldNotify = existing.adminNotesNotifiedAt === null && trimmed.length > 0;
+
+  const updated = await prisma.consultationBooking.update({
+    where: { id },
+    data: {
+      adminNotes: trimmed.length > 0 ? input.adminNotes : null,
+      adminNotesUpdatedAt: new Date(),
+      adminNotesUpdatedById: adminId,
+      ...(shouldNotify ? { adminNotesNotifiedAt: new Date() } : {}),
+    },
+    include: adminBookingInclude,
+  });
+
+  if (shouldNotify) {
+    sendConsultationNoteUpdatedEmailBestEffort({
+      toEmail: existing.user.email,
+      businessName: existing.user.businessName,
+      topic: existing.topic,
+    });
+  }
+
+  return {
+    message: 'Booking notes saved',
+    booking: toAdminBookingRow(updated),
+  };
+}
+
+/**
+ * Admin client-history view backing the ClientHistoryModal. Resolves
+ * booking → userId → user identity + last N completed Phase 2A/2B results
+ * (with R2 PDF URLs so the modal can render Download anchors). Permission-
+ * gated by the route (`consultations:read`).
+ */
+export async function adminGetClientHistoryService(
+  bookingId: string,
+  limit = 5,
+): Promise<AdminClientHistoryResponse> {
+  const booking = await prisma.consultationBooking.findUnique({
+    where: { id: bookingId },
+    select: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          businessName: true,
+          firstName: true,
+          lastName: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+  if (!booking) throw new AppError('Booking not found', NOT_FOUND);
+
+  const baseResults = await listCompletedResultsForUser(booking.user.id, limit);
+
+  // The shared helper doesn't carry the R2 reportPdfUrl (the user-facing
+  // dropdown doesn't need it). Pull it here in one keyed-IN query so the
+  // admin modal can render per-row Download buttons.
+  const pdfRows = await prisma.sessionResult.findMany({
+    where: { id: { in: baseResults.map((r) => r.sessionResultId) } },
+    select: { id: true, reportPdfUrl: true },
+  });
+  const pdfById = new Map(pdfRows.map((r) => [r.id, r.reportPdfUrl] as const));
+  const results = baseResults.map((r) => ({
+    ...r,
+    reportPdfUrl: pdfById.get(r.sessionResultId) ?? null,
+  }));
+
+  return {
+    message: 'Client history fetched successfully',
+    user: {
+      id: booking.user.id,
+      email: booking.user.email,
+      businessName: booking.user.businessName,
+      firstName: booking.user.firstName,
+      lastName: booking.user.lastName,
+      createdAt: booking.user.createdAt.toISOString(),
+    },
+    results,
   };
 }
 

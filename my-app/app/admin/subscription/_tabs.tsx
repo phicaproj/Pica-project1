@@ -32,15 +32,18 @@ import {
   adminCreateSubscriptionPlan,
   adminDeleteConsultationTier,
   adminDeleteSubscriptionPlan,
+  adminGetClientHistory,
   adminListConsultationBookings,
   adminListConsultationTiers,
   adminListSubscriptionPlans,
+  adminUpdateConsultationBookingNotes,
   adminUpdateConsultationBookingStatus,
   adminUpdateConsultationTier,
   adminUpdateSubscriptionPlan,
   getAdminAppSettings,
   updateAdminAppSettings,
   type AdminBookingRow,
+  type AdminClientHistoryResponse,
   type AppSettingsPayload,
   type CompletedResultOption,
   type ConsultationBookingStatus,
@@ -1176,6 +1179,7 @@ export function ConsultationsInboxTab() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<AdminBookingRow | null>(null);
+  const [viewing, setViewing] = useState<AdminBookingRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -1315,6 +1319,7 @@ export function ConsultationsInboxTab() {
               onMarkAttended={() => handleStatus(b, "ATTENDED")}
               onMarkNoShow={() => handleStatus(b, "NO_SHOW")}
               onCancel={() => handleStatus(b, "CANCELLED")}
+              onViewClient={() => setViewing(b)}
             />
           ))}
         </div>
@@ -1330,6 +1335,17 @@ export function ConsultationsInboxTab() {
           onClose={() => setConfirming(null)}
         />
       )}
+
+      {viewing && (
+        <ClientHistoryModal
+          booking={viewing}
+          onClose={() => setViewing(null)}
+          onSaved={async (msg) => {
+            setSuccess(msg);
+            await refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1341,6 +1357,7 @@ function BookingRow({
   onMarkAttended,
   onMarkNoShow,
   onCancel,
+  onViewClient,
 }: {
   booking: AdminBookingRow;
   busy: boolean;
@@ -1348,6 +1365,7 @@ function BookingRow({
   onMarkAttended: () => void;
   onMarkNoShow: () => void;
   onCancel: () => void;
+  onViewClient: () => void;
 }) {
   const paymentPending =
     booking.payment !== null && booking.payment.status !== "SUCCESS";
@@ -1442,7 +1460,7 @@ function BookingRow({
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         {booking.status === "REQUESTED" && !paymentPending && (
           <button
             onClick={onConfirm}
@@ -1471,6 +1489,16 @@ function BookingRow({
             </button>
           </>
         )}
+        {/* View client — always available regardless of status, so admins can
+            look back at history and add notes even on ATTENDED / CANCELLED
+            rows. */}
+        <button
+          onClick={onViewClient}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition hover:bg-indigo-500/10"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          View client
+        </button>
         {(booking.status === "REQUESTED" || booking.status === "CONFIRMED") && (
           <button
             onClick={onCancel}
@@ -1480,6 +1508,12 @@ function BookingRow({
             <XCircle className="h-3.5 w-3.5" />
             Cancel
           </button>
+        )}
+        {booking.adminNotes && booking.adminNotesUpdatedAt && (
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-indigo-300">
+            <MessageSquare className="h-3 w-3" />
+            Notes saved · {formatBookingDate(booking.adminNotesUpdatedAt)}
+          </span>
         )}
       </div>
     </div>
@@ -1580,6 +1614,234 @@ function ConfirmBookingModal({
           >
             {busy && <Loader className="h-4 w-4 animate-spin" />}
             Confirm & send email
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════
+// Client History modal — backs the "View client" button on each booking row.
+// Fetches the booking user's identity + last 5 completed assessment sessions
+// (with R2 PDF download links) and gives the admin a textarea to save free-
+// form feedback against the booking. First non-empty save emails the user
+// once; subsequent edits never re-email (single-shot gate lives on the BE).
+// ═════════════════════════════════════════════════════════════════════════
+
+function ClientHistoryModal({
+  booking,
+  onClose,
+  onSaved,
+}: {
+  booking: AdminBookingRow;
+  onClose: () => void;
+  onSaved: (message: string) => Promise<void> | void;
+}) {
+  const [history, setHistory] = useState<AdminClientHistoryResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [notes, setNotes] = useState(booking.adminNotes ?? "");
+  const [savedNotesAt, setSavedNotesAt] = useState<string | null>(
+    booking.adminNotesUpdatedAt,
+  );
+  const [savedAuthor, setSavedAuthor] = useState(booking.adminNotesUpdatedBy);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const res = await adminGetClientHistory(booking.id);
+      if (cancelled) return;
+      setLoading(false);
+      if (res.error || !res.data) {
+        setLoadError(res.error?.message ?? "Could not load client history.");
+        return;
+      }
+      setHistory(res.data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [booking.id]);
+
+  const dirty = notes !== (booking.adminNotes ?? "");
+
+  const submit = async () => {
+    setSaveError(null);
+    setSaving(true);
+    const res = await adminUpdateConsultationBookingNotes(booking.id, notes);
+    setSaving(false);
+    if (res.error || !res.data) {
+      setSaveError(res.error?.message ?? "Could not save notes.");
+      return;
+    }
+    // Surface "Notes saved" inline + bubble a toast to the inbox via onSaved.
+    setSavedNotesAt(res.data.booking.adminNotesUpdatedAt);
+    setSavedAuthor(res.data.booking.adminNotesUpdatedBy);
+    await onSaved(`Notes saved for ${booking.user.email}.`);
+  };
+
+  const userName = [history?.user.firstName, history?.user.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="my-8 w-full max-w-2xl rounded-2xl border border-white/10 bg-[#1C1F2E] p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-white">Client history</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Booking: <span className="text-gray-300">{booking.topic}</span>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/5 hover:text-white"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* User identity card. Pulled from history fetch so we don't trust
+            the booking row alone (defensive: lets a later admin endpoint
+            grow without forcing us to thread more fields through the row). */}
+        {loading ? (
+          <div className="flex min-h-[120px] items-center justify-center rounded-xl border border-white/5 bg-[#111318]">
+            <Loader className="h-5 w-5 animate-spin text-blue-300" />
+          </div>
+        ) : loadError ? (
+          <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <span>{loadError}</span>
+          </div>
+        ) : history ? (
+          <>
+            <div className="mb-5 rounded-xl border border-white/5 bg-[#111318] p-4">
+              <p className="text-sm font-semibold text-white">
+                {userName || history.user.businessName || history.user.email}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-500">{history.user.email}</p>
+              {history.user.businessName && userName && (
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {history.user.businessName}
+                </p>
+              )}
+              <p className="mt-2 text-[11px] uppercase tracking-widest text-gray-600">
+                Client since {formatBookingDate(history.user.createdAt)}
+              </p>
+            </div>
+
+            {/* Last-5 sessions. Empty state is common for brand-new users —
+                surface that explicitly so the admin doesn't think the
+                request failed silently. */}
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              Recent assessments
+            </p>
+            {history.results.length === 0 ? (
+              <div className="mb-5 rounded-xl border border-white/5 bg-[#111318] p-4 text-xs text-gray-500">
+                No completed assessments yet.
+              </div>
+            ) : (
+              <div className="mb-5 space-y-2">
+                {history.results.map((r) => (
+                  <div
+                    key={r.sessionResultId}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-[#111318] p-3 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white">
+                        {r.phase} {r.pillarCode ? `· ${r.pillarCode}` : ""}
+                      </p>
+                      <p className="mt-0.5 text-gray-500">
+                        {Math.round(r.totalScore)} · {r.colorBand}
+                        {r.generatedAt && ` · ${formatBookingDate(r.generatedAt)}`}
+                      </p>
+                    </div>
+                    {r.reportPdfUrl ? (
+                      <a
+                        href={r.reportPdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-500/30 px-3 py-1.5 text-[11px] font-semibold text-indigo-300 transition hover:bg-indigo-500/10"
+                      >
+                        Download PDF
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-[10px] uppercase tracking-widest text-gray-600">
+                        No PDF
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {/* Notes textarea + save. Save button is disabled until the field is
+            actually dirty so re-saves don't accidentally re-emit the "Notes
+            saved" toast. Email gate lives on the BE (single-shot via
+            adminNotesNotifiedAt). */}
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+          Admin notes (visible to the client)
+        </p>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={5}
+          maxLength={5000}
+          placeholder="e.g. Discussed onboarding bottleneck. Recommended starting Phase 2B Talent pillar next month — will follow up after their next 2A."
+          className="w-full rounded-xl border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-indigo-500/40 focus:outline-none"
+        />
+        <p className="mt-1 text-[10px] text-gray-600">
+          {notes.length} / 5000 characters
+        </p>
+
+        {savedNotesAt && !dirty && (
+          <p className="mt-2 text-[11px] text-emerald-300">
+            Saved {formatBookingDate(savedNotesAt)}
+            {savedAuthor && (savedAuthor.firstName || savedAuthor.lastName)
+              ? ` by ${[savedAuthor.firstName, savedAuthor.lastName].filter(Boolean).join(" ")}`
+              : ""}
+            . The user is emailed only once — re-edits won&apos;t re-notify.
+          </p>
+        )}
+
+        {saveError && (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span>{saveError}</span>
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm font-semibold text-white transition hover:bg-white/5 disabled:opacity-60"
+          >
+            Close
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving || !dirty}
+            className="flex-1 rounded-xl bg-indigo-500 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            {saving && <Loader className="h-4 w-4 animate-spin" />}
+            <Save className="h-4 w-4" />
+            Save notes
           </button>
         </div>
       </div>

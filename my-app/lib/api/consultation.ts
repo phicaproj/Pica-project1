@@ -59,6 +59,17 @@ export type ConsultationBookingPayload = {
 		currency: string
 		authorizationUrl: string | null
 	} | null
+	// Admin-authored client feedback. `null` when no admin has saved notes yet
+	// — FE hides the user-side panel in that case. `adminNotesUpdatedBy` is the
+	// staff user who last edited; surfaced as "from <name>" on the dashboard.
+	adminNotes: string | null
+	adminNotesUpdatedAt: string | null
+	adminNotesUpdatedBy: {
+		id: string
+		email: string
+		firstName: string | null
+		lastName: string | null
+	} | null
 	requestedAt: string
 }
 
@@ -272,6 +283,51 @@ export const adminUpdateConsultationBookingStatus = async (
 		{
 			method: 'PATCH',
 			body: JSON.stringify({ status }),
+		},
+	)
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Admin Consultation Notes feature
+//
+// Two endpoints backing the "View client" modal on /admin/consultations:
+//   - GET /client-history → user identity + last 5 completed sessions
+//   - PATCH /notes        → save admin-authored feedback (one-shot email)
+// ──────────────────────────────────────────────────────────────────────────
+
+export type AdminClientHistoryResult = CompletedResultOption & {
+	reportPdfUrl: string | null
+}
+
+export type AdminClientHistoryResponse = {
+	message: string
+	user: {
+		id: string
+		email: string
+		businessName: string | null
+		firstName: string | null
+		lastName: string | null
+		createdAt: string
+	}
+	results: AdminClientHistoryResult[]
+}
+
+export const adminGetClientHistory = async (bookingId: string) => {
+	return authedFetch<AdminClientHistoryResponse>(
+		`/admin/consultation-bookings/${bookingId}/client-history`,
+		{ method: 'GET' },
+	)
+}
+
+export const adminUpdateConsultationBookingNotes = async (
+	id: string,
+	adminNotes: string,
+) => {
+	return authedFetch<AdminBookingResponse>(
+		`/admin/consultation-bookings/${id}/notes`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify({ adminNotes }),
 		},
 	)
 }

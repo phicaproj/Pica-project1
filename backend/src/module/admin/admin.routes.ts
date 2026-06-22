@@ -67,6 +67,8 @@ import {
   adminListBookings as adminListConsultationBookings,
   adminConfirmBooking as adminConfirmConsultationBooking,
   adminUpdateBookingStatus as adminUpdateConsultationBookingStatus,
+  adminUpdateBookingNotes as adminUpdateConsultationBookingNotes,
+  adminGetClientHistory as adminGetConsultationClientHistory,
 } from '../consultation/consultation.controller';
 
 const adminRouter = express.Router();
@@ -192,6 +194,21 @@ adminRouter.patch(
   '/consultation-bookings/:id/status',
   hasPermission('consultations:write'),
   adminUpdateConsultationBookingStatus,
+);
+
+// Admin Consultation Notes feature — view a booking's user + their recent
+// assessment history, and save free-form admin feedback against the booking.
+// Both routes reuse the existing consultations:* permission pair; no new
+// permission keys were added.
+adminRouter.get(
+  '/consultation-bookings/:id/client-history',
+  hasPermission('consultations:read'),
+  adminGetConsultationClientHistory,
+);
+adminRouter.patch(
+  '/consultation-bookings/:id/notes',
+  hasPermission('consultations:write'),
+  adminUpdateConsultationBookingNotes,
 );
 
 export default adminRouter;

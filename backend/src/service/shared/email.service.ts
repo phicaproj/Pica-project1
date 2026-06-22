@@ -560,3 +560,38 @@ export async function sendConsultationConfirmedEmail({
     htmlContent: html,
   });
 }
+
+// One-shot notification fired the first time a consultant writes notes on a
+// booking. The body deliberately doesn't include the full note text — we want
+// the user to sign in to read it (matches the lighter-version scope: no
+// thread, no per-edit pings, just "your consultant got back to you"). The
+// caller (adminUpdateBookingNotesService) guards against double-sending via
+// `adminNotesNotifiedAt`.
+export async function sendConsultationNoteUpdatedEmail({
+  toEmail,
+  businessName,
+  topic,
+}: {
+  toEmail: string;
+  businessName: string | null;
+  topic: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = businessName ?? 'there';
+
+  const html = renderEmail({
+    heading: 'Your consultant left feedback',
+    preheader: `Notes on "${topic}" are ready to read.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">Your PICA consultant just left notes on your <strong>${topic}</strong> consultation.</p>
+      <p style="margin:0 0 16px 0;">Sign in to your dashboard and open your consultation booking to read what they wrote.</p>
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">You'll only receive this notification once — re-edits won't email you again.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `${BRAND} — your consultant left feedback`,
+    htmlContent: html,
+  });
+}

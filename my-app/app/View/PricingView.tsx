@@ -82,20 +82,6 @@ export default function PricingPage() {
     phase2BPrices.length > 0
       ? Math.min(...phase2BPrices.map((row) => row.price))
       : null;
-  // Section P2 — bundle discount ladder. Mirrors the BE formula
-  // discountPct = min(count - 1, maxPillars - 1) × pctPerPillar. We render
-  // rows up to maxPillars; the cap beyond that is intentionally not shown.
-  const bundleDiscount = pricing?.phase2bDiscount ?? null;
-  const discountLadder =
-    bundleDiscount && bundleDiscount.pctPerPillar > 0
-      ? Array.from({ length: bundleDiscount.maxPillars }, (_, i) => {
-          const count = i + 1;
-          const pct =
-            Math.min(count - 1, bundleDiscount.maxPillars - 1) *
-            bundleDiscount.pctPerPillar;
-          return { count, pct };
-        })
-      : [];
   // Section F — storefront on/off toggles. Default to "both live" so the page
   // renders normally during the initial fetch and any pre-toggle deploys
   // continue to work.
@@ -267,40 +253,6 @@ export default function PricingPage() {
                   <Link href="/dashboard/deep-dive" className={`block w-full py-3.5 rounded-xl text-sm font-bold border transition text-center ${d ? "bg-[#1a2010] border-white/10 text-white hover:bg-white/5" : "bg-gray-800 border-gray-700 text-white hover:bg-gray-700"}`}>
                     Choose Module
                   </Link>
-                  {discountLadder.length > 1 && (
-                    <div className="mt-6 pt-6 border-t border-[#4a6030]/30">
-                      <p className="text-xs font-semibold uppercase tracking-widest text-[#00ffaa] mb-3">
-                        Bundle &amp; save
-                      </p>
-                      <p className="text-sm text-gray-300 mb-4">
-                        Unlock more pillars in one checkout and your discount grows.
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {discountLadder
-                          .filter((row) => row.pct > 0)
-                          .map((row) => (
-                            <div
-                              key={row.count}
-                              className="rounded-lg bg-[#1a2010] border border-[#4a6030]/30 px-3 py-2 text-center"
-                            >
-                              <p className="text-sm font-bold text-white">
-                                {row.count} pillars
-                              </p>
-                              <p className="text-xs font-semibold text-[#00ffaa]">
-                                {row.pct}% off
-                              </p>
-                            </div>
-                          ))}
-                      </div>
-                      {bundleDiscount && (
-                        <p className="mt-3 text-[11px] text-gray-500">
-                          Bundle discount applies to your first{" "}
-                          {bundleDiscount.maxPillars} pillars; additional
-                          pillars are added at full price.
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </>
             ) : null}
@@ -426,54 +378,9 @@ export default function PricingPage() {
                           <p className={`text-[10px] font-bold uppercase tracking-widest mb-3 ${d ? "text-gray-500" : "text-gray-400"}`}>
                             Tier {plan.tier}
                           </p>
-                          <h3 className={`text-2xl md:text-3xl font-extrabold mb-3 ${d ? "text-white" : "text-gray-900"}`}>
+                          <h3 className={`text-2xl md:text-3xl font-extrabold mb-1 ${d ? "text-white" : "text-gray-900"}`}>
                             {plan.name}
                           </h3>
-
-                          {/* Per-card cadence pill — bold and centred per
-                              client direction. Clicking it drives the page-
-                              level interval state so all cards stay in sync.
-                              Annual is disabled per-tier when this tier has
-                              no annualDiscountPct configured. */}
-                          <div className="mb-3 flex justify-center">
-                            <div className={`inline-flex items-center gap-1 rounded-xl p-1 border ${d ? "bg-black/30 border-white/10" : "bg-gray-100 border-gray-200"}`}>
-                              <button
-                                type="button"
-                                onClick={() => setBillingInterval("MONTHLY")}
-                                className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
-                                  billingInterval === "MONTHLY"
-                                    ? d ? "bg-white text-[#0d1117]" : "bg-[#f97316] text-white"
-                                    : d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
-                                }`}
-                              >
-                                Monthly
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  anonAnnualAvailable && plan.annualDiscountPct > 0
-                                    ? setBillingInterval("ANNUAL")
-                                    : undefined
-                                }
-                                disabled={!anonAnnualAvailable || plan.annualDiscountPct === 0}
-                                className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
-                                  billingInterval === "ANNUAL" && plan.annualDiscountPct > 0
-                                    ? d ? "bg-white text-[#0d1117]" : "bg-[#f97316] text-white"
-                                    : anonAnnualAvailable && plan.annualDiscountPct > 0
-                                      ? d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900"
-                                      : d ? "text-gray-600 cursor-not-allowed" : "text-gray-400 cursor-not-allowed"
-                                }`}
-                                title={
-                                  plan.annualDiscountPct === 0
-                                    ? "Annual billing not available on this tier"
-                                    : undefined
-                                }
-                              >
-                                Annual
-                              </button>
-                            </div>
-                          </div>
-
                           <p className={`text-sm mb-1 ${d ? "text-gray-400" : "text-gray-500"}`}>
                             <span className={`text-3xl md:text-4xl font-extrabold ${d ? "text-white" : "text-gray-900"}`}>
                               {formatMoney(displayPrice, "USD")}

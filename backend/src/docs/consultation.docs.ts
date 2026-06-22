@@ -5,6 +5,7 @@ import {
   confirmBookingSchema,
   createConsultationTierSchema,
   listAdminBookingsQuerySchema,
+  updateAdminNotesSchema,
   updateBookingStatusSchema,
   updateConsultationTierSchema,
 } from '../module/consultation/consultation.types';
@@ -87,6 +88,21 @@ const ConsultationBookingPayloadSchema = registry.register(
           amount: z.number(),
           currency: z.string(),
           authorizationUrl: z.string().nullable(),
+        })
+        .nullable(),
+      // Admin-authored client feedback on this booking. `adminNotes` is null
+      // when no admin has written anything yet (FE hides the panel).
+      // `adminNotesUpdatedBy` identifies the staff user who last edited.
+      // `adminNotesNotifiedAt` (the single-shot email gate) is intentionally
+      // NOT exposed on this payload — it's an admin-internal field.
+      adminNotes: z.string().nullable(),
+      adminNotesUpdatedAt: z.string().datetime().nullable(),
+      adminNotesUpdatedBy: z
+        .object({
+          id: z.string().uuid(),
+          email: z.string().email(),
+          firstName: z.string().nullable(),
+          lastName: z.string().nullable(),
         })
         .nullable(),
       requestedAt: z.string().datetime(),
@@ -456,6 +472,96 @@ registry.registerPath({
       },
     },
     400: errorResponse('Invalid status transition'),
+    401: errorResponse('Missing or invalid token'),
+    403: errorResponse('Missing consultations:write permission'),
+    404: errorResponse('Booking not found'),
+  },
+});
+
+// GET /api/admin/consultation-bookings/{id}/client-history -----------------
+//
+// Backing endpoint for the admin ClientHistoryModal. Resolves booking →
+// userId, then returns the user identity block + their last 5 completed
+// Phase 2A/2B results (with R2 PDF URLs so the modal can render Download
+// anchors).
+const AdminClientHistoryResultSchema = registry.register(
+  'AdminClientHistoryResult',
+  CompletedResultOptionSchema.extend({
+    reportPdfUrl: z.string().nullable(),
+  }).openapi('AdminClientHistoryResult'),
+);
+
+const AdminClientHistoryResponseSchema = registry.register(
+  'AdminClientHistoryResponse',
+  z
+    .object({
+      message: z.string(),
+      user: z.object({
+        id: z.string().uuid(),
+        email: z.string().email(),
+        businessName: z.string().nullable(),
+        firstName: z.string().nullable(),
+        lastName: z.string().nullable(),
+        createdAt: z.string().datetime(),
+      }),
+      results: z.array(AdminClientHistoryResultSchema),
+    })
+    .openapi('AdminClientHistoryResponse'),
+);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/admin/consultation-bookings/{id}/client-history',
+  tags: ['Admin'],
+  summary: 'Get the booking user\'s recent assessment history',
+  description:
+    'Admin only — requires `consultations:read`. Returns the user identity block plus their last 5 completed Phase 2A/2B sessions, including the R2-hosted report PDF URL on each row so the admin UI can render per-result Download buttons. Backs the "View client" modal on /admin/consultations.',
+  security: [{ bearerAuth: [] }],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: 'Client history',
+      content: {
+        'application/json': { schema: AdminClientHistoryResponseSchema },
+      },
+    },
+    401: errorResponse('Missing or invalid token'),
+    403: errorResponse('Missing consultations:read permission'),
+    404: errorResponse('Booking not found'),
+  },
+});
+
+// PATCH /api/admin/consultation-bookings/{id}/notes ------------------------
+//
+// Save admin-authored client feedback. One-shot email gate: the user is
+// emailed exactly once — on the first save that takes `adminNotes` from
+// empty/null to non-empty. Subsequent edits update the text + timestamp +
+// author but never re-fire the email.
+registry.registerPath({
+  method: 'patch',
+  path: '/api/admin/consultation-bookings/{id}/notes',
+  tags: ['Admin'],
+  summary: 'Save admin-authored notes on a consultation booking',
+  description:
+    'Admin only — requires `consultations:write`. Updates `adminNotes`, `adminNotesUpdatedAt`, and the audit `adminNotesUpdatedById` (taken from the caller\'s JWT). The first save with non-empty notes also fires a one-time "your consultant left feedback" email to the user; subsequent edits never email again (guarded by `adminNotesNotifiedAt`). Saving an empty/whitespace string clears the notes back to null.',
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      required: true,
+      content: { 'application/json': { schema: updateAdminNotesSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Notes saved',
+      content: {
+        'application/json': {
+          schema: z.object({ message: z.string(), booking: AdminBookingRowSchema }),
+        },
+      },
+    },
+    400: errorResponse('Validation error'),
     401: errorResponse('Missing or invalid token'),
     403: errorResponse('Missing consultations:write permission'),
     404: errorResponse('Booking not found'),

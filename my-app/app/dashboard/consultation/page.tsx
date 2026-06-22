@@ -294,6 +294,17 @@ function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
   };
   const paymentPending =
     booking.payment !== null && booking.payment.status !== "SUCCESS";
+  // Notes panel collapses by default — the card stays compact in the grid;
+  // the user opts in to read the consultant's feedback.
+  const [notesOpen, setNotesOpen] = useState(false);
+  const consultantName = booking.adminNotesUpdatedBy
+    ? [
+        booking.adminNotesUpdatedBy.firstName,
+        booking.adminNotesUpdatedBy.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : "";
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-white/5 bg-[#111827] p-5 transition hover:border-white/10">
@@ -376,6 +387,39 @@ function BookingCard({ booking }: { booking: ConsultationBookingPayload }) {
           Complete payment
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
+      )}
+
+      {/* Consultant feedback panel — only rendered when the admin has saved
+          notes. Collapsed by default so the card stays compact in the grid;
+          the user clicks "View notes" to expand. `whitespace-pre-wrap`
+          preserves the admin's line breaks. */}
+      {booking.adminNotes && (
+        <div className="mt-4 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3">
+          <button
+            type="button"
+            onClick={() => setNotesOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-2 text-left"
+          >
+            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-300">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Consultant left feedback
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-indigo-300">
+              {notesOpen ? "Hide" : "View notes"}
+            </span>
+          </button>
+          {notesOpen && (
+            <>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-gray-200">
+                {booking.adminNotes}
+              </p>
+              <p className="mt-2 text-[10px] uppercase tracking-widest text-indigo-300/70">
+                Updated {booking.adminNotesUpdatedAt ? formatDate(booking.adminNotesUpdatedAt) : ""}
+                {consultantName ? ` · ${consultantName}` : ""}
+              </p>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

@@ -387,9 +387,6 @@ function PickerView({
                 priceDisplay={priceDisplay}
                 displayCurrency={displayCurrency}
                 interval={effectiveInterval}
-                globalInterval={interval}
-                annualAvailable={annualAvailable}
-                onIntervalChange={onIntervalChange}
                 recommended={isRecommended}
                 current={isCurrent}
                 hasActiveSub={hasActiveSub}
@@ -419,9 +416,6 @@ function SubscriptionCard({
   priceDisplay,
   displayCurrency,
   interval,
-  globalInterval,
-  annualAvailable,
-  onIntervalChange,
   recommended,
   current,
   hasActiveSub,
@@ -431,9 +425,6 @@ function SubscriptionCard({
   priceDisplay: number;
   displayCurrency: Currency;
   interval: BillingInterval;
-  globalInterval: BillingInterval;
-  annualAvailable: boolean;
-  onIntervalChange: (next: BillingInterval) => void;
   recommended: boolean;
   current: boolean;
   hasActiveSub: boolean;
@@ -478,51 +469,7 @@ function SubscriptionCard({
         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
           Tier {plan.tier}
         </p>
-        <h3 className="text-3xl font-extrabold text-white mb-3">{plan.name}</h3>
-
-        {/* Per-card cadence pill — clear, bold, in the middle of each tier
-            box per client direction. Drives the page-level interval so all
-            three cards stay in sync. The Annual button is disabled (and
-            visually muted) when this tier has no annual price configured. */}
-        <div className="mb-4 flex justify-center">
-          <div className="inline-flex items-center gap-1 rounded-xl bg-black/30 border border-white/10 p-1">
-            <button
-              type="button"
-              onClick={() => onIntervalChange("MONTHLY")}
-              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
-                globalInterval === "MONTHLY"
-                  ? "bg-white text-[#0d1117]"
-                  : "text-gray-400 hover:text-white"
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                annualAvailable && plan.annualDiscountPct > 0
-                  ? onIntervalChange("ANNUAL")
-                  : undefined
-              }
-              disabled={!annualAvailable || plan.annualDiscountPct === 0}
-              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider rounded-lg transition ${
-                globalInterval === "ANNUAL" && plan.annualDiscountPct > 0
-                  ? "bg-white text-[#0d1117]"
-                  : annualAvailable && plan.annualDiscountPct > 0
-                    ? "text-gray-400 hover:text-white"
-                    : "text-gray-600 cursor-not-allowed"
-              }`}
-              title={
-                plan.annualDiscountPct === 0
-                  ? "Annual billing not available on this tier"
-                  : undefined
-              }
-            >
-              Annual
-            </button>
-          </div>
-        </div>
-
+        <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
         <p className="text-gray-400 text-sm mb-2">
           <span className="text-3xl font-bold text-white">
             {formatMoney(priceDisplay, displayCurrency)}
