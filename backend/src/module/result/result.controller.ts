@@ -38,7 +38,8 @@ export const getMyLatestCompletedResult = asyncHandler(async (req: Request, res:
 
 export const downloadResultPdf = asyncHandler(async (req: Request, res: Response) => {
   const { sessionId } = assessmentSessionParams.parse(req.params);
-  const { pdfBuffer, filename } = await downloadResultPdfService(sessionId, req.user?.id);
+  const theme = req.query.theme === 'dark' ? 'dark' : 'light';
+  const { pdfBuffer, filename } = await downloadResultPdfService(sessionId, req.user?.id, theme);
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

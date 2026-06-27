@@ -35,6 +35,49 @@ const COLORS = {
 
 const PAGE_MARGIN = 40;
 
+// Dynamic colors resolver helper
+const getThemeColors = (theme: 'light' | 'dark') => {
+  if (theme === 'dark') {
+    return {
+      primary: '#FFFFFF', // White text/headers
+      primaryLight: '#E2E8F0',
+      accent: '#F97316', // Orange BRAND color
+      accentDark: '#EA6C0A',
+      bodyText: '#E2E8F0', // Light slate body
+      mutedText: '#94A3B8', // Muted slate text
+      green: '#34D399', // Emerald-400
+      greenBg: '#064E3B', // Emerald-900 (dark green bg)
+      greenBorder: '#10B981', // Emerald-500
+      amber: '#FBBF24', // Amber-400
+      amberBg: '#78350F', // Amber-900 (dark amber bg)
+      amberBorder: '#F59E0B', // Amber-500
+      red: '#F87171', // Rose-400
+      redBg: '#7F1D1D', // Rose-900 (dark red bg)
+      redBorder: '#F43F5E', // Rose-500
+      white: '#0d1520', // Dark Card solid background
+      lightGrey: '#0d1520', // Card solid fill
+      borderGrey: '#1e293b', // Slate border
+      pageWidth: 515,
+      bg: '#040b12', // Rich slate-black background!
+    };
+  }
+  return COLORS;
+};
+
+const getColors = (doc: PDFKit.PDFDocument) => {
+  return (doc as any).COLORS || COLORS;
+};
+
+const drawPageBackground = (doc: PDFKit.PDFDocument) => {
+  const theme = (doc as any).theme || 'light';
+  if (theme === 'dark') {
+    const COLORS = getColors(doc);
+    doc.save();
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.bg);
+    doc.restore();
+  }
+};
+
 // Logo lives in the assets folder
 const LOGO_PATH = path.join(process.cwd(), 'assets', 'logo.png');
 const LOGO_BUFFER: Buffer | null = (() => {
@@ -355,14 +398,16 @@ const roundedRect = (
 const hr = (
   doc: InstanceType<typeof PDFDocument>,
   y: number,
-  color: string = COLORS.borderGrey
+  color?: string
 ) => {
+  const COLORS = getColors(doc);
+  const strokeCol = color ?? COLORS.borderGrey;
   doc
     .save()
     .moveTo(PAGE_MARGIN, y)
     .lineTo(PAGE_MARGIN + COLORS.pageWidth, y)
     .lineWidth(0.5)
-    .strokeColor(color)
+    .strokeColor(strokeCol)
     .stroke()
     .restore();
 };
@@ -371,6 +416,7 @@ const hr = (
 // HEADER / FOOTER
 // ============================================================
 const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string, options?: { isKnockout?: boolean }) => {
+  const COLORS = getColors(doc);
   // Mini Header band
   const headerLineY = 50;
 
@@ -447,6 +493,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string,
 };
 
 const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: string) => {
+  const COLORS = getColors(doc);
   const footerY = doc.page.height - 40;
   const prevBottom = doc.page.margins.bottom;
   doc.page.margins.bottom = 0;
@@ -492,6 +539,9 @@ const drawCoverPage = (
     completedAt?: Date | null;
   }
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   const pageW = doc.page.width;
   const pageH = doc.page.height;
 
@@ -789,6 +839,9 @@ const drawExecutiveSummaryPage = (
   businessName: string,
   date: string
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   // If there are knockouts, draw normal header, the page itself shows red messages
   drawHeader(doc, businessName, date);
 
@@ -1044,6 +1097,9 @@ const drawPillarPage = (
   date: string,
   metadata?: { sessionId?: string }
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   // If knockout is triggered, draw Red header and alert
   drawHeader(doc, businessName, date, { isKnockout: pillar.hasKnockout });
 
@@ -1516,6 +1572,9 @@ const drawNextStepsPageCustom = (
   businessName: string,
   date: string
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   drawHeader(doc, businessName, date);
   
   // Custom header title with left margin accent vertical line (matching 4.jpg)
@@ -1783,6 +1842,9 @@ const drawLegalPage = (
   date: string,
   pillars: ScoringPillarPayload[]
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   drawHeader(doc, businessName, date);
   
   // Section 01 Tag
@@ -2005,6 +2067,9 @@ const drawClosingAttestationPage = (
   businessName: string,
   date: string
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   drawHeader(doc, businessName, date);
   
   // Tag
@@ -2114,6 +2179,9 @@ const drawVisualizationPage = (
   date: string,
   metadata?: { sessionId?: string }
 ) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+
   drawHeader(doc, businessName, date);
   
   // Top title section
@@ -2284,6 +2352,7 @@ const drawDonutGauge = (
   caption: string,
   customRingW?: number
 ) => {
+  const COLORS = getColors(doc);
   const ringW = customRingW ?? Math.max(8, radius * 0.20);
   const pct = Math.max(0, Math.min(100, score)) / 100;
   const full = Math.PI * 2;
@@ -2381,6 +2450,7 @@ export async function generateReportPDF(
     businessSize?: string | null;
     sessionId?: string;
     completedAt?: Date | null;
+    theme?: 'light' | 'dark';
   }
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -2394,6 +2464,10 @@ export async function generateReportPDF(
         Subject: `PICA ${phaseLabel(phase)}`,
       },
     });
+
+    const theme = metadata?.theme || 'light';
+    (doc as any).theme = theme;
+    (doc as any).COLORS = getThemeColors(theme);
 
     const chunks: Buffer[] = [];
     doc.on('data', (chunk) => chunks.push(chunk));

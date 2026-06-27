@@ -13,6 +13,7 @@ import {
   Loader,
   AlertTriangle,
   FileText,
+  Presentation,
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
 import { motion } from "framer-motion";
@@ -162,7 +163,7 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resultData, setResultData] = useState<GetResultResponse | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadMode, setDownloadMode] = useState<'standard' | 'presentation' | null>(null);
 
   const loadResult = useCallback(async () => {
     setLoading(true);
@@ -193,9 +194,9 @@ export default function ReportDetailPage() {
     }
   }, [id, loadResult]);
 
-  const handleDownloadPdf = useCallback(async () => {
+  const handleDownloadPdf = useCallback(async (mode: 'standard' | 'presentation' = 'standard') => {
     if (!resultData) return;
-    setDownloading(true);
+    setDownloadMode(mode);
     // Always attempt the download — the BE now consumes a subscription
     // Phase 2A slot at download time when one is available. We only fall
     // back to the paid checkout if the BE returns 402/403, which means
@@ -205,7 +206,8 @@ export default function ReportDetailPage() {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
       const sid = resultData.result.sessionId || id;
-      const res = await fetch(`${API_BASE}/result/${sid}/pdf`, { headers });
+      const query = mode === 'presentation' ? "?theme=dark" : "";
+      const res = await fetch(`${API_BASE}/result/${sid}/pdf${query}`, { headers });
       if (!res.ok) {
         if (res.status === 402 || res.status === 403) {
           router.push(`/dashboard/subscription?sessionId=${sid}&autoCheckout=1`);
@@ -228,7 +230,7 @@ export default function ReportDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to download report");
     } finally {
-      setDownloading(false);
+      setDownloadMode(null);
     }
   }, [resultData, router, id]);
 
@@ -293,7 +295,7 @@ export default function ReportDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Phase2BReport resultData={resultData} handleDownloadPdf={handleDownloadPdf} downloading={downloading} />
+        <Phase2BReport resultData={resultData} handleDownloadPdf={handleDownloadPdf} downloadMode={downloadMode} />
       </motion.div>
     );
   }
@@ -369,11 +371,11 @@ export default function ReportDetailPage() {
                 Deep Dive Into Operations
               </button>
               <button
-                onClick={handleDownloadPdf}
-                disabled={downloading}
+                onClick={() => handleDownloadPdf('standard')}
+                disabled={downloadMode !== null}
                 className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {downloading ? (
+                {downloadMode === 'standard' ? (
                   <>
                     <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
                     Downloading...
@@ -382,6 +384,23 @@ export default function ReportDetailPage() {
                   <>
                     <Download className="h-4 w-4" />
                     Download PDF
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => handleDownloadPdf('presentation')}
+                disabled={downloadMode !== null}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {downloadMode === 'presentation' ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-white" />
+                    Preparing Presentation...
+                  </>
+                ) : (
+                  <>
+                    <Presentation className="h-4 w-4" />
+                    Presentation PDF
                   </>
                 )}
               </button>
@@ -519,15 +538,21 @@ export default function ReportDetailPage() {
         </motion.section>
       )}
 
-      {downloading && (
+      {downloadMode !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
             <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-500/10">
               <span className="absolute inset-0 rounded-full border-2 border-teal-500/20 border-t-teal-400 animate-spin" />
               <Download className="h-6 w-6 text-teal-400 animate-pulse" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Generating Report PDF</h3>
-            <p className="text-sm text-teal-300/70 mb-4">Please wait while we aggregate the diagnostics and render your A4 report...</p>
+            <h3 className="text-lg font-bold text-white mb-2">
+              {downloadMode === 'presentation' ? "Generating Presentation PDF" : "Generating Report PDF"}
+            </h3>
+            <p className="text-sm text-teal-300/70 mb-4">
+              {downloadMode === 'presentation' 
+                ? "Please wait while we render your dark-themed presentation report..."
+                : "Please wait while we aggregate the diagnostics and render your A4 report..."}
+            </p>
             
             {/* Animated progress track */}
             <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -549,7 +574,7 @@ export default function ReportDetailPage() {
   );
 }
 
-function Phase2BReport({ resultData, handleDownloadPdf, downloading }: { resultData: GetResultResponse, handleDownloadPdf: () => void, downloading: boolean }) {
+function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { resultData: GetResultResponse, handleDownloadPdf: (mode: 'standard' | 'presentation') => void, downloadMode: 'standard' | 'presentation' | null }) {
   const { result } = resultData;
   const pillarScore = result.pillarScores[0];
   if (!pillarScore) return null;
@@ -586,11 +611,11 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloading }: { resultD
                Book Consultant
             </button>
             <button
-              onClick={handleDownloadPdf}
-              disabled={downloading}
+              onClick={() => handleDownloadPdf('standard')}
+              disabled={downloadMode !== null}
               className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-               {downloading ? (
+               {downloadMode === 'standard' ? (
                  <>
                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
                    Downloading...
@@ -598,6 +623,22 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloading }: { resultD
                ) : (
                  <>
                    <Download className="w-4 h-4"/> Download Full Report
+                 </>
+               )}
+            </button>
+            <button
+              onClick={() => handleDownloadPdf('presentation')}
+              disabled={downloadMode !== null}
+              className="px-6 py-3 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+               {downloadMode === 'presentation' ? (
+                 <>
+                   <span className="animate-spin rounded-full h-4 w-4 border-2 border-slate-400 border-t-white" />
+                   Preparing Presentation...
+                 </>
+               ) : (
+                 <>
+                   <Presentation className="w-4 h-4"/> Presentation PDF
                  </>
                )}
             </button>

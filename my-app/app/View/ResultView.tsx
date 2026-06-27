@@ -12,6 +12,7 @@ import {
 	Shield,
 	Radar,
 	ArrowRight,
+	Presentation,
 } from 'lucide-react'
 
 const API_BASE =
@@ -125,7 +126,7 @@ export default function ResultPage() {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [resultData, setResultData] = useState<GetResultResponse | null>(null)
-	const [downloading, setDownloading] = useState(false)
+	const [downloadMode, setDownloadMode] = useState<'standard' | 'presentation' | null>(null)
 
 	const loadResult = useCallback(async () => {
 		if (!sessionId) {
@@ -156,11 +157,12 @@ export default function ResultPage() {
 		loadResult()
 	}, [loadResult])
 
-	const handleDownloadPdf = useCallback(async () => {
+	const handleDownloadPdf = useCallback(async (mode: 'standard' | 'presentation' = 'standard') => {
 		if (!sessionId) return
-		setDownloading(true)
+		setDownloadMode(mode)
 		try {
-			const res = await fetch(`${API_BASE}/result/${sessionId}/pdf`)
+			const query = mode === 'presentation' ? '?theme=dark' : ''
+			const res = await fetch(`${API_BASE}/result/${sessionId}/pdf${query}`)
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}))
 				throw new Error(body.message || 'Failed to download report')
@@ -179,7 +181,7 @@ export default function ResultPage() {
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Failed to download report')
 		} finally {
-			setDownloading(false)
+			setDownloadMode(null)
 		}
 	}, [sessionId])
 
@@ -270,11 +272,11 @@ export default function ResultPage() {
 
 							<div className='mt-6 flex flex-wrap gap-3'>
 								<button
-									onClick={handleDownloadPdf}
-									disabled={downloading}
+									onClick={() => handleDownloadPdf('standard')}
+									disabled={downloadMode !== null}
 									className='inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-50'
 								>
-									{downloading ? (
+									{downloadMode === 'standard' ? (
 										<>
 											<Loader className='h-4 w-4 animate-spin' />{' '}
 											Preparing...
@@ -282,6 +284,22 @@ export default function ResultPage() {
 									) : (
 										<>
 											<Download className='h-4 w-4' /> Download PDF
+										</>
+									)}
+								</button>
+								<button
+									onClick={() => handleDownloadPdf('presentation')}
+									disabled={downloadMode !== null}
+									className='inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed'
+								>
+									{downloadMode === 'presentation' ? (
+										<>
+											<Loader className='h-4 w-4 animate-spin' />{' '}
+											Preparing Presentation...
+										</>
+									) : (
+										<>
+											<Presentation className='h-4 w-4' /> Presentation PDF
 										</>
 									)}
 								</button>
@@ -374,15 +392,21 @@ export default function ResultPage() {
 						})}
 					</div>
 				</section>
-			{downloading && (
+			{downloadMode !== null && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
 					<div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
 						<div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-500/10">
 							<span className="absolute inset-0 rounded-full border-2 border-teal-500/20 border-t-teal-400 animate-spin" />
 							<Download className="h-6 w-6 text-teal-400 animate-pulse" />
 						</div>
-						<h3 className="text-lg font-bold text-white mb-2">Generating Report PDF</h3>
-						<p className="text-sm text-teal-300/70 mb-4">Please wait while we aggregate the diagnostics and render your A4 report...</p>
+						<h3 className="text-lg font-bold text-white mb-2">
+							{downloadMode === 'presentation' ? "Generating Presentation PDF" : "Generating Report PDF"}
+						</h3>
+						<p className="text-sm text-teal-300/70 mb-4">
+							{downloadMode === 'presentation' 
+								? "Please wait while we render your dark-themed presentation report..."
+								: "Please wait while we aggregate the diagnostics and render your A4 report..."}
+						</p>
 						
 						{/* Animated progress track */}
 						<div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">

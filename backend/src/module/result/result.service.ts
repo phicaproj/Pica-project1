@@ -175,7 +175,8 @@ export async function getAllCompletedResultsForUserService(
  */
 export async function downloadResultPdfService(
   sessionId: string,
-  authenticatedUserId: string | undefined
+  authenticatedUserId: string | undefined,
+  theme: 'light' | 'dark' = 'light'
 ): Promise<{ pdfBuffer: Buffer; filename: string }> {
   const session = await prisma.assessmentSession.findUnique({
     where: { id: sessionId },
@@ -323,36 +324,55 @@ export async function downloadResultPdfService(
   }
 
   const businessName = session.businessName ?? 'Business';
+  const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}${theme === 'dark' ? '-presentation' : ''}.pdf`;
 
-  const pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase, {
-    businessSize: session.businessSize,
-    sessionId: session.id,
-    completedAt: session.completedAt,
-  });
-  const filename = `PICA-Report-${businessName.replace(/[^a-zA-Z0-9-_]/g, '_')}.pdf`;
-
-  // Persist the PDF to R2 on first download — subsequent downloads reuse the
-  // cached URL instead of re-uploading. Phase 1 PDFs are already uploaded at
-  // submit-time, so this primarily covers Phase 2A's first authorized download.
-  // Best-effort: a failure here shouldn't block the user's download.
+  let pdfBuffer: Buffer | null = null;
   let reportPdfUrl = result.reportPdfUrl;
-  if (!reportPdfUrl) {
-    const phaseFolder =
-      session.phase === Phase.PHASE2A
-        ? 'phase2a'
-        : session.phase === Phase.PHASE2B
-          ? 'phase2b'
-          : 'phase1';
+
+  // For light theme, try to fetch from cache (R2) first to return instantly
+  if (theme === 'light' && reportPdfUrl) {
     try {
-      const uploaded = await uploadPdf(`reports/${phaseFolder}/${sessionId}.pdf`, pdfBuffer);
-      reportPdfUrl = uploaded.url;
-      await prisma.sessionResult.update({
-        where: { sessionId },
-        data: { reportPdfUrl, generatedAt: new Date() },
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('downloadResultPdfService: R2 upload failed:', message);
+      console.log(`Cache hit: Fetching pre-generated PDF from R2: ${reportPdfUrl}`);
+      const response = await fetch(reportPdfUrl);
+      if (response.ok) {
+        const ab = await response.arrayBuffer();
+        pdfBuffer = Buffer.from(ab);
+      } else {
+        throw new Error(`R2 responded with status ${response.status}`);
+      }
+    } catch (err) {
+      console.warn('Failed to load cached PDF from R2, falling back to dynamic generation:', err);
+    }
+  }
+
+  // If no cache or generating dark presentation mode, render dynamically
+  if (!pdfBuffer) {
+    pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase, {
+      businessSize: session.businessSize,
+      sessionId: session.id,
+      completedAt: session.completedAt,
+      theme,
+    });
+
+    // Save/cache light theme PDFs on first request (or fallback)
+    if (theme === 'light') {
+      const phaseFolder =
+        session.phase === Phase.PHASE2A
+          ? 'phase2a'
+          : session.phase === Phase.PHASE2B
+            ? 'phase2b'
+            : 'phase1';
+      try {
+        const uploaded = await uploadPdf(`reports/${phaseFolder}/${sessionId}.pdf`, pdfBuffer);
+        reportPdfUrl = uploaded.url;
+        await prisma.sessionResult.update({
+          where: { sessionId },
+          data: { reportPdfUrl, generatedAt: new Date() },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        console.error('downloadResultPdfService: R2 upload failed:', message);
+      }
     }
   }
 
