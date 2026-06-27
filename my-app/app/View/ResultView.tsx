@@ -374,6 +374,32 @@ export default function ResultPage() {
 						})}
 					</div>
 				</section>
+			{downloading && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+					<div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
+						<div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-500/10">
+							<span className="absolute inset-0 rounded-full border-2 border-teal-500/20 border-t-teal-400 animate-spin" />
+							<Download className="h-6 w-6 text-teal-400 animate-pulse" />
+						</div>
+						<h3 className="text-lg font-bold text-white mb-2">Generating Report PDF</h3>
+						<p className="text-sm text-teal-300/70 mb-4">Please wait while we aggregate the diagnostics and render your A4 report...</p>
+						
+						{/* Animated progress track */}
+						<div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+							<div className="h-full bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full progress-bar-fill" />
+						</div>
+					</div>
+					<style dangerouslySetInnerHTML={{ __html: `
+						@keyframes progressFill {
+							0% { width: 0%; }
+							100% { width: 95%; }
+						}
+						.progress-bar-fill {
+							animation: progressFill 4s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+						}
+					` }} />
+				</div>
+			)}
 			</div>
 		</div>
 	)

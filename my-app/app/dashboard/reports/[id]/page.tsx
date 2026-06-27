@@ -162,6 +162,7 @@ export default function ReportDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resultData, setResultData] = useState<GetResultResponse | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const loadResult = useCallback(async () => {
     setLoading(true);
@@ -194,6 +195,7 @@ export default function ReportDetailPage() {
 
   const handleDownloadPdf = useCallback(async () => {
     if (!resultData) return;
+    setDownloading(true);
     // Always attempt the download — the BE now consumes a subscription
     // Phase 2A slot at download time when one is available. We only fall
     // back to the paid checkout if the BE returns 402/403, which means
@@ -225,6 +227,8 @@ export default function ReportDetailPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to download report");
+    } finally {
+      setDownloading(false);
     }
   }, [resultData, router, id]);
 
@@ -289,7 +293,7 @@ export default function ReportDetailPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Phase2BReport resultData={resultData} handleDownloadPdf={handleDownloadPdf} />
+        <Phase2BReport resultData={resultData} handleDownloadPdf={handleDownloadPdf} downloading={downloading} />
       </motion.div>
     );
   }
@@ -366,10 +370,20 @@ export default function ReportDetailPage() {
               </button>
               <button
                 onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                disabled={downloading}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Download className="h-4 w-4" />
-                Download PDF
+                {downloading ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </>
+                )}
               </button>
             </motion.div>
 
@@ -504,11 +518,38 @@ export default function ReportDetailPage() {
           </div>
         </motion.section>
       )}
+
+      {downloading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
+            <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-500/10">
+              <span className="absolute inset-0 rounded-full border-2 border-teal-500/20 border-t-teal-400 animate-spin" />
+              <Download className="h-6 w-6 text-teal-400 animate-pulse" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Generating Report PDF</h3>
+            <p className="text-sm text-teal-300/70 mb-4">Please wait while we aggregate the diagnostics and render your A4 report...</p>
+            
+            {/* Animated progress track */}
+            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full progress-bar-fill" />
+            </div>
+          </div>
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes progressFill {
+              0% { width: 0%; }
+              100% { width: 95%; }
+            }
+            .progress-bar-fill {
+              animation: progressFill 4s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+            }
+          ` }} />
+        </div>
+      )}
     </motion.div>
   );
 }
 
-function Phase2BReport({ resultData, handleDownloadPdf }: { resultData: GetResultResponse, handleDownloadPdf: () => void }) {
+function Phase2BReport({ resultData, handleDownloadPdf, downloading }: { resultData: GetResultResponse, handleDownloadPdf: () => void, downloading: boolean }) {
   const { result } = resultData;
   const pillarScore = result.pillarScores[0];
   if (!pillarScore) return null;
@@ -544,8 +585,21 @@ function Phase2BReport({ resultData, handleDownloadPdf }: { resultData: GetResul
             <button className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-2">
                Book Consultant
             </button>
-            <button onClick={handleDownloadPdf} className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition flex items-center gap-2">
-               <Download className="w-4 h-4"/> Download Full Report
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloading}
+              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+               {downloading ? (
+                 <>
+                   <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
+                   Downloading...
+                 </>
+               ) : (
+                 <>
+                   <Download className="w-4 h-4"/> Download Full Report
+                 </>
+               )}
             </button>
           </div>
         </div>

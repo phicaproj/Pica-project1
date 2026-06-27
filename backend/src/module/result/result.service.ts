@@ -305,6 +305,23 @@ export async function downloadResultPdfService(
   }
 
   const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;
+
+  // Dynamically backfill descriptive option labels for older session results if they are single letters
+  for (const pillar of scoringPayload.pillarScores || []) {
+    const findings = pillar.allFindings || pillar.findings || [];
+    for (const finding of findings) {
+      if (finding.selectedLabel && finding.selectedLabel.length === 1) {
+        const opt = await prisma.questionOption.findUnique({
+          where: { id: finding.optionId },
+          select: { optionText: true }
+        });
+        if (opt?.optionText) {
+          finding.selectedLabel = opt.optionText;
+        }
+      }
+    }
+  }
+
   const businessName = session.businessName ?? 'Business';
 
   const pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase, {
