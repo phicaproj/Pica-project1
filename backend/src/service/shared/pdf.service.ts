@@ -1355,7 +1355,7 @@ const drawPillarPage = (
     roundedRect(doc, ox, oy, 3, obsH, 2, fColor);
 
     const iconY = oy + 10.5;
-    const textY = oy + 12;
+    const textY = oy + 9;
 
     if (isKo || isRisk) {
       drawWarningIcon(doc, ox + 10, iconY, 11, fColor);
@@ -1363,19 +1363,19 @@ const drawPillarPage = (
       drawCheckIcon(doc, ox + 10, iconY, 11);
     }
 
-    // Title: Selected Answer label
+    // Title: Observation (bold, up to 2 lines)
     doc
-      .fontSize(8.5)
+      .fontSize(8)
       .font('Helvetica-Bold')
       .fillColor(COLORS.primary)
-      .text(finding.selectedLabel.toUpperCase(), ox + 25, textY, { width: obsW - 32, height: 12, ellipsis: true, lineBreak: false });
+      .text(finding.observation, ox + 25, textY, { width: obsW - 35, height: 22, ellipsis: true, lineGap: 1 });
 
-    // Description: Observation only
+    // Description: Selected Answer Text (regular)
     doc
       .fontSize(7.5)
       .font('Helvetica')
       .fillColor(COLORS.bodyText)
-      .text(finding.observation, ox + 10, oy + 32, { width: obsW - 20, height: 50, ellipsis: true, lineGap: 1.5 });
+      .text(finding.selectedLabel, ox + 10, oy + 34, { width: obsW - 20, height: 50, ellipsis: true, lineGap: 1.5 });
   }
 
   // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the bottom consistently)
