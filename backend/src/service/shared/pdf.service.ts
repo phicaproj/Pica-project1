@@ -1540,30 +1540,49 @@ const drawNextStepsPageCustom = (
   hr(doc, doc.y, COLORS.accent);
   doc.moveDown(0.6);
 
-  // Spaced layout matching 4.jpg
+  // Spaced layout matching 4.jpg - Dynamic Copy depending on Phase
   const topY = doc.y;
+
+  let line1Text = '';
+  let line2Text = '';
+  let bodyText = '';
+
+  if (phase === Phase.PHASE1) {
+    line1Text = 'You have mapped your business core (Phase 1).';
+    line2Text = 'Upgrade to Phase 2A for full structural clarity.';
+    bodyText = 
+      "The initial Phase 1 scan has successfully identified the high-level markers of your operations. While this core mapping is a critical first step, unlocking sustainable growth requires a deep dive into the architectural health of all 7 business units.\n\n" +
+      "Moving from high-level scanning to implementation requires deep diagnostic clarity. Upgrading to Phase 2A will provide detailed observations, concrete recommendations, and tailored checklists across every operational pillar, transforming weak links into competitive assets.";
+  } else if (phase === Phase.PHASE2A) {
+    line1Text = 'You now have structural clarity (2A).';
+    line2Text = 'Execution strength requires deeper testing (2B).';
+    bodyText =
+      "The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n" +
+      "Moving from identification to implementation is a non-linear process. It requires a pivot from broad observation to surgical precision. The following intelligence upgrades are designed to convert strategic theory into operational dominance, ensuring that every identified weakness is transformed into a competitive moat.";
+  } else { // Phase.PHASE2B (Consultation CTA Copy)
+    line1Text = 'Your Deep Dive results are synthesized (2B).';
+    line2Text = 'Move to execution with a Strategic Consultation.';
+    bodyText =
+      "This Phase 2B deep dive audit has successfully stress-tested your targeted operational structures. Having identified both the baseline strengths and the bottleneck points, your roadmap for building long-term scaling capacity is now fully clear.\n\n" +
+      "The critical next step to bridge diagnostic strategy with day-to-day execution is securing professional advisory guidance. Booking a 1-on-1 strategic consultation will allow us to unpack your results, prioritize your action plan, and deploy resources for immediate operational scaling.";
+  }
+
   doc
     .fontSize(12)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('You now have structural clarity (2A).', PAGE_MARGIN, topY, { width: 280 });
+    .text(line1Text, PAGE_MARGIN, topY, { width: 280 });
   doc
     .fontSize(12)
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
-    .text('Execution strength requires deeper testing (2B).', PAGE_MARGIN, topY + 16, { width: 280 });
+    .text(line2Text, PAGE_MARGIN, topY + 16, { width: 280 });
 
   doc
     .fontSize(8.5)
     .font('Helvetica')
     .fillColor(COLORS.bodyText)
-    .text(
-      "The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n" +
-      "Moving from identification to implementation is a non-linear process. It requires a pivot from broad observation to surgical precision. The following intelligence upgrades are designed to convert strategic theory into operational dominance, ensuring that every identified weakness is transformed into a competitive moat.",
-      PAGE_MARGIN,
-      topY + 45,
-      { width: 280, lineGap: 2.2 }
-    );
+    .text(bodyText, PAGE_MARGIN, topY + 45, { width: 280, lineGap: 2.2 });
 
   // Right card showing Grayscale building photo + white overlay Projected Delta
   const imgX = PAGE_MARGIN + 300;
@@ -1624,42 +1643,47 @@ const drawNextStepsPageCustom = (
     .fillColor(COLORS.primary)
     .text('+32.4% Projected', overlayX + 34, overlayY + 22);
 
-  // Upgrade Options section (dynamically calculated to push it down and add space)
+  // Upgrade Options / Strategic Next Steps section
   const maxBottomY = Math.max(doc.y, imgY + imgH);
   const opY = maxBottomY + 30;
+  
+  const sectionTitle = phase === Phase.PHASE2B ? 'Strategic Next Steps' : 'Upgrade Options';
   doc
     .fontSize(11)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('Upgrade Options', PAGE_MARGIN, opY);
+    .text(sectionTitle, PAGE_MARGIN, opY);
 
   const upgradeW = 248;
   const upgradeH = 135;
 
-  // Card 1: Pillar-Specific Deep Dives
+  // Card 1
   const ux1 = PAGE_MARGIN;
   roundedRect(doc, ux1, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux1, opY + 16, 4, upgradeH, 2, '#3B82F6'); // Blue accent line
   
   // compass icon
   drawDraftingCompassIcon(doc, ux1 + 16, opY + 30, 14);
+  
+  const card1Title = phase === Phase.PHASE2B ? 'Strategic Consultation' : 'Pillar-Specific Deep Dives';
+  const card1Desc = phase === Phase.PHASE2B 
+    ? 'Book a 1-on-1 session with our senior analysts to review your deep dive report, prioritize recommendations, and map out resource mobilization.'
+    : 'A comprehensive and vertical audit of your highest-impact pillars to extract actionable operational optimization nodes.';
+  const bulletList1 = phase === Phase.PHASE2B
+    ? ['1-on-1 Analyst Access', 'Prioritization Matrix', 'Resource Mobilization Plan']
+    : ['Vertical Risk Mapping', 'Operational Stress-Testing', 'Performance Benchmarking'];
+
   doc
     .fontSize(10.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('Pillar-Specific Deep Dives', ux1 + 36, opY + 32);
+    .text(card1Title, ux1 + 36, opY + 32);
   doc
     .fontSize(8)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text(
-      "A comprehensive and vertical audit of your highest-impact pillars to extract actionable operational optimization nodes.",
-      ux1 + 16,
-      opY + 52,
-      { width: upgradeW - 32, lineGap: 1.8 }
-    );
+    .text(card1Desc, ux1 + 16, opY + 52, { width: upgradeW - 32, lineGap: 1.8 });
 
-  const bulletList1 = ["Vertical Risk Mapping", "Operational Stress-Testing", "Performance Benchmarking"];
   let bulletY1 = opY + 94;
   for (const item of bulletList1) {
     drawCheckIcon(doc, ux1 + 16, bulletY1, 8);
@@ -1667,30 +1691,33 @@ const drawNextStepsPageCustom = (
     bulletY1 += 12;
   }
 
-  // Card 2: Targeted Intelligence
+  // Card 2
   const ux2 = PAGE_MARGIN + upgradeW + 19;
   roundedRect(doc, ux2, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux2, opY + 16, 4, upgradeH, 2, COLORS.accent); // Orange accent line
   
   // robot arm icon
   drawRobotArmIcon(doc, ux2 + 16, opY + 30, 14);
+  
+  const card2Title = phase === Phase.PHASE2B ? 'Implementation Alignment' : 'Targeted Intelligence';
+  const card2Desc = phase === Phase.PHASE2B
+    ? 'Structure custom execution timelines and coordinate project teams to begin deploying the targeted bottleneck patches.'
+    : "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.";
+  const bulletList2 = phase === Phase.PHASE2B
+    ? ['Timeline Structuring', 'Project Coordinator Assignment', 'Continuous Progress Audits']
+    : ['Rapid Vulnerability Patching', 'Efficiency Simulations', 'Resource Allocation Modeling'];
+
   doc
     .fontSize(10.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('Targeted Intelligence', ux2 + 36, opY + 32);
+    .text(card2Title, ux2 + 36, opY + 32);
   doc
     .fontSize(8)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text(
-      "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.",
-      ux2 + 16,
-      opY + 52,
-      { width: upgradeW - 32, lineGap: 1.8 }
-    );
+    .text(card2Desc, ux2 + 16, opY + 52, { width: upgradeW - 32, lineGap: 1.8 });
 
-  const bulletList2 = ["Rapid Vulnerability Patching", "Efficiency Simulations", "Resource Allocation Modeling"];
   let bulletY2 = opY + 94;
   for (const item of bulletList2) {
     drawTargetIcon(doc, ux2 + 16, bulletY2, 8);
@@ -2410,14 +2437,15 @@ export async function generateReportPDF(
     doc.addPage();
     drawNextStepsPageCustom(doc, result, phase, businessName, dateStr);
 
-    // --- Pages 11-13: Legal, Closing Attestation & Visualization (only for full scan) ---
+    // --- Pages 11-12: Legal & Closing Attestation (drawn for all phases: Phase 1, 2A, and 2B) ---
+    doc.addPage();
+    drawLegalPage(doc, businessName, dateStr, result.pillarScores);
+
+    doc.addPage();
+    drawClosingAttestationPage(doc, businessName, dateStr);
+
+    // --- Page 13: Spider Graph Visualization (only for full scan, i.e., not Phase 2B) ---
     if (!isSinglePillar) {
-      doc.addPage();
-      drawLegalPage(doc, businessName, dateStr, result.pillarScores);
-
-      doc.addPage();
-      drawClosingAttestationPage(doc, businessName, dateStr);
-
       doc.addPage();
       drawVisualizationPage(doc, result, businessName, dateStr, metadata);
     }
