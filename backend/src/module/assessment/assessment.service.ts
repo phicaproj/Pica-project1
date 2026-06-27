@@ -69,7 +69,6 @@ export async function startAssessmentService(
   const existingSession = await prisma.assessmentSession.findFirst({
     where: {
       leadEmail,
-      status: SessionStatus.IN_PROGRESS,
     },
     select: {
       id: true,

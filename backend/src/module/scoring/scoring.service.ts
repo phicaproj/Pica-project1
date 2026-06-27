@@ -128,7 +128,7 @@ const determineInsightRule = (responses: SessionResponseRecord[]): InsightRule =
 const toFinding = (response: SessionResponseRecord): ScoringFinding => ({
   optionId: response.selectedOption.id,
   questionText: response.question.questionText,
-  selectedLabel: response.selectedOption.optionLabel,
+  selectedLabel: response.selectedOption.optionText,
   observation: response.selectedOption.observation,
   recommendation: response.selectedOption.recommendation,
   riskType: response.riskTypeAtTime,
