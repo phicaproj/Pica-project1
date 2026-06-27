@@ -58,7 +58,7 @@ const getThemeColors = (theme: 'light' | 'dark') => {
       lightGrey: '#0d1520', // Card solid fill
       borderGrey: '#1e293b', // Slate border
       pageWidth: 515,
-      bg: '#040b12', // Rich slate-black background!
+      bg: '#0F131D', // Rich slate-black background!
     };
   }
   return COLORS;
@@ -95,7 +95,9 @@ const COVER_BUFFER: Buffer | null = (() => {
     return fs.readFileSync(COVER_PATH);
   } catch {
     try {
-      return fs.readFileSync(path.join(process.cwd(), '..', 'PDF report design', 'Cover page image.png'));
+      return fs.readFileSync(
+        path.join(process.cwd(), '..', 'PDF report design', 'Cover page image.png')
+      );
     } catch {
       return null;
     }
@@ -137,7 +139,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       border: COLORS.redBorder,
       label: 'REACTIVE (OVERRIDDEN)',
       interpretation: 'This pillar has failed critical compliance or safety criteria.',
-      emoji: '✕'
+      emoji: '✕',
     };
   }
   if (score >= 91) {
@@ -146,8 +148,9 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       bg: COLORS.greenBg,
       border: COLORS.greenBorder,
       label: 'FUTURE-PROOFED',
-      interpretation: 'This pillar is performing at a leading level with standard-setting resilience.',
-      emoji: '✓'
+      interpretation:
+        'This pillar is performing at a leading level with standard-setting resilience.',
+      emoji: '✓',
     };
   }
   if (score >= 71) {
@@ -157,7 +160,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       border: '#22C55E', // green-500
       label: 'STRUCTURALLY SOUND',
       interpretation: 'This pillar is performing well with no critical risks flagged.',
-      emoji: '✓'
+      emoji: '✓',
     };
   }
   if (score >= 51) {
@@ -167,7 +170,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       border: '#EAB308', // yellow-500
       label: 'OPERATIONALLY SOUND',
       interpretation: 'This pillar is functional but has minor bottlenecks worth addressing.',
-      emoji: '!'
+      emoji: '!',
     };
   }
   if (score >= 31) {
@@ -177,7 +180,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       border: '#F59E0B', // amber-500
       label: 'FOUNDATIONAL',
       interpretation: 'This pillar is functional but has moderate risks worth addressing.',
-      emoji: '!'
+      emoji: '!',
     };
   }
   return {
@@ -186,7 +189,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
     border: COLORS.redBorder,
     label: 'REACTIVE',
     interpretation: 'This pillar shows critical gaps that need immediate attention.',
-    emoji: '✕'
+    emoji: '✕',
   };
 };
 
@@ -194,41 +197,47 @@ const getExecutiveNarrativeDetails = (score: number, hasKnockout: boolean) => {
   if (hasKnockout) {
     return {
       title: 'Reactive State',
-      desc: "Your organization is currently operating in a Reactive state. Gaps in critical compliance, financial controls, or structural redundancy represent high-risk exposure. Immediate remediation of highlighted risk factors is required to prevent operational disruption."
+      desc: 'Your organization is currently operating in a Reactive state. Gaps in critical compliance, financial controls, or structural redundancy represent high-risk exposure. Immediate remediation of highlighted risk factors is required to prevent operational disruption.',
     };
   }
   if (score >= 91) {
     return {
       title: 'Future-Proofed',
-      desc: "Your business is Future-Proofed and scale-ready. You have built a highly adaptive operational architecture that matches global benchmarks, minimizing friction and enabling aggressive market expansion with high resilience."
+      desc: 'Your business is Future-Proofed and scale-ready. You have built a highly adaptive operational architecture that matches global benchmarks, minimizing friction and enabling aggressive market expansion with high resilience.',
     };
   }
   if (score >= 71) {
     return {
       title: 'Structurally Sound',
-      desc: "You have built a solid and defensible business architecture. The core 'skeleton' of the organization is strong, with established systems and clear governance. While there are minor operational refinements needed to reach peak efficiency, your business demonstrates the stability required to support sustainable growth and handle increased institutional scrutiny."
+      desc: "You have built a solid and defensible business architecture. The core 'skeleton' of the organization is strong, with established systems and clear governance. While there are minor operational refinements needed to reach peak efficiency, your business demonstrates the stability required to support sustainable growth and handle increased institutional scrutiny.",
     };
   }
   if (score >= 51) {
     return {
       title: 'Operationally Sound / Stabilizing',
-      desc: "Your business is Operationally Sound and stabilizing. While key systems are functional, minor bottlenecks in efficiency and operational process maturity require stabilization to ensure consistent growth and scalability."
+      desc: 'Your business is Operationally Sound and stabilizing. While key systems are functional, minor bottlenecks in efficiency and operational process maturity require stabilization to ensure consistent growth and scalability.',
     };
   }
   if (score >= 31) {
     return {
       title: 'Foundational / Vulnerable',
-      desc: "Your business is Foundational but structurally vulnerable in key areas. While core transaction processing is functional, key operational bottlenecks and governance gaps limit scalability and increase dependency on key individuals."
+      desc: 'Your business is Foundational but structurally vulnerable in key areas. While core transaction processing is functional, key operational bottlenecks and governance gaps limit scalability and increase dependency on key individuals.',
     };
   }
   return {
     title: 'Reactive State',
-    desc: "Your organization is currently operating in a Reactive state. Gaps in critical compliance, financial controls, or structural redundancy represent high-risk exposure. Immediate remediation of highlighted risk factors is required to prevent operational disruption."
+    desc: 'Your organization is currently operating in a Reactive state. Gaps in critical compliance, financial controls, or structural redundancy represent high-risk exposure. Immediate remediation of highlighted risk factors is required to prevent operational disruption.',
   };
 };
 
 // Vector icons used in design matching mockups
-const drawBuildingIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: number, color = '#9CA3AF') => {
+const drawBuildingIcon = (
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  size: number,
+  color = '#9CA3AF'
+) => {
   doc.save();
   doc.translate(x, y);
   doc.scale(size / 16);
@@ -332,7 +341,13 @@ const drawCheckIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: numb
   doc.restore();
 };
 
-const drawWarningIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: number, color = '#F59E0B') => {
+const drawWarningIcon = (
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  size: number,
+  color = '#F59E0B'
+) => {
   doc.save();
   doc.translate(x, y);
   doc.scale(size / 16);
@@ -343,19 +358,26 @@ const drawWarningIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: nu
   doc.restore();
 };
 
-const drawShieldIcon = (doc: PDFKit.PDFDocument, x: number, y: number, size: number, color: string) => {
+const drawShieldIcon = (
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) => {
   doc.save();
   doc.translate(x, y);
   doc.scale(size / 16);
-  doc.moveTo(8, 0)
-     .lineTo(15, 2.5)
-     .lineTo(15, 7.5)
-     .quadraticCurveTo(15, 12.5, 8, 15.5)
-     .quadraticCurveTo(1, 12.5, 1, 7.5)
-     .lineTo(1, 2.5)
-     .closePath()
-     .fillColor(color)
-     .fill();
+  doc
+    .moveTo(8, 0)
+    .lineTo(15, 2.5)
+    .lineTo(15, 7.5)
+    .quadraticCurveTo(15, 12.5, 8, 15.5)
+    .quadraticCurveTo(1, 12.5, 1, 7.5)
+    .lineTo(1, 2.5)
+    .closePath()
+    .fillColor(color)
+    .fill();
   doc.restore();
 };
 
@@ -395,11 +417,7 @@ const roundedRect = (
   doc.restore();
 };
 
-const hr = (
-  doc: InstanceType<typeof PDFDocument>,
-  y: number,
-  color?: string
-) => {
+const hr = (doc: InstanceType<typeof PDFDocument>, y: number, color?: string) => {
   const COLORS = getColors(doc);
   const strokeCol = color ?? COLORS.borderGrey;
   doc
@@ -415,7 +433,12 @@ const hr = (
 // ============================================================
 // HEADER / FOOTER
 // ============================================================
-const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string, options?: { isKnockout?: boolean }) => {
+const drawHeader = (
+  doc: PDFKit.PDFDocument,
+  businessName: string,
+  date: string,
+  options?: { isKnockout?: boolean }
+) => {
   const COLORS = getColors(doc);
   // Mini Header band
   const headerLineY = 50;
@@ -423,14 +446,17 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string,
   if (options?.isKnockout) {
     // Fill the header background in Signal Red (Red Alert)
     doc.rect(0, 0, doc.page.width, headerLineY).fill('#DC2626'); // red-600
-    
+
     // Draw white text inside it: "CRITICAL SURVIVAL ALERT"
     doc
       .fontSize(11)
       .font('Helvetica-Bold')
       .fillColor(COLORS.white)
-      .text('CRITICAL SURVIVAL ALERT — ACTION REQUIRED IMMEDIATELY', 0, 19, { align: 'center', width: doc.page.width });
-      
+      .text('CRITICAL SURVIVAL ALERT — ACTION REQUIRED IMMEDIATELY', 0, 19, {
+        align: 'center',
+        width: doc.page.width,
+      });
+
     // Divider line is white
     doc
       .save()
@@ -440,7 +466,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string,
       .strokeColor(COLORS.white)
       .stroke()
       .restore();
-      
+
     doc.y = headerLineY + 15;
     return;
   }
@@ -470,7 +496,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string,
   const rightX = PAGE_MARGIN + COLORS.pageWidth;
   const sealW = 120;
   const sealX = rightX - sealW;
-  
+
   doc
     .fontSize(8)
     .font('Helvetica-Bold')
@@ -478,7 +504,7 @@ const drawHeader = (doc: PDFKit.PDFDocument, businessName: string, date: string,
     .text('PICA PRODUCT SEAL', sealX, 20, { align: 'right', width: sealW - 16, lineBreak: false });
 
   drawCheckIcon(doc, rightX - 12, 17, 12);
-  
+
   // Draw thin divider line
   doc
     .save()
@@ -504,23 +530,21 @@ const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: s
     .fontSize(8)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text(
-      `© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`,
-      PAGE_MARGIN,
-      footerY,
-      { align: 'left', width: COLORS.pageWidth / 2, lineBreak: false }
-    );
+    .text(`© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
+      align: 'left',
+      width: COLORS.pageWidth / 2,
+      lineBreak: false,
+    });
 
   const displayId = sessionId ? `ID: BV-${sessionId.substring(0, 8).toUpperCase()}` : '';
   doc
     .fontSize(8)
     .fillColor(COLORS.mutedText)
-    .text(
-      `${businessName.substring(0, 30)}   ${displayId}`,
-      PAGE_MARGIN,
-      footerY,
-      { align: 'right', width: COLORS.pageWidth, lineBreak: false }
-    );
+    .text(`${businessName.substring(0, 30)}   ${displayId}`, PAGE_MARGIN, footerY, {
+      align: 'right',
+      width: COLORS.pageWidth,
+      lineBreak: false,
+    });
 
   doc.page.margins.bottom = prevBottom;
 };
@@ -552,7 +576,10 @@ const drawCoverPage = (
   // Top header: CONFIDENTIAL ADVISORY
   doc.save();
   doc.lineWidth(0.5).strokeColor(COLORS.borderGrey);
-  doc.moveTo(PAGE_MARGIN, 80).lineTo(PAGE_MARGIN + 120, 80).stroke();
+  doc
+    .moveTo(PAGE_MARGIN, 80)
+    .lineTo(PAGE_MARGIN + 120, 80)
+    .stroke();
   doc
     .fontSize(9)
     .font('Helvetica-Bold')
@@ -562,7 +589,10 @@ const drawCoverPage = (
       align: 'center',
       characterSpacing: 2,
     });
-  doc.moveTo(PAGE_MARGIN + 365, 80).lineTo(PAGE_MARGIN + COLORS.pageWidth, 80).stroke();
+  doc
+    .moveTo(PAGE_MARGIN + 365, 80)
+    .lineTo(PAGE_MARGIN + COLORS.pageWidth, 80)
+    .stroke();
   doc.restore();
 
   // Title block
@@ -601,7 +631,7 @@ const drawCoverPage = (
       // No border card behind it, stretch cover.png to fill card dimensions exactly
       doc.image(COVER_BUFFER, PAGE_MARGIN, cardY, {
         width: COLORS.pageWidth,
-        height: cardH
+        height: cardH,
       });
     } catch {
       // Fallback
@@ -610,13 +640,17 @@ const drawCoverPage = (
   } else {
     // Elegant fallback card
     roundedRect(doc, PAGE_MARGIN, cardY, COLORS.pageWidth, cardH, 10, COLORS.primary);
-    
+
     // Draw abstract technological/network nodes inside the dark card
     doc.save();
     doc.lineWidth(1).strokeColor('#374151');
     const nodes = [
-      { x: 100, y: 300 }, { x: 200, y: 350 }, { x: 150, y: 440 },
-      { x: 420, y: 320 }, { x: 380, y: 450 }, { x: 480, y: 400 }
+      { x: 100, y: 300 },
+      { x: 200, y: 350 },
+      { x: 150, y: 440 },
+      { x: 420, y: 320 },
+      { x: 380, y: 450 },
+      { x: 480, y: 400 },
     ];
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -642,11 +676,20 @@ const drawCoverPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text('STRATEGIC PARTNER', PAGE_MARGIN, gridY, { characterSpacing: 1 });
-  
+
   const iconBoxSize = 28;
-  roundedRect(doc, PAGE_MARGIN, gridY + 10, iconBoxSize, iconBoxSize, 4, '#F3F4F6', COLORS.borderGrey);
+  roundedRect(
+    doc,
+    PAGE_MARGIN,
+    gridY + 10,
+    iconBoxSize,
+    iconBoxSize,
+    4,
+    '#F3F4F6',
+    COLORS.borderGrey
+  );
   drawBuildingIcon(doc, PAGE_MARGIN + 6, gridY + 16, 16);
-  
+
   const textStartX = PAGE_MARGIN + iconBoxSize + 12;
   doc
     .fontSize(12)
@@ -688,7 +731,9 @@ const drawCoverPage = (
     .text(date, PAGE_MARGIN + 190, gridY + 54);
 
   // Col 3: Report Identity
-  const displayId = metadata?.sessionId ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}` : 'BV-DIAG-TEMP';
+  const displayId = metadata?.sessionId
+    ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}`
+    : 'BV-DIAG-TEMP';
   doc
     .fontSize(8)
     .font('Helvetica-Bold')
@@ -705,7 +750,7 @@ const drawCoverPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text('SECURITY STATUS', PAGE_MARGIN + 380, gridY + 40, { characterSpacing: 1 });
-  
+
   drawShieldIcon(doc, PAGE_MARGIN + 380, gridY + 52, 12, '#D97706'); // Gold color shield
   doc
     .fontSize(9)
@@ -726,7 +771,7 @@ const drawRadarChart = (
   benchmarks: number[]
 ) => {
   const numAxes = 7;
-  const getAngle = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI / numAxes);
+  const getAngle = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / numAxes;
 
   const stablePillars = getCanonicalPillars(pillars);
 
@@ -747,7 +792,10 @@ const drawRadarChart = (
   // 2. Axis lines
   for (let i = 0; i < numAxes; i++) {
     const angle = getAngle(i);
-    doc.moveTo(cx, cy).lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle)).stroke();
+    doc
+      .moveTo(cx, cy)
+      .lineTo(cx + r * Math.cos(angle), cy + r * Math.sin(angle))
+      .stroke();
   }
   doc.restore();
 
@@ -849,8 +897,8 @@ const drawExecutiveSummaryPage = (
   const dialY = 120;
   const centerScoreX = PAGE_MARGIN + COLORS.pageWidth / 2;
   const radius = 70; // Larger radius for a bold circular design
-  const ringW = 16;  // Wider ring width for a thick gauge
-  
+  const ringW = 16; // Wider ring width for a thick gauge
+
   const details = getPdfBandDetails(result.totalScore, result.hasAnyKnockout);
   const narDetails = getExecutiveNarrativeDetails(result.totalScore, result.hasAnyKnockout);
 
@@ -896,16 +944,11 @@ const drawExecutiveSummaryPage = (
       .fontSize(9.5)
       .font('Helvetica')
       .fillColor(COLORS.bodyText)
-      .text(
-        `"${narDetails.desc}"`,
-        PAGE_MARGIN + 30,
-        dialY + 200,
-        {
-          width: COLORS.pageWidth - 60,
-          align: 'center',
-          lineGap: 2.5,
-        }
-      );
+      .text(`"${narDetails.desc}"`, PAGE_MARGIN + 30, dialY + 200, {
+        width: COLORS.pageWidth - 60,
+        align: 'center',
+        lineGap: 2.5,
+      });
   }
 
   // Three columns layout (Moved down to provide more space)
@@ -947,18 +990,34 @@ const drawExecutiveSummaryPage = (
         .fontSize(8)
         .font('Helvetica-Bold')
         .fillColor(COLORS.green)
-        .text(`${Math.round(pillar.weightedScore)}%`, sx + colW - 40, cursorY, { align: 'right', width: 28 });
-      
+        .text(`${Math.round(pillar.weightedScore)}%`, sx + colW - 40, cursorY, {
+          align: 'right',
+          width: 28,
+        });
+
       cursorY += 12;
       roundedRect(doc, sx + 12, cursorY, colW - 24, 4, 2, COLORS.borderGrey);
-      roundedRect(doc, sx + 12, cursorY, (colW - 24) * (pillar.weightedScore / 100), 4, 2, COLORS.greenBorder);
+      roundedRect(
+        doc,
+        sx + 12,
+        cursorY,
+        (colW - 24) * (pillar.weightedScore / 100),
+        4,
+        2,
+        COLORS.greenBorder
+      );
 
       const obs = pillar.findings[0]?.observation ?? 'Optimal structure verified.';
       doc
         .fontSize(7.5)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(obs, sx + 12, cursorY + 8, { width: colW - 24, height: 32, ellipsis: true, lineGap: 1 });
+        .text(obs, sx + 12, cursorY + 8, {
+          width: colW - 24,
+          height: 32,
+          ellipsis: true,
+          lineGap: 1,
+        });
 
       cursorY += 46;
     }
@@ -998,18 +1057,34 @@ const drawExecutiveSummaryPage = (
         .fontSize(8)
         .font('Helvetica-Bold')
         .fillColor(COLORS.red)
-        .text(`${Math.round(pillar.weightedScore)}%`, rx + colW - 40, cursorY, { align: 'right', width: 28 });
-      
+        .text(`${Math.round(pillar.weightedScore)}%`, rx + colW - 40, cursorY, {
+          align: 'right',
+          width: 28,
+        });
+
       cursorY += 12;
       roundedRect(doc, rx + 12, cursorY, colW - 24, 4, 2, COLORS.borderGrey);
-      roundedRect(doc, rx + 12, cursorY, (colW - 24) * (pillar.weightedScore / 100), 4, 2, COLORS.redBorder);
+      roundedRect(
+        doc,
+        rx + 12,
+        cursorY,
+        (colW - 24) * (pillar.weightedScore / 100),
+        4,
+        2,
+        COLORS.redBorder
+      );
 
       const obs = pillar.findings[0]?.observation ?? 'Urgent attention required.';
       doc
         .fontSize(7.5)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(obs, rx + 12, cursorY + 8, { width: colW - 24, height: 32, ellipsis: true, lineGap: 1 });
+        .text(obs, rx + 12, cursorY + 8, {
+          width: colW - 24,
+          height: 32,
+          ellipsis: true,
+          lineGap: 1,
+        });
 
       cursorY += 46;
     }
@@ -1032,11 +1107,25 @@ const drawExecutiveSummaryPage = (
   // Legend under small radar chart
   doc.save();
   const legendY = colY + 190;
-  doc.rect(col3X + 10, legendY, 6, 6).fillColor('#F59E0B').fill();
-  doc.fontSize(6).font('Helvetica-Bold').fillColor(COLORS.primary).text('YOUR COMPANY PROFILE', col3X + 20, legendY + 1);
-  
-  doc.rect(col3X + 10, legendY + 12, 6, 6).fillColor('#EF4444').fill();
-  doc.fontSize(6).font('Helvetica-Bold').fillColor(COLORS.primary).text('INDUSTRY STANDARD BASELINE', col3X + 20, legendY + 13);
+  doc
+    .rect(col3X + 10, legendY, 6, 6)
+    .fillColor('#F59E0B')
+    .fill();
+  doc
+    .fontSize(6)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text('YOUR COMPANY PROFILE', col3X + 20, legendY + 1);
+
+  doc
+    .rect(col3X + 10, legendY + 12, 6, 6)
+    .fillColor('#EF4444')
+    .fill();
+  doc
+    .fontSize(6)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text('INDUSTRY STANDARD BASELINE', col3X + 20, legendY + 13);
   doc.restore();
 
   // --- BOTTOM KNOCKOUT SYSTEM CARD (Y = 660, fitting within the bottom boundary) ---
@@ -1054,11 +1143,17 @@ const drawExecutiveSummaryPage = (
       .fontSize(8)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
-      .text('Critical vulnerabilities requiring immediate remedial action.', PAGE_MARGIN + 38, koY + 26);
+      .text(
+        'Critical vulnerabilities requiring immediate remedial action.',
+        PAGE_MARGIN + 38,
+        koY + 26
+      );
 
     const knockoutPillars = result.pillarScores.filter((p) => p.hasKnockout);
-    const koW = (COLORS.pageWidth - 32 - (knockoutPillars.length - 1) * 12) / Math.max(1, knockoutPillars.length);
-    
+    const koW =
+      (COLORS.pageWidth - 32 - (knockoutPillars.length - 1) * 12) /
+      Math.max(1, knockoutPillars.length);
+
     let koCx = PAGE_MARGIN + 16;
     for (const pillar of knockoutPillars.slice(0, 3)) {
       roundedRect(doc, koCx, koY + 44, koW, 64, 4, COLORS.white, COLORS.borderGrey);
@@ -1070,12 +1165,19 @@ const drawExecutiveSummaryPage = (
         .fillColor(COLORS.primary)
         .text(`${pillar.pillarName}`, koCx + 10, koY + 50, { width: koW - 20, ellipsis: true });
 
-      const detail = pillar.findings.find((f) => f.riskType === 'KNOCKOUT')?.observation ?? 'Kill-switch risk identified.';
+      const detail =
+        pillar.findings.find((f) => f.riskType === 'KNOCKOUT')?.observation ??
+        'Kill-switch risk identified.';
       doc
         .fontSize(7)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(detail, koCx + 10, koY + 62, { width: koW - 20, height: 26, ellipsis: true, lineGap: 1 });
+        .text(detail, koCx + 10, koY + 62, {
+          width: koW - 20,
+          height: 26,
+          ellipsis: true,
+          lineGap: 1,
+        });
 
       roundedRect(doc, koCx + 10, koY + 92, 55, 10, 2, COLORS.redBorder);
       doc
@@ -1087,7 +1189,7 @@ const drawExecutiveSummaryPage = (
       koCx += koW + 12;
     }
   }
-}
+};
 
 // ============================================================
 const drawPillarPage = (
@@ -1108,23 +1210,40 @@ const drawPillarPage = (
   // Draw status pill based on score/knockout
   const isGreen = pillar.weightedScore >= 71 && !pillar.hasKnockout;
   const isAmber = pillar.weightedScore >= 41 && pillar.weightedScore < 71 && !pillar.hasKnockout;
-  
-  const badgeText = isGreen ? 'TOP STRENGTH' : isAmber ? 'STABILIZING' : 'CRITICAL UNDERPERFORMANCE';
+
+  const badgeText = isGreen
+    ? 'TOP STRENGTH'
+    : isAmber
+      ? 'STABILIZING'
+      : 'CRITICAL UNDERPERFORMANCE';
   const badgeColor = isGreen ? COLORS.greenBorder : isAmber ? COLORS.amberBorder : COLORS.redBorder; // Solid color for fill
   const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12; // Dynamic width with 6pt padding on left/right
 
   // Draw left check/warning square box with radius 3
   const statusBoxColor = isGreen ? COLORS.green : isAmber ? COLORS.amber : COLORS.red;
-  roundedRect(doc, PAGE_MARGIN, badgeY - 1, 14, 14, 3, isGreen ? COLORS.greenBg : isAmber ? COLORS.amberBg : COLORS.redBg, statusBoxColor);
+  roundedRect(
+    doc,
+    PAGE_MARGIN,
+    badgeY - 1,
+    14,
+    14,
+    3,
+    isGreen ? COLORS.greenBg : isAmber ? COLORS.amberBg : COLORS.redBg,
+    statusBoxColor
+  );
   drawShieldIcon(doc, PAGE_MARGIN + 2, badgeY + 2, 10, statusBoxColor);
 
   // Draw status pill (fill and stroke with the same badgeColor, radius = 6)
   roundedRect(doc, PAGE_MARGIN + 22, badgeY - 1, badgeW, 14, 6, badgeColor, badgeColor);
-  
+
   // Draw white text, centered vertically and horizontally inside the status pill
   doc
     .fillColor(COLORS.white)
-    .text(badgeText, PAGE_MARGIN + 22, badgeY + 3.5, { width: badgeW, align: 'center', lineBreak: false });
+    .text(badgeText, PAGE_MARGIN + 22, badgeY + 3.5, {
+      width: badgeW,
+      align: 'center',
+      lineBreak: false,
+    });
 
   // Draw Short Code badge to the right of the status pill
   const codeX = PAGE_MARGIN + 22 + badgeW + 8;
@@ -1145,16 +1264,18 @@ const drawPillarPage = (
 
   // Description text under the title
   const pillarDescriptions: Record<string, string> = {
-    FL: "An evaluation of leadership continuity, key-person risk, and strategic management frameworks.",
-    FR: "An institutional-grade evaluation of capital efficiency, reserve resilience, and fiscal governance models.",
-    BM: "An analysis of revenue streams, customer concentration, pricing structures, and product market fit.",
-    OP: "An audit of operational redundancy, system maturity, disaster recovery readiness, and process scaling.",
-    MS: "An assessment of marketing execution, customer acquisition cost efficiency, and brand growth velocity.",
-    GC: "An evaluation of regulatory compliance, board oversight, employee NDA policies, and data privacy frameworks.",
-    SS: "An audit of scaling capability, quarterly strategic targets, addressable market mapping, and milestone execution."
+    FL: 'An evaluation of leadership continuity, key-person risk, and strategic management frameworks.',
+    FR: 'An institutional-grade evaluation of capital efficiency, reserve resilience, and fiscal governance models.',
+    BM: 'An analysis of revenue streams, customer concentration, pricing structures, and product market fit.',
+    OP: 'An audit of operational redundancy, system maturity, disaster recovery readiness, and process scaling.',
+    MS: 'An assessment of marketing execution, customer acquisition cost efficiency, and brand growth velocity.',
+    GC: 'An evaluation of regulatory compliance, board oversight, employee NDA policies, and data privacy frameworks.',
+    SS: 'An audit of scaling capability, quarterly strategic targets, addressable market mapping, and milestone execution.',
   };
-  const descText = pillarDescriptions[pillar.pillarCode] ?? "An in-depth diagnostic analysis of this operational architecture.";
-  
+  const descText =
+    pillarDescriptions[pillar.pillarCode] ??
+    'An in-depth diagnostic analysis of this operational architecture.';
+
   doc
     .fontSize(8.5)
     .font('Helvetica')
@@ -1166,9 +1287,18 @@ const drawPillarPage = (
   const scoreCy = badgeY + 22; // Centered vertically relative to header height
   const scoreRadius = 32;
   const scoreRingW = 6;
-  
+
   const pDetails = getPdfBandDetails(pillar.weightedScore, pillar.hasKnockout);
-  drawDonutGauge(doc, scoreCx, scoreCy, scoreRadius, pillar.weightedScore, pDetails, 'Pillar Score', scoreRingW);
+  drawDonutGauge(
+    doc,
+    scoreCx,
+    scoreCy,
+    scoreRadius,
+    pillar.weightedScore,
+    pDetails,
+    'Pillar Score',
+    scoreRingW
+  );
 
   // SHIFTED DOWN: Divider line shifted to 152 to avoid touching score text/gauge
   doc.y = 152;
@@ -1191,14 +1321,20 @@ const drawPillarPage = (
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(pillar.hasKnockout ? COLORS.red : pDetails.text)
-    .text('PERFORMANCE ANALYSIS', PAGE_MARGIN + 16, midY + 12, { width: cardW - 32, characterSpacing: 1.2 });
+    .text('PERFORMANCE ANALYSIS', PAGE_MARGIN + 16, midY + 12, {
+      width: cardW - 32,
+      characterSpacing: 1.2,
+    });
 
-  const findingsToRender = pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
-  
+  const findingsToRender =
+    pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
+
   // Sort findings to find the highest score and lowest score
   const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
-  const recText = highestScored ? highestScored.recommendation : 'Leverage existing operational strengths to drive scaling.';
-  
+  const recText = highestScored
+    ? highestScored.recommendation
+    : 'Leverage existing operational strengths to drive scaling.';
+
   // Shifted recommendation to the next line using a single newline (\n) without paragraphing
   const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\nRecommendation: ${recText}`;
 
@@ -1226,16 +1362,23 @@ const drawPillarPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text(ratings[0].toUpperCase(), startX, midY + 95, { width: barW });
-  
+
   const rateText1 = isGreen ? 'SUPERIOR (TIER 1)' : isAmber ? 'STABILIZING' : 'REACTIVE';
   doc
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
     .text(rateText1, startX, midY + 103, { width: barW });
-  
+
   // Segmented progress blocks
-  const drawSegmentedProgress = (doc: PDFKit.PDFDocument, x: number, y: number, w: number, filledCount: number, color: string) => {
+  const drawSegmentedProgress = (
+    doc: PDFKit.PDFDocument,
+    x: number,
+    y: number,
+    w: number,
+    filledCount: number,
+    color: string
+  ) => {
     const segW = (w - 6) / 3;
     for (let i = 0; i < 3; i++) {
       const segX = x + i * (segW + 3);
@@ -1250,7 +1393,14 @@ const drawPillarPage = (
     return 1;
   };
 
-  drawSegmentedProgress(doc, startX, midY + 114, barW, getFilledSegments(ratingVal1), pDetails.border);
+  drawSegmentedProgress(
+    doc,
+    startX,
+    midY + 114,
+    barW,
+    getFilledSegments(ratingVal1),
+    pDetails.border
+  );
 
   // Rating 2
   doc
@@ -1258,30 +1408,37 @@ const drawPillarPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text(ratings[1].toUpperCase(), startX + barW + barGap, midY + 95, { width: barW });
-  
+
   const rateText2 = isGreen ? 'OPTIMAL (UNLEVERAGED)' : isAmber ? 'STANDARD' : 'VULNERABLE';
   doc
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
     .text(rateText2, startX + barW + barGap, midY + 103, { width: barW });
-  
-  drawSegmentedProgress(doc, startX + barW + barGap, midY + 114, barW, getFilledSegments(ratingVal2), pDetails.border);
+
+  drawSegmentedProgress(
+    doc,
+    startX + barW + barGap,
+    midY + 114,
+    barW,
+    getFilledSegments(ratingVal2),
+    pDetails.border
+  );
 
   // Draw Data Source block on the right (matching height 140)
   roundedRect(doc, blockX, midY, blockW, cardH, 6, COLORS.lightGrey, COLORS.borderGrey);
-  
+
   const imgMargin = 6;
   const imgW = blockW - imgMargin * 2;
   const imgH = cardH - imgMargin * 2 - 20;
-  
+
   if (PILLAR_IMG_BUFFER) {
     try {
       const imgX = blockX + imgMargin;
       const imgY = midY + imgMargin;
       doc.image(PILLAR_IMG_BUFFER, imgX, imgY, {
         width: imgW,
-        height: imgH
+        height: imgH,
       });
       // Add gradient overlay
       doc.save();
@@ -1298,7 +1455,7 @@ const drawPillarPage = (
       doc.restore();
     } catch {}
   }
-  
+
   // Data Source Caption below the image
   doc
     .fontSize(6)
@@ -1306,12 +1463,17 @@ const drawPillarPage = (
     .fillColor(COLORS.accent)
     .text('DATA SOURCE', blockX + imgMargin, midY + cardH - 18, { lineBreak: false });
 
-  const displayId = metadata?.sessionId ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}` : 'BV-DIAG-TEMP';
+  const displayId = metadata?.sessionId
+    ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}`
+    : 'BV-DIAG-TEMP';
   doc
     .fontSize(6)
     .font('Helvetica')
     .fillColor(COLORS.primary)
-    .text(`Aggregated Audit Data ${displayId}`, blockX + imgMargin, midY + cardH - 10, { width: imgW, ellipsis: true });
+    .text(`Aggregated Audit Data ${displayId}`, blockX + imgMargin, midY + cardH - 10, {
+      width: imgW,
+      ellipsis: true,
+    });
 
   doc.y = midY + cardH + 16;
 
@@ -1321,56 +1483,143 @@ const drawPillarPage = (
   // Static backfill map of default observations/recommendations to avoid empty boxes
   const defaultFindingsMap: Record<string, { observation: string; recommendation: string }[]> = {
     FL: [
-      { observation: "Founder roles and operational authorities are informal.", recommendation: "Document founder decision authority matrix." },
-      { observation: "No formal succession plan exists for key management.", recommendation: "Establish formal advisory board structures." },
-      { observation: "Advisory board oversight is absent or irregular.", recommendation: "Implement performance review checklists." },
-      { observation: "Key-person risk is concentrated in the founding team.", recommendation: "Design executive key-person insurance." }
+      {
+        observation: 'Founder roles and operational authorities are informal.',
+        recommendation: 'Document founder decision authority matrix.',
+      },
+      {
+        observation: 'No formal succession plan exists for key management.',
+        recommendation: 'Establish formal advisory board structures.',
+      },
+      {
+        observation: 'Advisory board oversight is absent or irregular.',
+        recommendation: 'Implement performance review checklists.',
+      },
+      {
+        observation: 'Key-person risk is concentrated in the founding team.',
+        recommendation: 'Design executive key-person insurance.',
+      },
     ],
     FR: [
-      { observation: "Capital buffers are thin with under 60 days of runway.", recommendation: "Optimize corporate tax reserves." },
-      { observation: "Cash flow velocity is variable and undocumented.", recommendation: "Formalize contingency capital buffers." },
-      { observation: "Vendor payment terms are not optimized for cash cycles.", recommendation: "Consolidate vendor credit terms." },
-      { observation: "Cash forecasting is performed ad-hoc without tooling.", recommendation: "Implement automated cash forecasting." }
+      {
+        observation: 'Capital buffers are thin with under 60 days of runway.',
+        recommendation: 'Optimize corporate tax reserves.',
+      },
+      {
+        observation: 'Cash flow velocity is variable and undocumented.',
+        recommendation: 'Formalize contingency capital buffers.',
+      },
+      {
+        observation: 'Vendor payment terms are not optimized for cash cycles.',
+        recommendation: 'Consolidate vendor credit terms.',
+      },
+      {
+        observation: 'Cash forecasting is performed ad-hoc without tooling.',
+        recommendation: 'Implement automated cash forecasting.',
+      },
     ],
     BM: [
-      { observation: "Customer concentration in a single account exceeds 30%.", recommendation: "Diversify customer contract models." },
-      { observation: "Intellectual property licensing models are unstructured.", recommendation: "Define key IP licensing terms." },
-      { observation: "Pricing structures lack volume-tier differentiation.", recommendation: "Review pricing multipliers per tier." },
-      { observation: "Margin leakages exist in variable delivery costs.", recommendation: "Analyze variable costs margins." }
+      {
+        observation: 'Customer concentration in a single account exceeds 30%.',
+        recommendation: 'Diversify customer contract models.',
+      },
+      {
+        observation: 'Intellectual property licensing models are unstructured.',
+        recommendation: 'Define key IP licensing terms.',
+      },
+      {
+        observation: 'Pricing structures lack volume-tier differentiation.',
+        recommendation: 'Review pricing multipliers per tier.',
+      },
+      {
+        observation: 'Margin leakages exist in variable delivery costs.',
+        recommendation: 'Analyze variable costs margins.',
+      },
     ],
     OP: [
-      { observation: "Operational processes are key-person dependent.", recommendation: "Document standard operating systems." },
-      { observation: "Critical business backups are not automated.", recommendation: "Introduce critical cloud backups." },
-      { observation: "Data migrations are performed manually without verification.", recommendation: "Audit automated migration steps." },
-      { observation: "No formal disaster recovery plan is documented.", recommendation: "Perform disaster recovery trial." }
+      {
+        observation: 'Operational processes are key-person dependent.',
+        recommendation: 'Document standard operating systems.',
+      },
+      {
+        observation: 'Critical business backups are not automated.',
+        recommendation: 'Introduce critical cloud backups.',
+      },
+      {
+        observation: 'Data migrations are performed manually without verification.',
+        recommendation: 'Audit automated migration steps.',
+      },
+      {
+        observation: 'No formal disaster recovery plan is documented.',
+        recommendation: 'Perform disaster recovery trial.',
+      },
     ],
     MS: [
-      { observation: "Customer onboarding churn occurs in the first 30 days.", recommendation: "Refine onboarding nurturing flows." },
-      { observation: "Sales scripts and pitches are undocumented.", recommendation: "Audit scripts for enterprise sales." },
-      { observation: "Marketing channel attribution is unmeasured.", recommendation: "Setup tracking attribution metrics." },
-      { observation: "Customer health scoring is not utilized by CS.", recommendation: "Formalize customer health scoring." }
+      {
+        observation: 'Customer onboarding churn occurs in the first 30 days.',
+        recommendation: 'Refine onboarding nurturing flows.',
+      },
+      {
+        observation: 'Sales scripts and pitches are undocumented.',
+        recommendation: 'Audit scripts for enterprise sales.',
+      },
+      {
+        observation: 'Marketing channel attribution is unmeasured.',
+        recommendation: 'Setup tracking attribution metrics.',
+      },
+      {
+        observation: 'Customer health scoring is not utilized by CS.',
+        recommendation: 'Formalize customer health scoring.',
+      },
     ],
     GC: [
-      { observation: "Regulatory compliance audits are not conducted annually.", recommendation: "Conduct annual regulatory compliance review." },
-      { observation: "Board resolutions are not formally archived.", recommendation: "Document board resolutions flow." },
-      { observation: "Employee NDAs are outdated or missing.", recommendation: "Standardize employee NDA policies." },
-      { observation: "Staff data privacy training is not formalized.", recommendation: "Train staff on data privacy guidelines." }
+      {
+        observation: 'Regulatory compliance audits are not conducted annually.',
+        recommendation: 'Conduct annual regulatory compliance review.',
+      },
+      {
+        observation: 'Board resolutions are not formally archived.',
+        recommendation: 'Document board resolutions flow.',
+      },
+      {
+        observation: 'Employee NDAs are outdated or missing.',
+        recommendation: 'Standardize employee NDA policies.',
+      },
+      {
+        observation: 'Staff data privacy training is not formalized.',
+        recommendation: 'Train staff on data privacy guidelines.',
+      },
     ],
     SS: [
-      { observation: "Quarterly growth targets are undefined at team levels.", recommendation: "Define clean quarterly strategic targets." },
-      { observation: "Total addressable market segmentation is unmapped.", recommendation: "Audit addressable market segmentation." },
-      { observation: "Expansion deadlines are not tracked in a PM tool.", recommendation: "Map out expansion target deadlines." },
-      { observation: "Business units lack dashboard metric alignment.", recommendation: "Align business unit leads on dashboard metrics." }
-    ]
+      {
+        observation: 'Quarterly growth targets are undefined at team levels.',
+        recommendation: 'Define clean quarterly strategic targets.',
+      },
+      {
+        observation: 'Total addressable market segmentation is unmapped.',
+        recommendation: 'Audit addressable market segmentation.',
+      },
+      {
+        observation: 'Expansion deadlines are not tracked in a PM tool.',
+        recommendation: 'Map out expansion target deadlines.',
+      },
+      {
+        observation: 'Business units lack dashboard metric alignment.',
+        recommendation: 'Align business unit leads on dashboard metrics.',
+      },
+    ],
   };
 
   // Select 4 findings. If we have fewer than 4, fill remaining with defaults so boxes are NEVER empty
   const selectedFindings: ScoringFinding[] = [];
   const sortedFindings = [...findingsToRender].sort((a, b) => b.score - a.score);
-  
+
   if (sortedFindings.length >= 4) {
     selectedFindings.push(sortedFindings[0], sortedFindings[1]); // 2 highest
-    selectedFindings.push(sortedFindings[sortedFindings.length - 2], sortedFindings[sortedFindings.length - 1]); // 2 lowest
+    selectedFindings.push(
+      sortedFindings[sortedFindings.length - 2],
+      sortedFindings[sortedFindings.length - 1]
+    ); // 2 lowest
   } else {
     selectedFindings.push(...sortedFindings);
     const defaults = defaultFindingsMap[pillar.pillarCode] || [];
@@ -1384,7 +1633,7 @@ const drawPillarPage = (
         observation: def.observation,
         recommendation: def.recommendation,
         riskType: 'NORMAL' as any,
-        score: 100
+        score: 100,
       });
     }
   }
@@ -1424,20 +1673,39 @@ const drawPillarPage = (
       .fontSize(8)
       .font('Helvetica-Bold')
       .fillColor(COLORS.primary)
-      .text(finding.observation, ox + 25, textY, { width: obsW - 35, height: 22, ellipsis: true, lineGap: 1 });
+      .text(finding.observation, ox + 25, textY, {
+        width: obsW - 35,
+        height: 22,
+        ellipsis: true,
+        lineGap: 1,
+      });
 
     // Description: Selected Answer Text (regular)
     doc
       .fontSize(7.5)
       .font('Helvetica')
       .fillColor(COLORS.bodyText)
-      .text(finding.selectedLabel, ox + 10, oy + 34, { width: obsW - 20, height: 50, ellipsis: true, lineGap: 1.5 });
+      .text(finding.selectedLabel, ox + 10, oy + 34, {
+        width: obsW - 20,
+        height: 50,
+        ellipsis: true,
+        lineGap: 1.5,
+      });
   }
 
   // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the bottom consistently)
   const mapY = 635;
-  roundedRect(doc, PAGE_MARGIN, mapY, COLORS.pageWidth, 125, 8, COLORS.lightGrey, COLORS.borderGrey);
-  
+  roundedRect(
+    doc,
+    PAGE_MARGIN,
+    mapY,
+    COLORS.pageWidth,
+    125,
+    8,
+    COLORS.lightGrey,
+    COLORS.borderGrey
+  );
+
   // Draw checkbox list watermark icon in background
   drawCheckboxListWatermark(doc, PAGE_MARGIN + COLORS.pageWidth - 60, mapY + 20, 48);
 
@@ -1450,7 +1718,11 @@ const drawPillarPage = (
     .fontSize(7.5)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text('Tailored action plan designed to mitigate organizational bottlenecks.', PAGE_MARGIN + 16, mapY + 24);
+    .text(
+      'Tailored action plan designed to mitigate organizational bottlenecks.',
+      PAGE_MARGIN + 16,
+      mapY + 24
+    );
 
   const rx = PAGE_MARGIN + 16;
   const stepW = 230;
@@ -1463,7 +1735,10 @@ const drawPillarPage = (
     const sy = mapY + 44 + row * 38;
 
     doc.save();
-    doc.circle(sx + 8, sy + 12, 8).fillColor(COLORS.primary).fill();
+    doc
+      .circle(sx + 8, sy + 12, 8)
+      .fillColor(COLORS.primary)
+      .fill();
     doc
       .fontSize(7.5)
       .font('Helvetica-Bold')
@@ -1485,7 +1760,12 @@ const drawPillarPage = (
       .fontSize(7.5)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
-      .text(recText, sx + 22, sy + 12, { width: stepW - 25, height: 20, ellipsis: true, lineGap: 1 });
+      .text(recText, sx + 22, sy + 12, {
+        width: stepW - 25,
+        height: 20,
+        ellipsis: true,
+        lineGap: 1,
+      });
   }
 };
 
@@ -1505,54 +1785,56 @@ const getPillarSubCriteria = (code: string): string[] => {
 const getPillarDefaultSteps = (code: string): string[] => {
   const map: Record<string, string[]> = {
     FL: [
-      "Establish formal advisory board structures",
-      "Document founder decision authority matrix",
-      "Implement performance review checklists",
-      "Design executive key-person insurance"
+      'Establish formal advisory board structures',
+      'Document founder decision authority matrix',
+      'Implement performance review checklists',
+      'Design executive key-person insurance',
     ],
     FR: [
-      "Optimize corporate tax reserves",
-      "Formalize contingency capital buffers",
-      "Consolidate vendor credit terms",
-      "Implement automated cash forecasting"
+      'Optimize corporate tax reserves',
+      'Formalize contingency capital buffers',
+      'Consolidate vendor credit terms',
+      'Implement automated cash forecasting',
     ],
     BM: [
-      "Diversify customer contract models",
-      "Define key IP licensing terms",
-      "Review pricing multipliers per tier",
-      "Analyze variable costs margins"
+      'Diversify customer contract models',
+      'Define key IP licensing terms',
+      'Review pricing multipliers per tier',
+      'Analyze variable costs margins',
     ],
     OP: [
-      "Document standard operating systems",
-      "Introduce critical cloud backups",
-      "Audit automated migration steps",
-      "Perform disaster recovery trial"
+      'Document standard operating systems',
+      'Introduce critical cloud backups',
+      'Audit automated migration steps',
+      'Perform disaster recovery trial',
     ],
     MS: [
-      "Refine onboarding nurturing flows",
-      "Audit scripts for enterprise sales",
-      "Setup tracking attribution metrics",
-      "Formalize customer health scoring"
+      'Refine onboarding nurturing flows',
+      'Audit scripts for enterprise sales',
+      'Setup tracking attribution metrics',
+      'Formalize customer health scoring',
     ],
     GC: [
-      "Conduct annual regulatory compliance review",
-      "Document board resolutions flow",
-      "Standardize employee NDA policies",
-      "Train staff on data privacy guidelines"
+      'Conduct annual regulatory compliance review',
+      'Document board resolutions flow',
+      'Standardize employee NDA policies',
+      'Train staff on data privacy guidelines',
     ],
     SS: [
-      "Define clean quarterly strategic targets",
-      "Audit addressable market segmentation",
-      "Map out expansion target deadlines",
-      "Align business unit leads on dashboard metrics"
-    ]
+      'Define clean quarterly strategic targets',
+      'Audit addressable market segmentation',
+      'Map out expansion target deadlines',
+      'Align business unit leads on dashboard metrics',
+    ],
   };
-  return map[code] ?? [
-    "Assess immediate mitigation plans",
-    "Establish structured milestones",
-    "Monitor progress weekly",
-    "Engage external advisory specialists"
-  ];
+  return (
+    map[code] ?? [
+      'Assess immediate mitigation plans',
+      'Establish structured milestones',
+      'Monitor progress weekly',
+      'Engage external advisory specialists',
+    ]
+  );
 };
 
 const extractFirstWords = (text: string, count: number): string => {
@@ -1576,12 +1858,15 @@ const drawNextStepsPageCustom = (
   drawPageBackground(doc);
 
   drawHeader(doc, businessName, date);
-  
+
   // Custom header title with left margin accent vertical line (matching 4.jpg)
   const headY = doc.y;
   doc.save();
   doc.lineWidth(4).strokeColor('#3B82F6');
-  doc.moveTo(PAGE_MARGIN + 2, headY + 3).lineTo(PAGE_MARGIN + 2, headY + 38).stroke();
+  doc
+    .moveTo(PAGE_MARGIN + 2, headY + 3)
+    .lineTo(PAGE_MARGIN + 2, headY + 38)
+    .stroke();
   doc.restore();
 
   doc
@@ -1593,7 +1878,9 @@ const drawNextStepsPageCustom = (
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
-    .text('DIAGNOSTIC POST-ANALYSIS ROADMAP', PAGE_MARGIN + 12, headY + 22, { characterSpacing: 1.2 });
+    .text('DIAGNOSTIC POST-ANALYSIS ROADMAP', PAGE_MARGIN + 12, headY + 22, {
+      characterSpacing: 1.2,
+    });
 
   doc.y = headY + 45;
   hr(doc, doc.y, COLORS.accent);
@@ -1609,21 +1896,22 @@ const drawNextStepsPageCustom = (
   if (phase === Phase.PHASE1) {
     line1Text = 'You have mapped your business core (Phase 1).';
     line2Text = 'Upgrade to Phase 2A for full structural clarity.';
-    bodyText = 
-      "The initial Phase 1 scan has successfully identified the high-level markers of your operations. While this core mapping is a critical first step, unlocking sustainable growth requires a deep dive into the architectural health of all 7 business units.\n\n" +
-      "Moving from high-level scanning to implementation requires deep diagnostic clarity. Upgrading to Phase 2A will provide detailed observations, concrete recommendations, and tailored checklists across every operational pillar, transforming weak links into competitive assets.";
+    bodyText =
+      'The initial Phase 1 scan has successfully identified the high-level markers of your operations. While this core mapping is a critical first step, unlocking sustainable growth requires a deep dive into the architectural health of all 7 business units.\n\n' +
+      'Moving from high-level scanning to implementation requires deep diagnostic clarity. Upgrading to Phase 2A will provide detailed observations, concrete recommendations, and tailored checklists across every operational pillar, transforming weak links into competitive assets.';
   } else if (phase === Phase.PHASE2A) {
     line1Text = 'You now have structural clarity (2A).';
     line2Text = 'Execution strength requires deeper testing (2B).';
     bodyText =
-      "The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n" +
-      "Moving from identification to implementation is a non-linear process. It requires a pivot from broad observation to surgical precision. The following intelligence upgrades are designed to convert strategic theory into operational dominance, ensuring that every identified weakness is transformed into a competitive moat.";
-  } else { // Phase.PHASE2B (Consultation CTA Copy)
+      'The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n' +
+      'Moving from identification to implementation is a non-linear process. It requires a pivot from broad observation to surgical precision. The following intelligence upgrades are designed to convert strategic theory into operational dominance, ensuring that every identified weakness is transformed into a competitive moat.';
+  } else {
+    // Phase.PHASE2B (Consultation CTA Copy)
     line1Text = 'Your Deep Dive results are synthesized (2B).';
     line2Text = 'Move to execution with a Strategic Consultation.';
     bodyText =
-      "This Phase 2B deep dive audit has successfully stress-tested your targeted operational structures. Having identified both the baseline strengths and the bottleneck points, your roadmap for building long-term scaling capacity is now fully clear.\n\n" +
-      "The critical next step to bridge diagnostic strategy with day-to-day execution is securing professional advisory guidance. Booking a 1-on-1 strategic consultation will allow us to unpack your results, prioritize your action plan, and deploy resources for immediate operational scaling.";
+      'This Phase 2B deep dive audit has successfully stress-tested your targeted operational structures. Having identified both the baseline strengths and the bottleneck points, your roadmap for building long-term scaling capacity is now fully clear.\n\n' +
+      'The critical next step to bridge diagnostic strategy with day-to-day execution is securing professional advisory guidance. Booking a 1-on-1 strategic consultation will allow us to unpack your results, prioritize your action plan, and deploy resources for immediate operational scaling.';
   }
 
   doc
@@ -1648,15 +1936,15 @@ const drawNextStepsPageCustom = (
   const imgY = topY;
   const imgW = 215;
   const imgH = 150; // Match the length of the text filled at the left side
-  
+
   if (BUILDING_IMG_BUFFER) {
     try {
       // Make it fill the box exactly
       doc.image(BUILDING_IMG_BUFFER, imgX, imgY, {
         width: imgW,
-        height: imgH
+        height: imgH,
       });
-      
+
       // Add gradient overlay
       doc.save();
       const grad = doc.linearGradient(imgX, imgY, imgX, imgY + imgH);
@@ -1674,23 +1962,33 @@ const drawNextStepsPageCustom = (
   } else {
     roundedRect(doc, imgX, imgY, imgW, imgH, 6, COLORS.primary);
   }
-  
+
   // White overlay card in the bottom-right corner of the image
   const overlayW = 125;
   const overlayH = 45;
   const overlayX = imgX + imgW - overlayW + 10;
   const overlayY = imgY + imgH - overlayH + 10;
-  
+
   roundedRect(doc, overlayX, overlayY, overlayW, overlayH, 6, COLORS.white, COLORS.borderGrey);
-  
+
   // Draw blue circle with rising arrow
   doc.save();
-  doc.circle(overlayX + 18, overlayY + 22, 10).fillColor('#1D4ED8').fill();
+  doc
+    .circle(overlayX + 18, overlayY + 22, 10)
+    .fillColor('#1D4ED8')
+    .fill();
   doc.lineWidth(1.5).strokeColor(COLORS.white);
-  doc.moveTo(overlayX + 14, overlayY + 24).lineTo(overlayX + 22, overlayY + 18).stroke();
-  doc.moveTo(overlayX + 18, overlayY + 18).lineTo(overlayX + 22, overlayY + 18).lineTo(overlayX + 22, overlayY + 22).stroke();
+  doc
+    .moveTo(overlayX + 14, overlayY + 24)
+    .lineTo(overlayX + 22, overlayY + 18)
+    .stroke();
+  doc
+    .moveTo(overlayX + 18, overlayY + 18)
+    .lineTo(overlayX + 22, overlayY + 18)
+    .lineTo(overlayX + 22, overlayY + 22)
+    .stroke();
   doc.restore();
-  
+
   doc
     .fontSize(6)
     .font('Helvetica-Bold')
@@ -1705,7 +2003,7 @@ const drawNextStepsPageCustom = (
   // Upgrade Options / Strategic Next Steps section
   const maxBottomY = Math.max(doc.y, imgY + imgH);
   const opY = maxBottomY + 30;
-  
+
   const sectionTitle = phase === Phase.PHASE2B ? 'Strategic Next Steps' : 'Upgrade Options';
   doc
     .fontSize(11)
@@ -1720,17 +2018,20 @@ const drawNextStepsPageCustom = (
   const ux1 = PAGE_MARGIN;
   roundedRect(doc, ux1, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux1, opY + 16, 4, upgradeH, 2, '#3B82F6'); // Blue accent line
-  
+
   // compass icon
   drawDraftingCompassIcon(doc, ux1 + 16, opY + 30, 14);
-  
-  const card1Title = phase === Phase.PHASE2B ? 'Strategic Consultation' : 'Pillar-Specific Deep Dives';
-  const card1Desc = phase === Phase.PHASE2B 
-    ? 'Book a 1-on-1 session with our senior analysts to review your deep dive report, prioritize recommendations, and map out resource mobilization.'
-    : 'A comprehensive and vertical audit of your highest-impact pillars to extract actionable operational optimization nodes.';
-  const bulletList1 = phase === Phase.PHASE2B
-    ? ['1-on-1 Analyst Access', 'Prioritization Matrix', 'Resource Mobilization Plan']
-    : ['Vertical Risk Mapping', 'Operational Stress-Testing', 'Performance Benchmarking'];
+
+  const card1Title =
+    phase === Phase.PHASE2B ? 'Strategic Consultation' : 'Pillar-Specific Deep Dives';
+  const card1Desc =
+    phase === Phase.PHASE2B
+      ? 'Book a 1-on-1 session with our senior analysts to review your deep dive report, prioritize recommendations, and map out resource mobilization.'
+      : 'A comprehensive and vertical audit of your highest-impact pillars to extract actionable operational optimization nodes.';
+  const bulletList1 =
+    phase === Phase.PHASE2B
+      ? ['1-on-1 Analyst Access', 'Prioritization Matrix', 'Resource Mobilization Plan']
+      : ['Vertical Risk Mapping', 'Operational Stress-Testing', 'Performance Benchmarking'];
 
   doc
     .fontSize(10.5)
@@ -1746,7 +2047,11 @@ const drawNextStepsPageCustom = (
   let bulletY1 = opY + 94;
   for (const item of bulletList1) {
     drawCheckIcon(doc, ux1 + 16, bulletY1, 8);
-    doc.fontSize(7.5).font('Helvetica-Bold').fillColor(COLORS.primary).text(item, ux1 + 28, bulletY1 + 1);
+    doc
+      .fontSize(7.5)
+      .font('Helvetica-Bold')
+      .fillColor(COLORS.primary)
+      .text(item, ux1 + 28, bulletY1 + 1);
     bulletY1 += 12;
   }
 
@@ -1754,17 +2059,19 @@ const drawNextStepsPageCustom = (
   const ux2 = PAGE_MARGIN + upgradeW + 19;
   roundedRect(doc, ux2, opY + 16, upgradeW, upgradeH, 8, COLORS.white, COLORS.borderGrey);
   roundedRect(doc, ux2, opY + 16, 4, upgradeH, 2, COLORS.accent); // Orange accent line
-  
+
   // robot arm icon
   drawRobotArmIcon(doc, ux2 + 16, opY + 30, 14);
-  
+
   const card2Title = phase === Phase.PHASE2B ? 'Implementation Alignment' : 'Targeted Intelligence';
-  const card2Desc = phase === Phase.PHASE2B
-    ? 'Structure custom execution timelines and coordinate project teams to begin deploying the targeted bottleneck patches.'
-    : "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.";
-  const bulletList2 = phase === Phase.PHASE2B
-    ? ['Timeline Structuring', 'Project Coordinator Assignment', 'Continuous Progress Audits']
-    : ['Rapid Vulnerability Patching', 'Efficiency Simulations', 'Resource Allocation Modeling'];
+  const card2Desc =
+    phase === Phase.PHASE2B
+      ? 'Structure custom execution timelines and coordinate project teams to begin deploying the targeted bottleneck patches.'
+      : "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.";
+  const bulletList2 =
+    phase === Phase.PHASE2B
+      ? ['Timeline Structuring', 'Project Coordinator Assignment', 'Continuous Progress Audits']
+      : ['Rapid Vulnerability Patching', 'Efficiency Simulations', 'Resource Allocation Modeling'];
 
   doc
     .fontSize(10.5)
@@ -1780,7 +2087,11 @@ const drawNextStepsPageCustom = (
   let bulletY2 = opY + 94;
   for (const item of bulletList2) {
     drawTargetIcon(doc, ux2 + 16, bulletY2, 8);
-    doc.fontSize(7.5).font('Helvetica-Bold').fillColor(COLORS.primary).text(item, ux2 + 28, bulletY2 + 1);
+    doc
+      .fontSize(7.5)
+      .font('Helvetica-Bold')
+      .fillColor(COLORS.primary)
+      .text(item, ux2 + 28, bulletY2 + 1);
     bulletY2 += 12;
   }
 
@@ -1798,23 +2109,23 @@ const drawNextStepsPageCustom = (
   const supportData = [
     {
       title: 'Strategy Sessions',
-      desc: 'Quarterly executive-level workshops designed to realign leadership with the evolving business landscape.'
+      desc: 'Quarterly executive-level workshops designed to realign leadership with the evolving business landscape.',
     },
     {
       title: 'Advisory',
-      desc: 'Continuous oversight and on-demand guidance from our senior analysts to navigate unforeseen market shifts.'
+      desc: 'Continuous oversight and on-demand guidance from our senior analysts to navigate unforeseen market shifts.',
     },
     {
       title: 'Implementation Support',
-      desc: 'Hands-on assistance from our project management office to ensure your strategic roadmap is executed flawlessly.'
-    }
+      desc: 'Hands-on assistance from our project management office to ensure your strategic roadmap is executed flawlessly.',
+    },
   ];
 
   for (let i = 0; i < 3; i++) {
     const sx = PAGE_MARGIN + i * (supportW + supportGap);
     roundedRect(doc, sx, ssY + 16, supportW, 120, 6, COLORS.lightGrey, COLORS.borderGrey);
     roundedRect(doc, sx, ssY + 16, 3, 120, 2, '#059669'); // Green/Teal accent line
-    
+
     // Draw green icons
     if (i === 0) drawPeopleIcon(doc, sx + 12, ssY + 28, 14);
     else if (i === 1) drawBuildingIcon(doc, sx + 12, ssY + 28, 14, '#059669');
@@ -1831,7 +2142,7 @@ const drawNextStepsPageCustom = (
       .fillColor(COLORS.mutedText)
       .text(supportData[i].desc, sx + 12, ssY + 68, { width: supportW - 24, lineGap: 1.8 });
   }
-}
+};
 
 // ============================================================
 // LEGAL FRAMEWORK & METHODOLOGY PAGE (PAGE 11/12) - Balanced Spacing
@@ -1846,7 +2157,7 @@ const drawLegalPage = (
   drawPageBackground(doc);
 
   drawHeader(doc, businessName, date);
-  
+
   // Section 01 Tag
   const headY = doc.y;
   doc
@@ -1885,7 +2196,7 @@ const drawLegalPage = (
     .fillColor(COLORS.bodyText)
     .text(
       "This diagnostic report, including all underlying logic, algorithmic structures, and the 'PICA' trademark, is the exclusive intellectual property of Beauvision Associates. Unauthorized reproduction, distribution, or reverse-engineering of the PICA methodology is strictly prohibited under international copyright and trade secret laws.\n\n" +
-      "The methodologies contained herein, specifically the Seven Pillars Framework and Weighted Aggregate Scoring, are proprietary business intelligence assets developed through recursive diagnostic data modeling.",
+        'The methodologies contained herein, specifically the Seven Pillars Framework and Weighted Aggregate Scoring, are proprietary business intelligence assets developed through recursive diagnostic data modeling.',
       PAGE_MARGIN,
       topY,
       { width: COLORS.pageWidth, lineGap: 2.2 }
@@ -1906,13 +2217,14 @@ const drawLegalPage = (
     .font('Helvetica-Oblique')
     .fillColor(COLORS.primary)
     .text(
-      "This report is produced based on data and inputs provided directly by the user or client organization. Beauvision Associates does not perform independent third-party verification of the underlying data provided. Consequently, this document does not constitute a formal financial audit, tax advice, or legal opinion.",
+      'This report is produced based on data and inputs provided directly by the user or client organization. Beauvision Associates does not perform independent third-party verification of the underlying data provided. Consequently, this document does not constitute a formal financial audit, tax advice, or legal opinion.',
       PAGE_MARGIN + 16,
       warnY + 26,
       { width: COLORS.pageWidth - 32, lineGap: 2 }
     );
 
-  const disclaimerText = "Beauvision Associates offers no guarantees, express or implied, regarding specific business outcomes or ROI resulting from the implementation of recommendations within this report. Business conditions are dynamic; the insights provided are a \"snapshot in time\" and should be used as a supplementary tool in executive decision-making. Liability is limited to the cost of the diagnostic service provided.";
+  const disclaimerText =
+    'Beauvision Associates offers no guarantees, express or implied, regarding specific business outcomes or ROI resulting from the implementation of recommendations within this report. Business conditions are dynamic; the insights provided are a "snapshot in time" and should be used as a supplementary tool in executive decision-making. Liability is limited to the cost of the diagnostic service provided.';
   doc
     .fontSize(7.5)
     .font('Helvetica')
@@ -1926,20 +2238,20 @@ const drawLegalPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
     .text('SECTION 02', PAGE_MARGIN, sec2Y, { characterSpacing: 1.2 });
-  
+
   doc
     .fontSize(14)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
     .text('PICA Diagnostic Methodology', PAGE_MARGIN, sec2Y + 10);
-  
+
   doc.y = sec2Y + 30;
 
   const methY = doc.y + 10;
   const pW = 68;
   const pGap = 6;
   const stablePillars = getCanonicalPillars(pillars);
-  
+
   for (let i = 0; i < 7; i++) {
     const pillar = stablePillars[i];
     const pName = pillar ? pillar.pillarName : `Pillar 0${i + 1}`;
@@ -1973,23 +2285,30 @@ const drawLegalPage = (
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
     .text(
-      "Our algorithm does not treat all data points equally. Each pillar is weighted proportionally based on industry volatility and relative impact on overall company valuations. A proprietary Kinetic Coefficient is applied to normalize data against current market benchmarks.",
+      'Our algorithm does not treat all data points equally. Each pillar is weighted proportionally based on industry volatility and relative impact on overall company valuations. A proprietary Kinetic Coefficient is applied to normalize data against current market benchmarks.',
       PAGE_MARGIN + 14,
       colY + 26,
       { width: colW - 28, lineGap: 1.5 }
     );
 
   const tiers = [
-    { name: "Tier 1: STRONG", color: COLORS.greenBorder },
-    { name: "Tier 2: EMERGING", color: '#3B82F6' },
-    { name: "Tier 3: WEAK", color: COLORS.amberBorder },
-    { name: "Tier 4: CRITICAL", color: COLORS.redBorder }
+    { name: 'Tier 1: STRONG', color: COLORS.greenBorder },
+    { name: 'Tier 2: EMERGING', color: '#3B82F6' },
+    { name: 'Tier 3: WEAK', color: COLORS.amberBorder },
+    { name: 'Tier 4: CRITICAL', color: COLORS.redBorder },
   ];
   let ty = colY + 84;
   for (const t of tiers) {
     doc.save();
-    doc.rect(PAGE_MARGIN + 14, ty, 25, 4).fillColor(t.color).fill();
-    doc.fontSize(6.5).font('Helvetica-Bold').fillColor(COLORS.primary).text(t.name, PAGE_MARGIN + 45, ty - 1);
+    doc
+      .rect(PAGE_MARGIN + 14, ty, 25, 4)
+      .fillColor(t.color)
+      .fill();
+    doc
+      .fontSize(6.5)
+      .font('Helvetica-Bold')
+      .fillColor(COLORS.primary)
+      .text(t.name, PAGE_MARGIN + 45, ty - 1);
     doc.restore();
     ty += 12;
   }
@@ -2012,7 +2331,16 @@ const drawLegalPage = (
       { width: colW - 28, lineGap: 1.5 }
     );
 
-  roundedRect(doc, PAGE_MARGIN + colW + 33, colY + 84, colW - 28, 42, 4, COLORS.redBg, COLORS.redBorder);
+  roundedRect(
+    doc,
+    PAGE_MARGIN + colW + 33,
+    colY + 84,
+    colW - 28,
+    42,
+    4,
+    COLORS.redBg,
+    COLORS.redBorder
+  );
   drawWarningIcon(doc, PAGE_MARGIN + colW + 43, colY + 92, 12, COLORS.red);
   doc
     .fontSize(7.5)
@@ -2023,11 +2351,16 @@ const drawLegalPage = (
     .fontSize(7)
     .font('Helvetica')
     .fillColor(COLORS.bodyText)
-    .text('Prevents high performance in secondary business units from masking terminal baseline vulnerabilities.', PAGE_MARGIN + colW + 60, colY + 103, { width: colW - 60, lineGap: 1 });
+    .text(
+      'Prevents high performance in secondary business units from masking terminal baseline vulnerabilities.',
+      PAGE_MARGIN + colW + 60,
+      colY + 103,
+      { width: colW - 60, lineGap: 1 }
+    );
 
   // Add the version details and validation block at the bottom
   const botY = colY + 160;
-  
+
   // Bottom left Version Card
   roundedRect(doc, PAGE_MARGIN, botY, 160, 32, 4, COLORS.lightGrey, COLORS.borderGrey);
   drawDraftingCompassIcon(doc, PAGE_MARGIN + 8, botY + 8, 16);
@@ -2049,7 +2382,7 @@ const drawLegalPage = (
   doc.circle(valX + 10, botY + 16, 8).stroke();
   doc.circle(valX + 10, botY + 16, 4).stroke();
   doc.restore();
-  
+
   doc
     .fontSize(6)
     .font('Helvetica-Bold')
@@ -2071,7 +2404,7 @@ const drawClosingAttestationPage = (
   drawPageBackground(doc);
 
   drawHeader(doc, businessName, date);
-  
+
   // Tag
   const headY = doc.y;
   doc
@@ -2079,13 +2412,13 @@ const drawClosingAttestationPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
     .text('SECTION 03', PAGE_MARGIN, headY, { characterSpacing: 1.2 });
-  
+
   doc
     .fontSize(14)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
     .text('Closing Attestation', PAGE_MARGIN, headY + 10);
-  
+
   doc.y = headY + 45;
   hr(doc, doc.y, COLORS.accent);
   doc.moveDown(0.6);
@@ -2098,7 +2431,7 @@ const drawClosingAttestationPage = (
     .fillColor(COLORS.primary)
     .text('Validation and Advisory Closeout.', PAGE_MARGIN, topY);
 
-  const closingText = 
+  const closingText =
     "This report completes the PICA Level 2A operational assessment. The conclusions presented here are designed to guide the client organization's leadership in prioritizing operational upgrades and mitigating systemic risks. Beauvision Associates remains committed to supporting your strategic path forward. We appreciate the opportunity to partner with you in strengthening your business foundations.";
 
   doc
@@ -2118,18 +2451,20 @@ const drawClosingAttestationPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text('LEAD ADVISORY REPRESENTATIVE', PAGE_MARGIN, sigY);
-  
+
   doc
     .fontSize(12)
     .font('Helvetica-Oblique')
     .fillColor(COLORS.primary)
     .text('Ronald Beauvision', PAGE_MARGIN, sigY + 16);
-  
+
   doc
     .fontSize(7.5)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text('Senior Managing Partner\nBeauvision Associates Ltd', PAGE_MARGIN, sigY + 32, { lineGap: 1.5 });
+    .text('Senior Managing Partner\nBeauvision Associates Ltd', PAGE_MARGIN, sigY + 32, {
+      lineGap: 1.5,
+    });
 
   // Right column: Client Representative
   const clientX = PAGE_MARGIN + colW + colGap;
@@ -2138,35 +2473,53 @@ const drawClosingAttestationPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text('CLIENT ACKNOWLEDGEMENT', clientX, sigY);
-  
+
   doc
     .fontSize(12)
     .font('Helvetica-Oblique')
     .fillColor(COLORS.primary)
     .text(businessName, clientX, sigY + 16);
-  
+
   doc
     .fontSize(7.5)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text('Executive Officer / Representative\nAuthorized Stakeholder Signatory', clientX, sigY + 32, { lineGap: 1.5 });
+    .text(
+      'Executive Officer / Representative\nAuthorized Stakeholder Signatory',
+      clientX,
+      sigY + 32,
+      { lineGap: 1.5 }
+    );
 
   // Bottom stamp design box
   const stampY = sigY + 90;
-  roundedRect(doc, PAGE_MARGIN, stampY, COLORS.pageWidth, 54, 6, COLORS.lightGrey, COLORS.borderGrey);
+  roundedRect(
+    doc,
+    PAGE_MARGIN,
+    stampY,
+    COLORS.pageWidth,
+    54,
+    6,
+    COLORS.lightGrey,
+    COLORS.borderGrey
+  );
   drawShieldIcon(doc, PAGE_MARGIN + 16, stampY + 12, 16, '#059669'); // Green shield for approval
-  
+
   doc
     .fontSize(8.5)
     .font('Helvetica-Bold')
     .fillColor('#059669')
     .text('DIAGNOSTIC STATUS: COMPLETED & VALIDATED', PAGE_MARGIN + 38, stampY + 14);
-  
+
   doc
     .fontSize(7.5)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text('This attestation page formally seals the diagnostic session results for reference in future audits.', PAGE_MARGIN + 38, stampY + 28);
+    .text(
+      'This attestation page formally seals the diagnostic session results for reference in future audits.',
+      PAGE_MARGIN + 38,
+      stampY + 28
+    );
 };
 
 // ============================================================
@@ -2183,7 +2536,7 @@ const drawVisualizationPage = (
   drawPageBackground(doc);
 
   drawHeader(doc, businessName, date);
-  
+
   // Top title section
   const headY = doc.y;
   doc
@@ -2191,7 +2544,7 @@ const drawVisualizationPage = (
     .font('Helvetica-Bold')
     .fillColor('#1D4ED8')
     .text('ANALYTICAL ANNEX', PAGE_MARGIN, headY, { characterSpacing: 1.2 });
-  
+
   doc
     .fontSize(14)
     .font('Helvetica-Bold')
@@ -2199,7 +2552,9 @@ const drawVisualizationPage = (
     .text('PICA Diagnostic Visualization', PAGE_MARGIN, headY + 10);
 
   // Confidential document tag (top right)
-  const displayId = metadata?.sessionId ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}` : 'BV-DIAG-TEMP';
+  const displayId = metadata?.sessionId
+    ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}`
+    : 'BV-DIAG-TEMP';
   const tagX = PAGE_MARGIN + COLORS.pageWidth - 120;
   doc
     .fontSize(6)
@@ -2227,7 +2582,7 @@ const drawVisualizationPage = (
     .font('Helvetica')
     .fillColor(COLORS.bodyText)
     .text(
-      "The spider graph below maps your company profile against global sector benchmarks across the 7 strategic dimensions. The area of divergence represents the structural gap in execution velocity that must be optimized.",
+      'The spider graph below maps your company profile against global sector benchmarks across the 7 strategic dimensions. The area of divergence represents the structural gap in execution velocity that must be optimized.',
       PAGE_MARGIN + 16,
       topY + 26,
       { width: COLORS.pageWidth - 32, lineGap: 2.2 }
@@ -2244,10 +2599,21 @@ const drawVisualizationPage = (
   const legX = PAGE_MARGIN + 30;
   const legY = topY + 335;
   doc.rect(legX, legY, 8, 8).fillColor('#F59E0B').fill();
-  doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.primary).text('YOUR COMPANY PROFILE', legX + 14, legY + 1);
-  
-  doc.rect(legX + 200, legY, 8, 8).fillColor('#EF4444').fill();
-  doc.fontSize(7).font('Helvetica-Bold').fillColor(COLORS.primary).text('INDUSTRY STANDARD BASELINE', legX + 214, legY + 1);
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text('YOUR COMPANY PROFILE', legX + 14, legY + 1);
+
+  doc
+    .rect(legX + 200, legY, 8, 8)
+    .fillColor('#EF4444')
+    .fill();
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text('INDUSTRY STANDARD BASELINE', legX + 214, legY + 1);
   doc.restore();
 
   // Gap Analysis Logic Cards
@@ -2260,20 +2626,20 @@ const drawVisualizationPage = (
       title: 'Competitive Advantage',
       desc: 'Identified where the Amber Plot expands beyond the Red Boundary. These zones represent operational superiority and high-yield efficiency.',
       color: COLORS.greenBorder,
-      bg: COLORS.greenBg
+      bg: COLORS.greenBg,
     },
     {
       title: 'Market Parity',
       desc: 'Occurs where the plots overlap. Indicates standard performance alignment with industry peers, representing a stabilized but non-differentiated position.',
       color: '#3B82F6',
-      bg: '#EFF6FF'
+      bg: '#EFF6FF',
     },
     {
       title: 'Operational Deficit',
       desc: 'Noted where the Amber Plot resides inside the Red Boundary. These are priority remediation zones requiring immediate strategic intervention.',
       color: COLORS.redBorder,
-      bg: COLORS.redBg
-    }
+      bg: COLORS.redBg,
+    },
   ];
 
   for (let i = 0; i < 3; i++) {
@@ -2295,7 +2661,7 @@ const drawVisualizationPage = (
 
   // Bottom block: Authenticity (Left) and Signature (Right)
   const botY = gapY + 125;
-  
+
   // Diagnostic Authenticity Card
   roundedRect(doc, PAGE_MARGIN, botY, 160, 32, 4, COLORS.lightGrey, COLORS.borderGrey);
   doc.save();
@@ -2303,7 +2669,7 @@ const drawVisualizationPage = (
   doc.rect(PAGE_MARGIN + 8, botY + 8, 16, 16).stroke();
   doc.rect(PAGE_MARGIN + 12, botY + 12, 8, 8).fill();
   doc.restore();
-  
+
   doc
     .fontSize(6)
     .font('Helvetica-Bold')
@@ -2322,7 +2688,7 @@ const drawVisualizationPage = (
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
     .text('ANALYST SIGNATURE', sigX, botY, { characterSpacing: 1 });
-  
+
   doc
     .fontSize(14)
     .font('Helvetica-Oblique')
@@ -2353,7 +2719,7 @@ const drawDonutGauge = (
   customRingW?: number
 ) => {
   const COLORS = getColors(doc);
-  const ringW = customRingW ?? Math.max(8, radius * 0.20);
+  const ringW = customRingW ?? Math.max(8, radius * 0.2);
   const pct = Math.max(0, Math.min(100, score)) / 100;
   const full = Math.PI * 2;
 
@@ -2363,7 +2729,10 @@ const drawDonutGauge = (
   // Faded background circle inside the track
   if (colorDetails.bg) {
     doc.save();
-    doc.circle(cx, cy, radius - ringW / 2).fillColor(colorDetails.bg).fill();
+    doc
+      .circle(cx, cy, radius - ringW / 2)
+      .fillColor(colorDetails.bg)
+      .fill();
     doc.restore();
   }
 
@@ -2373,14 +2742,20 @@ const drawDonutGauge = (
   }
 
   // Centered score
-  doc.font('Helvetica-Bold').fontSize(radius * 0.58).fillColor(colorDetails.text);
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(radius * 0.58)
+    .fillColor(colorDetails.text);
   const numText = `${Math.round(score)}`;
   const numW = doc.widthOfString(numText);
   const numH = doc.currentLineHeight();
   doc.text(numText, cx - numW / 2, cy - numH / 2 - radius * 0.06, { lineBreak: false });
 
   // /100 caption or inner caption
-  doc.font('Helvetica').fontSize(radius * 0.2).fillColor(COLORS.mutedText);
+  doc
+    .font('Helvetica')
+    .fontSize(radius * 0.2)
+    .fillColor(COLORS.mutedText);
   const subText = '/ 100';
   const subW = doc.widthOfString(subText);
   doc.text(subText, cx - subW / 2, cy + radius * 0.22, { lineBreak: false });
