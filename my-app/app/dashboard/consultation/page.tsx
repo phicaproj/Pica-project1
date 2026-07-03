@@ -1372,6 +1372,24 @@ function HistoryRow({
   const matchedExpert =
     EXPERTS.find((e) => e.tier === booking.tier.tier) || EXPERTS[0];
 
+  const feedbacks = useMemo(() => {
+    if (!booking.adminNotes) return [];
+    try {
+      const parsed = JSON.parse(booking.adminNotes);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ title: "Advisor Feedback", content: booking.adminNotes, updatedAt: booking.adminNotesUpdatedAt }];
+    } catch (e) {
+      return booking.adminNotes
+        .split(/\n\n+/)
+        .map((p, idx) => ({
+          title: `Feedback Block #${idx + 1}`,
+          content: p.trim(),
+          updatedAt: booking.adminNotesUpdatedAt
+        }))
+        .filter(b => b.content);
+    }
+  }, [booking.adminNotes, booking.adminNotesUpdatedAt]);
+
   return (
     <div
       onClick={onOpenDetails}
@@ -1422,19 +1440,19 @@ function HistoryRow({
       </div>
 
       {/* Expanded Feedback Panel */}
-      {open && booking.adminNotes && (
-        <div className="mt-4 p-4 rounded-lg bg-[#0c0d12] border border-indigo-500/10 text-xs space-y-3 animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-indigo-400 uppercase tracking-widest text-[9px]">
-              Consultant Briefing Notes
-            </span>
-            <span className="text-[9px] text-gray-600">
-              Updated {booking.adminNotesUpdatedAt ? formatDate(booking.adminNotesUpdatedAt) : ""}
-            </span>
-          </div>
-          <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-            {booking.adminNotes}
-          </p>
+      {open && feedbacks.length > 0 && (
+        <div className="mt-4 p-4 rounded-lg bg-[#0c0d12] border border-indigo-500/10 text-xs space-y-4 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+          {feedbacks.map((f, idx) => (
+            <div key={idx} className="space-y-1 border-b border-white/5 pb-2 last:border-b-0 last:pb-0">
+              <div className="flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase">
+                <span>{f.title || `Feedback Block #${idx + 1}`}</span>
+                <span>{f.updatedAt ? formatDate(f.updatedAt) : ""}</span>
+              </div>
+              <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {f.content}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1466,13 +1484,23 @@ function ViewBookingModal({
         .join(" ")
     : matchedExpert.name;
 
-  const feedbackBlocks = useMemo(() => {
+  const feedbacks = useMemo(() => {
     if (!booking.adminNotes) return [];
-    return booking.adminNotes
-      .split(/\n\n+/)
-      .map((p) => p.trim())
-      .filter(Boolean);
-  }, [booking.adminNotes]);
+    try {
+      const parsed = JSON.parse(booking.adminNotes);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ title: "Advisor Feedback", content: booking.adminNotes, updatedAt: booking.adminNotesUpdatedAt }];
+    } catch (e) {
+      return booking.adminNotes
+        .split(/\n\n+/)
+        .map((p, idx) => ({
+          title: `Feedback Block #${idx + 1}`,
+          content: p.trim(),
+          updatedAt: booking.adminNotesUpdatedAt
+        }))
+        .filter(b => b.content);
+    }
+  }, [booking.adminNotes, booking.adminNotesUpdatedAt]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
@@ -1614,21 +1642,21 @@ function ViewBookingModal({
             <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
               Advisor Feedbacks
             </h3>
-            {feedbackBlocks.length > 0 ? (
+            {feedbacks.length > 0 ? (
               <div className="space-y-3">
-                {feedbackBlocks.map((block, idx) => (
+                {feedbacks.map((block, idx) => (
                   <div
-                    key={idx}
+                    key={block.id || idx}
                     className="p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/[0.02] space-y-2 relative"
                   >
                     <div className="flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase tracking-wider">
-                      <span>Feedback Block #{idx + 1}</span>
+                      <span>{block.title || `Feedback Block #${idx + 1}`}</span>
                       <span>
-                        {booking.adminNotesUpdatedAt ? formatDate(booking.adminNotesUpdatedAt) : ""}
+                        {block.updatedAt ? formatDate(block.updatedAt) : ""}
                       </span>
                     </div>
                     <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">
-                      {block}
+                      {block.content}
                     </p>
                   </div>
                 ))}

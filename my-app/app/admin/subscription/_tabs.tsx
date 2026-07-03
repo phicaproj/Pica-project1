@@ -1641,7 +1641,19 @@ function ClientHistoryModal({
   const [history, setHistory] = useState<AdminClientHistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [notes, setNotes] = useState(booking.adminNotes ?? "");
+
+  // Load initial feedback list from booking.adminNotes (JSON or legacy fallback)
+  const [feedbacks, setFeedbacks] = useState<{ id: string; title: string; content: string; updatedAt: string }[]>(() => {
+    if (!booking.adminNotes) return [];
+    try {
+      const parsed = JSON.parse(booking.adminNotes);
+      if (Array.isArray(parsed)) return parsed;
+      return [{ id: "legacy", title: "Advisor Feedback", content: booking.adminNotes, updatedAt: booking.adminNotesUpdatedAt || new Date().toISOString() }];
+    } catch (e) {
+      return [{ id: "legacy", title: "Advisor Feedback", content: booking.adminNotes, updatedAt: booking.adminNotesUpdatedAt || new Date().toISOString() }];
+    }
+  });
+
   const [savedNotesAt, setSavedNotesAt] = useState<string | null>(
     booking.adminNotesUpdatedAt,
   );
@@ -1667,12 +1679,15 @@ function ClientHistoryModal({
     };
   }, [booking.id]);
 
-  const dirty = notes !== (booking.adminNotes ?? "");
+  const dirty = useMemo(() => {
+    return JSON.stringify(feedbacks) !== (booking.adminNotes ?? "");
+  }, [feedbacks, booking.adminNotes]);
 
   const submit = async () => {
     setSaveError(null);
     setSaving(true);
-    const res = await adminUpdateConsultationBookingNotes(booking.id, notes);
+    const payloadString = JSON.stringify(feedbacks);
+    const res = await adminUpdateConsultationBookingNotes(booking.id, payloadString);
     setSaving(false);
     if (res.error || !res.data) {
       setSaveError(res.error?.message ?? "Could not save notes.");
@@ -1794,20 +1809,84 @@ function ClientHistoryModal({
             actually dirty so re-saves don't accidentally re-emit the "Notes
             saved" toast. Email gate lives on the BE (single-shot via
             adminNotesNotifiedAt). */}
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-          Admin notes (visible to the client)
-        </p>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={5}
-          maxLength={5000}
-          placeholder="e.g. Discussed onboarding bottleneck. Recommended starting Phase 2B Talent pillar next month — will follow up after their next 2A."
-          className="w-full rounded-xl border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-indigo-500/40 focus:outline-none"
-        />
-        <p className="mt-1 text-[10px] text-gray-600">
-          {notes.length} / 5000 characters
-        </p>
+        {/* Notes textarea + save. Save button is disabled until the field is
+            actually dirty so re-saves don't accidentally re-emit the "Notes
+            saved" toast. Email gate lives on the BE (single-shot via
+            adminNotesNotifiedAt). */}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            Admin Feedback Blocks (visible to client)
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setFeedbacks((prev) => [
+                ...prev,
+                {
+                  id: Math.random().toString(36).substring(7),
+                  title: "New Feedback Step",
+                  content: "",
+                  updatedAt: new Date().toISOString(),
+                },
+              ]);
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-xs font-semibold text-indigo-300 hover:bg-indigo-500/20 transition"
+          >
+            <Plus className="h-3 w-3" /> Add Feedback
+          </button>
+        </div>
+
+        {feedbacks.length === 0 ? (
+          <div className="mb-5 rounded-xl border border-dashed border-white/5 bg-[#111318]/50 p-6 text-center text-xs text-gray-500">
+            No feedback blocks added yet. Click &quot;Add Feedback&quot; to write your review.
+          </div>
+        ) : (
+          <div className="mb-5 space-y-4 max-h-[300px] overflow-y-auto pr-1">
+            {feedbacks.map((f, index) => (
+              <div
+                key={f.id || index}
+                className="relative rounded-xl border border-white/5 bg-[#111318] p-4 space-y-3 animate-fadeIn"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <input
+                    value={f.title}
+                    onChange={(e) => {
+                      setFeedbacks((prev) =>
+                        prev.map((item, idx) =>
+                          idx === index ? { ...item, title: e.target.value } : item,
+                        ),
+                      );
+                    }}
+                    placeholder="Feedback Title (e.g. initial review)"
+                    className="bg-transparent text-sm font-bold text-white border-b border-white/10 focus:border-indigo-500 outline-none pb-0.5 w-full max-w-[70%]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedbacks((prev) => prev.filter((_, idx) => idx !== index));
+                    }}
+                    className="text-xs text-rose-400 hover:text-rose-300 font-semibold"
+                  >
+                    Delete Block
+                  </button>
+                </div>
+                <textarea
+                  value={f.content}
+                  onChange={(e) => {
+                    setFeedbacks((prev) =>
+                      prev.map((item, idx) =>
+                        idx === index ? { ...item, content: e.target.value } : item,
+                      ),
+                    );
+                  }}
+                  rows={3}
+                  placeholder="Feedback content..."
+                  className="w-full rounded-lg border border-white/10 bg-[#0c0d12] px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:border-indigo-500 focus:outline-none resize-none"
+                />
+              </div>
+            ))}
+          </div>
+        )}
 
         {savedNotesAt && !dirty && (
           <p className="mt-2 text-[11px] text-emerald-300">
