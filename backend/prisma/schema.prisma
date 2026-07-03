@@ -274,6 +274,14 @@ model QuestionOption {
   riskType       RiskType @map("risk_type")
   observation    String // e.g. "High focus"
   recommendation String // e.g. "Maintain this; you are in the Growth Zone"
+
+  // Phase 2B only — the option's "N-Day Action Plan". `actionPlanDays` is the
+  // admin-set window (30/50/60/90 or any 1–365 value); `actionPlanItems` is the
+  // ordered list of ~4–5 to-dos shown under it. For Phase 1 / 2A options these
+  // stay null / empty and the report uses `recommendation` instead.
+  actionPlanDays  Int?     @map("action_plan_days")
+  actionPlanItems String[] @default([]) @map("action_plan_items")
+
   displayOrder   Int      @map("display_order")
 
   // Relations

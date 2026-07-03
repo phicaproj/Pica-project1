@@ -30,6 +30,7 @@ import {
   type AdminQuestionPhase,
   type BusinessSize,
   type PillarMeta,
+  type UpdateAdminQuestionOptionPayload,
 } from "@/lib/authClient";
 
 type QuestionDraft = {
@@ -53,6 +54,8 @@ const emptyOption = (score = 0): AdminQuestionOptionPayload => ({
   score,
   observation: "",
   recommendation: "",
+  actionPlanDays: 30,
+  actionPlanItems: [""],
 });
 
 const initialCreateDraft = (): CreateDraft => ({
@@ -89,18 +92,34 @@ function optionPayload(option: AdminQuestionOption): AdminQuestionOptionPayload 
     score: option.score,
     observation: option.observation,
     recommendation: option.recommendation,
+    actionPlanDays: option.actionPlanDays ?? 30,
+    actionPlanItems: option.actionPlanItems ?? [""],
   };
 }
 
-function validateOption(option: AdminQuestionOptionPayload) {
-  return (
+function validateOption(option: AdminQuestionOptionPayload, phase: AdminQuestionPhase = "PHASE2A") {
+  const base =
     option.optionText.trim() &&
     Number.isFinite(option.score) &&
     option.score >= 0 &&
     option.score <= 10 &&
-    option.observation.trim() &&
-    option.recommendation.trim()
-  );
+    option.observation.trim();
+
+  if (phase === "PHASE2B") {
+    const hasDays =
+      option.actionPlanDays !== undefined &&
+      option.actionPlanDays !== null &&
+      Number.isInteger(option.actionPlanDays) &&
+      option.actionPlanDays >= 1 &&
+      option.actionPlanDays <= 365;
+    const hasItems =
+      option.actionPlanItems &&
+      option.actionPlanItems.length > 0 &&
+      option.actionPlanItems.every((item) => item.trim());
+    return base && hasDays && hasItems;
+  } else {
+    return base && option.recommendation && option.recommendation.trim();
+  }
 }
 
 export default function QuestionBankPage() {
@@ -264,19 +283,30 @@ export default function QuestionBankPage() {
 
   const saveOption = async (optionId: string) => {
     const draft = optionDrafts[optionId];
-    if (!draft || !validateOption(draft)) {
-      setError("Complete the option text, score, observation, and recommendation.");
+    if (!activeQuestion || !draft || !validateOption(draft, activeQuestion.phase)) {
+      setError("Complete the option details correctly.");
       return;
     }
 
     setSaving(true);
     setError(null);
-    const res = await updateAdminQuestionOption(optionId, {
+
+    const payload: UpdateAdminQuestionOptionPayload = {
       optionText: draft.optionText.trim(),
       score: Number(draft.score),
       observation: draft.observation.trim(),
-      recommendation: draft.recommendation.trim(),
-    });
+    };
+    if (activeQuestion.phase === "PHASE2B") {
+      payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : null;
+      payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+      payload.recommendation = "";
+    } else {
+      payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
+      payload.actionPlanDays = null;
+      payload.actionPlanItems = [];
+    }
+
+    const res = await updateAdminQuestionOption(optionId, payload);
 
     if (res.error) {
       setError(res.error.message);
@@ -288,19 +318,30 @@ export default function QuestionBankPage() {
   };
 
   const addOption = async () => {
-    if (!activeQuestion || !validateOption(newOption)) {
-      setError("Complete the new option before adding it.");
+    if (!activeQuestion || !validateOption(newOption, activeQuestion.phase)) {
+      setError("Complete the new option details correctly before adding it.");
       return;
     }
 
     setSaving(true);
     setError(null);
-    const res = await addAdminQuestionOption(activeQuestion.id, {
+
+    const payload: AdminQuestionOptionPayload = {
       optionText: newOption.optionText.trim(),
       score: Number(newOption.score),
       observation: newOption.observation.trim(),
-      recommendation: newOption.recommendation.trim(),
-    });
+    };
+    if (activeQuestion.phase === "PHASE2B") {
+      payload.actionPlanDays = newOption.actionPlanDays ? Number(newOption.actionPlanDays) : null;
+      payload.actionPlanItems = newOption.actionPlanItems ? newOption.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+      payload.recommendation = "";
+    } else {
+      payload.recommendation = newOption.recommendation ? newOption.recommendation.trim() : "";
+      payload.actionPlanDays = null;
+      payload.actionPlanItems = [];
+    }
+
+    const res = await addAdminQuestionOption(activeQuestion.id, payload);
 
     if (res.error) {
       setError(res.error.message);
@@ -350,15 +391,26 @@ export default function QuestionBankPage() {
       return;
     }
 
-    const options = createDraft.options.map((option) => ({
-      optionText: option.optionText.trim(),
-      score: Number(option.score),
-      observation: option.observation.trim(),
-      recommendation: option.recommendation.trim(),
-    }));
+    const options = createDraft.options.map((option) => {
+      const o: AdminQuestionOptionPayload = {
+        optionText: option.optionText.trim(),
+        score: Number(option.score),
+        observation: option.observation.trim(),
+      };
+      if (createDraft.phase === "PHASE2B") {
+        o.actionPlanDays = option.actionPlanDays ? Number(option.actionPlanDays) : null;
+        o.actionPlanItems = option.actionPlanItems ? option.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+        o.recommendation = "";
+      } else {
+        o.recommendation = option.recommendation ? option.recommendation.trim() : "";
+        o.actionPlanDays = null;
+        o.actionPlanItems = [];
+      }
+      return o;
+    });
 
-    if (options.length < 2 || options.some((option) => !validateOption(option))) {
-      setError("Every option needs text, score, observation, and recommendation.");
+    if (options.length < 2 || options.some((option) => !validateOption(option, createDraft.phase))) {
+      setError("Every option needs text, score, observation, and either a recommendation or action plan.");
       return;
     }
 
@@ -390,7 +442,7 @@ export default function QuestionBankPage() {
   const updateCreateOption = (
     index: number,
     key: keyof AdminQuestionOptionPayload,
-    value: string,
+    value: any,
   ) => {
     setCreateDraft((current) => ({
       ...current,
@@ -398,7 +450,13 @@ export default function QuestionBankPage() {
         optionIndex === index
           ? {
               ...option,
-              [key]: key === "score" ? Number(value) : value,
+              [key]: key === "score"
+                ? Number(value)
+                : key === "actionPlanDays"
+                ? Number(value)
+                : key === "actionPlanItems"
+                ? (Array.isArray(value) ? value : value.split("\n"))
+                : value,
             }
           : option,
       ),
@@ -786,15 +844,40 @@ export default function QuestionBankPage() {
                         placeholder="Observation"
                         className={`${textareaClass} md:col-span-3`}
                       />
-                      <textarea
-                        value={option.recommendation}
-                        onChange={(event) =>
-                          updateCreateOption(index, "recommendation", event.target.value)
-                        }
-                        rows={2}
-                        placeholder="Recommendation"
-                        className={`${textareaClass} md:col-span-3`}
-                      />
+                      {createDraft.phase === "PHASE2B" ? (
+                        <>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={option.actionPlanDays ?? 30}
+                            onChange={(event) =>
+                              updateCreateOption(index, "actionPlanDays", event.target.value)
+                            }
+                            placeholder="Action plan days"
+                            className={`${fieldClass} md:col-span-1`}
+                          />
+                          <textarea
+                            value={option.actionPlanItems?.join("\n") ?? ""}
+                            onChange={(event) =>
+                              updateCreateOption(index, "actionPlanItems", event.target.value)
+                            }
+                            rows={2}
+                            placeholder="Action plan items (one per line)"
+                            className={`${textareaClass} md:col-span-2`}
+                          />
+                        </>
+                      ) : (
+                        <textarea
+                          value={option.recommendation}
+                          onChange={(event) =>
+                            updateCreateOption(index, "recommendation", event.target.value)
+                          }
+                          rows={2}
+                          placeholder="Recommendation"
+                          className={`${textareaClass} md:col-span-3`}
+                        />
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1036,22 +1119,62 @@ export default function QuestionBankPage() {
                               className={textareaClass}
                             />
                           </div>
-                          <div className="md:col-span-3">
-                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
-                              Recommendation
-                            </label>
-                            <textarea
-                              value={draft.recommendation}
-                              onChange={(event) =>
-                                setOptionDrafts((current) => ({
-                                  ...current,
-                                  [option.id]: { ...draft, recommendation: event.target.value },
-                                }))
-                              }
-                              rows={3}
-                              className={textareaClass}
-                            />
-                          </div>
+                          {activeQuestion.phase === "PHASE2B" ? (
+                            <>
+                              <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                                  Action Plan Days
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="365"
+                                  value={draft.actionPlanDays ?? 30}
+                                  onChange={(event) =>
+                                    setOptionDrafts((current) => ({
+                                      ...current,
+                                      [option.id]: { ...draft, actionPlanDays: Number(event.target.value) },
+                                    }))
+                                  }
+                                  className={fieldClass}
+                                />
+                              </div>
+                              <div className="md:col-span-4">
+                                <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                                  Action Plan Items (one per line)
+                                </label>
+                                <textarea
+                                  value={draft.actionPlanItems?.join("\n") ?? ""}
+                                  onChange={(event) =>
+                                    setOptionDrafts((current) => ({
+                                      ...current,
+                                      [option.id]: { ...draft, actionPlanItems: event.target.value.split("\n") },
+                                    }))
+                                  }
+                                  rows={3}
+                                  placeholder="Item 1&#10;Item 2"
+                                  className={textareaClass}
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <div className="md:col-span-6">
+                              <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                                Recommendation
+                              </label>
+                              <textarea
+                                value={draft.recommendation}
+                                onChange={(event) =>
+                                  setOptionDrafts((current) => ({
+                                    ...current,
+                                    [option.id]: { ...draft, recommendation: event.target.value },
+                                  }))
+                                }
+                                rows={3}
+                                className={textareaClass}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1099,15 +1222,40 @@ export default function QuestionBankPage() {
                         placeholder="Observation"
                         className={`${textareaClass} md:col-span-3`}
                       />
-                      <textarea
-                        value={newOption.recommendation}
-                        onChange={(event) =>
-                          setNewOption({ ...newOption, recommendation: event.target.value })
-                        }
-                        rows={2}
-                        placeholder="Recommendation"
-                        className={`${textareaClass} md:col-span-3`}
-                      />
+                      {activeQuestion.phase === "PHASE2B" ? (
+                        <>
+                          <input
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={newOption.actionPlanDays ?? 30}
+                            onChange={(event) =>
+                              setNewOption({ ...newOption, actionPlanDays: Number(event.target.value) })
+                            }
+                            placeholder="Action plan days"
+                            className={`${fieldClass} md:col-span-1`}
+                          />
+                          <textarea
+                            value={newOption.actionPlanItems?.join("\n") ?? ""}
+                            onChange={(event) =>
+                              setNewOption({ ...newOption, actionPlanItems: event.target.value.split("\n") })
+                            }
+                            rows={2}
+                            placeholder="Action plan items (one per line)"
+                            className={`${textareaClass} md:col-span-2`}
+                          />
+                        </>
+                      ) : (
+                        <textarea
+                          value={newOption.recommendation}
+                          onChange={(event) =>
+                            setNewOption({ ...newOption, recommendation: event.target.value })
+                          }
+                          rows={2}
+                          placeholder="Recommendation"
+                          className={`${textareaClass} md:col-span-3`}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>

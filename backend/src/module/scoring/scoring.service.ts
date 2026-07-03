@@ -46,6 +46,8 @@ type SessionResponseRecord = {
     riskType: RiskType;
     observation: string;
     recommendation: string;
+    actionPlanDays: number | null;
+    actionPlanItems: string[];
   };
 };
 
@@ -131,6 +133,8 @@ const toFinding = (response: SessionResponseRecord): ScoringFinding => ({
   selectedLabel: response.selectedOption.optionText,
   observation: response.selectedOption.observation,
   recommendation: response.selectedOption.recommendation,
+  actionPlanDays: response.selectedOption.actionPlanDays,
+  actionPlanItems: response.selectedOption.actionPlanItems,
   riskType: response.riskTypeAtTime,
   score: response.scoreAtTime,
 });
@@ -246,6 +250,8 @@ export async function computeScoring(
             riskType: true,
             observation: true,
             recommendation: true,
+            actionPlanDays: true,
+            actionPlanItems: true,
           },
         },
       },

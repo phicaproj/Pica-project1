@@ -55,6 +55,8 @@ const adminQuestionSelect = {
       riskType: true,
       observation: true,
       recommendation: true,
+      actionPlanDays: true,
+      actionPlanItems: true,
       displayOrder: true,
     },
     orderBy: { displayOrder: 'asc' },
@@ -84,6 +86,8 @@ const toAdminQuestion = (question: RawAdminQuestion): AdminQuestionResponse => (
       riskType: option.riskType,
       observation: option.observation,
       recommendation: option.recommendation,
+      actionPlanDays: option.actionPlanDays,
+      actionPlanItems: option.actionPlanItems,
       displayOrder: option.displayOrder,
     })
   ),
@@ -298,7 +302,11 @@ export async function createQuestionService(
             score: option.score,
             riskType: deriveRiskType(option.score, maxScore),
             observation: option.observation,
-            recommendation: option.recommendation,
+            // Phase 2B options carry an action plan instead of a recommendation;
+            // the column is non-null so it defaults to '' when omitted.
+            recommendation: option.recommendation ?? '',
+            actionPlanDays: option.actionPlanDays ?? null,
+            actionPlanItems: option.actionPlanItems ?? [],
             displayOrder: index + 1,
           })),
         },
@@ -420,7 +428,9 @@ export async function addOptionService(
         score: input.score,
         riskType: deriveRiskType(input.score, input.score), // resynced below
         observation: input.observation,
-        recommendation: input.recommendation,
+        recommendation: input.recommendation ?? '',
+        actionPlanDays: input.actionPlanDays ?? null,
+        actionPlanItems: input.actionPlanItems ?? [],
         displayOrder: nextOrder,
       },
     });
@@ -457,6 +467,8 @@ export async function updateOptionService(
         ...(input.score !== undefined ? { score: input.score } : {}),
         ...(input.observation !== undefined ? { observation: input.observation } : {}),
         ...(input.recommendation !== undefined ? { recommendation: input.recommendation } : {}),
+        ...(input.actionPlanDays !== undefined ? { actionPlanDays: input.actionPlanDays } : {}),
+        ...(input.actionPlanItems !== undefined ? { actionPlanItems: input.actionPlanItems } : {}),
       },
     });
 

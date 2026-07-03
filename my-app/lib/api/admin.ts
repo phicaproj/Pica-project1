@@ -178,6 +178,8 @@ export type AdminQuestionOption = {
 	observation: string
 	recommendation: string
 	displayOrder: number
+	actionPlanDays?: number | null
+	actionPlanItems?: string[]
 }
 
 export type AdminQuestion = {
@@ -210,7 +212,9 @@ export type AdminQuestionOptionPayload = {
 	optionText: string
 	score: number
 	observation: string
-	recommendation: string
+	recommendation?: string
+	actionPlanDays?: number | null
+	actionPlanItems?: string[]
 }
 
 export type CreateAdminQuestionPayload = {

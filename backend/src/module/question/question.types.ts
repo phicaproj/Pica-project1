@@ -109,6 +109,23 @@ const optionScore = z
   .min(0, 'score cannot be negative')
   .max(10, 'score cannot exceed 10');
 
+// Free integer window for a Phase 2B action plan (30/50/60/90 or any 1–365).
+const actionPlanDays = z
+  .number({ error: 'actionPlanDays must be a number' })
+  .int('actionPlanDays must be a whole number')
+  .min(1, 'actionPlanDays must be at least 1')
+  .max(365, 'actionPlanDays cannot exceed 365');
+
+// The ordered ~4–5 to-do list under the window. Capped at 6 to match the option
+// cap; each item must be non-empty.
+const actionPlanItems = z
+  .array(z.string().trim().min(1, 'action plan items cannot be empty'))
+  .max(6, 'an action plan can have at most 6 items');
+
+// `recommendation` and the action plan are phase-conditional (enforced by the
+// superRefine on createQuestionSchema): Phase 1 / 2A require `recommendation`;
+// Phase 2B requires an action plan instead. Both are optional here so the shared
+// shape works for every phase.
 const adminOptionInput = z.object({
   optionText: z.string({ error: 'optionText is required' }).trim().min(1, 'optionText is required'),
   score: optionScore,
@@ -116,27 +133,55 @@ const adminOptionInput = z.object({
     .string({ error: 'observation is required' })
     .trim()
     .min(1, 'observation is required'),
-  recommendation: z
-    .string({ error: 'recommendation is required' })
-    .trim()
-    .min(1, 'recommendation is required'),
+  recommendation: z.string().trim().min(1, 'recommendation is required').optional(),
+  actionPlanDays: actionPlanDays.optional(),
+  actionPlanItems: actionPlanItems.optional(),
 });
 
-export const createQuestionSchema = z.object({
-  pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
-  phase: z.nativeEnum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
-  businessSize: z.nativeEnum(BusinessSize, {
-    message: 'businessSize must be one of: SMALL, MEDIUM',
-  }),
-  isPhase1Featured: z.boolean().default(false),
-  questionText: z
-    .string({ error: 'questionText is required' })
-    .trim()
-    .min(1, 'questionText is required'),
-  // 2–6 options; exactly one is expected to score 0 (the knockout) but we don't
-  // force it — hasKnockoutOption is derived from whatever is sent.
-  options: z.array(adminOptionInput).min(2, 'a question needs at least 2 options').max(6),
-});
+export const createQuestionSchema = z
+  .object({
+    pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
+    phase: z.nativeEnum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
+    businessSize: z.nativeEnum(BusinessSize, {
+      message: 'businessSize must be one of: SMALL, MEDIUM',
+    }),
+    isPhase1Featured: z.boolean().default(false),
+    questionText: z
+      .string({ error: 'questionText is required' })
+      .trim()
+      .min(1, 'questionText is required'),
+    // 2–6 options; exactly one is expected to score 0 (the knockout) but we don't
+    // force it — hasKnockoutOption is derived from whatever is sent.
+    options: z.array(adminOptionInput).min(2, 'a question needs at least 2 options').max(6),
+  })
+  .superRefine((data, ctx) => {
+    // Phase 2B options carry an action plan (window + items) instead of a
+    // recommendation; Phase 1 / 2A options require the recommendation line.
+    data.options.forEach((option, index) => {
+      if (data.phase === Phase.PHASE2B) {
+        if (!option.actionPlanItems || option.actionPlanItems.length === 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['options', index, 'actionPlanItems'],
+            message: 'Phase 2B options require at least one action plan item',
+          });
+        }
+        if (option.actionPlanDays === undefined) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['options', index, 'actionPlanDays'],
+            message: 'Phase 2B options require an action plan window (actionPlanDays)',
+          });
+        }
+      } else if (!option.recommendation) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['options', index, 'recommendation'],
+          message: 'recommendation is required',
+        });
+      }
+    });
+  });
 
 export const updateQuestionSchema = z
   .object({
@@ -156,6 +201,8 @@ export const updateOptionSchema = z
     score: optionScore.optional(),
     observation: z.string().trim().min(1).optional(),
     recommendation: z.string().trim().min(1).optional(),
+    actionPlanDays: actionPlanDays.optional(),
+    actionPlanItems: actionPlanItems.optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -244,6 +291,8 @@ export type AdminOptionResponse = {
   riskType: RiskType;
   observation: string;
   recommendation: string;
+  actionPlanDays: number | null;
+  actionPlanItems: string[];
   displayOrder: number;
 };
 

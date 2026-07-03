@@ -1192,6 +1192,419 @@ const drawExecutiveSummaryPage = (
 };
 
 // ============================================================
+// Shared pillar-page identity block: status badge + pillar name + description +
+// top-right score donut, ending with the divider at Y=152. Used by both the
+// full pillar page (Phase 1 / 2A) and the Phase 2B action-plan page so the
+// header treatment stays identical across phases.
+const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayload) => {
+  const COLORS = getColors(doc);
+  const badgeY = 80;
+
+  // Draw status pill based on score/knockout
+  const isGreen = pillar.weightedScore >= 71 && !pillar.hasKnockout;
+  const isAmber = pillar.weightedScore >= 41 && pillar.weightedScore < 71 && !pillar.hasKnockout;
+
+  const badgeText = isGreen
+    ? 'TOP STRENGTH'
+    : isAmber
+      ? 'STABILIZING'
+      : 'CRITICAL UNDERPERFORMANCE';
+  const badgeColor = isGreen ? COLORS.greenBorder : isAmber ? COLORS.amberBorder : COLORS.redBorder; // Solid color for fill
+  const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12; // Dynamic width with 6pt padding on left/right
+
+  // Draw left check/warning square box with radius 3
+  const statusBoxColor = isGreen ? COLORS.green : isAmber ? COLORS.amber : COLORS.red;
+  roundedRect(
+    doc,
+    PAGE_MARGIN,
+    badgeY - 1,
+    14,
+    14,
+    3,
+    isGreen ? COLORS.greenBg : isAmber ? COLORS.amberBg : COLORS.redBg,
+    statusBoxColor
+  );
+  drawShieldIcon(doc, PAGE_MARGIN + 2, badgeY + 2, 10, statusBoxColor);
+
+  // Draw status pill (fill and stroke with the same badgeColor, radius = 6)
+  roundedRect(doc, PAGE_MARGIN + 22, badgeY - 1, badgeW, 14, 6, badgeColor, badgeColor);
+
+  // Draw white text, centered vertically and horizontally inside the status pill
+  doc
+    .fillColor(COLORS.white)
+    .text(badgeText, PAGE_MARGIN + 22, badgeY + 3.5, {
+      width: badgeW,
+      align: 'center',
+      lineBreak: false,
+    });
+
+  // Draw Short Code badge to the right of the status pill
+  const codeX = PAGE_MARGIN + 22 + badgeW + 8;
+  roundedRect(doc, codeX, badgeY - 1, 24, 14, 3, COLORS.primary);
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.white)
+    .text(pillar.pillarCode, codeX, badgeY + 3.5, { width: 24, align: 'center', lineBreak: false });
+
+  // Pillar Name (Under the badges and Bigger/High-Catching!)
+  const nameY = badgeY + 20;
+  doc
+    .fontSize(22)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text(pillar.pillarName, PAGE_MARGIN, nameY);
+
+  // Description text under the title
+  const pillarDescriptions: Record<string, string> = {
+    FL: 'An evaluation of leadership continuity, key-person risk, and strategic management frameworks.',
+    FR: 'An institutional-grade evaluation of capital efficiency, reserve resilience, and fiscal governance models.',
+    BM: 'An analysis of revenue streams, customer concentration, pricing structures, and product market fit.',
+    OP: 'An audit of operational redundancy, system maturity, disaster recovery readiness, and process scaling.',
+    MS: 'An assessment of marketing execution, customer acquisition cost efficiency, and brand growth velocity.',
+    GC: 'An evaluation of regulatory compliance, board oversight, employee NDA policies, and data privacy frameworks.',
+    SS: 'An audit of scaling capability, quarterly strategic targets, addressable market mapping, and milestone execution.',
+  };
+  const descText =
+    pillarDescriptions[pillar.pillarCode] ??
+    'An in-depth diagnostic analysis of this operational architecture.';
+
+  doc
+    .fontSize(8.5)
+    .font('Helvetica')
+    .fillColor(COLORS.mutedText)
+    .text(descText, PAGE_MARGIN, nameY + 25, { width: 360 });
+
+  // Top Right Donut Gauge for Pillar Score (matching design 3.jpg)
+  const scoreCx = PAGE_MARGIN + COLORS.pageWidth - 35;
+  const scoreCy = badgeY + 22; // Centered vertically relative to header height
+  const scoreRadius = 32;
+  const scoreRingW = 6;
+
+  const pDetails = getPdfBandDetails(pillar.weightedScore, pillar.hasKnockout);
+  drawDonutGauge(
+    doc,
+    scoreCx,
+    scoreCy,
+    scoreRadius,
+    pillar.weightedScore,
+    pDetails,
+    'Pillar Score',
+    scoreRingW
+  );
+
+  // SHIFTED DOWN: Divider line shifted to 152 to avoid touching score text/gauge
+  doc.y = 152;
+  hr(doc, doc.y);
+  doc.moveDown(0.8);
+
+  return { isGreen, isAmber, pDetails };
+};
+
+// ============================================================
+// PHASE 2B PILLAR PAGE — observation + N-Day Action Plan blocks
+// ============================================================
+//
+// Unlike the Phase 1 / 2A pillar page (fixed single-page layout with the
+// Performance Analysis card + Strategic Road Map), the 2B page renders the
+// Performance Analysis card + Data Source block and Observations & Audit Summary
+// section title, but then flows up to 6 findings (observations + action plans)
+// across pages without rendering the Strategic Road Map at the bottom.
+const drawPillar2BPage = (
+  doc: PDFKit.PDFDocument,
+  pillar: ScoringPillarPayload,
+  businessName: string,
+  date: string,
+  metadata?: { sessionId?: string }
+) => {
+  const COLORS = getColors(doc);
+  drawPageBackground(doc);
+  drawHeader(doc, businessName, date, { isKnockout: pillar.hasKnockout });
+
+  // 1. Top status badges, name, description, gauge, and divider line
+  const { isGreen, isAmber, pDetails } = drawPillarIdentity(doc, pillar);
+
+  // 2. Middle section: Performance Analysis card (left) + Data Source photo block (right)
+  const midY = doc.y;
+  const cardW = 315;
+  const gap = 15;
+  const blockW = COLORS.pageWidth - cardW - gap; // 515 - 315 - 15 = 185
+  const blockX = PAGE_MARGIN + cardW + gap; // 40 + 315 + 15 = 370
+
+  const findingsToRender =
+    pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
+
+  // Sort findings to find the highest score and lowest score
+  const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
+  const highestRec =
+    highestScored?.recommendation ||
+    highestScored?.actionPlanItems?.[0] ||
+    'Leverage existing operational strengths to drive scaling.';
+  const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
+
+  // Shifted recommendation to the next line using a single newline (\n) without paragraphing
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+
+  // Dynamically compute explanation height and the card's height to prevent overlaps
+  const explanationH = doc
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .heightOfString(explanation, { width: cardW - 32, lineGap: 3.5 });
+  const calculatedCardH = Math.max(140, 25 + explanationH + 15 + 23 + 12);
+
+  // Performance Analysis card: clean light grey background with grey border, NO left colored stripe
+  roundedRect(doc, PAGE_MARGIN, midY, cardW, calculatedCardH, 6, COLORS.lightGrey, COLORS.borderGrey);
+
+  // Redesigned Performance Analysis text weight and character spacing
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(pillar.hasKnockout ? COLORS.red : pDetails.text)
+    .text('PERFORMANCE ANALYSIS', PAGE_MARGIN + 16, midY + 12, {
+      width: cardW - 32,
+      characterSpacing: 1.2,
+    });
+
+  doc
+    .fontSize(12) // Increased explanation text size to 12pt
+    .font('Helvetica-Bold') // Bold font style
+    .fillColor(COLORS.primary) // Elegant dark navy color matching the design
+    .text(explanation, PAGE_MARGIN + 16, midY + 25, {
+      width: cardW - 32,
+      lineGap: 3.5,
+    });
+
+  // Sub-criteria progress bars inside the card (anchored to the bottom padding)
+  const ratings = getPillarSubCriteria(pillar.pillarCode);
+  const ratingVal1 = Math.round(pillar.weightedScore);
+  const ratingVal2 = Math.round(Math.max(20, pillar.weightedScore - 8));
+
+  const barW = 120;
+  const barGap = 15;
+  const startX = PAGE_MARGIN + 16;
+
+  // Rating 1
+  doc
+    .fontSize(6)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.mutedText)
+    .text(ratings[0].toUpperCase(), startX, midY + calculatedCardH - 45, { width: barW });
+
+  const rateText1 = isGreen ? 'SUPERIOR (TIER 1)' : isAmber ? 'STABILIZING' : 'REACTIVE';
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text(rateText1, startX, midY + calculatedCardH - 37, { width: barW });
+
+  // Segmented progress blocks
+  const drawSegmentedProgress = (
+    doc: PDFKit.PDFDocument,
+    x: number,
+    y: number,
+    w: number,
+    filledCount: number,
+    color: string
+  ) => {
+    const segW = (w - 6) / 3;
+    for (let i = 0; i < 3; i++) {
+      const segX = x + i * (segW + 3);
+      const isFilled = i < filledCount;
+      roundedRect(doc, segX, y, segW, 4, 1.5, isFilled ? color : COLORS.borderGrey);
+    }
+  };
+
+  const getFilledSegments = (score: number) => {
+    if (score >= 71) return 3;
+    if (score >= 41) return 2;
+    return 1;
+  };
+
+  drawSegmentedProgress(
+    doc,
+    startX,
+    midY + calculatedCardH - 26,
+    barW,
+    getFilledSegments(ratingVal1),
+    pDetails.border
+  );
+
+  // Rating 2
+  doc
+    .fontSize(6)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.mutedText)
+    .text(ratings[1].toUpperCase(), startX + barW + barGap, midY + calculatedCardH - 45, { width: barW });
+
+  const rateText2 = isGreen ? 'OPTIMAL (UNLEVERAGED)' : isAmber ? 'STANDARD' : 'VULNERABLE';
+  doc
+    .fontSize(7)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.primary)
+    .text(rateText2, startX + barW + barGap, midY + calculatedCardH - 37, { width: barW });
+
+  drawSegmentedProgress(
+    doc,
+    startX + barW + barGap,
+    midY + calculatedCardH - 26,
+    barW,
+    getFilledSegments(ratingVal2),
+    pDetails.border
+  );
+
+  // Draw Data Source block on the right (matching computed height calculatedCardH)
+  roundedRect(doc, blockX, midY, blockW, calculatedCardH, 6, COLORS.lightGrey, COLORS.borderGrey);
+
+  const imgMargin = 6;
+  const imgW = blockW - imgMargin * 2;
+  const imgH = calculatedCardH - imgMargin * 2 - 20;
+
+  if (PILLAR_IMG_BUFFER) {
+    try {
+      const imgX = blockX + imgMargin;
+      const imgY = midY + imgMargin;
+      doc.image(PILLAR_IMG_BUFFER, imgX, imgY, {
+        width: imgW,
+        height: imgH,
+      });
+      // Add gradient overlay
+      doc.save();
+      const grad = doc.linearGradient(imgX, imgY, imgX, imgY + imgH);
+      grad.stop(0, '#FFFFFF');
+      grad.stop(1, COLORS.primary);
+      doc.fillOpacity(0.3);
+      doc.rect(imgX, imgY, imgW, imgH).fill(grad);
+      doc.restore();
+
+      // Draw border around image
+      doc.save().lineWidth(0.5).strokeColor(COLORS.borderGrey);
+      roundedRect(doc, imgX, imgY, imgW, imgH, 2, undefined, COLORS.borderGrey);
+      doc.restore();
+    } catch {}
+  }
+
+  // Data Source Caption below the image
+  doc
+    .fontSize(6)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.accent)
+    .text('DATA SOURCE', blockX + imgMargin, midY + calculatedCardH - 18, { lineBreak: false });
+
+  const displayId = metadata?.sessionId
+    ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}`
+    : 'BV-DIAG-TEMP';
+  doc
+    .fontSize(6)
+    .font('Helvetica')
+    .fillColor(COLORS.primary)
+    .text(`Aggregated Audit Data ${displayId}`, blockX + imgMargin, midY + calculatedCardH - 10, {
+      width: imgW,
+      ellipsis: true,
+    });
+
+  doc.y = midY + calculatedCardH + 16;
+
+  // 3. Observations & Audit Summary Section Title
+  drawSectionTitle(doc, 'Observations & Audit Summary');
+
+  // Pull up to 6 findings, already priority-ordered (KNOCKOUT → RISK → NORMAL)
+  const findings = findingsToRender.slice(0, 6);
+
+  const cardX = PAGE_MARGIN;
+  const findingCardW = COLORS.pageWidth;
+  const bottomLimit = doc.page.height - 60; // keep clear of the footer
+
+  // Measures the full rendered height of one finding block so we can decide
+  // whether it fits on the current page before drawing it.
+  const measureBlock = (finding: ScoringFinding): number => {
+    let h = 12; // top padding
+    doc.fontSize(10).font('Helvetica-Bold');
+    h += doc.heightOfString(finding.observation, { width: findingCardW - 52, lineGap: 1 });
+    h += 8; // gap before plan heading
+    h += 11; // plan heading line
+    const items = finding.actionPlanItems ?? [];
+    doc.fontSize(8.5).font('Helvetica');
+    for (const item of items) {
+      h += doc.heightOfString(item, { width: findingCardW - 52, lineGap: 1 }) + 5;
+    }
+    h += 12; // bottom padding
+    return h;
+  };
+
+  const drawBlock = (finding: ScoringFinding, index: number, y: number): number => {
+    const blockH = measureBlock(finding);
+    const isKo = finding.riskType === 'KNOCKOUT';
+    const isRisk = finding.riskType === 'RISK';
+    const accent = isKo ? COLORS.redBorder : isRisk ? COLORS.amberBorder : COLORS.greenBorder;
+
+    // Card + left accent stripe.
+    roundedRect(doc, cardX, y, findingCardW, blockH, 6, COLORS.lightGrey, COLORS.borderGrey);
+    roundedRect(doc, cardX, y, 3, blockH, 2, accent);
+
+    // Marker: check/warning icon instead of numbering box
+    const iconY = y + 13.5;
+    if (isKo || isRisk) {
+      drawWarningIcon(doc, cardX + 16, iconY, 11, accent);
+    } else {
+      drawCheckIcon(doc, cardX + 16, iconY, 11);
+    }
+
+    let cursorY = y + 12;
+    // Observation (the only content from the finding besides the plan).
+    doc
+      .fontSize(10)
+      .font('Helvetica-Bold')
+      .fillColor(COLORS.primary)
+      .text(finding.observation, cardX + 36, cursorY, { width: findingCardW - 52, lineGap: 1 });
+    cursorY = doc.y + 8;
+
+    // "N-Day Action Plan" accent heading.
+    const days = finding.actionPlanDays ?? 30;
+    doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .fillColor(COLORS.accent)
+      .text(`${days}-DAY ACTION PLAN`, cardX + 16, cursorY, { characterSpacing: 0.8 });
+    cursorY += 11;
+
+    // To-do items as bullets.
+    const items = finding.actionPlanItems ?? [];
+    for (const item of items) {
+      doc.save();
+      doc
+        .circle(cardX + 22, cursorY + 4, 2)
+        .fillColor(accent)
+        .fill();
+      doc.restore();
+      doc
+        .fontSize(8.5)
+        .font('Helvetica')
+        .fillColor(COLORS.bodyText)
+        .text(item, cardX + 36, cursorY, {
+          width: findingCardW - 52,
+          lineGap: 1,
+        });
+      cursorY = doc.y + 5;
+    }
+
+    return y + blockH + 12; // next block start (12pt gap)
+  };
+
+  let y = doc.y;
+  for (let i = 0; i < findings.length; i++) {
+    const blockH = measureBlock(findings[i]);
+    // Flow onto a new page when the block would overrun the footer zone.
+    if (y + blockH > bottomLimit) {
+      doc.addPage();
+      drawPageBackground(doc);
+      drawHeader(doc, businessName, date, { isKnockout: pillar.hasKnockout });
+      drawSectionTitle(doc, 'Observations & Audit Summary (cont.)');
+      y = doc.y;
+    }
+    y = drawBlock(findings[i], i, y);
+  }
+};
+
 const drawPillarPage = (
   doc: PDFKit.PDFDocument,
   pillar: ScoringPillarPayload,
@@ -1308,13 +1721,33 @@ const drawPillarPage = (
   // Middle section: Performance Analysis card (left) + Data Source photo block (right)
   const midY = doc.y;
   const cardW = 315;
-  const cardH = 140; // Increased card height to 140 to fit larger font size elegantly
   const gap = 15;
   const blockW = COLORS.pageWidth - cardW - gap; // 515 - 315 - 15 = 185
   const blockX = PAGE_MARGIN + cardW + gap; // 40 + 315 + 15 = 370
 
+  const findingsToRender =
+    pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
+
+  // Sort findings to find the highest score and lowest score
+  const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
+  const highestRec =
+    highestScored?.recommendation ||
+    highestScored?.actionPlanItems?.[0] ||
+    'Leverage existing operational strengths to drive scaling.';
+  const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
+
+  // Shifted recommendation to the next line using a single newline (\n) without paragraphing
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+
+  // Dynamically compute explanation height and the card's height to prevent overlaps
+  const explanationH = doc
+    .fontSize(12)
+    .font('Helvetica-Bold')
+    .heightOfString(explanation, { width: cardW - 32, lineGap: 3.5 });
+  const calculatedCardH = Math.max(140, 25 + explanationH + 15 + 23 + 12);
+
   // Performance Analysis card: clean light grey background with grey border, NO left colored stripe
-  roundedRect(doc, PAGE_MARGIN, midY, cardW, cardH, 6, COLORS.lightGrey, COLORS.borderGrey);
+  roundedRect(doc, PAGE_MARGIN, midY, cardW, calculatedCardH, 6, COLORS.lightGrey, COLORS.borderGrey);
 
   // Redesigned Performance Analysis text weight and character spacing
   doc
@@ -1326,18 +1759,6 @@ const drawPillarPage = (
       characterSpacing: 1.2,
     });
 
-  const findingsToRender =
-    pillar.allFindings && pillar.allFindings.length > 0 ? pillar.allFindings : pillar.findings;
-
-  // Sort findings to find the highest score and lowest score
-  const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
-  const recText = highestScored
-    ? highestScored.recommendation
-    : 'Leverage existing operational strengths to drive scaling.';
-
-  // Shifted recommendation to the next line using a single newline (\n) without paragraphing
-  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\nRecommendation: ${recText}`;
-
   doc
     .fontSize(12) // Increased explanation text size to 12pt
     .font('Helvetica-Bold') // Bold font style
@@ -1347,7 +1768,7 @@ const drawPillarPage = (
       lineGap: 3.5,
     });
 
-  // Sub-criteria progress bars inside the card (shifted down to prevent overlaps)
+  // Sub-criteria progress bars inside the card (anchored to the bottom padding)
   const ratings = getPillarSubCriteria(pillar.pillarCode);
   const ratingVal1 = Math.round(pillar.weightedScore);
   const ratingVal2 = Math.round(Math.max(20, pillar.weightedScore - 8));
@@ -1361,14 +1782,14 @@ const drawPillarPage = (
     .fontSize(6)
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
-    .text(ratings[0].toUpperCase(), startX, midY + 95, { width: barW });
+    .text(ratings[0].toUpperCase(), startX, midY + calculatedCardH - 45, { width: barW });
 
   const rateText1 = isGreen ? 'SUPERIOR (TIER 1)' : isAmber ? 'STABILIZING' : 'REACTIVE';
   doc
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text(rateText1, startX, midY + 103, { width: barW });
+    .text(rateText1, startX, midY + calculatedCardH - 37, { width: barW });
 
   // Segmented progress blocks
   const drawSegmentedProgress = (
@@ -1396,7 +1817,7 @@ const drawPillarPage = (
   drawSegmentedProgress(
     doc,
     startX,
-    midY + 114,
+    midY + calculatedCardH - 26,
     barW,
     getFilledSegments(ratingVal1),
     pDetails.border
@@ -1407,30 +1828,30 @@ const drawPillarPage = (
     .fontSize(6)
     .font('Helvetica-Bold')
     .fillColor(COLORS.mutedText)
-    .text(ratings[1].toUpperCase(), startX + barW + barGap, midY + 95, { width: barW });
+    .text(ratings[1].toUpperCase(), startX + barW + barGap, midY + calculatedCardH - 45, { width: barW });
 
   const rateText2 = isGreen ? 'OPTIMAL (UNLEVERAGED)' : isAmber ? 'STANDARD' : 'VULNERABLE';
   doc
     .fontSize(7)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text(rateText2, startX + barW + barGap, midY + 103, { width: barW });
+    .text(rateText2, startX + barW + barGap, midY + calculatedCardH - 37, { width: barW });
 
   drawSegmentedProgress(
     doc,
     startX + barW + barGap,
-    midY + 114,
+    midY + calculatedCardH - 26,
     barW,
     getFilledSegments(ratingVal2),
     pDetails.border
   );
 
-  // Draw Data Source block on the right (matching height 140)
-  roundedRect(doc, blockX, midY, blockW, cardH, 6, COLORS.lightGrey, COLORS.borderGrey);
+  // Draw Data Source block on the right (matching computed height calculatedCardH)
+  roundedRect(doc, blockX, midY, blockW, calculatedCardH, 6, COLORS.lightGrey, COLORS.borderGrey);
 
   const imgMargin = 6;
   const imgW = blockW - imgMargin * 2;
-  const imgH = cardH - imgMargin * 2 - 20;
+  const imgH = calculatedCardH - imgMargin * 2 - 20;
 
   if (PILLAR_IMG_BUFFER) {
     try {
@@ -1461,7 +1882,7 @@ const drawPillarPage = (
     .fontSize(6)
     .font('Helvetica-Bold')
     .fillColor(COLORS.accent)
-    .text('DATA SOURCE', blockX + imgMargin, midY + cardH - 18, { lineBreak: false });
+    .text('DATA SOURCE', blockX + imgMargin, midY + calculatedCardH - 18, { lineBreak: false });
 
   const displayId = metadata?.sessionId
     ? `BV-${metadata.sessionId.substring(0, 8).toUpperCase()}`
@@ -1470,12 +1891,12 @@ const drawPillarPage = (
     .fontSize(6)
     .font('Helvetica')
     .fillColor(COLORS.primary)
-    .text(`Aggregated Audit Data ${displayId}`, blockX + imgMargin, midY + cardH - 10, {
+    .text(`Aggregated Audit Data ${displayId}`, blockX + imgMargin, midY + calculatedCardH - 10, {
       width: imgW,
       ellipsis: true,
     });
 
-  doc.y = midY + cardH + 16;
+  doc.y = midY + calculatedCardH + 16;
 
   // Observations Section Title
   drawSectionTitle(doc, 'Observations & Audit Summary');
@@ -1748,7 +2169,6 @@ const drawPillarPage = (
 
     const finding = selectedFindings[i];
     const recTitle = finding.observation;
-    const recText = finding.recommendation;
 
     doc
       .fontSize(8.5)
@@ -1756,16 +2176,40 @@ const drawPillarPage = (
       .fillColor(COLORS.primary)
       .text(recTitle, sx + 22, sy + 1, { width: stepW - 25, height: 10, ellipsis: true });
 
-    doc
-      .fontSize(7.5)
-      .font('Helvetica')
-      .fillColor(COLORS.mutedText)
-      .text(recText, sx + 22, sy + 12, {
-        width: stepW - 25,
-        height: 20,
-        ellipsis: true,
-        lineGap: 1,
-      });
+    // Phase 2B options carry an "N-Day Action Plan" (window + to-do items) in
+    // place of a single recommendation line. When present, surface the window
+    // as a bold accent heading and the items as a compact bulleted line;
+    // otherwise fall back to the recommendation text (Phase 1 / 2A unchanged).
+    const planItems = finding.actionPlanItems ?? [];
+    if (planItems.length > 0) {
+      const planLabel = `${finding.actionPlanDays ?? 30}-Day Action Plan`;
+      doc
+        .fontSize(7)
+        .font('Helvetica-Bold')
+        .fillColor(COLORS.accent)
+        .text(planLabel, sx + 22, sy + 12, { width: stepW - 25, height: 9, ellipsis: true });
+      doc
+        .fontSize(7)
+        .font('Helvetica')
+        .fillColor(COLORS.mutedText)
+        .text(planItems.join('  •  '), sx + 22, sy + 21, {
+          width: stepW - 25,
+          height: 14,
+          ellipsis: true,
+          lineGap: 1,
+        });
+    } else {
+      doc
+        .fontSize(7.5)
+        .font('Helvetica')
+        .fillColor(COLORS.mutedText)
+        .text(finding.recommendation, sx + 22, sy + 12, {
+          width: stepW - 25,
+          height: 20,
+          ellipsis: true,
+          lineGap: 1,
+        });
+    }
   }
 };
 
@@ -2879,7 +3323,13 @@ export async function generateReportPDF(
 
     for (const pillar of sortedWorstFirst) {
       doc.addPage();
-      drawPillarPage(doc, pillar, businessName, dateStr, metadata);
+      if (isSinglePillar) {
+        // Phase 2B: observation + N-Day Action Plan blocks (flows to new pages),
+        // no Strategic Road Map.
+        drawPillar2BPage(doc, pillar, businessName, dateStr, metadata);
+      } else {
+        drawPillarPage(doc, pillar, businessName, dateStr, metadata);
+      }
     }
 
     // --- Page 10: Next Steps ---

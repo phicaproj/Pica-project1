@@ -8,6 +8,10 @@ export interface ScoringFinding {
   selectedLabel: string;
   observation: string;
   recommendation: string;
+  // Phase 2B action plan (null/empty for Phase 1 / 2A findings). `actionPlanDays`
+  // is the admin-set window; `actionPlanItems` the ~4–5 to-dos rendered under it.
+  actionPlanDays?: number | null;
+  actionPlanItems?: string[];
   riskType: RiskType;
   score: number;
 }

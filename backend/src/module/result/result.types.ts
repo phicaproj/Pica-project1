@@ -15,6 +15,9 @@ export type ResultPillarScoreResponse = {
     selectedLabel: string;
     observation: string;
     recommendation: string;
+    // Phase 2B action plan (null/empty for Phase 1 / 2A findings).
+    actionPlanDays?: number | null;
+    actionPlanItems?: string[];
     riskType: RiskType;
     score: number;
   }>;
