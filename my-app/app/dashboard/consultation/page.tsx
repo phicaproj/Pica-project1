@@ -1339,6 +1339,14 @@ export default function ConsultationPage() {
           </div>
         </div>
       )}
+
+      {/* ─── DETAIL VIEW MODAL ─── */}
+      {activeViewingBooking && (
+        <ViewBookingModal
+          booking={activeViewingBooking}
+          onClose={() => setActiveViewingBooking(null)}
+        />
+      )}
     </div>
   );
 }
