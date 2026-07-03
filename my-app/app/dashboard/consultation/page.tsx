@@ -213,6 +213,7 @@ export default function ConsultationPage() {
   const [relatedSessionResultId, setRelatedSessionResultId] = useState("");
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [activeViewingBooking, setActiveViewingBooking] = useState<ConsultationBookingPayload | null>(null);
 
   const displayCurrency: Currency = useMemo(
     () => resolveDisplayCurrency(me?.country ?? null),
@@ -452,7 +453,8 @@ export default function ConsultationPage() {
                       return (
                         <div
                           key={b.id}
-                          className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 transition duration-300"
+                          onClick={() => setActiveViewingBooking(b)}
+                          className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 hover:bg-white/[0.02] transition duration-300 cursor-pointer"
                         >
                           <div className="absolute right-0 top-0 h-24 w-24 bg-white/[0.01] rounded-bl-full" />
                           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -476,6 +478,7 @@ export default function ConsultationPage() {
                                 href={b.meetingLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
                                 className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-2.5 text-xs font-bold text-white transition-all shadow-lg shadow-orange-500/20 active:scale-95"
                               >
                                 <MessageSquare className="h-4 w-4" />
@@ -572,7 +575,11 @@ export default function ConsultationPage() {
                 {pastBookings.length > 0 ? (
                   <div className="space-y-3">
                     {pastBookings.map((b) => (
-                      <HistoryRow key={b.id} booking={b} />
+                      <HistoryRow
+                        key={b.id}
+                        booking={b}
+                        onOpenDetails={() => setActiveViewingBooking(b)}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -1340,7 +1347,13 @@ export default function ConsultationPage() {
 // HISTORY ROW — Past/attended/canceled bookings drawn in list format
 // ─────────────────────────────────────────────────────────────────────────
 
-function HistoryRow({ booking }: { booking: ConsultationBookingPayload }) {
+function HistoryRow({
+  booking,
+  onOpenDetails,
+}: {
+  booking: ConsultationBookingPayload;
+  onOpenDetails: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const consultantName = booking.adminNotesUpdatedBy
     ? [booking.adminNotesUpdatedBy.firstName, booking.adminNotesUpdatedBy.lastName]
@@ -1352,7 +1365,10 @@ function HistoryRow({ booking }: { booking: ConsultationBookingPayload }) {
     EXPERTS.find((e) => e.tier === booking.tier.tier) || EXPERTS[0];
 
   return (
-    <div className="rounded-xl border border-white/5 bg-[#111318] p-4 hover:border-white/10 transition duration-200">
+    <div
+      onClick={onOpenDetails}
+      className="rounded-xl border border-white/5 bg-[#111318] p-4 hover:border-white/10 hover:bg-white/[0.02] transition duration-200 cursor-pointer"
+    >
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-[#0c0d12] flex items-center justify-center border border-white/[0.05]">
@@ -1374,7 +1390,10 @@ function HistoryRow({ booking }: { booking: ConsultationBookingPayload }) {
         <div className="flex items-center gap-2">
           {booking.adminNotes && (
             <button
-              onClick={() => setOpen(!open)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(!open);
+              }}
               className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-xs font-semibold text-gray-400 hover:text-white transition"
             >
               <MessageSquare className="h-3.5 w-3.5" />
@@ -1382,7 +1401,8 @@ function HistoryRow({ booking }: { booking: ConsultationBookingPayload }) {
             </button>
           )}
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               alert("Downloading notes pack...");
             }}
             className="p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-gray-400 hover:text-white transition"
@@ -1409,6 +1429,224 @@ function HistoryRow({ booking }: { booking: ConsultationBookingPayload }) {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// DETAIL VIEW MODAL — Displays full consultation card details + feedbacks
+// ─────────────────────────────────────────────────────────────────────────
+
+function ViewBookingModal({
+  booking,
+  onClose,
+}: {
+  booking: ConsultationBookingPayload;
+  onClose: () => void;
+}) {
+  const status = STATUS_COPY[booking.status] ?? {
+    label: booking.status,
+    tone: "bg-gray-500/15 text-gray-300 border border-gray-500/20",
+  };
+
+  const matchedExpert =
+    EXPERTS.find((e) => e.tier === booking.tier.tier) || EXPERTS[0];
+
+  const consultantName = booking.adminNotesUpdatedBy
+    ? [booking.adminNotesUpdatedBy.firstName, booking.adminNotesUpdatedBy.lastName]
+        .filter(Boolean)
+        .join(" ")
+    : matchedExpert.name;
+
+  const feedbackBlocks = useMemo(() => {
+    if (!booking.adminNotes) return [];
+    return booking.adminNotes
+      .split(/\n\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }, [booking.adminNotes]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0c0e14] shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${status.tone}`}
+            >
+              {status.label}
+            </span>
+            <span className="text-xs text-gray-500 font-semibold">
+              Advisory Booking Details
+            </span>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-500 hover:text-white hover:bg-white/5 transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Main Title / Topic */}
+          <div>
+            <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
+              {booking.topic}
+            </h2>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+              <span>{booking.tier.name}</span>
+              <span>·</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {booking.tier.durationMinutes} min
+              </span>
+              <span>·</span>
+              <span>Requested {formatDate(booking.requestedAt)}</span>
+            </p>
+          </div>
+
+          {/* Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Consultant / Expert Assigned */}
+            <div className="p-4 rounded-xl border border-white/5 bg-[#111318]">
+              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                Assigned Advisor
+              </p>
+              <div className="flex items-center gap-3 mt-2">
+                <img
+                  src={matchedExpert.avatar}
+                  alt={consultantName}
+                  className="h-10 w-10 rounded-full object-cover border border-white/15"
+                />
+                <div>
+                  <h4 className="text-sm font-bold text-white leading-tight">
+                    {consultantName}
+                  </h4>
+                  <p className="text-[10px] text-gray-500">
+                    {matchedExpert.role}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Slot */}
+            <div className="p-4 rounded-xl border border-white/5 bg-[#111318] flex flex-col justify-between">
+              <div>
+                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                  Scheduled Time
+                </p>
+                <p className="text-sm font-bold text-white mt-2">
+                  {booking.scheduledAt ? formatDateTime(booking.scheduledAt) : "Awaiting slots assignment"}
+                </p>
+              </div>
+              {booking.status === "CONFIRMED" && booking.meetingLink && (
+                <a
+                  href={booking.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                >
+                  Join Meeting URL <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+
+            {/* Briefing notes context */}
+            {booking.notes && (
+              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
+                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                  Briefing Notes & Context
+                </p>
+                <p className="text-xs text-gray-300 mt-2 leading-relaxed whitespace-pre-wrap">
+                  {booking.notes}
+                </p>
+              </div>
+            )}
+
+            {/* Preferred times options */}
+            {booking.preferredTimes && (
+              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
+                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                  Preferred Availability Slots
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {booking.preferredTimes}
+                </p>
+              </div>
+            )}
+
+            {/* Linked result */}
+            {booking.relatedResult && (
+              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
+                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                  Linked Diagnostic Scan
+                </p>
+                <div className="mt-2 flex items-center gap-3 bg-[#0a0d13] p-3 rounded-lg border border-white/5">
+                  <Sparkles className="h-4 w-4 text-orange-400" />
+                  <div className="text-xs text-gray-300">
+                    <span className="font-semibold text-white">
+                      {booking.relatedResult.pillarCode || "System-wide"} Scan
+                    </span>{" "}
+                    • Phase {booking.relatedResult.phase === "PHASE2B" ? "2B" : "2A"} •{" "}
+                    <span className={bandColor(booking.relatedResult.colorBand)}>
+                      {Math.round(booking.relatedResult.totalScore)} Score ({booking.relatedResult.colorBand})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Feedback Section (feedbacks as blocks list) */}
+          <div className="pt-2">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
+              Advisor Feedbacks
+            </h3>
+            {feedbackBlocks.length > 0 ? (
+              <div className="space-y-3">
+                {feedbackBlocks.map((block, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/[0.02] space-y-2 relative"
+                  >
+                    <div className="flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase tracking-wider">
+                      <span>Feedback Block #{idx + 1}</span>
+                      <span>
+                        {booking.adminNotesUpdatedAt ? formatDate(booking.adminNotesUpdatedAt) : ""}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">
+                      {block}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/5 bg-white/[0.01] p-6 text-center">
+                <MessageSquare className="h-6 w-6 text-gray-600 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">
+                  No briefing notes or feedbacks have been recorded yet. They will appear here once
+                  provided by the advisor.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-white/5 bg-[#0a0d13] flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs font-bold text-white uppercase tracking-wider transition"
+          >
+            Close Details
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
