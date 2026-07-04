@@ -178,9 +178,9 @@ export type QuotaCheckResponse = {
 	kind: QuotaCheckKind
 }
 
-export const quotaCheck = async (kind: QuotaCheckKind) => {
+export const quotaCheck = async (kind: QuotaCheckKind, count = 1) => {
 	return authedFetch<QuotaCheckResponse>(
-		`/subscription/quota-check?kind=${encodeURIComponent(kind)}`,
+		`/subscription/quota-check?kind=${encodeURIComponent(kind)}&count=${count}`,
 		{ method: 'GET' },
 	)
 }

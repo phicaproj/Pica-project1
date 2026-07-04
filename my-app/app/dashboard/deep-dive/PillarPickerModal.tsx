@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X, ArrowRight, Lock, Check } from "lucide-react";
+import { X, ArrowRight, Lock, Check, Crown } from "lucide-react";
 import { formatMoney, type Currency } from "@/lib/utils";
 
 type PillarForPicker = {
@@ -25,6 +25,7 @@ interface PillarPickerModalProps {
   // full chosen set. The discount schedule drives the live savings preview.
   discount: DiscountConfig;
   onConfirm: (pillarIds: string[]) => void;
+  remainingQuota?: number;
 }
 
 // Pillar rows arrive tagged with the currency the pricing API returned. Any
@@ -64,6 +65,7 @@ export function PillarPickerModal({
   ownedPillarIds,
   discount,
   onConfirm,
+  remainingQuota,
 }: PillarPickerModalProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -235,6 +237,24 @@ export function PillarPickerModal({
                 <p className="text-xs text-gray-500">
                   Add a 2nd pillar to save {discount.pctPerPillar}%.
                 </p>
+              )}
+              {remainingQuota !== undefined && remainingQuota > 0 && (
+                <div className="rounded-lg p-3 bg-orange-500/10 border border-orange-500/20 text-xs text-orange-400 space-y-1.5 mt-3">
+                  <p className="font-bold flex items-center gap-1.5 text-white">
+                    <Crown className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
+                    Subscription Credits: {remainingQuota} remaining
+                  </p>
+                  {count > remainingQuota && (
+                    <p className="text-gray-400 leading-relaxed">
+                      You selected {count} pillars. Since partial quota consumption is not supported, this selection will proceed as a regular paid purchase. To use your remaining credits, select at most {remainingQuota} pillar{remainingQuota > 1 ? "s" : ""}.
+                    </p>
+                  )}
+                  {count > 0 && count <= remainingQuota && (
+                    <p className="text-emerald-400 font-semibold leading-relaxed">
+                      ✓ This selection is fully covered by your subscription quota. No payment will be required!
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

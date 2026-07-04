@@ -291,19 +291,21 @@ export async function subscribeService(
     throw new AppError('This plan does not offer an annual option', BAD_REQUEST);
   }
 
-  // Block double-subscribe — if the user already has a live subscription we
-  // make them cancel first. Lets us avoid the FE accidentally signing the
-  // same user up twice if they spam the button.
+  // Block double-subscribe — if the user already has a live subscription to the same
+  // plan and interval, we block it. If they are choosing a different plan or
+  // interval, we allow it (upgrade/downgrade pathway).
   const existing = await prisma.userSubscription.findFirst({
     where: {
       userId,
       status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
+      planId,
+      billingInterval: interval,
     },
     select: { id: true },
   });
   if (existing) {
     throw new AppError(
-      'You already have an active subscription — cancel it before starting a new one.',
+      'You already have an active subscription to this plan and interval.',
       CONFLICT
     );
   }
@@ -876,7 +878,7 @@ export async function activateSubscriptionFromWebhook(input: {
     }
   }
 
-  await prisma.userSubscription.create({
+  const newSub = await prisma.userSubscription.create({
     data: {
       userId: input.userId,
       planId: input.planId,
@@ -891,6 +893,35 @@ export async function activateSubscriptionFromWebhook(input: {
       ...cardFields,
     },
   });
+
+  // Upgrade/Downgrade: Disable and expire any older active/past-due subscriptions for this user
+  const oldSubs = await prisma.userSubscription.findMany({
+    where: {
+      userId: input.userId,
+      status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE] },
+      id: { not: newSub.id },
+    },
+  });
+
+  for (const oldSub of oldSubs) {
+    if (oldSub.paystackSubscriptionCode && oldSub.paystackEmailToken) {
+      try {
+        await disablePaystackSubscription({
+          subscriptionCode: oldSub.paystackSubscriptionCode,
+          emailToken: oldSub.paystackEmailToken,
+        });
+      } catch (err) {
+        console.warn(
+          `[webhook:activateSubscription] failed to disable old subscription ${oldSub.paystackSubscriptionCode}:`,
+          err
+        );
+      }
+    }
+    await prisma.userSubscription.update({
+      where: { id: oldSub.id },
+      data: { status: SubscriptionStatus.EXPIRED, cancelAtPeriodEnd: true },
+    });
+  }
 }
 
 /**

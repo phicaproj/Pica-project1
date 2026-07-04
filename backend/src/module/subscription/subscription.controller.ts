@@ -82,11 +82,12 @@ export const cancelSubscription = asyncHandler(async (req: Request, res: Respons
 // can branch without checking for 404.
 export const checkQuota = asyncHandler(async (req: Request, res: Response) => {
   const userId = requireUserId(req);
-  const { kind } = quotaCheckQuerySchema.parse(req.query);
+  const { kind, count } = quotaCheckQuerySchema.parse(req.query);
   const verdict = await assertSubscriptionQuota(userId, QUOTA_KIND_MAP[kind]);
+  const hasQuota = verdict.hasQuota && verdict.remaining >= count;
   const payload: QuotaCheckResponse = {
     message: 'Quota check completed',
-    hasQuota: verdict.hasQuota,
+    hasQuota,
     kind,
   };
   return res.status(OK).json(payload);

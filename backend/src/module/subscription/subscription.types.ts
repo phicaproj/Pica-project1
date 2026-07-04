@@ -103,6 +103,7 @@ export type SubscribeInput = z.infer<typeof subscribeSchema>;
 // the side effect of creating a PENDING Payment row.
 export const quotaCheckQuerySchema = z.object({
   kind: z.enum(['PHASE2A', 'PHASE2B_PILLAR', 'CONSULTATION']),
+  count: z.string().regex(/^\d+$/).default('1').transform(Number),
 });
 
 export type QuotaCheckQuery = z.infer<typeof quotaCheckQuerySchema>;

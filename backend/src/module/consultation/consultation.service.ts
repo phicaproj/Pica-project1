@@ -383,7 +383,7 @@ export async function bookConsultationService(
   userId: string,
   input: BookConsultationInput,
 ): Promise<BookConsultationResponse> {
-  const [user, tier] = await Promise.all([
+  const [user, tier, sub] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -394,6 +394,14 @@ export async function bookConsultationService(
       },
     }),
     prisma.consultationTier.findUnique({ where: { id: input.tierId } }),
+    prisma.userSubscription.findFirst({
+      where: {
+        userId,
+        status: { in: ['ACTIVE', 'PAST_DUE'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { plan: true },
+    }),
   ]);
   if (!user) throw new AppError('User not found', NOT_FOUND);
   if (!tier) throw new AppError('Consultation tier not found', NOT_FOUND);
@@ -424,8 +432,9 @@ export async function bookConsultationService(
   // Try the subscription quota first. Non-throwing: hasQuota=false falls
   // through to paywall. Same contract Phase 2A / 2B use.
   const verdict = await assertSubscriptionQuota(user.id, 'consultation');
+  const isTierCovered = sub && sub.plan.tier >= tier.tier;
 
-  if (verdict.hasQuota) {
+  if (verdict.hasQuota && isTierCovered) {
     const booking = await prisma.$transaction(async (tx) => {
       // Re-read the period end inside the tx so the usage upsert key is exact.
       const sub = await tx.userSubscription.findUnique({

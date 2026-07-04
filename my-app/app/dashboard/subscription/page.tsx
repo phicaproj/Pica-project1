@@ -861,6 +861,7 @@ function SubscriptionPageInner() {
             pillars={allPillars}
             ownedPillarIds={ownedPillarIds}
             discount={pricing?.phase2bDiscount ?? { pctPerPillar: 5, maxPillars: 5 }}
+            remainingQuota={mySub ? Math.max(0, mySub.plan.phase2bPerMonth - mySub.usage.phase2bUsed) : 0}
             onClose={() => {
               setShowPillarPicker(false);
               setPendingPlan(null);

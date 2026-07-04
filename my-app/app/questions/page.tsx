@@ -238,7 +238,7 @@ export default function QuestionPage() {
               Back to Homepage
             </Link>
             {/* Replace with your logo */}
-            <img src="./images/logo.png" className="h-10 mt-2" />
+            <img src="./images/newlogo.png" className="h-10 mt-2" />
           </div>
 
           {/* Results card */}
@@ -310,7 +310,7 @@ export default function QuestionPage() {
             Back to Homepage
           </Link>
           
-          <img src="./images/logo.png" className="h-10 mt-2" />
+          <img src="./images/newlogo.png" className="h-10 mt-2" />
         </div>
 
         {/* Question card */}

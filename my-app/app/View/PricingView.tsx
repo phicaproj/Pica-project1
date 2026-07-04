@@ -232,9 +232,14 @@ export default function PricingPage() {
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 03</p>
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Plan 2B Deep Dive</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
-                    {phase2BFrom === null
-                      ? "Not configured"
-                      : `From ${formatMoney(phase2BFrom, pricing?.currency ?? "USD")}`}
+                    {phase2BFrom === null ? (
+                      "Not configured"
+                    ) : (
+                      <>
+                        <span className="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider mr-2 align-middle">From</span>
+                        <span className="align-middle">{formatMoney(phase2BFrom, pricing?.currency ?? "USD")}</span>
+                      </>
+                    )}
                   </p>
                   {/* Section P — every PHASE2B_PILLAR row carries the same
                       bullets (the admin form edits one pillar at a time but

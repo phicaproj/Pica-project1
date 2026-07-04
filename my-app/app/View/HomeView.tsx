@@ -1,5 +1,5 @@
 "use client";
-
+ 
 import Link from "next/link";
 import { useTheme } from "@/components/ThemeContext";
 import Image from "next/image";
@@ -19,75 +19,81 @@ import {
   CheckCircle,
   AlertTriangle,
   Info,
+  Crown,
+  Quote,
+  MessageSquare,
 } from "lucide-react";
 
 export default function HomePage() {
   const { dark } = useTheme();
-
   const d = dark;
 
   return (
-    <div className={`antialiased ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
+    <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      {/* min-h-screen + flex-justify-center anchors the hero to one viewport
-          instead of letting padding pile up. Vertical centering keeps the
-          dashboard mockup balanced against the headline on tall monitors. */}
-      <section className={`relative min-h-screen flex flex-col justify-center py-8 md:py-12 px-4 sm:px-6 md:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative min-h-screen flex items-center py-16 md:py-24 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
-        {d && <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full bg-teal-500/10 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center">
+        {d && <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center w-full relative z-10">
           {/* Left */}
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-teal-400 uppercase mb-4">Precision Business Intelligence</p>
-            <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-6">
-              Understand<br />
-              Your<br />
-              Business<br />
-              <span className="text-teal-400">Before</span><br />
-              You Try to Grow<br />
-              It
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
+                Precision Business Intelligence
+              </span>
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight tracking-tight">
+              Understand Your <br className="hidden lg:inline" />
+              Business <span className="text-teal-400">Before</span> <br />
+              You Try to Grow It
             </h1>
-            <p className={`text-sm leading-relaxed mb-8 max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA provides Nigerian founders with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-              <Link href="/pages/freescan" className="px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition text-center">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+              <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
                 Start Free Scan
               </Link>
-              <Link href="/pages/about" className={`px-6 py-3 rounded-lg text-sm font-semibold border transition text-center ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="/pages/about" className={`px-8 py-4 rounded-xl text-sm font-bold border transition-all text-center active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 PICA Onboarding Guide
               </Link>
             </div>
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-2xl overflow-hidden border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-100 border-gray-200"}`} style={{ minHeight: "340px" }}>
-            <Image
-              src="/images/landing1.png"
-              alt="Dashboard Preview"
-              width={500}
-              height={340}
-              className="w-full h-full object-cover"
-            />
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl p-1 ${d ? "bg-[#161b22]/50 border-white/10 shadow-black/40" : "bg-white border-gray-200 shadow-gray-200/50"}`} style={{ minHeight: "360px" }}>
+            <div className="relative rounded-2xl overflow-hidden w-full h-full" style={{ minHeight: "350px" }}>
+              <Image
+                src="/images/landing1.png"
+                alt="PICA Dashboard Preview"
+                fill
+                priority
+                className="object-cover"
+              />
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Capabilities ── */}
-      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
-        <div className="max-w-7xl mx-auto">
-          <p className="text-xs font-semibold tracking-widest text-teal-400 uppercase mb-3">Some Capabilities</p>
-          <h2 className={`text-2xl md:text-3xl font-bold mb-12 ${d ? "text-white" : "text-gray-900"}`}>Comprehensive Diagnostics for Businesses</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="space-y-3">
+            <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Capabilities</p>
+            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>
+              Comprehensive Diagnostics for Businesses
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {[
               { icon: <Search className="w-6 h-6 text-teal-400" />, title: "Blind Spot Discovery", desc: "Identify structural weaknesses in your business model that standard accounting software misses." },
               { icon: <BarChart2 className="w-6 h-6 text-teal-400" />, title: "Performance Benchmarking", desc: "Compare your KPIs against top-performing Nigerian businesses in your specific sector." },
               { icon: <Zap className="w-6 h-6 text-teal-400" />, title: "Growth Readiness", desc: "Determine if your infrastructure is truly ready for high-velocity scaling without breaking." },
             ].map(({ icon, title, desc }) => (
-              <div key={title} className={`p-4 md:p-6 rounded-2xl border transition hover:border-teal-500/50 ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
-                <div className="mb-4">{icon}</div>
-                <h3 className={`text-base font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>{title}</h3>
+              <div key={title} className={`group p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30 hover:shadow-xl hover:shadow-teal-500/[0.02]" : "bg-gray-50 border-gray-200 hover:border-teal-500/30 hover:shadow-xl hover:shadow-gray-200/50"}`}>
+                <div className="mb-6 w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center group-hover:scale-105 group-hover:bg-teal-500/20 transition-all duration-200">{icon}</div>
+                <h3 className={`text-lg font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>{title}</h3>
                 <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
               </div>
             ))}
@@ -96,73 +102,85 @@ export default function HomePage() {
       </section>
 
       {/* ── Three Layers ── */}
-      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
-        <div className="max-w-7xl mx-auto text-center mb-12">
-          <h2 className={`text-2xl md:text-3xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>The Three Layers of Intelligence</h2>
-          <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>From instant insights to deep-dive forensic analysis.</p>
-        </div>
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Layer 01 - Free Scan */}
-          <div className={`rounded-2xl p-4 md:p-6 border ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Layer 01</p>
-            <h3 className={`text-lg font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Free Scan</h3>
-            <ul className="space-y-2 mb-6">
-              {["15-Minute Audit", "Top-Level Health Score", "Top 3 Risk Factors"].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
-                  <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
-                </li>
-              ))}
-            </ul>
-            <Link href="/pages/freescan" className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition text-center ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-              Start Scanning
-            </Link>
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="text-center max-w-2xl mx-auto space-y-3">
+            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The Three Layers of Intelligence</h2>
+            <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>From instant insights to deep-dive forensic analysis.</p>
           </div>
+          <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Layer 01 - Free Scan */}
+            <div className={`rounded-2xl p-6 lg:p-8 border flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#0d1117] border-white/10 hover:border-white/20" : "bg-white border-gray-200 shadow-sm hover:shadow-md"}`}>
+              <div className="space-y-4">
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Layer 01</p>
+                <h3 className={`text-xl font-bold ${d ? "text-white" : "text-gray-900"}`}>Free Scan</h3>
+                <ul className="space-y-3 pt-2">
+                  {["15-Minute Audit", "Top-Level Health Score", "Top 3 Risk Factors"].map((item) => (
+                    <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
+                      <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Link href="/pages/freescan" className={`mt-8 w-full py-3 rounded-xl text-xs font-bold border transition-all text-center active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+                Start Scanning
+              </Link>
+            </div>
 
-          {/* Layer 02 - Full Diagnostic (featured) */}
-          <div className="rounded-2xl p-4 md:p-6 bg-[#1a2e1a] border border-teal-500/50 relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#f97316] text-white text-xs font-bold px-3 py-1 rounded-full">Most Popular</div>
-            <p className="text-xs text-teal-400 font-semibold uppercase tracking-wider mb-1">Layer 02</p>
-            <h3 className="text-lg font-bold text-white mb-4">Full Diagnostic</h3>
-            <ul className="space-y-2 mb-6">
-              {["Complete 7-Pillar Review", "Gap Analysis Report", "Priority Roadmap"].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-300">
-                  <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
-                </li>
-              ))}
-            </ul>
-            <Link href="/pages/fulldiagnostic" className="w-full py-2.5 rounded-xl text-sm font-semibold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center block">
-              Get Diagnostic
-            </Link>
-          </div>
+            {/* Layer 02 - Full Diagnostic (featured) */}
+            <div className="rounded-2xl p-6 lg:p-8 bg-[#152e22] border border-teal-500/40 relative flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/[0.03]">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#f97316] text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg shadow-orange-500/20">
+                Most Popular
+              </div>
+              <div className="space-y-4 pt-2">
+                <p className="text-xs text-teal-400 font-bold uppercase tracking-wider">Layer 02</p>
+                <h3 className="text-xl font-bold text-white">Full Diagnostic</h3>
+                <ul className="space-y-3 pt-2">
+                  {["Complete 7-Pillar Review", "Gap Analysis Report", "Priority Roadmap"].map((item) => (
+                    <li key={item} className="flex items-center gap-2.5 text-sm text-gray-200">
+                      <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Link href="/pages/fulldiagnostic" className="mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition-all text-center block shadow-lg shadow-orange-500/20 active:scale-95">
+                Get Diagnostic
+              </Link>
+            </div>
 
-          {/* Layer 03 - Intelligence */}
-          <div className={`rounded-2xl p-4 md:p-6 border ${d ? "bg-[#1a2e20] border-teal-800/40" : "bg-green-50 border-green-200"}`}>
-            <p className="text-xs text-teal-400 font-semibold uppercase tracking-wider mb-1">Layer 03</p>
-            <h3 className={`text-lg font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Intelligence</h3>
-            <ul className="space-y-2 mb-6">
-              {["Monthly Deep Dives", "Competitor Intelligence", "Board-Level Dashboards"].map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
-                  <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
-                </li>
-              ))}
-            </ul>
-            <button className={`w-full py-2.5 rounded-xl text-sm font-semibold border transition ${d ? "border-teal-600 text-teal-400 hover:bg-teal-600/10" : "border-green-600 text-green-700 hover:bg-green-100"}`}>
-              Contact Expert
-            </button>
+            {/* Layer 03 - Intelligence */}
+            <div className={`rounded-2xl p-6 lg:p-8 border flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#13281d] border-teal-800/40 hover:border-teal-700/40" : "bg-emerald-50/50 border-emerald-200 hover:border-emerald-300"}`}>
+              <div className="space-y-4">
+                <p className="text-xs text-teal-400 font-bold uppercase tracking-wider">Layer 03</p>
+                <h3 className={`text-xl font-bold ${d ? "text-white" : "text-gray-900"}`}>Intelligence</h3>
+                <ul className="space-y-3 pt-2">
+                  {["Monthly Deep Dives", "Competitor Intelligence", "Board-Level Dashboards"].map((item) => (
+                    <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
+                      <CheckCircle className="w-4 h-4 text-teal-400 flex-shrink-0" />{item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <Link href="/Auth/signup" className={`mt-8 w-full py-3 rounded-xl text-xs font-bold border transition-all text-center block active:scale-95 ${d ? "border-teal-600/50 text-teal-400 hover:bg-teal-600/10" : "border-emerald-600 text-emerald-700 hover:bg-emerald-100"}`}>
+                Sign Up & Consult
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── 7 Pillars ── */}
-      <section className={`py-6 md:py-10 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-start mb-12">
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-teal-400 uppercase mb-3">Structural Foundation</p>
-              <h2 className={`text-2xl md:text-3xl font-bold ${d ? "text-white" : "text-gray-900"}`}>The 7 Pillars of Nigerian Business Resilience</h2>
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b border-white/5 pb-8">
+            <div className="space-y-3">
+              <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Structural Foundation</p>
+              <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>
+                The 7 Pillars of Nigerian Business Resilience
+              </h2>
             </div>
-            <p className={`text-sm leading-relaxed pt-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
-              Every diagnostic explores these interconnected areas to build a bulletproof operation.
+            <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
+              Every diagnostic explores these interconnected areas to build a bulletproof operation, optimized specifically for local economic realities.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -175,9 +193,9 @@ export default function HomePage() {
               { icon: <Shield className="w-6 h-6 text-teal-400" />, label: "Legal & Compliance" },
               { icon: <MapPin className="w-6 h-6 text-teal-400" />, label: "Product-Market Fit" },
             ].map(({ icon, label }) => (
-              <div key={label} className={`flex flex-col items-center gap-3 p-5 rounded-2xl border text-center transition hover:border-teal-500/50 ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
-                {icon}
-                <span className={`text-sm font-medium ${d ? "text-gray-300" : "text-gray-700"}`}>{label}</span>
+              <div key={label} className={`flex flex-col items-center gap-4 p-6 rounded-2xl border text-center transition-all duration-300 hover:-translate-y-1 hover:border-teal-500/40 ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200 hover:shadow-md hover:shadow-gray-200/20"}`}>
+                <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center">{icon}</div>
+                <span className={`text-sm font-semibold ${d ? "text-gray-300" : "text-gray-700"}`}>{label}</span>
               </div>
             ))}
           </div>
@@ -185,106 +203,152 @@ export default function HomePage() {
       </section>
 
       {/* ── Data You Can Actually Use ── */}
-      <section className={`py-8 md:py-12 px-4 sm:px-6 md:px-8 ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-teal-400 uppercase mb-3">Output Quality</p>
-            <h2 className={`text-3xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Data You Can Actually Use</h2>
-            <p className={`text-sm leading-relaxed mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Output Quality</p>
+              <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>Data You Can Actually Use</h2>
+            </div>
+            <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
               No generic advice. Our reports provide forensic-level detail on where your money is leaking and where your next 10x growth will come from.
             </p>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-[#f97316] flex-shrink-0 mt-0.5" />
+            <div className="space-y-4 pt-2">
+              <div className="flex items-start gap-4">
+                <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <AlertTriangle className="w-5 h-5 text-[#f97316]" />
+                </div>
                 <div>
-                  <p className={`text-sm font-semibold ${d ? "text-white" : "text-gray-900"}`}>Risk Identification</p>
-                  <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>Immediate flags for legal or financial exposure unique to Nigeria.</p>
+                  <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Risk Identification</p>
+                  <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>Immediate flags for legal or financial exposure unique to Nigeria.</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3">
-                <Zap className="w-5 h-5 text-[#f97316] flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-4">
+                <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap className="w-5 h-5 text-[#f97316]" />
+                </div>
                 <div>
-                  <p className={`text-sm font-semibold ${d ? "text-white" : "text-gray-900"}`}>Efficiency Multipliers</p>
-                  <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>Actionable steps to increase margin without raising prices.</p>
+                  <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Efficiency Multipliers</p>
+                  <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>Actionable steps to increase margin without raising prices.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Executive Summary Card */}
-          <div className={`rounded-2xl border p-6 ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200 shadow"}`}>
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs text-gray-500">DIAGNOSTIC REPORT V2.1</p>
-              <p className="text-xs text-gray-500">Jan 28, 2025</p>
+          <div className={`rounded-2xl border p-6 lg:p-8 shadow-2xl ${d ? "bg-[#0d1117] border-white/10 shadow-black/40" : "bg-white border-gray-200"}`}>
+            <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">DIAGNOSTIC REPORT V2.1</p>
+              <p className="text-[10px] font-bold text-gray-500">REALTIME SNAPSHOT</p>
             </div>
-            <h3 className={`text-base font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Executive Summary</h3>
-            <div className="flex items-center gap-8 mb-4">
+            <h3 className={`text-lg font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Executive Summary</h3>
+            <div className="flex items-center gap-12 mb-6">
               <div>
                 <p className="text-xs text-gray-500 mb-1">Risk Score</p>
-                <p className="text-3xl font-extrabold text-[#f97316]">68%</p>
+                <p className="text-4xl font-black text-[#f97316]">68%</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-1">Risk Profile</p>
                 <p className="text-lg font-bold text-red-400">Moderate High</p>
               </div>
             </div>
-            <div className={`rounded-xl p-3 mb-3 border-l-4 border-red-500 ${d ? "bg-red-500/10" : "bg-red-50"}`}>
-              <p className="text-xs font-bold text-red-400 mb-1">CRITICAL: Cash-Flow Concentration</p>
-              <p className="text-xs text-gray-400">60% of revenue derived from 3 B2B clients. Concentration exposure within 90 days.</p>
-            </div>
-            <div className={`rounded-xl p-3 border-l-4 border-yellow-500 ${d ? "bg-yellow-500/10" : "bg-yellow-50"}`}>
-              <p className="text-xs font-bold text-yellow-400 mb-1">ADVISORY: Ops Optimization</p>
-              <p className="text-xs text-gray-400">Inventory turnover may be improved by 30 days. Capital locked in lagoon stock.</p>
+            <div className="space-y-3">
+              <div className={`rounded-xl p-4 border-l-4 border-red-500 ${d ? "bg-red-500/10" : "bg-red-50"}`}>
+                <p className="text-xs font-bold text-red-400 mb-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  CRITICAL: Cash-Flow Concentration
+                </p>
+                <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>60% of revenue derived from 3 B2B clients. Concentration exposure within 90 days.</p>
+              </div>
+              <div className={`rounded-xl p-4 border-l-4 border-yellow-500 ${d ? "bg-yellow-500/10" : "bg-yellow-50"}`}>
+                <p className="text-xs font-bold text-yellow-400 mb-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  ADVISORY: Ops Optimization
+                </p>
+                <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>Inventory turnover may be improved by 30 days. Capital locked in lagoon stock.</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Economy Section ── */}
-      <section className={`py-8 md:py-12 px-4 sm:px-6 md:px-8 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
-          {/* Image placeholder */}
-          <div className={`rounded-2xl overflow-hidden relative ${d ? "bg-[#161b22] border border-white/10" : "bg-gray-100 border border-gray-200"}`} style={{ minHeight: "280px" }}>
-            <Image
-              src="/images/landing2.png"
-              alt="Team / Office"
-              width={500}
-              height={280}
-              className="w-full h-full object-cover"
-            />
+      {/* ── Economy Section (Testimonial Card Upgrade) ── */}
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
+          {/* Image */}
+          <div className={`rounded-3xl overflow-hidden relative shadow-xl ${d ? "bg-[#161b22]/50 border border-white/10 shadow-black/40" : "bg-gray-100 border border-gray-200"}`} style={{ minHeight: "320px" }}>
+            <div className="relative w-full h-full" style={{ minHeight: "320px" }}>
+              <Image
+                src="/images/landing2.png"
+                alt="PICA Consulting Session"
+                fill
+                className="object-cover"
+              />
+            </div>
           </div>
-          <div>
-            <h2 className={`text-3xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>
+          <div className="space-y-6">
+            <h2 className={`text-3xl md:text-4xl font-black leading-tight ${d ? "text-white" : "text-gray-900"}`}>
               The Economy is Changing.<br />
               <span className="text-teal-400">Is Your Business?</span>
             </h2>
-            <p className={`text-sm leading-relaxed mb-6 ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
               In a volatile market, guessing is a liability. PICA gives you the empirical data to survive headwinds and capture opportunities before your competitors even see them.
             </p>
-            <blockquote className={`border-l-4 border-teal-400 pl-4 ${d ? "text-gray-300" : "text-gray-700"}`}>
-              <p className="text-sm italic mb-2">&quot;The diagnostic changed how we saw our supply chain. We saved 15% in costs in just three months.&quot;</p>
-              <p className="text-xs text-teal-400 font-semibold">— Tunde A., Founder of Lagos Logistics</p>
-            </blockquote>
+            
+            {/* Testimonial Card */}
+            <div className={`rounded-2xl p-6 border relative ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
+              <Quote className="absolute right-6 top-6 h-8 w-8 text-teal-400/20" />
+              <p className={`text-sm italic leading-relaxed mb-4 relative z-10 ${d ? "text-gray-300" : "text-gray-700"}`}>
+                &quot;The diagnostic changed how we saw our supply chain. We saved 15% in costs in just three months.&quot;
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-teal-400/10 text-teal-400 text-xs font-black flex items-center justify-center">
+                  TA
+                </div>
+                <div>
+                  <p className={`text-xs font-bold ${d ? "text-white" : "text-gray-900"}`}>Tunde A.</p>
+                  <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Founder, Lagos Logistics</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="py-8 md:py-12 px-4 sm:px-6 md:px-8 bg-gradient-to-br from-[#f97316] via-[#f59e0b] to-[#fbbf24]">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-3">Get Instant Clarity on Your Business</h2>
-          <p className="text-sm text-gray-800 mb-8">Join 500+ Nigerian founders who stopped guessing and started scaling with precision.</p>
-          <Link href="/pages/freescan" className="inline-block px-8 py-4 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold transition">
-            Run Your area Scan Now
-          </Link>
-          <p className="text-xs text-gray-700 mt-4">NO CREDIT CARD REQUIRED · TAKES 15 MINUTES</p>
+      <section className="py-20 md:py-28 px-6 lg:px-8 bg-gradient-to-br from-[#ea580c] via-[#f97316] to-[#facc15] relative overflow-hidden">
+        {/* Decorative Circles */}
+        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-black/5 blur-2xl pointer-events-none" />
+        <div className="max-w-3xl mx-auto text-center space-y-6 relative z-10">
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+            Get Instant Clarity on Your Business
+          </h2>
+          <p className="text-base md:text-lg text-gray-900/80 font-medium max-w-xl mx-auto">
+            Join 500+ Nigerian founders who stopped guessing and started scaling with precision.
+          </p>
+          <div className="pt-4">
+            <Link href="/pages/freescan" className="inline-block px-10 py-5 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-black/20 hover:scale-105 active:scale-95">
+              Run Your Free Scan Now
+            </Link>
+          </div>
+          <p className="text-[10px] text-gray-900/60 font-bold uppercase tracking-widest pt-2">
+            NO CREDIT CARD REQUIRED · TAKES 15 MINUTES
+          </p>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className={`py-8 px-8 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/10 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
-        © Beauvision 2024. All rights reserved. Powered by{" "}
-        <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition">SunDimension</a>
+      <footer className={`py-12 px-6 lg:px-8 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
+        <div className="max-w-7xl mx-auto space-y-4">
+          <p className="font-bold text-sm tracking-wider text-teal-400">PICA</p>
+          <p>
+            © PICA 2026. All rights reserved. Powered by{" "}
+            <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition-colors">
+              SunDimension
+            </a>
+          </p>
+        </div>
       </footer>
     </div>
   );

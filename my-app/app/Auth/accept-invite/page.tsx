@@ -110,7 +110,7 @@ function AcceptInviteContent() {
 				{/* Logo - centered */}
 				<div className='pt-10 flex justify-center'>
 					<div className='flex items-center gap-2'>
-						<img src='/images/logo.png' alt='logo' />
+						<img src='/images/newlogo.png' alt='logo' />
 					</div>
 				</div>
 

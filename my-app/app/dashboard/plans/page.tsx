@@ -431,15 +431,14 @@ function SubscriptionCard({
   onSubscribe: () => void;
 }) {
   // CTA logic:
-  //   - current plan → disabled "Current plan" pill, link out to manage
-  //   - other plan while subscribed → disabled "Cancel current first" pill
-  //     (the BE rejects double-subscribe; this surfaces it before the click)
+  //   - current plan → disabled "Current plan" pill
+  //   - other plan while subscribed → "Switch to this plan" (upgrade/downgrade)
   //   - no active sub → normal subscribe button
-  const buttonDisabled = current || hasActiveSub;
+  const buttonDisabled = current;
   const buttonLabel = current
     ? "Current plan"
     : hasActiveSub
-      ? "Cancel current to switch"
+      ? "Switch to this plan"
       : `Subscribe to ${plan.name}`;
 
   return (

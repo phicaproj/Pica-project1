@@ -42,7 +42,7 @@ export default function ForgotPasswordPage() {
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-10">
-          <img src="/images/logo.png" alt="Beauvision" className="h-8" />
+          <img src="/images/newlogo.png" alt="Beauvision" className="h-8" />
           <span className="text-white text-lg font-bold">Beauvision</span>
         </div>
 

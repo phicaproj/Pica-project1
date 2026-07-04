@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Clock,
   Crown,
+  CreditCard,
   Download,
   ExternalLink,
   FileText,
@@ -31,6 +32,7 @@ import {
   getMyConsultationResults,
   getMyConsultations,
   getMySubscription,
+  verifyPayment,
   type CompletedResultOption,
   type ConsultationBookingPayload,
   type ConsultationTierPublic,
@@ -44,6 +46,28 @@ import {
   resolveDisplayCurrency,
   type Currency,
 } from "@/lib/utils";
+import Script from "next/script";
+
+// Paystack inline-widget shape
+type PaystackHandler = { openIframe: () => void };
+type PaystackSetupOptions = {
+  key: string;
+  email: string;
+  amount: number;
+  ref: string;
+  currency?: string;
+  callback: (response: { reference: string }) => void;
+  onClose: () => void;
+};
+declare global {
+  interface Window {
+    PaystackPop?: {
+      setup: (options: PaystackSetupOptions) => PaystackHandler;
+    };
+  }
+}
+
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
 // ─── Constants & Mock Data ──────────────────────────────────────────────────
 
@@ -314,6 +338,67 @@ export default function ConsultationPage() {
     return tiers.find((t) => t.tier === expert.tier) || tiers[0] || null;
   };
 
+  const verifyWithRetry = async (reference: string) => {
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (attempts < maxAttempts) {
+      attempts++;
+      const verify = await verifyPayment(reference);
+      if (!verify.error && verify.data?.paid) {
+        return { ok: true, message: "Payment verified successfully" };
+      }
+      const status = verify.data?.status;
+      if (verify.error || (status && status !== "PENDING")) {
+        return {
+          ok: false,
+          message:
+            verify.error?.message ??
+            `Payment verification failed with status: ${status}`,
+        };
+      }
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    return { ok: false, message: "Payment verification timed out. We are still processing it." };
+  };
+
+  const handlePendingPaymentClick = (booking: ConsultationBookingPayload) => {
+    if (!booking.payment) return;
+    const { reference, amount, currency, authorizationUrl } = booking.payment;
+
+    if (typeof window !== "undefined" && window.PaystackPop && PAYSTACK_PUBLIC_KEY) {
+      const handler = window.PaystackPop.setup({
+        key: PAYSTACK_PUBLIC_KEY,
+        email: me?.email ?? "",
+        amount: Math.round(Number(amount) * 100),
+        ref: reference,
+        currency,
+        callback: (response) => {
+          void (async () => {
+            setSubmittingBooking(true);
+            const result = await verifyWithRetry(response.reference);
+            setSubmittingBooking(false);
+            if (result.ok) {
+              setToast("Payment completed successfully!");
+              await refresh();
+            } else {
+              alert(result.message);
+            }
+          })();
+        },
+        onClose: () => {},
+      });
+      handler.openIframe();
+    } else {
+      if (authorizationUrl) {
+        window.open(authorizationUrl, "_blank");
+      } else {
+        alert("Payment gateway configuration issue. Please contact support.");
+      }
+    }
+  };
+
   const handleBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedExpert) return;
@@ -351,12 +436,45 @@ export default function ConsultationPage() {
     if (res.data.coveredBySubscription) {
       setBookingStep(3);
     } else {
-      const auth = res.data.booking.payment?.authorizationUrl;
-      if (auth) {
-        setCheckoutUrl(auth);
+      const paymentObj = res.data.booking.payment;
+      if (!paymentObj) {
         setBookingStep(3);
+        return;
+      }
+
+      const { reference, amount, currency, authorizationUrl } = paymentObj;
+
+      if (typeof window !== "undefined" && window.PaystackPop && PAYSTACK_PUBLIC_KEY) {
+        const handler = window.PaystackPop.setup({
+          key: PAYSTACK_PUBLIC_KEY,
+          email: me?.email ?? "",
+          amount: Math.round(Number(amount) * 100),
+          ref: reference,
+          currency,
+          callback: (response) => {
+            void (async () => {
+              setSubmittingBooking(true);
+              const result = await verifyWithRetry(response.reference);
+              setSubmittingBooking(false);
+              if (result.ok) {
+                setCheckoutUrl(null);
+                setBookingStep(3);
+                await refresh();
+              } else {
+                alert(result.message);
+              }
+            })();
+          },
+          onClose: () => {},
+        });
+        handler.openIframe();
       } else {
-        setBookingStep(3);
+        if (authorizationUrl) {
+          setCheckoutUrl(authorizationUrl);
+          setBookingStep(3);
+        } else {
+          setBookingStep(3);
+        }
       }
     }
   };
@@ -459,13 +577,19 @@ export default function ConsultationPage() {
                           <div className="absolute right-0 top-0 h-24 w-24 bg-white/[0.01] rounded-bl-full" />
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-2">
-                              <span
-                                className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-                                  STATUS_COPY[b.status]?.tone || ""
-                                }`}
-                              >
-                                {STATUS_COPY[b.status]?.label || b.status}
-                              </span>
+                              {b.payment && b.payment.status === "PENDING" ? (
+                                <span className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                  Payment Pending
+                                </span>
+                              ) : (
+                                <span
+                                  className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                    STATUS_COPY[b.status]?.tone || ""
+                                  }`}
+                                >
+                                  {STATUS_COPY[b.status]?.label || b.status}
+                                </span>
+                              )}
                               {b.coveredBySubscription && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">
                                   <Crown className="h-3 w-3" />
@@ -484,6 +608,17 @@ export default function ConsultationPage() {
                                 <MessageSquare className="h-4 w-4" />
                                 Enter Briefing Room
                               </a>
+                            ) : b.payment && b.payment.status === "PENDING" ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePendingPaymentClick(b);
+                                }}
+                                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-5 py-2.5 text-xs font-bold text-white transition-all shadow-lg shadow-orange-500/20 active:scale-95"
+                              >
+                                <CreditCard className="h-4 w-4" />
+                                Complete Payment
+                              </button>
                             ) : (
                               <span className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/15">
                                 <Clock className="h-3.5 w-3.5" />
@@ -899,7 +1034,7 @@ export default function ConsultationPage() {
                       const isSelected = selectedExpert?.id === exp.id;
                       if (!dbTier) return null;
 
-                      const isCovered = coveredTier?.id === dbTier.id;
+                      const isCovered = mySub && mySub.plan.tier >= dbTier.tier;
                       const hasQuotaLeft = isCovered && consultationsRemaining > 0;
                       const priceConverted = convertFromUsd(
                         dbTier.priceUsd,
@@ -1177,7 +1312,7 @@ export default function ConsultationPage() {
                     <div className="text-xs text-gray-500 max-w-md">
                       {getDbTierForExpert(selectedExpert) && (
                         <>
-                          {coveredTier?.tier === selectedExpert.tier && consultationsRemaining > 0 ? (
+                          {mySub && mySub.plan.tier >= selectedExpert.tier && consultationsRemaining > 0 ? (
                             <span className="text-emerald-400 font-semibold flex items-center gap-1">
                               <Crown className="h-3.5 w-3.5" />
                               Included with subscription ({consultationsRemaining} left)

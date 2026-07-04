@@ -127,7 +127,7 @@ export default function SignUpPage() {
             </Link>
             {/* Logo */}
             <div className="flex items-center gap-2 mb-8">
-              <img src="/images/logo.png" alt="Beauvision" className="h-8" />
+              <img src="/images/newlogo.png" alt="Beauvision" className="h-8" />
               <span className="text-white text-lg font-bold">Beauvision</span>
             </div>
 
