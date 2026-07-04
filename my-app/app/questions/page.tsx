@@ -238,7 +238,10 @@ export default function QuestionPage() {
               Back to Homepage
             </Link>
             {/* Replace with your logo */}
-            <img src="./images/newlogo.png" className="h-10 mt-2" />
+            <div className="flex items-center gap-2 mt-2">
+              <img src="./images/favicon.png" className="h-6 w-6 object-contain" />
+              <span className="text-white text-lg font-bold">Beauvision</span>
+            </div>
           </div>
 
           {/* Results card */}
@@ -310,7 +313,10 @@ export default function QuestionPage() {
             Back to Homepage
           </Link>
           
-          <img src="./images/newlogo.png" className="h-10 mt-2" />
+          <div className="flex items-center gap-2 mt-2">
+            <img src="./images/favicon.png" className="h-6 w-6 object-contain" />
+            <span className="text-gray-800 text-lg font-bold">Beauvision</span>
+          </div>
         </div>
 
         {/* Question card */}

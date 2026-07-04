@@ -110,7 +110,7 @@ export default function LoginPage() {
             </Link>
             {/* Logo */}
             <div className="flex items-center gap-2 mb-10">
-              <img src="/images/newlogo.png" alt="Beauvision" className="h-8" />
+              <img src="/images/favicon.png" alt="Beauvision" className="h-6 w-6 object-contain" />
               <span className="text-white text-lg font-bold">Beauvision</span>
             </div>
 

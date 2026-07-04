@@ -32,46 +32,44 @@ export default function HomePage() {
     <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative min-h-screen flex items-center py-16 md:py-24 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
-        {d && <div className="absolute top-20 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center w-full relative z-10">
+        {d && <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center w-full relative z-10">
           {/* Left */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
                 Precision Business Intelligence
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight">
               Understand Your <br className="hidden lg:inline" />
               Business <span className="text-teal-400">Before</span> <br />
               You Try to Grow It
             </h1>
-            <p className={`text-base leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-sm leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA provides Nigerian founders with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-              <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+              <Link href="/pages/freescan" className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
                 Start Free Scan
               </Link>
-              <Link href="/pages/about" className={`px-8 py-4 rounded-xl text-sm font-bold border transition-all text-center active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="/pages/about" className={`px-6 py-3 rounded-xl text-sm font-bold border transition-all text-center active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 PICA Onboarding Guide
               </Link>
             </div>
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl p-1 ${d ? "bg-[#161b22]/50 border-white/10 shadow-black/40" : "bg-white border-gray-200 shadow-gray-200/50"}`} style={{ minHeight: "360px" }}>
-            <div className="relative rounded-2xl overflow-hidden w-full h-full" style={{ minHeight: "350px" }}>
-              <Image
-                src="/images/landing1.png"
-                alt="PICA Dashboard Preview"
-                fill
-                priority
-                className="object-cover"
-              />
-            </div>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "300px" }}>
+            <Image
+              src="/images/landing1.png"
+              alt="PICA Dashboard Preview"
+              fill
+              priority
+              className="object-cover w-full h-full"
+            />
           </div>
         </div>
       </section>
@@ -341,9 +339,9 @@ export default function HomePage() {
       {/* ── Footer ── */}
       <footer className={`py-12 px-6 lg:px-8 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
         <div className="max-w-7xl mx-auto space-y-4">
-          <p className="font-bold text-sm tracking-wider text-teal-400">PICA</p>
+          <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
           <p>
-            © PICA 2026. All rights reserved. Powered by{" "}
+            © Beauvision 2026. All rights reserved. Powered by{" "}
             <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition-colors">
               SunDimension
             </a>

@@ -75,20 +75,23 @@ export default function Navbar({
     <>
       <nav
         className={`${isFixed ? "fixed top-0 left-0 right-0 z-50" : ""
-          } flex items-center justify-between px-4 sm:px-8 py-2 border-b ${d
+          } flex items-center justify-between px-4 sm:px-8 py-1.5 border-b ${d
             ? "bg-[#0d1117]/95 border-white/10 backdrop-blur"
             : "bg-white/95 border-gray-200 backdrop-blur"
           }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/images/logo.png"
+            src="/images/favicon.png"
             alt="Beauvision"
-            width={100}
-            height={28}
-            className="h-auto w-[100px]"
+            width={24}
+            height={24}
+            className="h-6 w-6 object-contain"
           />
+          <span className={`text-base font-bold tracking-tight ${d ? "text-white" : "text-gray-900"}`}>
+            Beauvision
+          </span>
         </Link>
 
         {/* Desktop Navigation - hidden on mobile */}

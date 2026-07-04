@@ -7,7 +7,7 @@ import {
   ArrowRight,
   Timer,
   AlertTriangle,
-  Monitor,
+  CheckCircle,
 } from "lucide-react";
 
 export default function FreeScanPage() {
@@ -15,58 +15,60 @@ export default function FreeScanPage() {
   const d = dark;
 
   return (
-    <div className={`antialiased min-h-screen ${d ? "bg-[#111111] text-white" : "bg-white text-gray-900"}`}>
+    <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      {/* Hero fills one viewport so the "Start Quick Scan" CTA + hero image
-          land in the same frame instead of below a tall empty band. */}
-      <section className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/20 text-[#f97316] text-xs font-semibold uppercase tracking-wider mb-6">
-              <span className="w-2 h-2 rounded-full bg-[#f97316]" />
-              Free Individual Plan
+      <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+        {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center w-full relative z-10">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
+              <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#f97316]">
+                Free Individual Plan
+              </span>
             </div>
-            <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-6">
-              Awareness 1A:<br />
-              The First Step to<br />
-              <span className="text-[#f97316]">Clarity.</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight">
+              Awareness 1A: <br />
+              The First Step to <span className="text-[#f97316]">Clarity.</span>
             </h1>
-            <p className={`text-sm leading-relaxed mb-8 max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-sm leading-relaxed max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
               Experience the precision of the Clinical Architect Framework at zero cost. Designed for individual professionals seeking immediate baseline visibility into their operational health.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
               <Link href="/pages/generaltest"
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold transition">
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
                 Start Quick Scan <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
           {/* Image placeholder */}
-          <div className={`rounded-2xl overflow-hidden ${d ? "bg-[#1a1a1a] border border-white/10" : "bg-gray-100 border border-gray-200"}`} style={{ minHeight: "300px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "300px" }}>
             <Image
               src="/images/freescan1.png"
-              alt="Hero Image"
-              width={500}
-              height={300}
-              className="w-full h-full object-cover"
+              alt="Quick Scan Preview"
+              fill
+              priority
+              className="object-cover w-full h-full"
             />
           </div>
         </div>
       </section>
 
       {/* ── Quick Scan Toolkit ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
-        <div className="max-w-6xl mx-auto">
-          <h2 className={`text-2xl md:text-3xl font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>The Quick Scan Toolkit</h2>
-          <p className={`text-sm mb-10 ${d ? "text-gray-400" : "text-gray-600"}`}>Essential diagnostics for the modern architect.</p>
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-6xl mx-auto space-y-12">
+          <div className="space-y-3">
+            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The Quick Scan Toolkit</h2>
+            <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>Essential diagnostics for the modern architect.</p>
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {/* 15-Minute Express Audit card */}
-            <div className={`rounded-2xl p-5 md:p-8 border ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
-              <div className="w-10 h-10 rounded-xl bg-[#00ffaa]/20 flex items-center justify-center mb-6">
-                <Timer className="w-5 h-5 text-[#00ffaa]" />
+            <div className={`group rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#0d1117] border-white/10 hover:border-teal-500/30" : "bg-white border-gray-200 shadow-sm hover:shadow-md"}`}>
+              <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-teal-500/20 transition-all duration-200">
+                <Timer className="w-6 h-6 text-teal-400" />
               </div>
               <h3 className={`text-xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>15-Minute Express Audit</h3>
               <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
@@ -75,11 +77,11 @@ export default function FreeScanPage() {
             </div>
 
             {/* Health Score metric card */}
-            <div className="rounded-2xl p-5 md:p-8 bg-[#00ffaa] flex flex-col items-center justify-center text-center">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-4">Current Metric</p>
-              <p className="text-4xl sm:text-5xl md:text-8xl font-extrabold text-gray-900 leading-none mb-2">84</p>
-              <p className="text-xl font-bold text-gray-900 mb-3">Health Score</p>
-              <p className="text-xs text-gray-700 max-w-xs">
+            <div className="rounded-2xl p-8 bg-teal-400 flex flex-col items-center justify-center text-center shadow-lg shadow-teal-400/10 transition-transform duration-300 hover:-translate-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">Platform Metric</p>
+              <p className="text-6xl md:text-7xl font-black text-gray-900 leading-none mb-3">84</p>
+              <p className="text-lg font-bold text-gray-900 mb-2">Health Score Baseline</p>
+              <p className="text-xs text-gray-800 max-w-xs leading-relaxed">
                 A singular, authoritative metric reflecting your overall alignment with the Clinical Architect Framework.
               </p>
             </div>
@@ -88,26 +90,26 @@ export default function FreeScanPage() {
       </section>
 
       {/* ── Risk Priority Matrix + Report Overview ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-8 md:py-12 ${d ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
 
           {/* Risk Priority Matrix */}
-          <div className={`rounded-2xl p-4 md:p-6 border ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
-            <div className="flex items-center gap-2 mb-5">
-              <AlertTriangle className="w-4 h-4 text-[#00ffaa]" />
-              <p className="text-sm font-bold text-[#00ffaa]">Risk Priority Matrix</p>
+          <div className={`rounded-2xl p-6 lg:p-8 border ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/5">
+              <AlertTriangle className="w-5 h-5 text-teal-400" />
+              <p className="text-sm font-bold uppercase tracking-wider text-teal-400">Risk Priority Matrix</p>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[
                 { num: "01", title: "Operational Friction",  desc: "High latency in decision pipelines."              },
                 { num: "02", title: "Protocol Drift",        desc: "Deviation from core architectural standards."     },
                 { num: "03", title: "Resilience Deficit",    desc: "Lack of redundancy in critical workflows."        },
               ].map(({ num, title, desc }) => (
-                <div key={num} className={`flex items-start gap-3 p-4 rounded-xl ${d ? "bg-[#1a1a1a]" : "bg-gray-50"}`}>
+                <div key={num} className={`flex items-start gap-4 p-4 rounded-xl transition-colors duration-200 ${d ? "bg-[#0d1117]/80 hover:bg-[#0d1117]" : "bg-gray-50 hover:bg-gray-100/80"}`}>
                   <span className={`text-xs font-bold ${d ? "text-gray-500" : "text-gray-400"}`}>{num}</span>
                   <div>
-                    <p className={`text-sm font-semibold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
-                    <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
+                    <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
+                    <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
                   </div>
                 </div>
               ))}
@@ -115,24 +117,25 @@ export default function FreeScanPage() {
           </div>
 
           {/* Report Overview */}
-          <div className={`rounded-2xl p-4 md:p-6 border ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
-            <h3 className={`text-xl font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>Report Overview</h3>
-            <p className={`text-sm leading-relaxed mb-4 ${d ? "text-gray-400" : "text-gray-600"}`}>
-              A distilled, executive summary delivered directly to your dashboard. Clean typography for effortless consumption.
-            </p>
-            {/* Progress bars */}
-            <div className="flex gap-2 mb-6">
-              <div className="h-1.5 w-16 rounded-full bg-[#00ffaa]" />
-              <div className="h-1.5 w-8 rounded-full bg-[#00ffaa]/40" />
+          <div className={`rounded-2xl p-6 lg:p-8 border flex flex-col justify-between ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
+            <div className="space-y-4">
+              <h3 className={`text-xl font-bold ${d ? "text-white" : "text-gray-900"}`}>Report Overview</h3>
+              <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
+                A distilled, executive summary delivered directly to your dashboard. Clean typography for effortless consumption.
+              </p>
+              {/* Progress bars */}
+              <div className="flex gap-2">
+                <div className="h-1.5 w-16 rounded-full bg-teal-400 shadow-sm shadow-teal-400/20" />
+                <div className="h-1.5 w-8 rounded-full bg-teal-400/30" />
+              </div>
             </div>
             {/* Tablet image placeholder */}
-            <div className={`rounded-xl overflow-hidden relative ${d ? "bg-[#1a1a1a] border border-white/10" : "bg-gray-100 border border-gray-200"}`} style={{ minHeight: "160px" }}>
+            <div className={`mt-6 rounded-2xl overflow-hidden relative border ${d ? "bg-[#0d1117] border-white/5" : "bg-gray-50 border-gray-200"}`} style={{ minHeight: "160px" }}>
               <Image
                 src="/images/freescan2.png"
-                alt="Tablet Image"
-                width={500}
-                height={160}
-                className="w-full h-full object-cover"
+                alt="Distilled Report Summary Preview"
+                fill
+                className="object-cover w-full h-full"
               />
             </div>
           </div>
@@ -140,41 +143,37 @@ export default function FreeScanPage() {
       </section>
 
       {/* ── CTA Section ── */}
-      <section className={`px-4 sm:px-6 md:px-8 py-10 md:py-14 text-center ${d ? "bg-[#111111]" : "bg-white"}`}>
-        <div className="max-w-2xl mx-auto">
-          <h2 className={`text-2xl md:text-4xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>
+      <section className={`py-20 md:py-28 px-6 lg:px-8 text-center border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-2xl mx-auto space-y-6">
+          <h2 className={`text-3xl md:text-5xl font-black leading-tight ${d ? "text-white" : "text-gray-900"}`}>
             Ready for a Clinical Appraisal?
           </h2>
-          <p className={`text-sm mb-10 ${d ? "text-gray-400" : "text-gray-600"}`}>
+          <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>
             No credit card, no commitment. Just the data you need to understand your current operational standing.
           </p>
-          <div className="flex items-center justify-center gap-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link href="/pages/generaltest"
-              className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
+              className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
               Start Assessment
             </Link>
-            <Link href="/pricing"
-              className="text-sm font-semibold text-[#f97316] hover:underline transition">
+            <Link href="/pages/pricing"
+              className="px-8 py-4 rounded-xl text-sm font-bold border transition-all hover:bg-white/5 active:scale-95 border-white/10 text-teal-400 hover:text-teal-300">
               Compare All Plans
             </Link>
           </div>
-          <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>
+          <p className={`text-[10px] uppercase font-bold tracking-wider pt-2 ${d ? "text-gray-500" : "text-gray-400"}`}>
             Trusted by 12,000+ individual architects worldwide.
           </p>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className={`px-4 sm:px-6 md:px-8 py-10 border-t ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
-        <div className="max-w-6xl mx-auto flex flex-col items-center gap-4">
-          <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>PICA</p>
-          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
-            {["Terms","Privacy","Documentation","Contact"].map((item) => (
-              <Link key={item} href="#" className={`text-xs transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{item}</Link>
-            ))}
-          </div>
-          <p className={`text-xs ${d ? "text-gray-600" : "text-gray-400"}`}>
-            © 2024 PICA Editorial SaaS. The Clinical Architect Framework.
+      <footer className={`py-12 px-6 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
+        <div className="max-w-7xl mx-auto space-y-4">
+          <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
+          <p>
+            © Beauvision 2026. All rights reserved. Powered by{" "}
+            <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition-colors">SunDimension</a>
           </p>
         </div>
       </footer>
