@@ -113,9 +113,8 @@ export default function PricingPage() {
           <div className="inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-xs font-semibold uppercase tracking-widest text-gray-300 mb-4 md:mb-6">
             Strategic Intelligence
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-xl mx-auto">
-            Architectural Pricing for<br />
-            <span className="text-[#00ffaa]">African Enterprise.</span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-2xl mx-auto">
+            Architectural Pricing for <span className="text-[#00ffaa]">African Enterprise.</span>
           </h1>
           <p className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
             Choose a framework designed to scale with your organizational complexity. Pricing is served from the platform backend.
@@ -501,14 +500,14 @@ export default function PricingPage() {
 
       <footer className={`px-4 sm:px-6 md:px-8 py-8 border-t ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>PICA</p>
+          <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Beauvision</p>
           <div className="flex flex-wrap items-center justify-center gap-3 md:gap-8">
             {["Privacy Policy", "Terms of Service", "Contact Support", "Documentation"].map((item) => (
               <Link key={item} href="#" className={`text-xs transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{item}</Link>
             ))}
           </div>
           <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>
-            (c) 2024 PICA Editorial SaaS. All rights reserved.
+            © Beauvision 2026. All rights reserved.
           </p>
         </div>
       </footer>

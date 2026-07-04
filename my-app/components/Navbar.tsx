@@ -75,7 +75,7 @@ export default function Navbar({
     <>
       <nav
         className={`${isFixed ? "fixed top-0 left-0 right-0 z-50" : ""
-          } flex items-center justify-between px-4 sm:px-8 py-1.5 border-b ${d
+          } flex items-center justify-between px-4 sm:px-8 py-2 border-b ${d
             ? "bg-[#0d1117]/95 border-white/10 backdrop-blur"
             : "bg-white/95 border-gray-200 backdrop-blur"
           }`}

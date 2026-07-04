@@ -35,9 +35,9 @@ export default function HomePage() {
       <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
         {d && <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center w-full relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full relative z-10">
           {/* Left */}
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
                 Precision Business Intelligence
@@ -62,7 +62,7 @@ export default function HomePage() {
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "300px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[95%] my-auto ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
             <Image
               src="/images/landing1.png"
               alt="PICA Dashboard Preview"
