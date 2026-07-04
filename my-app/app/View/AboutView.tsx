@@ -153,9 +153,9 @@ export default function AboutPage() {
             </p>
             <div className="space-y-5">
               {[
-                { num: "1A", color: "bg-teal-500",    title: "Awareness",    desc: "Full visibility across all operational channels. No more dark spots." },
-                { num: "1B", color: "bg-[#f97316]",   title: "Diagnosis",    desc: "Automated identification of structural inefficiencies and risk factors." },
                 { num: "2B", color: "bg-red-500",      title: "Intelligence", desc: "Predictive modeling for future growth and risk mitigation." },
+                { num: "1B", color: "bg-[#f97316]",   title: "Diagnosis",    desc: "Automated identification of structural inefficiencies and risk factors." },
+                { num: "1A", color: "bg-teal-500",    title: "Awareness",    desc: "Full visibility across all operational channels. No more dark spots." },
               ].map(({ num, color, title, desc }) => (
                 <div key={title} className="flex items-start gap-4">
                   <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5`}>{num}</div>
@@ -169,14 +169,14 @@ export default function AboutPage() {
           </div>
 
           {/* Pyramid graphic */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col items-center gap-3 w-full">
             {[
-              { label: "INTELLIGENCE (2B)", bg: "bg-gradient-to-r from-red-600 to-red-700",  h: "py-6"  },
-              { label: "DIAGNOSIS (1B)",    bg: "bg-gradient-to-r from-orange-500 to-orange-600",   h: "py-8"  },
-              { label: "AWARENESS (1A)",    bg: "bg-gradient-to-r from-teal-600 to-teal-700",   h: "py-10" },
-            ].map(({ label, bg, h }) => (
-              <div key={label} className={`${bg} ${h} rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 transition-transform duration-200 hover:scale-[1.02] cursor-default`}>
-                <p className="text-white text-xs md:text-sm font-black tracking-widest">{label}</p>
+              { label: "INTELLIGENCE (2B)", bg: "bg-gradient-to-r from-red-500 to-red-600", width: "w-1/2 max-w-[220px]", py: "py-4 md:py-5" },
+              { label: "DIAGNOSIS (1B)",    bg: "bg-gradient-to-r from-orange-500 to-orange-600", width: "w-3/4 max-w-[340px]", py: "py-5 md:py-6" },
+              { label: "AWARENESS (1A)",    bg: "bg-gradient-to-r from-teal-500 to-teal-600", width: "w-full max-w-[460px]", py: "py-6 md:py-7" },
+            ].map(({ label, bg, width, py }) => (
+              <div key={label} className={`${bg} ${py} ${width} rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 transition-all duration-300 hover:scale-[1.03] cursor-default text-center`}>
+                <p className="text-white text-xs md:text-sm font-black tracking-widest px-4">{label}</p>
               </div>
             ))}
           </div>
