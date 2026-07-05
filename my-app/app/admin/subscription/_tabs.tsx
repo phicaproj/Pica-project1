@@ -88,6 +88,7 @@ type SubDraft = {
   name: string;
   description: string;
   priceUsd: number;
+  priceNgn: number;
   phase2aPerMonth: number;
   phase2bPerMonth: number;
   consultationsPerMonth: number;
@@ -99,12 +100,13 @@ type SubDraft = {
   displayOrder: number;
 };
 
-const subPlanToDraft = (p: SubscriptionPlanAdmin): SubDraft => ({
+const subPlanToDraft = (p: SubscriptionPlanAdmin, usdToNgn: number): SubDraft => ({
   id: p.id,
   tier: p.tier,
   name: p.name,
   description: p.description,
   priceUsd: p.priceUsd,
+  priceNgn: Math.round(p.priceUsd * usdToNgn),
   phase2aPerMonth: p.phase2aPerMonth,
   phase2bPerMonth: p.phase2bPerMonth,
   consultationsPerMonth: p.consultationsPerMonth,
@@ -120,6 +122,7 @@ const emptySubDraft = (suggestedTier: number): SubDraft => ({
   name: "",
   description: "",
   priceUsd: 0,
+  priceNgn: 0,
   phase2aPerMonth: 0,
   phase2bPerMonth: 0,
   consultationsPerMonth: 0,
@@ -137,17 +140,24 @@ export function SubscriptionTiersTab() {
   const [editing, setEditing] = useState<SubDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [usdToNgn, setUsdToNgn] = useState<number>(1500);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await adminListSubscriptionPlans();
+    const [res, settingsRes] = await Promise.all([
+      adminListSubscriptionPlans(),
+      getAdminAppSettings(),
+    ]);
     setLoading(false);
     if (res.error || !res.data) {
       setError(res.error?.message ?? "Could not load subscription tiers.");
       return;
     }
     setPlans(res.data.plans);
+    if (settingsRes.data?.settings?.usdToNgn) {
+      setUsdToNgn(settingsRes.data.settings.usdToNgn);
+    }
   }, []);
 
   useEffect(() => {
@@ -162,17 +172,20 @@ export function SubscriptionTiersTab() {
   const handleSave = async () => {
     if (!editing) return;
     if (!editing.name.trim()) return setError("Name is required.");
-    if (editing.priceUsd <= 0) return setError("Price must be greater than zero.");
+    if (editing.priceNgn <= 0) return setError("Price must be greater than zero.");
 
     setSaving(true);
     setError(null);
     if (editing.annualDiscountPct < 0 || editing.annualDiscountPct > 80) {
       return setError("Annual discount must be between 0 and 80%.");
     }
+
+    const calculatedPriceUsd = Number((editing.priceNgn / usdToNgn).toFixed(2));
+
     const payload = {
       name: editing.name.trim(),
       description: editing.description.trim(),
-      priceUsd: editing.priceUsd,
+      priceUsd: calculatedPriceUsd,
       phase2aPerMonth: editing.phase2aPerMonth,
       phase2bPerMonth: editing.phase2bPerMonth,
       consultationsPerMonth: editing.consultationsPerMonth,
@@ -269,7 +282,7 @@ export function SubscriptionTiersTab() {
               plan={plan}
               featured={idx === Math.floor(plans.length / 2)}
               onEdit={() => {
-                setEditing(subPlanToDraft(plan));
+                setEditing(subPlanToDraft(plan, usdToNgn));
                 setSuccess(null);
                 setError(null);
               }}
@@ -292,6 +305,7 @@ export function SubscriptionTiersTab() {
             setError(null);
           }}
           onSave={handleSave}
+          usdToNgn={usdToNgn}
         />
       )}
     </div>
@@ -428,6 +442,7 @@ function SubscriptionEditorModal({
   onChange,
   onClose,
   onSave,
+  usdToNgn,
 }: {
   draft: SubDraft;
   saving: boolean;
@@ -435,6 +450,7 @@ function SubscriptionEditorModal({
   onChange: (d: SubDraft) => void;
   onClose: () => void;
   onSave: () => void;
+  usdToNgn: number;
 }) {
   const set = <K extends keyof SubDraft>(key: K, value: SubDraft[K]) =>
     onChange({ ...draft, [key]: value });
@@ -491,14 +507,14 @@ function SubscriptionEditorModal({
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>
-            <ModalField label="Monthly price (USD)">
+            <ModalField label="Monthly price (NGN)">
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min={0}
-                value={draft.priceUsd}
+                value={draft.priceNgn || ""}
                 disabled={saving}
-                onChange={(e) => set("priceUsd", parseFloat(e.target.value || "0"))}
+                onChange={(e) => set("priceNgn", parseFloat(e.target.value || "0"))}
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>
@@ -506,7 +522,7 @@ function SubscriptionEditorModal({
               label="Annual discount (%)"
               hint={
                 draft.annualDiscountPct > 0
-                  ? `Annual sticker: $${(draft.priceUsd * 12 * (1 - draft.annualDiscountPct / 100)).toFixed(2)}`
+                  ? `Annual sticker: ₦${(draft.priceNgn * 12 * (1 - draft.annualDiscountPct / 100)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (approx. $${((draft.priceNgn / usdToNgn) * 12 * (1 - draft.annualDiscountPct / 100)).toFixed(2)})`
                   : "0 hides the annual option for this tier"
               }
             >
@@ -635,6 +651,7 @@ type ConsultDraft = {
   name: string;
   description: string;
   priceUsd: number;
+  priceNgn: number;
   durationMinutes: number;
   // PICA 2A bonus per confirmed booking — 0 disables.
   freeP2ARuns: number;
@@ -643,12 +660,13 @@ type ConsultDraft = {
   displayOrder: number;
 };
 
-const consultTierToDraft = (t: ConsultationTierAdmin): ConsultDraft => ({
+const consultTierToDraft = (t: ConsultationTierAdmin, usdToNgn: number): ConsultDraft => ({
   id: t.id,
   tier: t.tier,
   name: t.name,
   description: t.description,
   priceUsd: t.priceUsd,
+  priceNgn: Math.round(t.priceUsd * usdToNgn),
   durationMinutes: t.durationMinutes,
   freeP2ARuns: t.freeP2ARuns,
   freeP2ACreditWindowDays: t.freeP2ACreditWindowDays,
@@ -662,6 +680,7 @@ const emptyConsultDraft = (suggestedTier: number): ConsultDraft => ({
   name: "",
   description: "",
   priceUsd: 0,
+  priceNgn: 0,
   durationMinutes: 30,
   freeP2ARuns: 5,
   freeP2ACreditWindowDays: 90,
@@ -677,17 +696,24 @@ export function ConsultationTiersTab() {
   const [editing, setEditing] = useState<ConsultDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [usdToNgn, setUsdToNgn] = useState<number>(1500);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await adminListConsultationTiers();
+    const [res, settingsRes] = await Promise.all([
+      adminListConsultationTiers(),
+      getAdminAppSettings(),
+    ]);
     setLoading(false);
     if (res.error || !res.data) {
       setError(res.error?.message ?? "Could not load consultation tiers.");
       return;
     }
     setTiers(res.data.tiers);
+    if (settingsRes.data?.settings?.usdToNgn) {
+      setUsdToNgn(settingsRes.data.settings.usdToNgn);
+    }
   }, []);
 
   useEffect(() => {
@@ -702,7 +728,7 @@ export function ConsultationTiersTab() {
   const handleSave = async () => {
     if (!editing) return;
     if (!editing.name.trim()) return setError("Name is required.");
-    if (editing.priceUsd <= 0) return setError("Price must be greater than zero.");
+    if (editing.priceNgn <= 0) return setError("Price must be greater than zero.");
     if (editing.durationMinutes < 5) return setError("Duration must be at least 5 minutes.");
     if (editing.freeP2ARuns < 0) return setError("Free 2A runs cannot be negative.");
     if (editing.freeP2ACreditWindowDays < 1 || editing.freeP2ACreditWindowDays > 365) {
@@ -711,10 +737,13 @@ export function ConsultationTiersTab() {
 
     setSaving(true);
     setError(null);
+
+    const calculatedPriceUsd = Number((editing.priceNgn / usdToNgn).toFixed(2));
+
     const payload = {
       name: editing.name.trim(),
       description: editing.description.trim(),
-      priceUsd: editing.priceUsd,
+      priceUsd: calculatedPriceUsd,
       durationMinutes: editing.durationMinutes,
       freeP2ARuns: editing.freeP2ARuns,
       freeP2ACreditWindowDays: editing.freeP2ACreditWindowDays,
@@ -809,7 +838,7 @@ export function ConsultationTiersTab() {
               tier={tier}
               featured={idx === Math.floor(tiers.length / 2)}
               onEdit={() => {
-                setEditing(consultTierToDraft(tier));
+                setEditing(consultTierToDraft(tier, usdToNgn));
                 setSuccess(null);
                 setError(null);
               }}
@@ -832,6 +861,7 @@ export function ConsultationTiersTab() {
             setError(null);
           }}
           onSave={handleSave}
+          usdToNgn={usdToNgn}
         />
       )}
     </div>
@@ -943,6 +973,7 @@ function ConsultationEditorModal({
   onChange,
   onClose,
   onSave,
+  usdToNgn,
 }: {
   draft: ConsultDraft;
   saving: boolean;
@@ -950,6 +981,7 @@ function ConsultationEditorModal({
   onChange: (d: ConsultDraft) => void;
   onClose: () => void;
   onSave: () => void;
+  usdToNgn: number;
 }) {
   const set = <K extends keyof ConsultDraft>(key: K, value: ConsultDraft[K]) =>
     onChange({ ...draft, [key]: value });
@@ -962,7 +994,7 @@ function ConsultationEditorModal({
               {draft.id ? `Edit ${draft.name || "tier"}` : "New consultation tier"}
             </h2>
             <p className="mt-1 text-sm text-gray-500">
-              Sets price (USD) and duration. Customers in NG pay the NGN
+              Sets price (NGN) and duration. Customers in NG pay the NGN
               equivalent via the live FX rate.
             </p>
           </div>
@@ -1006,14 +1038,14 @@ function ConsultationEditorModal({
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>
-            <ModalField label="Price (USD)">
+            <ModalField label="Price (NGN)">
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 min={0}
-                value={draft.priceUsd}
+                value={draft.priceNgn || ""}
                 disabled={saving}
-                onChange={(e) => set("priceUsd", parseFloat(e.target.value || "0"))}
+                onChange={(e) => set("priceNgn", parseFloat(e.target.value || "0"))}
                 className="w-full rounded-lg border border-white/10 bg-[#111318] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500/50"
               />
             </ModalField>

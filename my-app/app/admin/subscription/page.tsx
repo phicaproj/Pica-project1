@@ -19,6 +19,7 @@ import {
 import {
   createAdminPricing,
   deleteAdminPricing,
+  getAdminAppSettings,
   getAdminPillars,
   getAdminPricing,
   updateAdminPricing,
@@ -104,6 +105,7 @@ function featuresForPlan(
 function PayPerUseTab() {
   const [prices, setPrices] = useState<PricingRow[]>([]);
   const [pillars, setPillars] = useState<PillarMeta[]>([]);
+  const [usdToNgn, setUsdToNgn] = useState<number>(1500);
   // Derived per-plan features map for rendering the summary cards. The actual
   // edit state lives in `featureDraft` and is sent on every save.
   const features = useMemo<Record<PricingPlan, string[]>>(
@@ -155,9 +157,10 @@ function PayPerUseTab() {
     setLoading(true);
     setError(null);
 
-    const [pricingRes, pillarsRes] = await Promise.all([
+    const [pricingRes, pillarsRes, settingsRes] = await Promise.all([
       getAdminPricing(),
       getAdminPillars(),
+      getAdminAppSettings(),
     ]);
 
     if (pricingRes.error || pillarsRes.error) {
@@ -170,6 +173,9 @@ function PayPerUseTab() {
 
     if (pricingRes.data) setPrices(sortPrices(pricingRes.data.prices));
     if (pillarsRes.data) setPillars(pillarsRes.data.pillars);
+    if (settingsRes.data?.settings?.usdToNgn) {
+      setUsdToNgn(settingsRes.data.settings.usdToNgn);
+    }
     setLoading(false);
   }, []);
 
@@ -184,12 +190,12 @@ function PayPerUseTab() {
 
     if (plan === "PHASE2A") {
       setSelectedPillarId("");
-      setPriceDraft(phase2APrice ? String(phase2APrice.price) : "");
+      setPriceDraft(phase2APrice ? String(Math.round(phase2APrice.price * usdToNgn)) : "");
     } else {
       const nextPillarId = pillarId || phase2BPrices[0]?.pillarId || pillars[0]?.id || "";
       const existing = nextPillarId ? phase2BByPillarId.get(nextPillarId) : null;
       setSelectedPillarId(nextPillarId);
-      setPriceDraft(existing ? String(existing.price) : "");
+      setPriceDraft(existing ? String(Math.round(existing.price * usdToNgn)) : "");
     }
 
     setModalOpen(true);
@@ -198,7 +204,7 @@ function PayPerUseTab() {
   const handlePillarChange = (pillarId: string) => {
     const existing = phase2BByPillarId.get(pillarId);
     setSelectedPillarId(pillarId);
-    setPriceDraft(existing ? String(existing.price) : "");
+    setPriceDraft(existing ? String(Math.round(existing.price * usdToNgn)) : "");
   };
 
   const closeModal = () => {
@@ -217,8 +223,8 @@ function PayPerUseTab() {
   };
 
   const savePlan = async () => {
-    const amount = Number(priceDraft);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amountNgn = Number(priceDraft);
+    if (!Number.isFinite(amountNgn) || amountNgn <= 0) {
       setError("Enter a valid price greater than 0.");
       return;
     }
@@ -236,9 +242,12 @@ function PayPerUseTab() {
     const existing =
       activePlan === "PHASE2A" ? phase2APrice : selectedPillarPrice;
 
+    // Convert Naira back to USD before saving
+    const amountUsd = Number((amountNgn / usdToNgn).toFixed(2));
+
     const response = existing
       ? await updateAdminPricing(existing.id, {
-          price: amount,
+          price: amountUsd,
           features: nextFeatures,
           ...(activePlan === "PHASE2B_PILLAR"
             ? { pillarId: selectedPillarId }
@@ -246,7 +255,7 @@ function PayPerUseTab() {
         })
       : await createAdminPricing({
           plan: activePlan,
-          price: amount,
+          price: amountUsd,
           features: nextFeatures,
           ...(activePlan === "PHASE2B_PILLAR"
             ? { pillarId: selectedPillarId }
