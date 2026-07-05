@@ -58,7 +58,7 @@ export const resetPasswordSchema = z.object({
 
 export const verifyAdminOTPSchema = z.object({
   loginToken: z.string().min(1, 'Login token is required'),
-  code: z.string().regex(/^\d{5}$/, 'Code must be a 5-digit number'),
+  code: z.string().regex(/^\d{6}$/, 'Code must be a 6-digit number'),
 });
 
 export const acceptInviteSchema = z.object({
