@@ -348,6 +348,7 @@ export async function adminUpdatePaymentStatusService(
       appliedCouponCode: true,
       providerReference: true,
       verifyPayload: true,
+      grantedAt: true,
     },
   });
   if (!payment) throw new AppError('Payment not found', NOT_FOUND);
@@ -390,13 +391,14 @@ export async function adminUpdatePaymentStatusService(
         status: newStatus,
         verifyPayload: auditedPayload as Prisma.InputJsonValue,
         ...(flippingToSuccess ? { paidAt: now } : {}),
+        ...(flippingToSuccess && payment.grantedAt === null ? { grantedAt: now } : {}),
         ...(newStatus === PaymentStatus.FAILED
           ? { failureReason: `Admin override: ${input.reason}` }
           : {}),
       },
     });
 
-    if (flippingToSuccess) {
+    if (flippingToSuccess && payment.grantedAt === null) {
       await grantSuccessEntitlements(tx, payment, now, 'admin-override');
     }
   });

@@ -512,21 +512,28 @@ export async function cancelSubscriptionService(
     throw new AppError('Subscription is already scheduled to cancel', CONFLICT);
   }
 
-  // If we don't have the Paystack handles yet (subscription.create webhook
-  // hasn't fired), we still mark our row — the webhook will see
-  // cancelAtPeriodEnd and skip the activation path.
-  if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
-    await disablePaystackSubscription({
-      subscriptionCode: sub.paystackSubscriptionCode,
-      emailToken: sub.paystackEmailToken,
-    });
-  }
-
   const updated = await prisma.userSubscription.update({
     where: { id: sub.id },
     data: { cancelAtPeriodEnd: true },
     select: { currentPeriodEnd: true },
   });
+
+  // If we don't have the Paystack handles yet (subscription.create webhook
+  // hasn't fired), we still mark our row — the webhook will see
+  // cancelAtPeriodEnd and skip the activation path.
+  if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+    try {
+      await disablePaystackSubscription({
+        subscriptionCode: sub.paystackSubscriptionCode,
+        emailToken: sub.paystackEmailToken,
+      });
+    } catch (err) {
+      console.error(
+        `[subscription:cancel] Paystack API disable failed for sub ${sub.id} (code: ${sub.paystackSubscriptionCode}). Local DB updated to cancel. Error:`,
+        err
+      );
+    }
+  }
 
   // Fire-and-forget: "you're cancelled, you'll keep access until X, come back".
   // Failures don't block the cancel response — the DB flip is the source of truth.
@@ -1072,28 +1079,84 @@ export async function consumeSubscriptionQuota(
   }
 ): Promise<void> {
   const count = input.count ?? 1;
-  const incField =
+  const usedField =
     input.kind === 'phase2a'
-      ? { phase2aUsed: { increment: count } }
+      ? 'phase2aUsed'
       : input.kind === 'phase2b'
-        ? { phase2bUsed: { increment: count } }
-        : { consultationsUsed: { increment: count } };
+        ? 'phase2bUsed'
+        : 'consultationsUsed';
 
-  await tx.subscriptionUsage.upsert({
+  // 1. Try to find existing usage record inside transaction
+  let usage = await tx.subscriptionUsage.findUnique({
     where: {
       userSubscriptionId_periodStart: {
         userSubscriptionId: input.subscriptionId,
         periodStart: input.periodStart,
       },
     },
-    create: {
+  });
+
+  // 2. Fetch the plan quota dynamically to enforce the atomic ceiling
+  const sub = await tx.userSubscription.findUniqueOrThrow({
+    where: { id: input.subscriptionId },
+    include: { plan: true },
+  });
+
+  const planQuota =
+    input.kind === 'phase2a'
+      ? sub.plan.phase2aPerMonth
+      : input.kind === 'phase2b'
+        ? sub.plan.phase2bPerMonth
+        : sub.plan.consultationsPerMonth;
+
+  if (!usage) {
+    if (count > planQuota) {
+      throw new AppError('Requested count exceeds monthly plan quota', CONFLICT);
+    }
+
+    try {
+      await tx.subscriptionUsage.create({
+        data: {
+          userSubscriptionId: input.subscriptionId,
+          periodStart: input.periodStart,
+          periodEnd: input.periodEnd,
+          phase2aUsed: input.kind === 'phase2a' ? count : 0,
+          phase2bUsed: input.kind === 'phase2b' ? count : 0,
+          consultationsUsed: input.kind === 'consultation' ? count : 0,
+        },
+      });
+      return; // successfully created first usage row for this period
+    } catch (err) {
+      // If another concurrent transaction created the row in the split-second since we checked,
+      // catch the unique constraint error and fall back to the updateMany block below
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        usage = await tx.subscriptionUsage.findUniqueOrThrow({
+          where: {
+            userSubscriptionId_periodStart: {
+              userSubscriptionId: input.subscriptionId,
+              periodStart: input.periodStart,
+            },
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  // 3. Atomically check remaining quota and increment usage
+  const updated = await tx.subscriptionUsage.updateMany({
+    where: {
       userSubscriptionId: input.subscriptionId,
       periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      phase2aUsed: input.kind === 'phase2a' ? count : 0,
-      phase2bUsed: input.kind === 'phase2b' ? count : 0,
-      consultationsUsed: input.kind === 'consultation' ? count : 0,
+      [usedField]: { lte: planQuota - count },
     },
-    update: incField,
+    data: {
+      [usedField]: { increment: count },
+    },
   });
+
+  if (updated.count === 0) {
+    throw new AppError('Quota exhausted', CONFLICT);
+  }
 }

@@ -3,3 +3,9 @@ Operations Deep Dive - Results.png
 .antigravitycli/
 /pdf report design/*
 /*.pdf
+backend/test-report.pdf
+Screenshot 2026-07-04 192726.png
+security_audit.md
+backend/prisma/_2b_block.txt
+backend/test-report-2b.pdf
+backend/src/test-pdf-run-2b.ts

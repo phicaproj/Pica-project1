@@ -135,6 +135,6 @@ export const updateMyProfile = asyncHandler(async (req: Request, res: Response) 
     throw new AppError('Admin not authenticated', UNAUTHORIZED);
   }
   const input = updateAdminProfileSchema.parse(req.body);
-  const result = await updateAdminProfileService(req.user.id, input);
+  const result = await updateAdminProfileService(req.user.id, input, req.ip);
   return res.status(OK).json(result);
 });

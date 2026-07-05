@@ -9,6 +9,13 @@ import {
 import AppError from './appError';
 import { INTERNAL_SERVER_ERROR } from './http';
 
+// Validate R2_PUBLIC_BASE_URL on boot (L-5)
+try {
+  new URL(R2_PUBLIC_BASE_URL);
+} catch (error) {
+  throw new Error(`Invalid R2_PUBLIC_BASE_URL config: ${R2_PUBLIC_BASE_URL}`);
+}
+
 /**
  * Thin Cloudflare R2 wrapper. R2 speaks the S3 API so we use the AWS SDK
  * pointed at the account-scoped R2 endpoint. Three responsibilities:

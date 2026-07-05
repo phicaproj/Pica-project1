@@ -6,7 +6,7 @@
 > on/off toggles, tier display order) are intentionally **excluded** — the admin
 > can already do those today via Settings → App Settings, `/admin/subscription`
 > tier tabs, and `/admin/consultations`.
-> Last updated 2026-06-17.
+> Last updated 2026-06-22 (Admin Consultation Notes batch).
 
 ---
 
@@ -23,20 +23,12 @@ We need ONE definitive table from the client before BE-1 / FE-1 can ship. Sugges
 > 1–7, what is (a) the base, (b) the discount %, and (c) the flat-rate cap
 > if any? Page 2 says cap at ₦80,000 for 5+; page 4 says ₦40,000. Which one is current?"
 
-### CL-1 — "90-Day Free PICA™ 2A Access" consultation bonus
-PDF page 6 grants every consultation tier (₦30k, ₦50k, ₦75k) "90-Day Free PICA™ 2A Access". This is almost certainly a copy/paste artefact — three issues:
-1. PICA 2A is a one-off paid PDF (page 2 rule says "session ends" after download). "90 days of access" doesn't map.
-2. All three tiers grant identical bonus despite 2.5× price difference — unusual.
-3. The phrase is ambiguous between (a) a free 2A *credit* valid 90 days, (b) "dashboard access" (already free for logged-in users), or (c) leftover copy from a prior draft.
-
-Ask the client all three at once:
-> "On the consultation tiers, 'SaaS Platform Bonus: 90-Day Free PICA 2A Access' —
-> does this mean (a) one free PICA 2A report credit valid for 90 days from booking,
-> (b) the bonus should scale by tier (e.g. Option 1 = 1 credit, Option 3 = 3 credits),
-> or (c) we should drop it as placeholder copy? Today it's listed identically on
-> all three tiers, which we'd expect to differ."
-
-**Do not build this until CL-1 is resolved.** Stub holder: BE-3 below.
+### CL-1 — "90-Day Free PICA™ 2A Access" consultation bonus ✅ RESOLVED (2026-06-22)
+Client confirmed (a)-with-multiplier reading: every confirmed consultation booking
+grants **5 free PICA 2A credits valid for 90 days** from confirm. Per-tier
+admin-configurable via `ConsultationTier.freeP2ARuns` + `freeP2ACreditWindowDays`
+(defaults 5 / 90), so the client can later tune any tier without a code change.
+Built — see BE-3 / FE-3 below.
 
 ### CL-2 — PICA 2A canonical price
 PDF page 2 lists 2A as ₦25,000 in one paragraph and ₦50,000 ("Comprehensive PDF Report") in the adjacent table. Trivial to fix in admin once the client confirms — flagging here so it doesn't get implemented incorrectly elsewhere.
@@ -89,75 +81,106 @@ This is the single biggest gap.
 - [x] **Docs:** `src/docs/payment.docs.ts` documents the `pillarIds` array;
   `src/docs/admin.docs.ts` documents the two new app-settings fields.
 
-## BE-2 — Annual subscription billing cycle
+## BE-2 — Annual subscription billing cycle ✅ DONE (2026-06-22)
 **Why:** PDF page 9–10 explicitly mentions *"For Annual Subscription, access is
 valid for one year"* on every tier. Today `UserSubscription.currentPeriodEnd`
 rolls 30 days from each charge; there's no annual concept.
 
-- [ ] **Schema:**
-  - `SubscriptionPlan.billingInterval` enum (`MONTHLY`, `ANNUAL`) — default `MONTHLY`.
-    OR split: keep one plan row but add `priceUsdAnnual Decimal?`,
-    `paystackPlanCodeUsdAnnual String?`, `paystackPlanCodeNgnAnnual String?`.
-    Recommend the second shape — one logical "Starter" with two billing options,
-    not two separate plan rows the admin has to mirror.
-  - `UserSubscription.billingInterval` — snapshot at subscribe time so a plan
-    price change doesn't retroactively re-bill.
-  - Migration: `prisma/migrations/<ts>_subscription_annual_interval/migration.sql`.
-- [ ] **Paystack plan creation** in `paystack.service.ts`: eagerly create the
-  USD annual plan when admin saves a tier; lazily create NGN annual on first NG
-  annual subscriber (mirrors the current monthly flow).
-- [ ] **Subscribe endpoint** (`POST /api/subscription/subscribe`): accept
-  `interval: 'MONTHLY' | 'ANNUAL'`; pick the right Paystack plan code; persist
-  on the new `UserSubscription.billingInterval` column.
-- [ ] **Period roll** in `handleSubscriptionChargeSuccess` and
-  `expireLapsedSubscriptions`: 30 days for monthly, 365 days for annual.
-- [ ] **Quota meaning:** quotas in `SubscriptionPlan` are `*PerMonth` today.
-  Decide: do annual subscribers get `12 × monthly` upfront, or
-  `monthly` quota that resets every 30 days inside the annual term?
-  Recommend the latter — matches PDF's monthly cadence emphasis on page 9 and
-  keeps the existing `SubscriptionUsage(periodStart)` model intact.
-- [ ] **Frontend `GET /subscription/plans`:** return both prices side-by-side
-  so the FE can render a monthly/annual toggle.
-- [ ] **Admin tier CRUD:** add `priceUsdAnnual` to the create/update Zod schemas.
-- [ ] **Docs:** `src/docs/subscription.docs.ts` — update plan + subscribe payloads.
+Resolution: per-tier admin-set `annualDiscountPct` (0–80) instead of a raw
+`priceUsdAnnual`. The list response derives `priceUsdAnnual = priceUsd × 12 ×
+(1 − pct/100)` server-side so the FE never recomputes. Monthly quota cadence
+preserved inside the annual term (matches PDF page 9 emphasis).
 
-## BE-3 — Consultation → free PICA 2A credit grant (BLOCKED on CL-1)
+- [x] **Schema:** `SubscriptionPlan.annualDiscountPct` (Int, 0 = no annual
+  option) + `paystackPlanCodeUsdAnnual` / `paystackPlanCodeNgnAnnual`.
+  `UserSubscription.billingInterval` snapshot (new `BillingInterval { MONTHLY,
+  ANNUAL }` enum). Migration:
+  `prisma/migrations/20260622000000_consult_2a_bonus_annual_billing/migration.sql`.
+- [x] **Paystack plan creation** in `subscription.service.ts`: eagerly mints the
+  USD-annual plan when admin saves a tier with `annualDiscountPct > 0`; lazily
+  mints NGN-annual on first NG annual subscriber. `adminUpdatePlanService`
+  resyncs annual mirrors when price or discount changes.
+- [x] **Subscribe endpoint** accepts `interval: 'MONTHLY' | 'ANNUAL'` (default
+  MONTHLY). Picks the right plan code, lazy-creates the missing one, persists
+  `UserSubscription.billingInterval`, threads `interval` through Paystack
+  metadata for the webhook.
+- [x] **Period roll** — `nextPeriodEnd(start, interval)` helper (365d for
+  ANNUAL, 30d for MONTHLY). Wired in `handleSubscriptionChargeSuccess` and
+  `handleSubscriptionEvent`. `expireLapsedSubscriptions` is interval-agnostic
+  (date-based), no change needed.
+- [x] **Quota meaning:** monthly cadence preserved inside an annual term
+  (`SubscriptionUsage(periodStart)` model untouched).
+- [x] **`GET /subscription/plans`** returns `annualDiscountPct` + derived
+  `priceUsdAnnual` on every public plan row.
+- [x] **Admin tier CRUD:** `createPlanSchema` / `updatePlanSchema` gain
+  `annualDiscountPct`. `MySubscriptionPayload` carries `billingInterval`.
+- [x] **Docs:** `src/docs/subscription.docs.ts` — annual fields on
+  `SubscriptionPlanPublic/Admin`, `billingInterval` on `MySubscriptionPayload`,
+  interval semantics documented on the subscribe endpoint.
+
+## BE-3 — Consultation → free PICA 2A credit grant ✅ DONE (2026-06-22)
 **Why:** PDF page 6 lists "90-Day Free PICA 2A Access" as a bonus on all three
-consultation options. Awaiting CL-1 clarification before building. Shape the
-work once the client answers:
+consultation options. CL-1 resolved to "N credits per booking, valid M days,
+per-tier configurable". Defaults match PDF (5 / 90).
 
-- [ ] **If CL-1 = "one free 2A credit per consultation, valid 90 days":**
-  - New `Phase2ACredit` table: `userId`, `expiresAt`, `consultationBookingId?`,
-    `consumedAt? + consumedPaymentId?`.
-  - On `confirmConsultationBooking`, insert a credit with
-    `expiresAt = now + 90d` (gated by tier if the answer is "scales by tier").
-  - In `initPaymentService` Phase 2A branch: before falling through to
-    subscription quota, look for an unconsumed un-expired `Phase2ACredit` —
-    if found, short-circuit to $0 Payment + mark `consumedAt`.
-- [ ] **If CL-1 = "drop":** mark this section closed in code review notes.
-- [ ] **If CL-1 = "scales by tier":** add `creditsGranted Int` column on
-  `ConsultationTier`, default 1 / 2 / 3 (or whatever the client says).
+- [x] **Schema:** new `Phase2ACredit { id, userId, consultationBookingId,
+  sequence, expiresAt, consumedAt?, consumedPaymentId? }` model with
+  `(consultationBookingId, sequence)` unique (idempotent confirm) and
+  `(userId, consumedAt, expiresAt)` index (hot lookup). `ConsultationTier` gains
+  `freeP2ARuns` + `freeP2ACreditWindowDays` (defaults 5 / 90 — admin editable).
+- [x] **Confirm flow:** `adminConfirmBookingService` wraps the status flip +
+  N upserts in one `$transaction`. Idempotent on `(bookingId, sequence)` so
+  re-confirm refreshes the expiry on unconsumed rows without duplicating.
+- [x] **Phase 2A short-circuit:** `initPaymentService` checks for the
+  oldest unconsumed unexpired credit BEFORE the subscription quota path.
+  Atomic claim via `updateMany + consumedAt: null` filter (race-safe). Returns
+  `free: true`, `paymentMethod: 'consultation-credit'`, marks SessionResult
+  paid via the existing `grantSuccessEntitlements`.
+- [x] **New endpoint** `GET /api/consultation/phase2a-credits` —
+  unconsumed unexpired credits for the FE banner.
+- [x] **Docs:** `src/docs/consultation.docs.ts` documents the bonus columns
+  + new endpoint; `src/docs/payment.docs.ts` documents the credit
+  short-circuit on `/payment/init`.
 
-## BE-4 — Tier 3 consultation "30-Day Checkpoint" follow-up
-**Why:** PDF page 5 says Option 3 (₦75k) includes a *separate* 30-day
-follow-up session. Today `ConsultationBooking` is flat — one row per session.
+## BE-4 — Admin Consultation Notes + Client History modal ✅ DONE (2026-06-22)
+**Why:** Original 30-day-checkpoint scope was dropped — that's marketing copy,
+admins handle outreach manually. Reframed into: let admins browse the user
+behind each consultation booking, view their last 5 assessment sessions
+with PDF download links, and leave free-form feedback the user can read on
+their dashboard. Lighter than a notes thread by design — single text column,
+single email on first save, no read/unread tracking.
 
-- [ ] **Schema:**
-  - `ConsultationBooking.parentBookingId String?` self-FK with
-    `relation("CheckpointChild", fields: [parentBookingId], references: [id])`.
-  - `ConsultationBooking.isCheckpoint Boolean @default(false)`.
-  - `ConsultationTier.includesCheckpoint Boolean @default(false)` — admin-editable.
-  - Migration: `prisma/migrations/<ts>_consultation_checkpoints/migration.sql`.
-- [ ] **Confirm flow** in `confirmConsultationBookingService`: after the
-  primary booking is CONFIRMED, if the tier has `includesCheckpoint = true`,
-  insert a child REQUESTED row with `parentBookingId = primary.id`,
-  `isCheckpoint = true`, and a suggested `scheduledAt` 30 days out (admin
-  re-confirms with actual meeting link later).
-- [ ] **Admin inbox UI:** group child booking visually under its parent;
-  prevent confirming a checkpoint whose parent is still REQUESTED / cancelled.
-- [ ] **User dashboard:** surface the checkpoint as a linked "follow-up
-  session" chip on the primary booking row.
-- [ ] **Docs:** `src/docs/consultation.docs.ts` — describe parent/child shape.
+- [x] **Schema:** four nullable columns on `ConsultationBooking` — `adminNotes
+  String?`, `adminNotesUpdatedAt DateTime?`, `adminNotesUpdatedById String?`
+  (FK on `users.id`, SET NULL on delete), `adminNotesNotifiedAt DateTime?`
+  (single-shot email gate). Back-relation `User.consultationAdminNotes`
+  via `@relation("ConsultationAdminNotes")`. Migration:
+  `prisma/migrations/20260623000000_consultation_admin_notes/migration.sql`.
+- [x] **Service:** `adminUpdateBookingNotesService(id, adminId, input)` —
+  fetches existing booking, computes `shouldNotify = (adminNotesNotifiedAt
+  === null && trimmed.length > 0)`, single UPDATE sets text + timestamp +
+  author + (conditionally) `adminNotesNotifiedAt`. Email fires only when
+  `shouldNotify` so re-edits never re-notify. Empty/whitespace string
+  clears `adminNotes` back to null.
+- [x] **Service:** `adminGetClientHistoryService(bookingId)` — resolves
+  booking → user, returns identity block + last 5 completed Phase 2A/2B
+  results via shared helper `listCompletedResultsForUser(userId, limit)`
+  (extracted from the existing `listMyCompletedResultsService` — no
+  regression). Joins `SessionResult.reportPdfUrl` in a second keyed-IN
+  query so the modal can render Download buttons.
+- [x] **Email:** new `sendConsultationNoteUpdatedEmail` in `email.service.ts`
+  + fire-and-forget wrapper `sendConsultationNoteUpdatedEmailBestEffort`
+  in `consultation.email.ts`. Body says "your consultant left feedback —
+  sign in to read" without quoting the note text (lighter-version scope).
+- [x] **Routes:** PATCH `/api/admin/consultation-bookings/:id/notes`
+  (`consultations:write`) + GET `/client-history` (`consultations:read`).
+  Both reuse the existing permission pair — no new permission keys.
+- [x] **Payload:** `ConsultationBookingPayload` + `AdminBookingRow` carry
+  `adminNotes`, `adminNotesUpdatedAt`, and `adminNotesUpdatedBy` (id +
+  email + first/last name). `adminNotesNotifiedAt` is intentionally NOT
+  exposed — admin-internal.
+- [x] **Docs:** `src/docs/consultation.docs.ts` registers both endpoints
+  + extends the booking-payload Zod schema with the three public note fields.
 
 ## BE-5 — PICA Execute Tier 3 "From $X" / "Custom quote" pricing (BLOCKED on CL-3)
 **Why:** PDF Tier 3 is ₦350k–₦1M+ — a range, not a fixed monthly price.
@@ -216,34 +239,65 @@ demands a multi-select bundle with a live discount preview.
 > Note: live browser click-through of the full Paystack purchase path is still
 > unverified — code compiles and both apps typecheck clean.
 
-## FE-2 — Monthly vs Annual subscription toggle (pairs with BE-2)
+## FE-2 — Monthly vs Annual subscription toggle ✅ DONE (2026-06-22)
 **Why:** No way today to pick annual on `/dashboard/plans`.
 
-- [ ] **Billing-interval toggle** at the top of `/dashboard/plans`: pill
-  selector "Monthly / Annual". Persists in URL query (`?interval=annual`)
-  so the user can share the page in their chosen view.
-- [ ] **Card pricing** swaps based on the toggle. Show "Save X%" badge on the
-  annual option computed from `(monthly × 12 − annual) / (monthly × 12)`.
-- [ ] **Subscribe modal** sends `interval` alongside `planId`.
-- [ ] **Settings → Billing → Subscription sub-tab** ManageView shows the
-  user's actual cadence + next renewal correctly when annual.
-- [ ] **Admin tier CRUD** (`/admin/subscription` Subscription Tiers tab):
-  add an Annual price input next to the existing USD price.
+- [x] **Billing-interval toggle** at the top of `/dashboard/plans`: pill
+  selector "Monthly / Annual". Hidden when no tier has `annualDiscountPct > 0`.
+  *(Local component state rather than URL query — simpler; URL persistence
+  can be added later if shareable links are needed.)*
+- [x] **Card pricing** swaps based on the toggle. "Save X% vs monthly" badge
+  on annual using the per-tier `annualDiscountPct`. Cadence label switches
+  to "/ year".
+- [x] **Subscribe modal** sends `interval` alongside `planId` and `couponCode`.
+  Coupon validation uses the discounted annual price as the base.
+- [x] **Settings → Billing → Subscription sub-tab** ManageView reads
+  `sub.billingInterval`, shows "billed monthly" vs "billed annually" + the
+  correct sticker (`stickerUsd` = annual when ANNUAL).
+- [x] **Admin tier CRUD** (`/admin/subscription` Subscription Tiers tab):
+  "Annual discount (%)" input alongside the monthly price with a live
+  preview of the resulting annual sticker.
 
-## FE-3 — Consultation booking shows free-2A bonus (BLOCKED on CL-1 → BE-3)
-- [ ] Once CL-1 resolves and BE-3 ships: success-modal copy on
-  `/dashboard/consultation` after a booking explains the free 2A credit
-  (count + expiry). Banner on `/dashboard/strategic-scan` Phase 2A start
-  CTA when the user has an unconsumed credit ("Your consultation bonus
-  covers this — no charge").
+## FE-3 — Consultation booking shows free-2A bonus ✅ DONE (2026-06-22)
+- [x] **Tier cards on `/dashboard/consultation`** render a "+ N free Strategic
+  Scans (D days)" chip below the price using `tier.freeP2ARuns` /
+  `tier.freeP2ACreditWindowDays`. Chip hides when `freeP2ARuns === 0`.
+- [x] **Strategic-scan landing banner** (`/dashboard/strategic-scan`) shows
+  "Your consultation credit covers this Strategic Scan — no charge. Valid
+  until {date}." when `GET /api/consultation/phase2a-credits` returns a fresh
+  credit. Uses the earliest-expiring credit's `expiresAt`.
+- [x] **Admin consultation tier form** gains "Free PICA 2A runs per booking"
+  and "Credit validity (days)" inputs.
 
-## FE-4 — Checkpoint follow-up display (pairs with BE-4)
-- [ ] **Consultation page bookings panel**: render checkpoint child as an
-  indented row under its parent with an "Auto-scheduled 30 days after primary"
-  hint chip.
-- [ ] **Admin Consultations Inbox** (`/admin/consultations`): show
-  parent/child grouping; surface a warning if a checkpoint is approaching
-  without a confirmed meeting link.
+> Optional follow-up (not blocking): a tier-specific copy line on the
+> booking success toast after a paid consultation lands. Today the chip
+> on the tier card communicates the bonus pre-purchase, which is the
+> dominant moment users care about.
+
+## FE-4 — Admin Consultation Notes UI (pairs with BE-4) ✅ DONE (2026-06-22)
+- [x] **Admin Consultations Inbox** (`/admin/consultations` →
+  `ConsultationsInboxTab` in `_tabs.tsx`): every `BookingRow` gains a
+  "View client" button (visible regardless of booking status so notes can
+  be saved on ATTENDED/CANCELLED rows too). A right-aligned "Notes saved ·
+  {date}" chip appears once an admin has written notes on the row.
+- [x] **`ClientHistoryModal`** — sibling of `ConfirmBookingModal`:
+  fetches `adminGetClientHistory(bookingId)`, renders user header
+  (business name + email + name + client-since date), last-5 assessment
+  table (phase, pillar, score, color band, generated date) with per-row
+  "Download PDF" anchors pointing at `SessionResult.reportPdfUrl`, plus a
+  5000-char textarea + Save button calling
+  `adminUpdateConsultationBookingNotes`. Inline "Saved {date} by {name}"
+  hint appears post-save; the email-once disclosure is shown beside it.
+- [x] **User dashboard** (`/dashboard/consultation` → `BookingCard`):
+  when `booking.adminNotes` is non-null, render a collapsed
+  "Consultant left feedback" panel with a View notes / Hide toggle. Opens
+  to show the full text (`whitespace-pre-wrap`) plus "Updated {date} ·
+  {consultant name}".
+- [x] **API wrappers:** `lib/api/consultation.ts` adds
+  `adminGetClientHistory` + `adminUpdateConsultationBookingNotes` +
+  `AdminClientHistoryResponse` / `AdminClientHistoryResult` types and
+  extends `ConsultationBookingPayload` with the three public note fields.
+  Re-exported automatically through `@/lib/authClient`.
 
 ## FE-5 — Tier 3 "From $X" / "Contact sales" display (BLOCKED on CL-3 → BE-5)
 - [ ] **(b) Range mode:** plan card renders "From $X / month" with a "Up to $Y"
@@ -265,15 +319,41 @@ demands a multi-select bundle with a live discount preview.
 
 # Cross-cutting
 
-- [ ] Every new endpoint added to `src/docs/*` (swagger).
-- [ ] Every new admin permission key added to the role-management UI.
-- [ ] Every new env var (Paystack annual plan ids, etc.) goes through
-  `Config/env.ts getEnv()`.
-- [ ] One logical migration per model group; verify on the `@prisma/adapter-pg`
-  setup before merging.
-- [ ] Follow the established module layout:
-  `module/<name>/<name>.{controller,service,routes,types}.ts`, Zod-validated
-  controllers, services using Prisma `select`, `AppError` + http constants.
+- [x] Every new endpoint added to `src/docs/*` (swagger) — payment.docs,
+  subscription.docs, consultation.docs updated for the 2026-06-22 batch.
+- [x] One logical migration per model group:
+  `20260622000000_consult_2a_bonus_annual_billing/migration.sql` covers
+  both the consultation 2A bonus and the annual subscription cadence.
+  *Migration is NOT yet applied to dev/prod — run `prisma migrate dev`
+  (or `migrate deploy`) before merging.*
+- [x] No new env vars required — Paystack `annually` reuses
+  `PAYSTACK_SECRET_KEY`; plan codes live on `SubscriptionPlan` rows, not env.
+- [x] No new admin permission keys — the new endpoints reuse the existing
+  `subscriptions:*` / `consultations:*` gates already wired on
+  `/admin/subscription-plans` and `/admin/consultation-tiers`.
+- [x] Module layout respected — additions stayed in the existing
+  consultation, subscription, and payment modules; no new modules created.
+
+**2026-06-22 follow-up (annual-toggle visibility + emphasis):**
+- [x] **Monthly/Annual toggle** on `/dashboard/plans` and the anonymous
+  `View/PricingView.tsx` was previously hidden by an `annualAvailable`
+  guard — invisible to clients on a fresh DB. Reworked: the toggle is
+  always rendered, with the Annual side disabled (with a tooltip / nudge
+  copy) when no live tier has `annualDiscountPct > 0`. The control is
+  larger, bolder, centred above the grid (orange-on-dark active state),
+  and each tier card now carries its own Monthly/Annual pill (driving
+  the same global state) so the cadence is visible on every box per
+  client direction.
+- [x] **Hero copy** — replaced "Monthly Plans" badge with "Subscription
+  Plans" and the subhead now reads "Pick monthly or annual billing".
+- [x] **Checkout modal** — "Monthly price" label swaps to "Annual price"
+  on annual; "Then $X every month" footer swaps to "every year".
+
+**Open cross-cutting work (BE-5 / BE-6 dependent):**
+- [ ] When BE-6 ships, add the `transform:read` / `transform:write`
+  permission keys to `admin.types.PERMISSION_KEYS` + the role-management UI.
+- [ ] When BE-5 (option c) ships, the new
+  `POST /api/subscription/enterprise-inquiry` endpoint goes in swagger.
 
 ---
 

@@ -239,6 +239,7 @@ export async function initPaymentService(
             status: PaymentStatus.SUCCESS,
             paymentMethod: 'consultation-credit',
             paidAt,
+            grantedAt: paidAt,
             customerEmail: user.email,
             customerBusinessName: user.businessName,
           },
@@ -254,6 +255,7 @@ export async function initPaymentService(
             customerEmail: true,
             customerBusinessName: true,
             appliedCouponCode: true,
+            grantedAt: true,
           },
         });
         // Re-claim the credit inside the tx; the read above was outside it
@@ -328,6 +330,7 @@ export async function initPaymentService(
           status: PaymentStatus.SUCCESS,
           paymentMethod: 'subscription',
           paidAt,
+          grantedAt: paidAt,
           customerEmail: user.email,
           customerBusinessName: user.businessName,
         },
@@ -343,6 +346,7 @@ export async function initPaymentService(
           customerEmail: true,
           customerBusinessName: true,
           appliedCouponCode: true,
+          grantedAt: true,
         },
       });
       // Re-read the period end inside the tx — assertSubscriptionQuota only
@@ -450,6 +454,7 @@ export async function initPaymentService(
           status: PaymentStatus.SUCCESS,
           paymentMethod: 'coupon',
           paidAt,
+          grantedAt: paidAt,
           customerEmail: user.email,
           customerBusinessName: user.businessName,
         },
@@ -465,6 +470,7 @@ export async function initPaymentService(
           customerEmail: true,
           customerBusinessName: true,
           appliedCouponCode: true,
+          grantedAt: true,
         },
       });
       await grantSuccessEntitlements(tx, created, paidAt, 'free-coupon');
@@ -625,8 +631,69 @@ export async function verifyPaymentService(
 
 type WebhookEnvelope = {
   event: string;
-  data: PaystackVerifyData & { reference?: string };
+  data: any;
 };
+
+async function handleDisputeEvent(parsedBody: WebhookEnvelope): Promise<void> {
+  const reference = parsedBody.data?.transaction?.reference;
+  if (!reference) {
+    throw new AppError('Dispute webhook missing transaction reference', BAD_REQUEST);
+  }
+
+  const payment = await prisma.payment.findUnique({
+    where: { providerReference: reference },
+  });
+
+  if (!payment) {
+    console.warn(`[webhook:dispute] Dispute event received for unknown payment reference: ${reference}`);
+    return;
+  }
+
+  if (parsedBody.event === 'charge.dispute.create') {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        failureReason: `Charge disputed: ${parsedBody.data?.status || 'awaiting feedback'}`,
+      },
+    });
+    console.warn(`[webhook:dispute] Payment reference ${reference} disputed by user.`);
+  } else if (parsedBody.event === 'charge.dispute.resolve') {
+    const resolution = parsedBody.data?.resolution;
+    if (resolution === 'merchant-accepted' || resolution === 'declined') {
+      await prisma.$transaction(async (tx) => {
+        // 1. Mark payment as REVERSED
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: PaymentStatus.REVERSED,
+            failureReason: `Chargeback resolved: ${resolution}`,
+          },
+        });
+
+        // 2. Revoke entitlements based on the plan
+        if (payment.plan === Plan.PHASE2A && payment.sessionId) {
+          await tx.sessionResult.update({
+            where: { sessionId: payment.sessionId },
+            data: { isPaid: false },
+          });
+        } else if (payment.plan === Plan.PHASE2B_PILLAR) {
+          await tx.phase2BPillarUnlock.deleteMany({
+            where: { paymentId: payment.id },
+          });
+        } else if (payment.plan === Plan.SUBSCRIPTION && payment.userSubscriptionId) {
+          await tx.userSubscription.update({
+            where: { id: payment.userSubscriptionId },
+            data: { status: SubscriptionStatus.EXPIRED },
+          });
+        }
+
+        console.warn(
+          `[webhook:dispute] Chargeback resolved with "${resolution}". Payment ${payment.id} marked REVERSED and entitlements revoked.`
+        );
+      });
+    }
+  }
+}
 
 export async function handleWebhookService(params: {
   signatureValid: boolean;
@@ -700,6 +767,32 @@ export async function handleWebhookService(params: {
         },
       });
       return { message: 'Subscription event processed', processingStatus: WebhookProcessingStatus.PROCESSED };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.FAILED,
+          processingError: message,
+          processedAt: new Date(),
+        },
+      });
+      throw error;
+    }
+  }
+
+  // charge.dispute.create / charge.dispute.resolve — handle chargebacks
+  if (parsedBody.event === 'charge.dispute.create' || parsedBody.event === 'charge.dispute.resolve') {
+    try {
+      await handleDisputeEvent(parsedBody);
+      await prisma.webhookEvent.update({
+        where: { id: event.id },
+        data: {
+          processingStatus: WebhookProcessingStatus.PROCESSED,
+          processedAt: new Date(),
+        },
+      });
+      return { message: 'Dispute event processed', processingStatus: WebhookProcessingStatus.PROCESSED };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       await prisma.webhookEvent.update({
@@ -1303,6 +1396,7 @@ export async function applyVerificationResult(
       customerEmail: true,
       customerBusinessName: true,
       appliedCouponCode: true,
+      grantedAt: true,
     },
   });
 
@@ -1322,22 +1416,23 @@ export async function applyVerificationResult(
         status: newStatus,
         paymentMethod: verifyData.channel ?? null,
         paidAt,
+        ...(flippingToSuccess && payment.grantedAt === null ? { grantedAt: paidAt ?? new Date() } : {}),
         failureReason:
           newStatus === PaymentStatus.FAILED ? (verifyData.gateway_response ?? null) : null,
         verifyPayload: verifyData as unknown as Prisma.InputJsonValue,
       },
     });
 
-    if (flippingToSuccess) {
+    if (flippingToSuccess && payment.grantedAt === null) {
       await grantSuccessEntitlements(tx, payment, paidAt, opts.source);
     }
   });
 
-  if (flippingToSuccess) {
+  if (flippingToSuccess && payment.grantedAt === null) {
     sendSuccessEmailBestEffort(payment, reference, opts.source);
   }
 
-  return { paymentId: payment.id, flippedToSuccess: flippingToSuccess };
+  return { paymentId: payment.id, flippedToSuccess: flippingToSuccess && payment.grantedAt === null };
 }
 
 // Narrow payment shape the success side-effects need. Both the Paystack
@@ -1356,6 +1451,7 @@ export type SuccessPaymentSnapshot = {
   customerEmail: string;
   customerBusinessName: string | null;
   appliedCouponCode: string | null;
+  grantedAt: Date | null;
 };
 
 /**
@@ -1371,18 +1467,49 @@ export async function grantSuccessEntitlements(
   source: string
 ): Promise<void> {
   if (payment.appliedCouponCode) {
-    // Count this redemption. Atomic increment, then retire the code only once
-    // the cap is reached — multi-use promo codes stay live until exhausted.
-    const coupon = await tx.discount.update({
-      where: { code: payment.appliedCouponCode },
-      data: { usedCount: { increment: 1 } },
-      select: { usedCount: true, maxUses: true },
-    });
-    if (coupon.usedCount >= coupon.maxUses) {
-      await tx.discount.update({
+    try {
+      const couponRecord = await tx.discount.findUnique({
         where: { code: payment.appliedCouponCode },
-        data: { status: 'USED', isActive: false },
+        select: { maxUses: true, status: true, isActive: true },
       });
+
+      if (couponRecord) {
+        if (!couponRecord.isActive || couponRecord.status === 'USED') {
+          throw new AppError('This coupon is no longer active', UNPROCESSABLE_CONTENT);
+        }
+
+        const coupon = await tx.discount.update({
+          where: {
+            code: payment.appliedCouponCode,
+            usedCount: { lt: couponRecord.maxUses },
+            isActive: true,
+          },
+          data: { usedCount: { increment: 1 } },
+          select: { usedCount: true, maxUses: true, id: true },
+        });
+
+        if (coupon.usedCount >= coupon.maxUses) {
+          await tx.discount.update({
+            where: { id: coupon.id },
+            data: { status: 'USED', isActive: false },
+          });
+        }
+      }
+    } catch (error) {
+      const isKnownRequestError = error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025';
+      const isAppError = error instanceof AppError;
+
+      if (isKnownRequestError || isAppError) {
+        if (source === 'free-coupon') {
+          throw error;
+        } else {
+          console.warn(
+            `[payment:${source}] Coupon check/increment failed for code "${payment.appliedCouponCode}": ${error.message}. Proceeding with entitlements grant.`
+          );
+        }
+      } else {
+        throw error;
+      }
     }
   }
 

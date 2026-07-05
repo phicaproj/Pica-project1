@@ -4,12 +4,15 @@ const requiredText = (label: string) =>
   z
     .string({ error: `${label} is required` })
     .trim()
-    .min(1, `${label} is required`);
+    .min(1, `${label} is required`)
+    .max(200, `${label} must be under 200 characters`);
 
 export const startAssessmentInput = z.object({
   leadEmail: z
     .string({ error: 'Lead email is required' })
-    .email('Lead email must be a valid email address'),
+    .trim()
+    .email('Lead email must be a valid email address')
+    .max(255, 'Email must be under 255 characters'),
   staffSize: requiredText('Staff size'),
   businessName: requiredText('Business name'),
   industry: requiredText('Industry'),
@@ -18,7 +21,7 @@ export const startAssessmentInput = z.object({
   // Annual revenue used to feed the SMALL/MEDIUM classifier; business size
   // is now staff-only (see assessment.service.ts). The column is kept on
   // AssessmentSession for history, so we still accept it when provided.
-  annualRevenue: z.string().trim().optional(),
+  annualRevenue: z.string().trim().max(100, 'Annual revenue must be under 100 characters').optional(),
 });
 
 export const assessmentSessionParams = z.object({

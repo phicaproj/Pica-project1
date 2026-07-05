@@ -3,6 +3,8 @@ import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from '../shared/http';
 import AppError from '../shared/appError';
 import { ZodError } from 'zod';
 
+import { NODE_ENV } from '../../Config/env';
+
 const handleZodError = (res: Response, error: ZodError) => {
   const issue = error.issues[0];
   const message = issue
@@ -35,9 +37,13 @@ const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     }
   }
 
+  console.error('[errorHandler] Unhandled exception:', error);
+
   return res.status(INTERNAL_SERVER_ERROR).json({
     message: 'Internal Server Error',
-    error: error.message,
+    ...(NODE_ENV === 'development' && error && typeof error === 'object' && 'message' in error
+      ? { error: (error as { message: string }).message }
+      : {}),
   });
 };
 

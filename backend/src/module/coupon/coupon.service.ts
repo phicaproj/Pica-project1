@@ -16,7 +16,7 @@ import type {
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous 0/O/1/I
 const CODE_LENGTH = 8;
-const MAX_CODE_ATTEMPTS = 5;
+const MAX_CODE_ATTEMPTS = 20;
 
 const roundToTwo = (value: number): number => Number(value.toFixed(2));
 

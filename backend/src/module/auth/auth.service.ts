@@ -264,28 +264,32 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
 // to be guessable from a few observed codes, which matters for admin login
 // and password reset — randomInt uses the OS CSPRNG.
 function generateOtpCode(): string {
-  return randomInt(10000, 100000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export async function forgotPasswordService(
   data: ForgotPasswordInput
 ): Promise<ForgotPasswordResponse> {
+  const targetEmail = data.email.trim().toLowerCase();
   const user = await prisma.user.findUnique({
-    where: { email: data.email },
+    where: { email: targetEmail },
     select: { id: true, email: true },
   });
-
-  if (!user) {
-    throw new AppError('No account found with this email', NOT_FOUND);
-  }
 
   const code = generateOtpCode();
   const purpose = 'password-reset';
   const otpToken = generateOtpToken({
-    email: user.email,
-    codeHash: hashOtpCode({ email: user.email, code, purpose }),
+    email: targetEmail,
+    codeHash: hashOtpCode({ email: targetEmail, code, purpose }),
     purpose,
   });
+
+  if (!user) {
+    return {
+      message: 'Password reset code sent. Check your email.',
+      otpToken,
+    };
+  }
 
   try {
     await sendPasswordResetEmail(user.email, code);
@@ -298,6 +302,23 @@ export async function forgotPasswordService(
     message: 'Password reset code sent. Check your email.',
     otpToken,
   };
+}
+
+// Map to track failed attempts per OTP hash (H-11)
+const otpFailureMap = new Map<string, number>();
+
+function enforceOtpAttempts(codeHash: string, code: string, payload: any) {
+  const attempts = otpFailureMap.get(codeHash) ?? 0;
+  if (attempts >= 5) {
+    throw new AppError('This verification code has been locked due to too many failed attempts. Please request a new one.', UNAUTHORIZED);
+  }
+
+  if (!otpCodeMatches(payload, code)) {
+    otpFailureMap.set(codeHash, attempts + 1);
+    throw new AppError('Invalid or expired code', BAD_REQUEST);
+  }
+
+  otpFailureMap.delete(codeHash);
 }
 
 export async function verifyResetOtpService(
@@ -313,13 +334,19 @@ export async function verifyResetOtpService(
     throw new AppError('OTP does not match the provided email', BAD_REQUEST);
   }
 
-  if (!otpCodeMatches(payload, data.code)) {
-    throw new AppError('Invalid or expired reset code', BAD_REQUEST);
-  }
+  enforceOtpAttempts(payload.codeHash, data.code, payload);
+
+  const user = await prisma.user.findUnique({
+    where: { email: data.email.trim().toLowerCase() },
+    select: { passwordHash: true },
+  });
+
+  const hashPrefix = user?.passwordHash ? user.passwordHash.substring(0, 15) : 'no_hash';
 
   const passwordToken = generatePasswordResetToken({
     email: data.email,
     purpose: 'password-reset',
+    hashPrefix,
   });
 
   return {
@@ -339,11 +366,16 @@ export async function resetPasswordService(
 
   const user = await prisma.user.findUnique({
     where: { email: payload.email },
-    select: { id: true },
+    select: { id: true, passwordHash: true },
   });
 
   if (!user) {
     throw new AppError('Account no longer exists', NOT_FOUND);
+  }
+
+  const currentPrefix = user.passwordHash ? user.passwordHash.substring(0, 15) : 'no_hash';
+  if (payload.hashPrefix !== currentPrefix) {
+    throw new AppError('This password reset token has already been used or is invalid', BAD_REQUEST);
   }
 
   const passwordHash = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
@@ -409,16 +441,14 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
   });
 
   if (!user || !user.passwordHash) {
+    // Perform a dummy compare to avoid timing differences that reveal user existence
+    await bcrypt.compare(data.password, '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
     throw new AppError('Invalid email or password', UNAUTHORIZED);
-  }
-
-  if (user.role !== 'ADMIN') {
-    throw new AppError('Access denied: not an admin account', FORBIDDEN);
   }
 
   const passwordMatches = await bcrypt.compare(data.password, user.passwordHash);
 
-  if (!passwordMatches) {
+  if (!passwordMatches || user.role !== 'ADMIN') {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
@@ -463,9 +493,7 @@ export async function verifyAdminOTPService(
     throw new AppError('Invalid admin login OTP token', BAD_REQUEST);
   }
 
-  if (!otpCodeMatches(payload, data.code)) {
-    throw new AppError('Invalid or expired OTP code', BAD_REQUEST);
-  }
+  enforceOtpAttempts(payload.codeHash, data.code, payload);
 
   const user = await prisma.user.findUnique({
     where: { email: payload.email },

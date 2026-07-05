@@ -48,6 +48,42 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+function detectMimeTypeFromBuffer(buffer: Buffer): string | null {
+  if (buffer.length < 4) return null;
+
+  // Check PNG: 89 50 4E 47
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+
+  // Check JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+
+  // Check WebP: RIFF ... WEBP
+  if (
+    buffer[0] === 0x52 && // R
+    buffer[1] === 0x49 && // I
+    buffer[2] === 0x46 && // F
+    buffer[3] === 0x46 && // F
+    buffer.length >= 12 &&
+    buffer[8] === 0x57 && // W
+    buffer[9] === 0x45 && // E
+    buffer[10] === 0x42 && // B
+    buffer[11] === 0x50 // P
+  ) {
+    return 'image/webp';
+  }
+
+  return null;
+}
+
 export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user?.id || req.user?.role !== 'USER') {
     throw new AppError('User not authenticated', UNAUTHORIZED);
@@ -56,13 +92,19 @@ export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => 
     throw new AppError('No avatar file provided in upload request', BAD_REQUEST);
   }
 
-  // 1. Fetch current user to check for an existing avatarUrl
+  // 1. Sniff binary magic-bytes for format validation
+  const detectedMime = detectMimeTypeFromBuffer(req.file.buffer);
+  if (!detectedMime) {
+    throw new AppError('Invalid image format. Only JPEG, PNG, and WebP are allowed.', BAD_REQUEST);
+  }
+
+  // 2. Fetch current user to check for an existing avatarUrl
   const existingUser = await prisma.user.findUnique({
     where: { id: req.user.id },
     select: { avatarUrl: true },
   });
 
-  // 2. If user already has an avatar, delete it first from R2 to save space
+  // 3. If user already has an avatar, delete it first from R2 to save space
   if (existingUser?.avatarUrl && R2_PUBLIC_BASE_URL) {
     const base = R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
     if (existingUser.avatarUrl.startsWith(base)) {
@@ -75,13 +117,17 @@ export const uploadAvatar = asyncHandler(async (req: Request, res: Response) => 
     }
   }
 
-  // Generate an unguessable unique storage key
-  const fileExt = req.file.originalname.split('.').pop() || 'png';
-  const cleanOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9]/g, '_');
-  const key = `avatars/${req.user.id}-${Date.now()}-${cleanOriginalName}.${fileExt}`;
+  // 4. Generate a clean storage key with server-asserted file extension
+  const mimeToExt: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  };
+  const fileExt = mimeToExt[detectedMime];
+  const key = `avatars/${req.user.id}-${Date.now()}.${fileExt}`;
 
   // Call the storage convenience service to push directly to Cloudflare R2
-  const uploadResult = await uploadToR2(key, req.file.buffer, req.file.mimetype);
+  const uploadResult = await uploadToR2(key, req.file.buffer, detectedMime);
 
   // Update the user database row
   const updatedUser = await updateAvatarUrlService(req.user.id, uploadResult.url);

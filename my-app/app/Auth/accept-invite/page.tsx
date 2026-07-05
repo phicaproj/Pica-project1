@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { acceptInvite } from '@/lib/authClient'
 
@@ -48,7 +48,22 @@ const EyeOffIcon = () => (
 function AcceptInviteContent() {
 	const router = useRouter()
 	const searchParams = useSearchParams()
-	const token = searchParams.get('token') ?? ''
+	const [token, setToken] = useState('')
+
+	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			const hash = window.location.hash
+			const match = hash.match(/#token=([^&]*)/)
+			if (match && match[1]) {
+				setToken(decodeURIComponent(match[1]))
+				return
+			}
+			const queryToken = searchParams.get('token')
+			if (queryToken) {
+				setToken(queryToken)
+			}
+		}
+	}, [searchParams])
 
 	const [showNew, setShowNew] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)

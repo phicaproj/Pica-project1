@@ -30,6 +30,7 @@ export interface OtpTokenPayload {
 export interface PasswordResetTokenPayload {
   email: string;
   purpose: 'password-reset';
+  hashPrefix: string;
 }
 
 export interface InviteTokenPayload {

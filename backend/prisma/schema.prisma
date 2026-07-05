@@ -343,6 +343,7 @@ model User {
   appSettingsUpdates     AppSettings[]      @relation("AppSettingsUpdatedBy")
   subscriptions          UserSubscription[]
   consultations          ConsultationBooking[]
+  adminAuditLogs         AdminAuditLog[]
   // Back-relation for ConsultationBooking.adminNotesUpdatedById — every
   // staff edit on a client's booking notes points back at the staff user
   // who last wrote it. Distinct from `consultations` (those are bookings
@@ -557,6 +558,7 @@ model Payment {
   status        PaymentStatus @default(PENDING)
   paymentMethod String?       @map("payment_method") // "card" | "bank" | "ussd" | "qr" | "transfer" | etc.
   paidAt        DateTime?     @map("paid_at")
+  grantedAt     DateTime?     @map("granted_at")
   failureReason String?       @map("failure_reason")
 
   // Snapshot of customer details at init time so the admin transaction page
@@ -1062,4 +1064,18 @@ model Phase2ACredit {
   // Hot path: "does this user have an unconsumed, unexpired credit?"
   @@index([userId, consumedAt, expiresAt])
   @@map("phase2a_credits")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  adminId   String   @map("admin_id")
+  field     String
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  admin     User     @relation(fields: [adminId], references: [id])
+
+  @@map("admin_audit_logs")
 }

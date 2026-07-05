@@ -9,10 +9,11 @@ import {
   submitAssessment,
   getSessionResponses,
 } from './assessment.controller';
+import { assessmentStartLimiter } from '../../service/shared/rateLimiter';
 
 const assessmentRouter = Router();
 
-assessmentRouter.post('/start', startAssessment);
+assessmentRouter.post('/start', assessmentStartLimiter, startAssessment);
 assessmentRouter.post('/phase2a/start', authenticate, startPhase2A);
 assessmentRouter.post('/phase2b/start', authenticate, startPhase2B);
 assessmentRouter.get('/phase2b/me', authenticate, getMyPhase2BPillars);

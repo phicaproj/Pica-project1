@@ -720,7 +720,7 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
     });
 
     const inviteToken = generateInviteToken({ email: normalizedEmail, purpose: 'admin-invite' });
-    const inviteLink = `${APP_URL}/Auth/accept-invite?token=${encodeURIComponent(inviteToken)}`;
+    const inviteLink = `${APP_URL}/Auth/accept-invite#token=${encodeURIComponent(inviteToken)}`;
 
     const sent = await sendAdminInviteEmail(created.email, inviteLink, created.department);
     if (!sent.success) {
@@ -828,30 +828,68 @@ export async function getAdminProfileService(userId: string): Promise<AdminProfi
 
 export async function updateAdminProfileService(
   userId: string,
-  input: UpdateAdminProfileInput
+  input: UpdateAdminProfileInput,
+  ipAddress?: string
 ): Promise<AdminProfileResponse> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
-  if (!user) {
-    throw new AppError('Admin user not found', NOT_FOUND);
-  }
-
-  const updated = await prisma.user.update({
+  const user = await prisma.user.findUnique({
     where: { id: userId },
-    data: {
-      ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
-      ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
-      ...(input.phone !== undefined ? { phone: input.phone } : {}),
-      ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
-    },
     select: {
       id: true,
-      email: true,
       firstName: true,
       lastName: true,
       phone: true,
       businessName: true,
-      avatarUrl: true,
     },
+  });
+  if (!user) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+
+  // Calculate changed fields and prepare audit log entries
+  const auditLogs: Prisma.AdminAuditLogCreateManyInput[] = [];
+  const fields = ['firstName', 'lastName', 'phone', 'businessName'] as const;
+
+  for (const field of fields) {
+    const newValue = input[field];
+    const oldValue = user[field];
+    if (newValue !== undefined && newValue !== oldValue) {
+      auditLogs.push({
+        adminId: userId,
+        field,
+        oldValue: oldValue || null,
+        newValue: newValue || null,
+        ipAddress: ipAddress || null,
+      });
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: {
+        ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+        ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.businessName !== undefined ? { businessName: input.businessName } : {}),
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        businessName: true,
+        avatarUrl: true,
+      },
+    });
+
+    if (auditLogs.length > 0) {
+      await tx.adminAuditLog.createMany({
+        data: auditLogs,
+      });
+    }
+
+    return updatedUser;
   });
 
   return { ...shapeAdminProfile(updated), message: 'Profile updated successfully' };
