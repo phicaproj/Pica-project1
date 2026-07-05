@@ -16,7 +16,7 @@ function VerifyCodeContent() {
   const type = searchParams.get("type") || "forget-password";
   const isAdminLogin = type === "admin-login";
 
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", ""]);
+  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [codeError, setCodeError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -44,20 +44,20 @@ function VerifyCodeContent() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").slice(0, 5).split("");
+    const pasted = e.clipboardData.getData("text").slice(0, 6).split("");
     const newOtp = [...otp];
     pasted.forEach((char, i) => {
       if (/\d/.test(char)) newOtp[i] = char;
     });
     setOtp(newOtp);
-    inputRefs.current[Math.min(pasted.length, 4)]?.focus();
+    inputRefs.current[Math.min(pasted.length, 5)]?.focus();
   };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otp.join("");
-    if (code.length < 5) {
-      setCodeError("Please enter the full 5-digit code.");
+    if (code.length < 6) {
+      setCodeError("Please enter the full 6-digit code.");
       return;
     }
 
@@ -92,7 +92,7 @@ function VerifyCodeContent() {
   };
 
   const handleResend = async () => {
-    setOtp(["", "", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
     setCodeError("");
     setIsResending(true);
     inputRefs.current[0]?.focus();

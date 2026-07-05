@@ -31,25 +31,26 @@ export default function AboutPage() {
       <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
-          <div className="flex flex-col justify-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
+          <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
+            <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
                 Architectural Intelligence
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
               We Help Businesses <br />
               Understand Themselves <br />
               <span className="text-teal-400">Before</span> They Try to Grow
             </h1>
-            <p className={`text-sm leading-relaxed max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA is a structured diagnostic system designed to replace guesswork with analytical clarity. Scale on a foundation of truth, not assumptions.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
-              <Link href="/pages/freescan" className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+              <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
                 Start Assessment
               </Link>
-              <Link href="#pica-ecosystem" className={`px-6 py-3 rounded-xl text-sm font-bold border transition-all text-center active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="#pica-ecosystem" className={`px-8 py-4 rounded-xl text-base font-bold border transition-all text-center hover:scale-[1.03] active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 View Framework
               </Link>
             </div>

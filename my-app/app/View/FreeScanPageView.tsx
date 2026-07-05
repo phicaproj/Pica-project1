@@ -21,23 +21,23 @@ export default function FreeScanPage() {
       <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
-          <div className="flex flex-col justify-center space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
-              <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#f97316]">
+          <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
+            <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-widest text-[#f97316]">
                 Free Individual Plan
               </span>
             </div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
               Awareness 1A: <br />
               The First Step to <span className="text-[#f97316]">Clarity.</span>
             </h1>
-            <p className={`text-sm leading-relaxed max-w-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
               Experience the precision of the Clinical Architect Framework at zero cost. Designed for individual professionals seeking immediate baseline visibility into their operational health.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <Link href="/pages/generaltest"
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all text-center shadow-lg shadow-orange-500/20 active:scale-95">
+                className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
                 Start Quick Scan <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
