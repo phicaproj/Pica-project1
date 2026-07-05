@@ -892,15 +892,6 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
                 />
               </div>
-              <div className="p-4 rounded-lg bg-[#0d1117] border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-400">Target Expansion</span>
-                  <span className="text-sm font-bold text-teal-400">+15%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 w-[60%]" />
-                </div>
-              </div>
             </div>
           </div>
 

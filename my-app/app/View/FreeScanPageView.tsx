@@ -20,8 +20,8 @@ export default function FreeScanPage() {
       {/* ── Hero ── */}
       <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full relative z-10">
-          <div className="space-y-4 py-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
+          <div className="flex flex-col justify-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
               <span className="w-2 h-2 rounded-full bg-[#f97316] animate-pulse" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#f97316]">
@@ -44,7 +44,7 @@ export default function FreeScanPage() {
           </div>
 
           {/* Image placeholder */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[95%] my-auto ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-full ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
             <Image
               src="/images/freescan1.png"
               alt="Quick Scan Preview"

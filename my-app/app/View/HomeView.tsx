@@ -35,9 +35,9 @@ export default function HomePage() {
       <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
         {d && <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
           {/* Left */}
-          <div className="space-y-4 py-4">
+          <div className="flex flex-col justify-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
                 Precision Business Intelligence
@@ -62,7 +62,7 @@ export default function HomePage() {
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[95%] my-auto ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-full ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
             <Image
               src="/images/landing1.png"
               alt="PICA Dashboard Preview"
@@ -314,19 +314,19 @@ export default function HomePage() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="py-20 md:py-28 px-6 lg:px-8 bg-gradient-to-br from-[#ea580c] via-[#f97316] to-[#facc15] relative overflow-hidden">
+      <section className="py-12 md:py-16 px-6 lg:px-8 bg-gradient-to-br from-[#ea580c] via-[#f97316] to-[#facc15] relative overflow-hidden">
         {/* Decorative Circles */}
         <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/5 blur-2xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-black/5 blur-2xl pointer-events-none" />
-        <div className="max-w-3xl mx-auto text-center space-y-6 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+        <div className="max-w-3xl mx-auto text-center space-y-4 relative z-10">
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight">
             Get Instant Clarity on Your Business
           </h2>
           <p className="text-base md:text-lg text-gray-900/80 font-medium max-w-xl mx-auto">
             Join 500+ Nigerian founders who stopped guessing and started scaling with precision.
           </p>
-          <div className="pt-4">
-            <Link href="/pages/freescan" className="inline-block px-10 py-5 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-black/20 hover:scale-105 active:scale-95">
+          <div className="pt-2">
+            <Link href="/pages/freescan" className="inline-block px-8 py-4 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-black/20 hover:scale-105 active:scale-95">
               Run Your Free Scan Now
             </Link>
           </div>
