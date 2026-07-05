@@ -273,7 +273,8 @@ export async function getUserDetailsService(userId: string): Promise<ShowUserRes
  */
 export async function updateUserStatusService(
   userId: string,
-  input: UpdateUserStatusInput
+  input: UpdateUserStatusInput,
+  callerId?: string
 ): Promise<{ message: string; user: { id: string; status: UserStatus } }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -282,8 +283,8 @@ export async function updateUserStatusService(
 
   if (!user) throw new AppError('User not found', NOT_FOUND);
 
-  if (user.role === UserRole.ADMIN) {
-    throw new AppError('Admin accounts cannot be suspended', CONFLICT);
+  if (user.role === UserRole.ADMIN && callerId === userId) {
+    throw new AppError('You cannot suspend your own admin account', CONFLICT);
   }
 
   if (user.status === input.status) {

@@ -48,7 +48,7 @@ export const showUserById = asyncHandler(async (req: Request, res: Response) => 
 export const updateUserStatus = asyncHandler(async (req: Request, res: Response) => {
   const { id } = showUserQuery.parse(req.params);
   const input = updateUserStatusSchema.parse(req.body);
-  const result = await updateUserStatusService(id, input);
+  const result = await updateUserStatusService(id, input, req.user?.id);
   return res.status(OK).json(result);
 });
 

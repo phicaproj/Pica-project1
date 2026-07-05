@@ -31,6 +31,8 @@ import {
   getScoringSettings,
   updateScoringSettings,
   getAdminPillarsDetailed,
+  getStoredUser,
+  updateAdminUserStatus,
   type AdminUserRow,
   type AdminPillarDetailed,
   type ScoringSettings,
@@ -548,6 +550,10 @@ function RolesTab() {
   const [editCustomDept, setEditCustomDept] = useState("");
   const [editPerms, setEditPerms] = useState<string[]>([]);
   const [savingAccess, setSavingAccess] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
+
+  const currentUser = getStoredUser();
+  const isSelf = currentUser && editTarget && currentUser.id === editTarget.id;
 
   const loadData = useCallback(async () => {
     try {
@@ -623,6 +629,49 @@ function RolesTab() {
     setEditPerms(admin.permissions ?? admin.adminRole?.permissions ?? []);
     setError(null);
     setSuccessMessage(null);
+  };
+
+  const handleToggleStatus = async () => {
+    if (!editTarget) return;
+    const isCurrentlyActive = editTarget.status === "ACTIVE";
+    const name =
+      `${editTarget.firstName ?? ""} ${editTarget.lastName ?? ""}`.trim() ||
+      editTarget.email;
+    const action = isCurrentlyActive ? "Disable" : "Reactivate";
+
+    const confirmed = window.confirm(
+      isCurrentlyActive
+        ? `Disable administrator ${name}? They will be logged out immediately and unable to sign in until reactivated.`
+        : `Reactivate administrator ${name}? They will be able to sign in again.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setTogglingStatus(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const nextStatus = isCurrentlyActive ? "DISABLED" : "ACTIVE";
+      const res = await updateAdminUserStatus(editTarget.id, nextStatus);
+
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+
+      setEditTarget((prev) => (prev ? { ...prev, status: nextStatus } : null));
+      setAdmins((current) =>
+        current.map((a) => (a.id === editTarget.id ? { ...a, status: nextStatus } : a))
+      );
+      setSuccessMessage(
+        `Administrator account ${isCurrentlyActive ? "disabled" : "reactivated"} successfully.`
+      );
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || `Failed to ${action.toLowerCase()} account.`);
+    } finally {
+      setTogglingStatus(false);
+    }
   };
 
   const handleSaveAccess = async (e: React.FormEvent) => {
@@ -942,22 +991,41 @@ function RolesTab() {
                 onTogglePermission={(key) => togglePerm(setEditPerms, key)}
               />
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-white/5">
-                <button
-                  type="button"
-                  onClick={() => setEditTarget(null)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingAccess || !resolveDept(editDepartment, editCustomDept)}
-                  className="px-5 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
-                >
-                  {savingAccess && <Loader className="w-4 h-4 animate-spin" />}
-                  Save Access
-                </button>
+              <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                {editTarget && (
+                  <button
+                    type="button"
+                    disabled={togglingStatus || Boolean(isSelf)}
+                    onClick={handleToggleStatus}
+                    title={isSelf ? "You cannot disable your own account" : undefined}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border ${
+                      editTarget.status === "ACTIVE"
+                        ? "bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400"
+                        : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400"
+                    }`}
+                  >
+                    {togglingStatus && <Loader className="w-4 h-4 animate-spin" />}
+                    {editTarget.status === "ACTIVE" ? "Disable Account" : "Reactivate Account"}
+                  </button>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditTarget(null)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingAccess || !resolveDept(editDepartment, editCustomDept)}
+                    className="px-5 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2"
+                  >
+                    {savingAccess && <Loader className="w-4 h-4 animate-spin" />}
+                    Save Access
+                  </button>
+                </div>
               </div>
             </form>
           </div>
