@@ -146,6 +146,8 @@ export const createQuestionSchema = z
       message: 'businessSize must be one of: SMALL, MEDIUM',
     }),
     isPhase1Featured: z.boolean().default(false),
+    isKnockout: z.boolean().default(false),
+    showOnPhase1: z.boolean().default(false),
     questionText: z
       .string({ error: 'questionText is required' })
       .trim()
@@ -155,6 +157,27 @@ export const createQuestionSchema = z
     options: z.array(adminOptionInput).min(2, 'a question needs at least 2 options').max(6),
   })
   .superRefine((data, ctx) => {
+    // 1. Guard: showOnPhase1 only settable when isKnockout = true
+    if (data.showOnPhase1 && !data.isKnockout) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['showOnPhase1'],
+        message: 'showOnPhase1 can only be true if isKnockout is true',
+      });
+    }
+
+    // 2. Validate a knockout question has exactly one 0-score trigger option
+    if (data.isKnockout) {
+      const zeroScoreCount = data.options.filter((o) => o.score === 0).length;
+      if (zeroScoreCount !== 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['options'],
+          message: 'A knockout question must have exactly one option with a score of 0',
+        });
+      }
+    }
+
     // Phase 2B options carry an action plan (window + items) instead of a
     // recommendation; Phase 1 / 2A options require the recommendation line.
     data.options.forEach((option, index) => {
@@ -189,6 +212,8 @@ export const updateQuestionSchema = z
     phase: z.nativeEnum(Phase).optional(),
     businessSize: z.nativeEnum(BusinessSize).optional(),
     isPhase1Featured: z.boolean().optional(),
+    isKnockout: z.boolean().optional(),
+    showOnPhase1: z.boolean().optional(),
     isActive: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -306,6 +331,8 @@ export type AdminQuestionResponse = {
   businessSize: BusinessSize;
   isPhase1Featured: boolean;
   hasKnockoutOption: boolean;
+  isKnockout: boolean;
+  showOnPhase1: boolean;
   isActive: boolean;
   displayOrder: number;
   options: AdminOptionResponse[];

@@ -38,6 +38,8 @@ type QuestionDraft = {
   phase: AdminQuestionPhase;
   businessSize: BusinessSize;
   isPhase1Featured: boolean;
+  isKnockout: boolean;
+  showOnPhase1: boolean;
   isActive: boolean;
 };
 
@@ -64,6 +66,8 @@ const initialCreateDraft = (): CreateDraft => ({
   phase: "PHASE2A",
   businessSize: "SMALL",
   isPhase1Featured: false,
+  isKnockout: false,
+  showOnPhase1: false,
   isActive: true,
   options: [emptyOption(10), emptyOption(6), emptyOption(3), emptyOption(0)],
 });
@@ -229,6 +233,8 @@ export default function QuestionBankPage() {
       phase: activeQuestion.phase,
       businessSize: activeQuestion.businessSize,
       isPhase1Featured: activeQuestion.isPhase1Featured,
+      isKnockout: activeQuestion.isKnockout,
+      showOnPhase1: activeQuestion.showOnPhase1,
       isActive: activeQuestion.isActive,
     });
 
@@ -269,6 +275,8 @@ export default function QuestionBankPage() {
       phase: questionDraft.phase,
       businessSize: questionDraft.businessSize,
       isPhase1Featured: questionDraft.isPhase1Featured,
+      isKnockout: questionDraft.isKnockout,
+      showOnPhase1: questionDraft.showOnPhase1,
       isActive: questionDraft.isActive,
     });
 
@@ -409,9 +417,12 @@ export default function QuestionBankPage() {
       return o;
     });
 
-    if (options.length < 2 || options.some((option) => !validateOption(option, createDraft.phase))) {
-      setError("Every option needs text, score, observation, and either a recommendation or action plan.");
-      return;
+    if (createDraft.isKnockout) {
+      const zeroScoreCount = options.filter(o => o.score === 0).length;
+      if (zeroScoreCount !== 1) {
+        setError("Knockout questions must designate exactly one choice with a 0 score.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -422,6 +433,8 @@ export default function QuestionBankPage() {
       phase: createDraft.phase,
       businessSize: createDraft.businessSize,
       isPhase1Featured: createDraft.isPhase1Featured,
+      isKnockout: createDraft.isKnockout,
+      showOnPhase1: createDraft.showOnPhase1,
       options,
     });
 
@@ -640,6 +653,16 @@ export default function QuestionBankPage() {
                       <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
                         {question.businessSize}
                       </span>
+                      {question.isKnockout && (
+                        <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+                          KNOCKOUT
+                        </span>
+                      )}
+                      {question.showOnPhase1 && (
+                        <span className="rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
+                          PHASE 1
+                        </span>
+                      )}
                     </div>
                     {!question.isActive && (
                       <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
@@ -766,20 +789,39 @@ export default function QuestionBankPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-4">
+
                 <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={createDraft.isPhase1Featured}
+                    checked={createDraft.isKnockout}
                     onChange={(event) =>
                       setCreateDraft({
                         ...createDraft,
-                        isPhase1Featured: event.target.checked,
+                        isKnockout: event.target.checked,
+                        showOnPhase1: event.target.checked ? createDraft.showOnPhase1 : false,
                       })
                     }
                     className="h-4 w-4 accent-blue-500"
                   />
-                  Phase 1 featured
+                  Is Knockout Question
                 </label>
+
+                {createDraft.isKnockout && (
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={createDraft.showOnPhase1}
+                      onChange={(event) =>
+                        setCreateDraft({
+                          ...createDraft,
+                          showOnPhase1: event.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 accent-blue-500"
+                    />
+                    Show on Phase 1
+                  </label>
+                )}
               </div>
 
               <div className="mt-6 space-y-4">
@@ -990,17 +1032,34 @@ export default function QuestionBankPage() {
                 <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={questionDraft.isPhase1Featured}
+                    checked={questionDraft.isKnockout}
                     onChange={(event) =>
                       setQuestionDraft({
                         ...questionDraft,
-                        isPhase1Featured: event.target.checked,
+                        isKnockout: event.target.checked,
+                        showOnPhase1: event.target.checked ? questionDraft.showOnPhase1 : false,
                       })
                     }
                     className="h-4 w-4 accent-blue-500"
                   />
-                  Phase 1 featured
+                  Is Knockout
                 </label>
+                {questionDraft.isKnockout && (
+                  <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={questionDraft.showOnPhase1}
+                      onChange={(event) =>
+                        setQuestionDraft({
+                          ...questionDraft,
+                          showOnPhase1: event.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 accent-blue-500"
+                    />
+                    Show on Phase 1
+                  </label>
+                )}
                 <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 md:mt-6 cursor-pointer">
                   <input
                     type="checkbox"

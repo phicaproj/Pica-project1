@@ -24,6 +24,7 @@ type SettingsRow = {
   subscriptionActive: boolean;
   phase2bDiscountPctPerPillar: number;
   phase2bDiscountMaxPillars: number;
+  phase1PullTotal: number;
   updatedBy: string | null;
   updatedAt: Date;
 };
@@ -34,6 +35,7 @@ const toPayload = (row: SettingsRow): AppSettingsPayload => ({
   subscriptionActive: row.subscriptionActive,
   phase2bDiscountPctPerPillar: row.phase2bDiscountPctPerPillar,
   phase2bDiscountMaxPillars: row.phase2bDiscountMaxPillars,
+  phase1PullTotal: row.phase1PullTotal,
   updatedBy: row.updatedBy,
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -124,6 +126,9 @@ export async function updateAppSettingsService(
         : {}),
       ...(input.phase2bDiscountMaxPillars !== undefined
         ? { phase2bDiscountMaxPillars: input.phase2bDiscountMaxPillars }
+        : {}),
+      ...(input.phase1PullTotal !== undefined
+        ? { phase1PullTotal: input.phase1PullTotal }
         : {}),
       updatedBy,
     },

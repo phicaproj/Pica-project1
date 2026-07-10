@@ -55,8 +55,30 @@ function toQuestionResponse(question: RawQuestion): QuestionResponse {
 }
 
 export async function getPhase1QuestionsService(
-  businessSize: BusinessSize
+  sessionId: string
 ): Promise<Phase1QuestionsResponse> {
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      phase: true,
+      selectedQuestionIds: true,
+    },
+  });
+
+  if (!session) {
+    throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+
+  if (session.phase !== Phase.PHASE1) {
+    throw new AppError('Session is not a Phase 1 session', CONFLICT);
+  }
+
+  const snapshot = (session.selectedQuestionIds ?? []) as string[];
+  if (!Array.isArray(snapshot) || snapshot.length === 0) {
+    throw new AppError('Phase 1 session has no question snapshot', UNPROCESSABLE_CONTENT);
+  }
+
   const pillars = await prisma.pillar.findMany({
     where: {
       isActive: true,
@@ -69,8 +91,7 @@ export async function getPhase1QuestionsService(
       displayOrder: true,
       questions: {
         where: {
-          businessSize,
-          isPhase1Featured: true,
+          id: { in: snapshot },
           isActive: true,
         },
         select: questionSelect,

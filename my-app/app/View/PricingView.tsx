@@ -186,7 +186,7 @@ export default function PricingPage() {
                   its bullets stay hardcoded here — they describe the product
                   shape, not a configurable price tier. */}
               <ul className="space-y-3 mb-10">
-                {["Core business health check", "Phase 1 quick scan", "Basic PDF Performance Summary"].map((item) => (
+                {["Core business health check", "Business Snapshot assessment", "Basic PDF Performance Summary"].map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
                     <CheckCircle className="w-4 h-4 text-[#00ffaa] flex-shrink-0" />{item}
                   </li>
@@ -204,7 +204,7 @@ export default function PricingPage() {
                     Most Selected
                   </div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 02</p>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Plan 2A Full Diagnostic</h3>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Strategic Scan Full Diagnostic</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
                     {formatMoney(phase2A?.price, phase2A?.currency ?? "USD")}
                   </p>
@@ -406,8 +406,8 @@ export default function PricingPage() {
                             </p>
                           )}
                           <ul className="space-y-3 mb-8">
-                            <QuotaLine count={plan.phase2aPerMonth} label="Phase 2A diagnostics" dark={d} />
-                            <QuotaLine count={plan.phase2bPerMonth} label="Phase 2B deep dives" dark={d} />
+                            <QuotaLine count={plan.phase2aPerMonth} label="Strategic Scans" dark={d} />
+                            <QuotaLine count={plan.phase2bPerMonth} label="Deep Dive Modules" dark={d} />
                             <QuotaLine count={plan.consultationsPerMonth} label="Expert consultations" dark={d} />
                             {plan.features.map((feature) => (
                               <li key={feature} className={`flex items-start gap-2 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}>

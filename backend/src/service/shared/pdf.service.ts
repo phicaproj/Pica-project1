@@ -3359,3 +3359,228 @@ export async function generateReportPDF(
     doc.end();
   });
 }
+
+export async function generateSnapshotPDF(
+  result: ScoringResultPayload,
+  businessName: string,
+  metadata?: {
+    businessSize?: string | null;
+    sessionId?: string;
+    completedAt?: Date | null;
+    theme?: 'light' | 'dark';
+  }
+): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      margin: PAGE_MARGIN,
+      size: 'A4',
+      bufferPages: true,
+      info: {
+        Title: `PICA Business Snapshot — ${businessName}`,
+        Author: 'Beauvision Associates Ltd',
+        Subject: 'PICA Business Snapshot',
+      },
+    });
+
+    const theme = metadata?.theme || 'light';
+    (doc as any).theme = theme;
+    (doc as any).COLORS = getThemeColors(theme);
+    const COLORS = (doc as any).COLORS;
+
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const targetDate = metadata?.completedAt ? new Date(metadata.completedAt) : new Date();
+    const dateStr = targetDate.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    drawPageBackground(doc);
+
+    // --- Header ---
+    doc.save();
+    // Top logo / branding
+    doc.fontSize(16).font('Helvetica-Bold').fillColor(COLORS.accent).text('PICA', PAGE_MARGIN, PAGE_MARGIN);
+    doc.fontSize(10).font('Helvetica').fillColor(COLORS.mutedText).text('BUSINESS SNAPSHOT', PAGE_MARGIN + 45, PAGE_MARGIN + 5);
+
+    // Date & metadata right-aligned
+    const topMetaText = `${dateStr}  |  ${metadata?.businessSize ? `${metadata.businessSize} size` : 'Free Tier'}`;
+    doc.fontSize(8).font('Helvetica').fillColor(COLORS.mutedText).text(topMetaText, PAGE_MARGIN, PAGE_MARGIN + 6, {
+      align: 'right',
+      width: COLORS.pageWidth,
+    });
+    doc.restore();
+
+    hr(doc, PAGE_MARGIN + 24, COLORS.borderGrey);
+
+    // --- Business Title ---
+    doc.y = PAGE_MARGIN + 35;
+    doc.fontSize(22).font('Helvetica-Bold').fillColor(COLORS.primary).text(businessName);
+    doc.fontSize(10).font('Helvetica').fillColor(COLORS.mutedText).text('Your high-level organizational health profile summary.');
+    doc.moveDown(1.5);
+
+    // --- Composite Health Score & Main Info Row ---
+    const startY = doc.y;
+    
+    // Draw Composite Score Donut Gauge
+    const gaugeX = PAGE_MARGIN + 60;
+    const gaugeY = startY + 50;
+    const gaugeR = 45;
+    
+    // Band Details resolution
+    const bandDetails = getBandColors(result.colorBand, COLORS);
+
+    drawDonutGauge(doc, gaugeX, gaugeY, gaugeR, Math.round(result.totalScore), bandDetails, 'HEALTH SCORE');
+
+    // Right of gauge: Summary text block
+    doc.y = startY + 10;
+    doc.x = PAGE_MARGIN + 140;
+    const textWidth = COLORS.pageWidth - 140;
+
+    doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.primary).text(`Overall Rating: ${result.colorBand}`);
+    doc.moveDown(0.4);
+    doc.fontSize(9.5).font('Helvetica').fillColor(COLORS.bodyText).text(
+      `Your organization has achieved a composite health score of ${Math.round(result.totalScore)}/100, placing you in the ${result.colorBand} band. ` +
+      `This diagnostic evaluates your business operational strength, compliance profile, and resilience pillars.`,
+      { width: textWidth, lineBreak: true }
+    );
+
+    // If there's any knockout triggered, draw a warning block
+    if (result.hasAnyKnockout) {
+      doc.moveDown(0.8);
+      doc.save();
+      const alertY = doc.y;
+      doc.rect(PAGE_MARGIN + 140, alertY, textWidth, 24)
+        .fillColor(COLORS.redBg)
+        .fill();
+      doc.rect(PAGE_MARGIN + 140, alertY, 3, 24)
+        .fillColor(COLORS.redBorder)
+        .fill();
+      
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(COLORS.red)
+        .text('CRITICAL GATES TRIGGERED: One or more knockout risk thresholds have been hit.', PAGE_MARGIN + 150, alertY + 7, {
+          width: textWidth - 20,
+          lineBreak: false
+        });
+      doc.restore();
+      doc.y = alertY + 30;
+    } else {
+      doc.moveDown(1.5);
+    }
+
+    doc.x = PAGE_MARGIN; // Reset X
+    doc.y = startY + 115; // Set Y past gauge
+
+    hr(doc, doc.y, COLORS.borderGrey);
+    doc.moveDown(1.0);
+
+    // --- Pillar Breakdown Section ---
+    doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.primary).text('Pillar Performance Breakdown');
+    doc.moveDown(0.6);
+
+    // Draw pillar strips
+    const pillarStripH = 26;
+    const spacing = 8;
+    
+    for (const pillar of result.pillarScores) {
+      const pY = doc.y;
+      const pColors = getBandColors(pillar.colorBand, COLORS);
+
+      // Draw background bar
+      doc.save();
+      doc.rect(PAGE_MARGIN, pY, COLORS.pageWidth, pillarStripH)
+        .fillColor(COLORS.lightGrey)
+        .fill();
+
+      // Draw color band indicator strip on the left
+      doc.rect(PAGE_MARGIN, pY, 5, pillarStripH)
+        .fillColor(pColors.border)
+        .fill();
+
+      // Pillar name and code
+      doc.fontSize(9.5).font('Helvetica-Bold').fillColor(COLORS.primary)
+        .text(`${pillar.pillarName} (${pillar.pillarCode})`, PAGE_MARGIN + 15, pY + 8, { lineBreak: false });
+
+      // Score badge background
+      const badgeW = 40;
+      const badgeH = 16;
+      const badgeX = PAGE_MARGIN + COLORS.pageWidth - badgeW - 10;
+      const badgeY = pY + 5;
+
+      doc.rect(badgeX, badgeY, badgeW, badgeH)
+        .fillColor(pColors.bg || COLORS.lightGrey)
+        .strokeColor(pColors.border)
+        .lineWidth(0.5)
+        .stroke()
+        .fill();
+
+      // Score value
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(pColors.text)
+        .text(`${Math.round(pillar.rawScore)}/10`, badgeX, badgeY + 4, {
+          width: badgeW,
+          align: 'center',
+          lineBreak: false
+        });
+
+      doc.restore();
+      doc.y = pY + pillarStripH + spacing;
+    }
+
+    doc.moveDown(1.2);
+    hr(doc, doc.y, COLORS.borderGrey);
+    doc.moveDown(1.2);
+
+    // --- Unlock strategic scan call to action ---
+    const ctaY = doc.y;
+    const ctaH = 65;
+    doc.save();
+    doc.rect(PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH)
+      .fillColor(COLORS.greenBg)
+      .strokeColor(COLORS.greenBorder)
+      .lineWidth(0.5)
+      .stroke()
+      .fill();
+
+    doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.green)
+      .text('Unlock the full Strategic Scan & Diagnostic', PAGE_MARGIN + 15, ctaY + 12, { lineBreak: false });
+      
+    doc.fontSize(9).font('Helvetica').fillColor(COLORS.bodyText)
+      .text(
+        'Get a comprehensive 13-page operational breakdown, custom-designed recommendations, and a ' +
+        'tailored, printable action plan to optimize your organization\'s efficiency and address compliance gaps.',
+        PAGE_MARGIN + 15, ctaY + 28, { width: COLORS.pageWidth - 30 }
+      );
+    doc.restore();
+
+    // Footer at the bottom
+    drawFooter(doc, businessName, metadata?.sessionId);
+
+    doc.end();
+  });
+}
+
+function getBandColors(band: string, COLORS: any) {
+  if (band === 'GREEN') {
+    return {
+      text: COLORS.green,
+      bg: COLORS.greenBg,
+      border: COLORS.greenBorder,
+    };
+  }
+  if (band === 'AMBER') {
+    return {
+      text: COLORS.amber,
+      bg: COLORS.amberBg,
+      border: COLORS.amberBorder,
+    };
+  }
+  return {
+    text: COLORS.red,
+    bg: COLORS.redBg,
+    border: COLORS.redBorder,
+  };
+}

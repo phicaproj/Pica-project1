@@ -226,6 +226,8 @@ model AppSettings {
   phase2bDiscountPctPerPillar Int @default(5) @map("phase2b_discount_pct_per_pillar")
   phase2bDiscountMaxPillars   Int @default(5) @map("phase2b_discount_max_pillars")
 
+  phase1PullTotal             Int @default(15) @map("phase1_pull_total")
+
   updatedBy String? @map("updated_by")
   updatedByUser User? @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
 
@@ -251,6 +253,8 @@ model Question {
   // Existing rows default to PHASE2A so the migration is non-destructive.
   phase             Phase        @default(PHASE2A) @map("phase")
   displayOrder      Int          @map("display_order")
+  isKnockout        Boolean      @default(false) @map("is_knockout")
+  showOnPhase1      Boolean      @default(false) @map("show_on_phase1")
   hasKnockoutOption Boolean      @default(false) @map("has_knockout_option")
   isActive          Boolean      @default(true) @map("is_active")
 

@@ -1982,6 +1982,9 @@ export function AppSettingsTab() {
   const [draftMax, setDraftMax] = useState("");
   const [savingDiscount, setSavingDiscount] = useState(false);
 
+  // Phase 1 pull total draft.
+  const [draftPullTotal, setDraftPullTotal] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -1995,6 +1998,7 @@ export function AppSettingsTab() {
     setDraftRate(String(res.data.settings.usdToNgn));
     setDraftPct(String(res.data.settings.phase2bDiscountPctPerPillar));
     setDraftMax(String(res.data.settings.phase2bDiscountMaxPillars));
+    setDraftPullTotal(String(res.data.settings.phase1PullTotal));
   }, []);
 
   useEffect(() => {
@@ -2008,6 +2012,10 @@ export function AppSettingsTab() {
 
   const parsedPct = Number(draftPct);
   const parsedMax = Number(draftMax);
+  
+  const parsedPullTotal = Number(draftPullTotal);
+  const pullTotalValid = Number.isInteger(parsedPullTotal) && parsedPullTotal >= 7 && parsedPullTotal <= 70;
+  const pullTotalDirty = settings ? parsedPullTotal !== settings.phase1PullTotal : false;
   const pctValid = Number.isInteger(parsedPct) && parsedPct >= 0 && parsedPct <= 100;
   const maxValid = Number.isInteger(parsedMax) && parsedMax >= 1 && parsedMax <= 7;
   const discountDirty = settings
@@ -2073,6 +2081,25 @@ export function AppSettingsTab() {
     setDraftPct(String(res.data.settings.phase2bDiscountPctPerPillar));
     setDraftMax(String(res.data.settings.phase2bDiscountMaxPillars));
     setSuccess("Phase 2B bundle discount updated.");
+  };
+
+  const handleSavePullTotal = async () => {
+    if (!pullTotalValid) {
+      setError("Phase 1 pull total must be a whole number between 7 and 70.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    const res = await updateAdminAppSettings({ phase1PullTotal: parsedPullTotal });
+    setSaving(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message ?? "Could not save app settings.");
+      return;
+    }
+    setSettings(res.data.settings);
+    setDraftPullTotal(String(res.data.settings.phase1PullTotal));
+    setSuccess("Phase 1 pull total updated.");
   };
 
   const handleToggleSection = async (
@@ -2325,6 +2352,62 @@ export function AppSettingsTab() {
           >
             {savingDiscount ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save discount
+          </button>
+        </div>
+      </div>
+
+      {/* Phase 1 Pull Total */}
+      <div className="mt-5 rounded-xl border border-white/5 bg-[#1C1F2E] p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Settings2 className="w-4 h-4 text-blue-300" />
+          <h2 className="text-base font-bold text-white">Phase 1 pull total</h2>
+        </div>
+        <p className="text-xs text-gray-500 mb-5">
+          The number of Phase 2A questions to randomly sample for a Phase 1 (Business Snapshot) assessment.
+          A whole number ≥ 7 is recommended.
+        </p>
+
+        <label className="block mb-5">
+          <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
+            Questions to pull:
+          </span>
+          <input
+            type="number"
+            step="1"
+            min={7}
+            max={70}
+            value={draftPullTotal}
+            disabled={saving}
+            onChange={(e) => setDraftPullTotal(e.target.value)}
+            className="w-full max-w-xs bg-[#111318] border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+          />
+          {!pullTotalValid && (
+            <span className="block text-[10px] text-rose-300 mt-1">
+              Must be a whole number between 7 and 70.
+            </span>
+          )}
+        </label>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => {
+              if (settings) {
+                setDraftPullTotal(String(settings.phase1PullTotal));
+                setError(null);
+              }
+            }}
+            disabled={saving || !pullTotalDirty}
+            className="px-4 py-2.5 rounded-lg border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-40"
+          >
+            Reset
+          </button>
+          <button
+            onClick={handleSavePullTotal}
+            disabled={saving || !pullTotalDirty || !pullTotalValid}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition disabled:opacity-60"
+          >
+            {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save pull total
           </button>
         </div>
       </div>

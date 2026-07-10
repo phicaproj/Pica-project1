@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { getPhaseLabel } from "@/lib/phaseLabels";
 import {
   Activity,
   AlertCircle,
@@ -207,7 +208,7 @@ const bandColor = (band: string) => {
 };
 
 const labelForResult = (r: CompletedResultOption) => {
-  const phase = r.phase === "PHASE2B" ? "Phase 2B" : "Phase 2A";
+  const phase = getPhaseLabel(r.phase);
   const pillar =
     r.pillarName ?? (r.phase === "PHASE2B" ? r.pillarCode ?? "Pillar" : "All pillars");
   const date = formatDate(r.generatedAt);

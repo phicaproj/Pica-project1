@@ -61,6 +61,11 @@ export type AdminUserRow = {
   department?: string | null;
   permissions?: string[];
 
+  // True for an ADMIN who was invited but has not yet activated their account
+  // (passwordHash still null). Drives the "Pending activation" badge and the
+  // "Resend invite" button on the FE. The hash itself is never exposed.
+  pendingInvite?: boolean;
+
   createdAt: Date;
 };
 
@@ -272,6 +277,18 @@ export type InviteAdminResponse = {
     email: string;
     department: string | null;
     permissions: string[];
+  };
+};
+
+// ── Resend an expired/pending admin invite ──────────────────────────────────
+// Regenerates a fresh 24h activation link and re-emails it. No request body —
+// the target is identified by the :id path param. Refuses if the admin has
+// already onboarded (passwordHash set).
+export type ResendAdminInviteResponse = {
+  message: string;
+  admin: {
+    id: string;
+    email: string;
   };
 };
 

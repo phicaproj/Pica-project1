@@ -191,6 +191,8 @@ export type AdminQuestion = {
 	phase: AdminQuestionPhase
 	businessSize: BusinessSize
 	isPhase1Featured: boolean
+	isKnockout: boolean
+	showOnPhase1: boolean
 	hasKnockoutOption: boolean
 	isActive: boolean
 	displayOrder: number
@@ -222,6 +224,8 @@ export type CreateAdminQuestionPayload = {
 	phase: AdminQuestionPhase
 	businessSize: BusinessSize
 	isPhase1Featured: boolean
+	isKnockout?: boolean
+	showOnPhase1?: boolean
 	questionText: string
 	options: AdminQuestionOptionPayload[]
 }
@@ -231,6 +235,8 @@ export type UpdateAdminQuestionPayload = {
 	phase?: AdminQuestionPhase
 	businessSize?: BusinessSize
 	isPhase1Featured?: boolean
+	isKnockout?: boolean
+	showOnPhase1?: boolean
 	isActive?: boolean
 }
 
@@ -444,6 +450,9 @@ export type AdminUserRow = {
 	// Per-person admin access (source of truth for new admins).
 	department?: string | null
 	permissions?: string[]
+	// True for an ADMIN who was invited but hasn't activated their account yet
+	// (no password set). Drives the "Pending activation" badge + Resend button.
+	pendingInvite?: boolean
 	createdAt: string
 }
 
@@ -732,6 +741,15 @@ export const inviteAdmin = async (payload: {
 	)
 }
 
+// Resend a 24h activation link to a pending admin. Backend refuses (409) if
+// the admin has already activated their account.
+export const resendAdminInvite = async (userId: string) => {
+	return authedFetch<{ message: string; admin: { id: string; email: string } }>(
+		`/admin/users/${userId}/resend-invite`,
+		{ method: 'POST' },
+	)
+}
+
 // Edit an existing admin's department + per-person permissions.
 export const updateAdminAccess = async (
 	userId: string,
@@ -792,6 +810,7 @@ export type AppSettingsPayload = {
 	// pillars count toward the discount.
 	phase2bDiscountPctPerPillar: number
 	phase2bDiscountMaxPillars: number
+	phase1PullTotal: number
 	updatedBy: string | null
 	updatedAt: string
 }
@@ -811,6 +830,7 @@ export const updateAdminAppSettings = async (input: {
 	subscriptionActive?: boolean
 	phase2bDiscountPctPerPillar?: number
 	phase2bDiscountMaxPillars?: number
+	phase1PullTotal?: number
 }) => {
 	return authedFetch<AppSettingsResponse>('/admin/app-settings', {
 		method: 'PATCH',

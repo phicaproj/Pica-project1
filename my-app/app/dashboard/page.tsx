@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { getPhaseLabel } from '@/lib/phaseLabels'
 import {
 	Search,
 	ArrowRight,
@@ -36,10 +37,9 @@ type Phase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
 
 function phaseDisplayName(res: ResultPayload): string {
 	if (res.phase === 'PHASE2B') {
-		return res.pillarScores?.[0]?.pillar?.name || 'Phase 2B Deep Dive'
+		return res.pillarScores?.[0]?.pillar?.name || getPhaseLabel(res.phase)
 	}
-	if (res.phase === 'PHASE2A') return 'Phase 2A'
-	return 'Phase 1'
+	return getPhaseLabel(res.phase)
 }
 
 interface PillarMeta {

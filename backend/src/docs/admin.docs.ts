@@ -35,6 +35,13 @@ const AdminUserRowSchema = registry.register(
       isActive: z.boolean(),
       lastSeenAt: z.string().datetime().nullable(),
       status: z.enum(['ACTIVE', 'DISABLED']),
+      pendingInvite: z
+        .boolean()
+        .optional()
+        .openapi({
+          description:
+            'True for an ADMIN who was invited but has not yet activated their account (no password set). Drives the "Resend invite" button.',
+        }),
       createdAt: z.string().datetime(),
     })
     .openapi('AdminUserRow')
@@ -897,6 +904,39 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: 'post',
+  path: '/api/admin/users/{id}/resend-invite',
+  tags: ['Admin'],
+  summary: 'Resend an admin activation link',
+  description:
+    'Admin only — requires `users:write`. Regenerates a fresh 24-hour invite token for a PENDING admin (one with no password set yet) and re-emails the activation link. Refuses with 409 if the admin has already activated their account.',
+  security: [{ bearerAuth: [] }],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: 'Invite re-sent',
+      content: {
+        'application/json': {
+          schema: z.object({
+            message: z.string(),
+            admin: z.object({
+              id: z.string().uuid(),
+              email: z.string().email(),
+            }),
+          }),
+        },
+      },
+    },
+    401: errorResponse('Missing or invalid token'),
+    403: errorResponse('Missing users:write permission'),
+    404: errorResponse('Admin user not found'),
+    409: errorResponse('Admin has already activated their account'),
+  },
+});
+
 // ============================================================
 // ADMIN — app-wide settings (FX rate + storefront toggles)
 // ============================================================
@@ -913,6 +953,9 @@ const AppSettingsPayloadSchema = registry.register(
       }),
       phase2bDiscountMaxPillars: z.number().int().openapi({
         description: 'Phase 2B bundle: max pillars that count toward the discount (cap)',
+      }),
+      phase1PullTotal: z.number().int().openapi({
+        description: 'Phase 1: Configurable N random general questions pull total',
       }),
       updatedBy: z.string().uuid().nullable(),
       updatedAt: z.string().datetime(),

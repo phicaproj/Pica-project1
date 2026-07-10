@@ -23,7 +23,13 @@ export const registerSchema = z.object({
   phone: z
     .string()
     .regex(/^\+?\d{10,15}$/, 'Phone number must be 10–15 digits, optionally starting with +'),
-  staffSize: z.string().trim().min(1).optional(),
+  // Staff size is a headcount: whole positive integer only (no decimals).
+  staffSize: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, 'Staff size must be a whole number (no decimals)')
+    .refine((v) => Number.parseInt(v, 10) >= 1, 'Staff size must be at least 1')
+    .optional(),
   industry: z.string().trim().min(1).optional(),
   country: z.string().trim().min(1).optional(),
   state: z.string().trim().min(1).optional(),

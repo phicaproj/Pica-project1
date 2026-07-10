@@ -81,13 +81,13 @@ registry.registerPath({
   method: 'get',
   path: '/api/questions/phase1',
   tags: ['Questions'],
-  summary: 'Get Phase 1 questions for a business size',
+  summary: 'Get Phase 1 questions for a session',
   description:
-    'Public. Returns the Phase 1 question set (one featured question per pillar) for the given business size. Call after POST /api/assessment/start, passing the `businessSize` it returned.',
+    'Public. Returns the Phase 1 question set (randomly sampled from Phase 2A questions, plus any showOnPhase1 knockouts) for the given sessionId. Call after POST /api/assessment/start, passing the `sessionId` it returned.',
   request: {
     query: z.object({
-      businessSize: z.enum(['SMALL', 'MEDIUM']).openapi({
-        param: { name: 'businessSize', in: 'query' },
+      sessionId: z.string().uuid().openapi({
+        param: { name: 'sessionId', in: 'query' },
         description: 'Returned by POST /api/assessment/start',
       }),
     }),
@@ -105,6 +105,7 @@ registry.registerPath({
       },
     },
     400: errorResponse('Validation error'),
+    404: errorResponse('Assessment session not found'),
   },
 });
 

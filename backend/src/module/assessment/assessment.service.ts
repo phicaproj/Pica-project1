@@ -4,7 +4,7 @@ import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import { computeScoring } from '../scoring/scoring.service';
 import type { ScoringResultPayload } from '../scoring/scoring.types';
-import { generateReportPDF } from '../../service/shared/pdf.service';
+import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
 import type {
@@ -23,8 +23,19 @@ import type {
 
 const phase1QuestionCount = async (
   tx: Prisma.TransactionClient,
-  businessSize: BusinessSize | null
+  businessSize: BusinessSize | null,
+  sessionId?: string
 ) => {
+  if (sessionId) {
+    const session = await tx.assessmentSession.findUnique({
+      where: { id: sessionId },
+      select: { selectedQuestionIds: true },
+    });
+    if (session?.selectedQuestionIds) {
+      const snapshot = session.selectedQuestionIds as string[];
+      return snapshot.length;
+    }
+  }
   return tx.question.count({
     where: {
       isActive: true,
@@ -40,10 +51,12 @@ const phase1QuestionCount = async (
  * at registration. Never recomputed.
  *
  * Rule (staff size only):
- *   - staffSize is a free-text headcount the user types. Parse the first integer.
+ *   - staffSize is a headcount validated as a whole positive integer at the
+ *     schema layer (see staffSizeRule in assessment.types.ts).
  *       <= 50  → SMALL
  *       >= 51  → MEDIUM
- *     If unparseable, treat as SMALL (don't upgrade based on noise).
+ *     A non-numeric value can no longer reach here; if one somehow does, we
+ *     fall back to SMALL (don't upgrade based on noise).
  *
  * Annual revenue used to be a second signal that could pull a business up to
  * MEDIUM; the client dropped that requirement on 2026-06-13, so size is now
@@ -54,9 +67,8 @@ const phase1QuestionCount = async (
 const SMALL_STAFF_THRESHOLD = 50;
 
 function computeBusinessSize(staffSize: string): BusinessSize {
-  const match = staffSize.match(/\d+/);
-  if (!match) return BusinessSize.SMALL;
-  const headcount = Number.parseInt(match[0], 10);
+  const headcount = Number.parseInt(staffSize.trim(), 10);
+  if (Number.isNaN(headcount)) return BusinessSize.SMALL;
   return headcount > SMALL_STAFF_THRESHOLD ? BusinessSize.MEDIUM : BusinessSize.SMALL;
 }
 
@@ -93,6 +105,106 @@ export async function startAssessmentService(
     };
   }
 
+  const appSettings = await prisma.appSettings.findFirst({
+    select: { phase1PullTotal: true },
+  });
+  const pullTotal = appSettings?.phase1PullTotal ?? 15;
+
+  const pillars = await prisma.pillar.findMany({
+    where: { isActive: true },
+    select: {
+      id: true,
+      questions: {
+        where: {
+          phase: Phase.PHASE2A,
+          businessSize,
+          isActive: true,
+          isKnockout: false,
+        },
+        select: { id: true },
+      },
+    },
+    orderBy: { displayOrder: 'asc' },
+  });
+
+  const pillarPools = pillars.map((p) => p.questions.map((q) => q.id));
+  const numPillars = pillars.length;
+  const selectedQuestionIds: string[] = [];
+
+  if (numPillars > 0 && pullTotal > 0) {
+    const quotas = Array(numPillars).fill(0);
+    const baseQuota = Math.floor(pullTotal / numPillars);
+    let remainder = pullTotal % numPillars;
+    for (let i = 0; i < numPillars; i++) {
+      quotas[i] = baseQuota + (remainder > 0 ? 1 : 0);
+      remainder--;
+    }
+
+    const finalPillarDraws: string[][] = Array(numPillars).fill(null).map(() => []);
+    const availablePools: { index: number; pool: string[] }[] = [];
+
+    for (let i = 0; i < numPillars; i++) {
+      const pool = pillarPools[i];
+      const quota = quotas[i];
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+      if (shuffled.length <= quota) {
+        finalPillarDraws[i] = shuffled;
+      } else {
+        finalPillarDraws[i] = shuffled.slice(0, quota);
+        availablePools.push({
+          index: i,
+          pool: shuffled.slice(quota),
+        });
+      }
+    }
+
+    // Redistribute shortfall
+    let totalDrawn = finalPillarDraws.reduce((sum, d) => sum + d.length, 0);
+    let shortfall = pullTotal - totalDrawn;
+
+    while (shortfall > 0 && availablePools.length > 0) {
+      let drawnAny = false;
+      for (let k = availablePools.length - 1; k >= 0; k--) {
+        const item = availablePools[k];
+        if (item.pool.length > 0) {
+          const qId = item.pool.pop()!;
+          finalPillarDraws[item.index].push(qId);
+          shortfall--;
+          drawnAny = true;
+          if (shortfall === 0) break;
+        } else {
+          availablePools.splice(k, 1);
+        }
+      }
+      if (!drawnAny) break;
+    }
+
+    for (const draw of finalPillarDraws) {
+      selectedQuestionIds.push(...draw);
+    }
+  }
+
+  // Append all showOnPhase1 = true knockout questions (PHASE2A) for that business size
+  const knockoutQuestions = await prisma.question.findMany({
+    where: {
+      phase: Phase.PHASE2A,
+      businessSize,
+      isKnockout: true,
+      showOnPhase1: true,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+  selectedQuestionIds.push(...knockoutQuestions.map((q) => q.id));
+
+  if (selectedQuestionIds.length === 0) {
+    throw new AppError(
+      `No active Phase 1 questions configured for businessSize=${businessSize}.`,
+      UNPROCESSABLE_CONTENT
+    );
+  }
+
   const session = await prisma.assessmentSession.create({
     data: {
       phase: Phase.PHASE1,
@@ -107,6 +219,7 @@ export async function startAssessmentService(
       // when the FE omits it (it no longer feeds business-size classification).
       annualRevenue: data.annualRevenue ?? '',
       businessSize,
+      selectedQuestionIds: selectedQuestionIds as unknown as Prisma.InputJsonValue,
     },
     select: {
       id: true,
@@ -182,10 +295,8 @@ export async function answerAssessmentService(
     // and be flagged as Phase 1 featured. (Phase 2A ownership/snapshot was already
     // checked above.)
     if (session.phase === Phase.PHASE1) {
-      if (
-        (session.businessSize && question.businessSize !== session.businessSize) ||
-        !question.isPhase1Featured
-      ) {
+      const snapshot = (session.selectedQuestionIds ?? []) as string[];
+      if (!Array.isArray(snapshot) || !snapshot.includes(data.questionId)) {
         throw new AppError('Question does not belong to this Phase 1 assessment', CONFLICT);
       }
     }
@@ -292,11 +403,18 @@ function deliverReportInBackground(params: {
         where: { id: sessionId },
         select: { businessSize: true, completedAt: true },
       });
-      const pdfBuffer = await generateReportPDF(result, businessName, phase, {
-        businessSize: session?.businessSize,
-        sessionId,
-        completedAt: session?.completedAt,
-      });
+      const pdfBuffer =
+        phase === Phase.PHASE1
+          ? await generateSnapshotPDF(result, businessName, {
+              businessSize: session?.businessSize,
+              sessionId,
+              completedAt: session?.completedAt,
+            })
+          : await generateReportPDF(result, businessName, phase, {
+              businessSize: session?.businessSize,
+              sessionId,
+              completedAt: session?.completedAt,
+            });
 
       // Upload to R2 under a stable per-session key — re-submitting/regenerating
       // overwrites the same object instead of leaving orphans.
@@ -338,6 +456,7 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
           businessName: true,
           leadEmail: true,
           businessSize: true,
+          selectedQuestionIds: true,
         },
       });
 
@@ -353,7 +472,7 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
         tx.sessionResponse.count({
           where: { sessionId },
         }),
-        phase1QuestionCount(tx, session.businessSize),
+        phase1QuestionCount(tx, session.businessSize, sessionId),
       ]);
 
       if (answeredQuestions !== totalQuestions) {
@@ -374,6 +493,7 @@ async function submitPhase1Service(sessionId: string): Promise<SubmitAssessmentR
       const result = await computeScoring(tx, sessionId, {
         phase: Phase.PHASE1,
         businessSize: session.businessSize ?? undefined,
+        questionIdScope: (session.selectedQuestionIds ?? []) as string[],
       });
 
       await tx.sessionResult.create({

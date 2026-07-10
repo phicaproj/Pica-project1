@@ -33,6 +33,7 @@ import {
   getAdminPillarsDetailed,
   getStoredUser,
   updateAdminUserStatus,
+  resendAdminInvite,
   type AdminUserRow,
   type AdminPillarDetailed,
   type ScoringSettings,
@@ -552,6 +553,27 @@ function RolesTab() {
   const [savingAccess, setSavingAccess] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
 
+  const [resendingId, setResendingId] = useState<string | null>(null);
+
+  const handleResendInvite = async (admin: AdminUserRow) => {
+    try {
+      setResendingId(admin.id);
+      setError(null);
+      setSuccessMessage(null);
+      const res = await resendAdminInvite(admin.id);
+      if (res.error) {
+        setError(res.error.message);
+        return;
+      }
+      setSuccessMessage("Invitation re-sent — valid 24 hours");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to resend invitation.");
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   const currentUser = getStoredUser();
   const isSelf = currentUser && editTarget && currentUser.id === editTarget.id;
 
@@ -833,7 +855,7 @@ function RolesTab() {
                         </div>
                       </div>
 
-                      <div className="pr-4">
+                      <div className="pr-4 flex items-center gap-2">
                         <span
                           className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-lg border ${
                             isSuper
@@ -843,16 +865,38 @@ function RolesTab() {
                         >
                           {isSuper ? "Super Admin" : label}
                         </span>
+                        {admin.pendingInvite && (
+                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                            Pending activation
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs text-gray-400">{permCount} permissions</span>
-                        <button
-                          onClick={() => openEditAccess(admin)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
-                        >
-                          <Pencil className="w-3.5 h-3.5" /> Edit access
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {admin.pendingInvite && (
+                            <button
+                              disabled={resendingId === admin.id}
+                              onClick={() => void handleResendInvite(admin)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-semibold rounded-lg transition-colors flex-shrink-0 disabled:opacity-55"
+                              title="Resend 24-hour activation link"
+                            >
+                              {resendingId === admin.id ? (
+                                <Loader className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Mail className="w-3.5 h-3.5" />
+                              )}
+                              Resend invite
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openEditAccess(admin)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Edit access
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

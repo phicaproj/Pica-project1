@@ -342,11 +342,26 @@ function ProfileStep({
 							Staff Size
 						</label>
 						<input
-							type='text'
+							type='number'
+							min={1}
+							step={1}
+							inputMode='numeric'
 							placeholder='Number of employees'
 							value={profile.staffSize}
+							onKeyDown={(e) => {
+								// Block decimal point, exponent and sign — staff size
+								// is a whole positive number.
+								if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
+									e.preventDefault()
+								}
+							}}
 							onChange={(e) =>
-								update('staffSize', e.target.value)
+								// Keep only digits so a pasted decimal/symbol can't
+								// reach the backend. Backend also validates.
+								update(
+									'staffSize',
+									e.target.value.replace(/[^\d]/g, '')
+								)
 							}
 							className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-400'}`}
 						/>
@@ -895,14 +910,14 @@ export default function GeneralTestPage() {
 	// Fetch questions after the assessment session returns its businessSize.
 	// Reset per-question progress when the size changes (e.g. user re-submits the profile).
 	useEffect(() => {
-		if (!businessSize) return
+		if (!sessionId) return
 		setCurrentIndex(0)
 		setAnswers({})
 		setAnswerError(null)
 		async function fetchQuestions() {
 			try {
 				const res = await fetch(
-					`${API_BASE}/questions/phase1?businessSize=${businessSize}`,
+					`${API_BASE}/questions/phase1?sessionId=${sessionId}`,
 				)
 				const data = await res.json()
 				if (!res.ok)
@@ -934,7 +949,7 @@ export default function GeneralTestPage() {
 			}
 		}
 		fetchQuestions()
-	}, [businessSize])
+	}, [sessionId])
 
 	// Start assessment session
 	const handleStartAssessment = async () => {
@@ -949,6 +964,16 @@ export default function GeneralTestPage() {
 		if (!profile.operatingYears.trim()) missing.push('years in operation')
 		if (missing.length > 0) {
 			setError(`Please provide ${missing.join(', ')}.`)
+			return
+		}
+
+		// Staff size must be a whole number ≥ 1 (no decimals / non-numerics).
+		if (!/^\d+$/.test(profile.staffSize.trim())) {
+			setError('Staff size must be a whole number (no decimals).')
+			return
+		}
+		if (Number.parseInt(profile.staffSize.trim(), 10) < 1) {
+			setError('Staff size must be at least 1.')
 			return
 		}
 

@@ -14,6 +14,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { getPhaseLabel } from "@/lib/phaseLabels";
 import Script from "next/script";
 import {
   ArrowRight,
@@ -491,8 +492,8 @@ function SubscriptionCard({
         )}
 
         <ul className="space-y-3 mb-8">
-          <QuotaLine label="Phase 2A diagnostics" count={plan.phase2aPerMonth} />
-          <QuotaLine label="Phase 2B deep dives" count={plan.phase2bPerMonth} />
+          <QuotaLine label={`${getPhaseLabel("PHASE2A")}s`} count={plan.phase2aPerMonth} />
+          <QuotaLine label={`${getPhaseLabel("PHASE2B")} Modules`} count={plan.phase2bPerMonth} />
           <QuotaLine
             label="Expert consultations"
             count={plan.consultationsPerMonth}
@@ -765,7 +766,7 @@ function SubscriptionCheckoutModal({
           <ul className="mt-3 space-y-1.5">
             <li className="text-xs text-gray-400 flex items-center gap-2">
               <Sparkles className="w-3 h-3 text-orange-400" />
-              {plan.phase2aPerMonth} Phase 2A · {plan.phase2bPerMonth} Phase 2B ·{" "}
+              {plan.phase2aPerMonth} {getPhaseLabel("PHASE2A")} · {plan.phase2bPerMonth} {getPhaseLabel("PHASE2B")} ·{" "}
               {plan.consultationsPerMonth} consultations / month
             </li>
           </ul>

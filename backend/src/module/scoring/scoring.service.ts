@@ -193,7 +193,6 @@ export async function computeScoring(
   const phaseQuestionWhere = {
     isActive: true,
     ...(options.businessSize ? { businessSize: options.businessSize } : {}),
-    ...(options.phase === Phase.PHASE1 ? { isPhase1Featured: true } : {}),
     ...(options.questionIdScope ? { id: { in: options.questionIdScope } } : {}),
   } as const;
 

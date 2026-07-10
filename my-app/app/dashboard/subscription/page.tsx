@@ -142,7 +142,7 @@ function buildPlans(
       amount: 0,
       currency: display,
       features: [
-        "Phase 1 quick scan",
+        "Business Snapshot assessment",
         "Standard insights summary",
         "Email-delivered report",
       ],
@@ -151,7 +151,7 @@ function buildPlans(
     },
     {
       tier: "ACCELERATOR",
-      name: "Plan 2A",
+      name: "Strategic Scan",
       price: formatMoney(phase2APriceDisplay, display),
       amount: phase2APriceDisplay,
       currency: display,
@@ -162,13 +162,13 @@ function buildPlans(
         pricing?.phase2A?.features?.length
           ? pricing.phase2A.features
           : [
-              "Full Phase 2A diagnostic",
+              "Full Strategic Scan diagnostic",
               businessSize === "MEDIUM"
                 ? "Medium-business question set"
                 : "Pillar-by-pillar findings",
               "Downloadable PDF report",
             ],
-      buttonLabel: "Unlock Plan 2A",
+      buttonLabel: "Unlock Strategic Scan",
       buttonVariant: "filled",
       recommended: true,
       backendPlan: "PHASE2A",
@@ -918,7 +918,7 @@ function LockedScanPickerModal({
               Choose a scan to unlock
             </h2>
             <p className="text-xs text-gray-400 mt-1">
-              Phase 2A is unlocked per scan. Pick which locked scan this payment should
+              Strategic Scan is unlocked per scan. Pick which locked scan this payment should
               unlock.
             </p>
           </div>
@@ -938,7 +938,7 @@ function LockedScanPickerModal({
         ) : scans.length === 0 ? (
           <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5">
             <p className="text-sm text-yellow-300 mb-3">
-              You don&apos;t have any locked Phase 2A scans yet. Take a Strategic Scan
+              You don&apos;t have any locked Strategic Scans yet. Take a Strategic Scan
               first, then come back to unlock the full diagnostic.
             </p>
             <Link
@@ -960,7 +960,7 @@ function LockedScanPickerModal({
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
-                      Phase 2A Scan · {scan.sessionId.substring(0, 8)}
+                      Strategic Scan · {scan.sessionId.substring(0, 8)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {formatDate(scan.completedAt)}
@@ -1138,7 +1138,7 @@ function ChoosePlanView({
             {
               icon: <Rocket className="w-5 h-5 text-red-400" />,
               title: "Full Diagnostic",
-              desc: "Complete Phase 2A analysis or Deep Dive Phase 2B Module.",
+              desc: "Complete Strategic Scan analysis or Deep Dive Module.",
             },
             {
               icon: <CircleDot className="w-5 h-5 text-teal-400" />,
@@ -1388,7 +1388,7 @@ function CheckoutView({
 
       if (plan.backendPlan === "PHASE2A" && !sessionId) {
         setError(
-          "No scan selected. Please pick a locked Phase 2A scan to unlock, or take a Strategic Scan first.",
+          "No scan selected. Please pick a locked Strategic Scan to unlock, or take a Strategic Scan first.",
         );
         setBusy(false);
         return;
@@ -1491,7 +1491,7 @@ function CheckoutView({
             </span>
           </h1>
           <p className="text-gray-400 text-sm md:text-base mb-10 max-w-md">
-            Secure your access to the full Phase 2A diagnostic. Payment is processed
+            Secure your access to the full Strategic Scan diagnostic. Payment is processed
             by Paystack in a secure popup — you stay on this page the whole time.
           </p>
 
@@ -1854,7 +1854,7 @@ function SuccessView({
     : [
         {
           icon: <BarChart2 className="w-5 h-5 text-[#f97316]" />,
-          title: "Full Phase 2A Diagnostic",
+          title: "Full Strategic Scan Diagnostic",
           desc: "Pillar-level findings, scoring, and risk markers.",
         },
         {

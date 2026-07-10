@@ -17,7 +17,13 @@ export const updateBusinessInfoSchema = z.object({
   country: z.string().min(1).max(100).optional(),
   state: z.string().min(1).max(100).optional().nullable(),
   operatingYears: z.string().min(1).max(20).optional(),
-  staffSize: z.string().min(1).max(50).optional(),
+  // Staff size is a headcount: whole positive integer only (no decimals).
+  staffSize: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, 'Staff size must be a whole number (no decimals)')
+    .refine((v) => Number.parseInt(v, 10) >= 1, 'Staff size must be at least 1')
+    .optional(),
   annualRevenue: z.string().min(2).max(100).optional(),
 });
 

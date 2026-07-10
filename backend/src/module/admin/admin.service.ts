@@ -17,6 +17,7 @@ import type {
   AssignRoleInput,
   InviteAdminInput,
   InviteAdminResponse,
+  ResendAdminInviteResponse,
   UpdateAdminAccessInput,
   UpdateAdminProfileInput,
   AdminProfileResponse,
@@ -77,6 +78,9 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
         status: true,
         department: true,
         permissions: true,
+        // Selected only to derive the pending-invite flag below; the raw hash
+        // is never returned to the client.
+        passwordHash: true,
         adminRoleId: true,
         adminRole: {
           select: {
@@ -123,6 +127,8 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
       adminRole: row.adminRole,
       department: row.department,
       permissions: row.permissions,
+      // An invited-but-not-activated admin has role ADMIN + null passwordHash.
+      pendingInvite: targetRole === UserRole.ADMIN && row.passwordHash === null,
       createdAt: row.createdAt,
     };
   });
@@ -743,6 +749,42 @@ export async function inviteAdminService(input: InviteAdminInput): Promise<Invit
       department: admin.department,
       permissions: admin.permissions,
     },
+  };
+}
+
+// Re-send an activation link to a pending admin whose invite expired (or who
+// lost the email). Only valid while the account is still un-activated
+// (passwordHash === null); once they've set a password there's nothing to
+// resend and we refuse so a fresh link can't hijack a live account.
+export async function resendAdminInviteService(
+  adminId: string
+): Promise<ResendAdminInviteResponse> {
+  const admin = await prisma.user.findUnique({
+    where: { id: adminId },
+    select: { id: true, email: true, role: true, passwordHash: true, department: true },
+  });
+
+  if (!admin || admin.role !== UserRole.ADMIN) {
+    throw new AppError('Admin user not found', NOT_FOUND);
+  }
+  if (admin.passwordHash !== null) {
+    throw new AppError('This admin has already activated their account', CONFLICT);
+  }
+
+  const inviteToken = generateInviteToken({ email: admin.email, purpose: 'admin-invite' });
+  const inviteLink = `${APP_URL}/Auth/accept-invite#token=${encodeURIComponent(inviteToken)}`;
+
+  const sent = await sendAdminInviteEmail(admin.email, inviteLink, admin.department);
+  if (!sent.success) {
+    throw new AppError(
+      'Could not send the invitation email. Please verify the address and try again.',
+      CONFLICT
+    );
+  }
+
+  return {
+    message: `Invitation re-sent to ${admin.email}`,
+    admin: { id: admin.id, email: admin.email },
   };
 }
 

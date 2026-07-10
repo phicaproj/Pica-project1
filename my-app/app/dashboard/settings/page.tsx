@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { getPhaseLabel } from "@/lib/phaseLabels";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
@@ -641,6 +642,10 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
   }, [initialUser]);
 
   const handleSave = async () => {
+    if (staffSize && !/^\d+$/.test(staffSize.trim())) {
+      alert("Number of staff must be a whole number (no decimals).");
+      return;
+    }
     setSaving(true);
     try {
       const res = await updateUserBusiness({
@@ -885,9 +890,17 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   NUMBER OF STAFF
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
                   value={staffSize}
-                  onChange={(e) => setStaffSize(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ([".", "e", "E", "+", "-"].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => setStaffSize(e.target.value.replace(/[^\d]/g, ""))}
                   disabled={!isEditing}
                   className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
                 />
@@ -1030,7 +1043,7 @@ function BillingHistoryView() {
         // Update the current plan label based on the most recent successful payment
         const successfulPayment = res.data.payments.find((p: any) => p.status === "SUCCESS");
         if (successfulPayment) {
-          const planLabel = successfulPayment.plan === "PHASE2B_PILLAR" ? "Phase 2B - Deep Dive" : "Phase 2A - Diagnosis";
+          const planLabel = successfulPayment.plan === "PHASE2B_PILLAR" ? `${getPhaseLabel("PHASE2B")} Module` : getPhaseLabel("PHASE2A");
           setLatestPlan(planLabel);
         }
       }
@@ -1334,12 +1347,12 @@ function SubscriptionManageView() {
           </p>
           <div className="space-y-5">
             <QuotaMeter
-              label="Phase 2A diagnostics"
+              label={`${getPhaseLabel("PHASE2A")}s`}
               used={sub.usage.phase2aUsed}
               total={sub.plan.phase2aPerMonth}
             />
             <QuotaMeter
-              label="Phase 2B deep dives"
+              label={`${getPhaseLabel("PHASE2B")} Modules`}
               used={sub.usage.phase2bUsed}
               total={sub.plan.phase2bPerMonth}
             />

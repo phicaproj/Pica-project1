@@ -28,6 +28,7 @@ import {
   deleteRoleService,
   assignRoleToAdminService,
   inviteAdminService,
+  resendAdminInviteService,
   updateAdminAccessService,
   getAdminProfileService,
   updateAdminProfileService,
@@ -111,6 +112,13 @@ export const inviteAdmin = asyncHandler(async (req: Request, res: Response) => {
   const input = inviteAdminSchema.parse(req.body);
   const result = await inviteAdminService(input);
   return res.status(CREATED).json(result);
+});
+
+// Resend an activation link to a pending (not-yet-activated) admin.
+export const resendAdminInvite = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = showUserQuery.parse(req.params);
+  const result = await resendAdminInviteService(id);
+  return res.status(OK).json(result);
 });
 
 export const updateAdminAccess = asyncHandler(async (req: Request, res: Response) => {

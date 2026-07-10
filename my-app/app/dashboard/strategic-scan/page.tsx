@@ -744,7 +744,7 @@ export default function StrategicScanPage() {
 		const res = await authFetch(`/questions/phase2a?sessionId=${id}`)
 		const data = await res.json().catch(() => ({}))
 		if (!res.ok) {
-			throw new Error(data.message || 'Failed to load Phase 2A questions')
+			throw new Error(data.message || 'Failed to load Strategic Scan questions')
 		}
 
 		const loadedPillars = (data.pillars || []) as Phase2APillar[]
@@ -779,7 +779,7 @@ export default function StrategicScanPage() {
 		// Mirror the BE gate — see assessment.service Phase 2A start.
 		if (me && !me.profileComplete) {
 			setError(
-				'Complete your business profile (staff size) before starting Phase 2A.',
+				'Complete your business profile (staff size) before starting Strategic Scan.',
 			)
 			return
 		}
@@ -793,7 +793,7 @@ export default function StrategicScanPage() {
 			const startData = await startRes.json().catch(() => ({}))
 			if (!startRes.ok) {
 				throw new Error(
-					startData.message || 'Failed to start Phase 2A session',
+					startData.message || 'Failed to start Strategic Scan session',
 				)
 			}
 

@@ -9,7 +9,7 @@ import {
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
-import { generateReportPDF } from '../../service/shared/pdf.service';
+import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
 import { APP_URL } from '../../Config/env';
@@ -347,12 +347,20 @@ export async function downloadResultPdfService(
 
   // If no cache or generating dark presentation mode, render dynamically
   if (!pdfBuffer) {
-    pdfBuffer = await generateReportPDF(scoringPayload, businessName, session.phase, {
-      businessSize: session.businessSize,
-      sessionId: session.id,
-      completedAt: session.completedAt,
-      theme,
-    });
+    pdfBuffer =
+      session.phase === Phase.PHASE1
+        ? await generateSnapshotPDF(scoringPayload, businessName, {
+            businessSize: session.businessSize,
+            sessionId: session.id,
+            completedAt: session.completedAt,
+            theme,
+          })
+        : await generateReportPDF(scoringPayload, businessName, session.phase, {
+            businessSize: session.businessSize,
+            sessionId: session.id,
+            completedAt: session.completedAt,
+            theme,
+          });
 
     // Save/cache light theme PDFs on first request (or fallback)
     if (theme === 'light') {

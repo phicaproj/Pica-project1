@@ -13,6 +13,7 @@ import {
   deleteRole,
   assignRoleToAdmin,
   inviteAdmin,
+  resendAdminInvite,
   updateAdminAccess,
   getMyProfile,
   updateMyProfile,
@@ -93,6 +94,8 @@ adminRouter.patch('/users/:id/access', hasPermission('users:write'), updateAdmin
 // Onboard a new admin: creates an ADMIN account with no password and emails a
 // 24h tokenized activation link. Gated like other user-modifying actions.
 adminRouter.post('/invite', hasPermission('users:write'), inviteAdmin);
+// Resend a 24h activation link to a pending admin (refuses once activated).
+adminRouter.post('/users/:id/resend-invite', hasPermission('users:write'), resendAdminInvite);
 
 // Admin users list — backs the admin Users table.
 adminRouter.get('/users', hasPermission('users:read'), listUsers);

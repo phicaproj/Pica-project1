@@ -11,9 +11,9 @@ import {
 import { businessSizeQuerySchema, phase2aQuerySchema, phase2bQuerySchema } from './question.types';
 
 export const getPhase1Questions = asyncHandler(async (req: Request, res: Response) => {
-  const { businessSize } = businessSizeQuerySchema.parse(req.query);
+  const { sessionId } = phase2aQuerySchema.parse(req.query);
 
-  const result = await getPhase1QuestionsService(businessSize);
+  const result = await getPhase1QuestionsService(sessionId);
 
   return res.status(OK).json(result);
 });

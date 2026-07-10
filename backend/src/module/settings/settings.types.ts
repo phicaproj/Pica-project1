@@ -41,6 +41,12 @@ export const updateAppSettingsSchema = z
       .min(1, 'phase2bDiscountMaxPillars must be at least 1')
       .max(7, 'phase2bDiscountMaxPillars cannot exceed 7')
       .optional(),
+    phase1PullTotal: z
+      .number()
+      .int('phase1PullTotal must be an integer')
+      .min(1, 'phase1PullTotal must be at least 1')
+      .max(100, 'phase1PullTotal cannot exceed 100')
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -54,6 +60,7 @@ export type AppSettingsPayload = {
   subscriptionActive: boolean;
   phase2bDiscountPctPerPillar: number;
   phase2bDiscountMaxPillars: number;
+  phase1PullTotal: number;
   updatedBy: string | null;
   updatedAt: string;
 };

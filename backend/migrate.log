@@ -1,0 +1,15 @@
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma\schema.prisma.
+Datasource "db": PostgreSQL database "neondb", schema "public" at "ep-tiny-mode-ant7bih5.c-6.us-east-1.aws.neon.tech"
+
+Applying migration `20260710150949_knockout_questions_and_settings`
+
+The following migration(s) have been created and applied from new schema changes:
+
+prisma\migrations/
+  └─ 20260710150949_knockout_questions_and_settings/
+    └─ migration.sql
+
+Your database is now in sync with your schema.
+

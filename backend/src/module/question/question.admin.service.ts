@@ -28,8 +28,8 @@ const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E', 'F'] as const;
  * This matches the seed convention (10 NORMAL / 6,3 RISK / 0 KNOCKOUT) while
  * working for any score set the admin enters.
  */
-const deriveRiskType = (score: number, maxScore: number): RiskType => {
-  if (score === 0) return RiskType.KNOCKOUT;
+const deriveRiskType = (score: number, maxScore: number, isKnockout: boolean): RiskType => {
+  if (score === 0) return isKnockout ? RiskType.KNOCKOUT : RiskType.RISK;
   if (score === maxScore) return RiskType.NORMAL;
   return RiskType.RISK;
 };
@@ -43,6 +43,8 @@ const adminQuestionSelect = {
   businessSize: true,
   isPhase1Featured: true,
   hasKnockoutOption: true,
+  isKnockout: true,
+  showOnPhase1: true,
   isActive: true,
   displayOrder: true,
   pillar: { select: { code: true } },
@@ -75,6 +77,8 @@ const toAdminQuestion = (question: RawAdminQuestion): AdminQuestionResponse => (
   businessSize: question.businessSize,
   isPhase1Featured: question.isPhase1Featured,
   hasKnockoutOption: question.hasKnockoutOption,
+  isKnockout: question.isKnockout,
+  showOnPhase1: question.showOnPhase1,
   isActive: question.isActive,
   displayOrder: question.displayOrder,
   options: question.options.map(
@@ -267,7 +271,8 @@ export async function createQuestionService(
   input: CreateQuestionInput
 ): Promise<AdminQuestionDetailResponse> {
   const maxScore = input.options.reduce((max, option) => Math.max(max, option.score), 0);
-  const hasKnockoutOption = input.options.some((option) => option.score === 0);
+  const isKnockout = input.isKnockout ?? false;
+  const hasKnockoutOption = isKnockout && input.options.some((option) => option.score === 0);
 
   const question = await prisma.$transaction(async (tx) => {
     const pillar = await tx.pillar.findUnique({
@@ -293,6 +298,8 @@ export async function createQuestionService(
         businessSize: input.businessSize,
         phase: input.phase,
         isPhase1Featured: input.isPhase1Featured,
+        isKnockout,
+        showOnPhase1: input.showOnPhase1 ?? false,
         hasKnockoutOption,
         displayOrder,
         options: {
@@ -300,7 +307,7 @@ export async function createQuestionService(
             optionLabel: OPTION_LABELS[index],
             optionText: option.optionText,
             score: option.score,
-            riskType: deriveRiskType(option.score, maxScore),
+            riskType: deriveRiskType(option.score, maxScore, isKnockout),
             observation: option.observation,
             // Phase 2B options carry an action plan instead of a recommendation;
             // the column is non-null so it defaults to '' when omitted.
@@ -327,9 +334,25 @@ export async function updateQuestionService(
 ): Promise<AdminQuestionDetailResponse> {
   const existing = await prisma.question.findUnique({
     where: { id: questionId },
-    select: { id: true },
+    select: { id: true, isKnockout: true, showOnPhase1: true, options: { select: { score: true } } },
   });
   if (!existing) throw new AppError('Question not found', NOT_FOUND);
+
+  // Compute resolved states
+  const nextIsKnockout = input.isKnockout !== undefined ? input.isKnockout : existing.isKnockout;
+  const nextShowOnPhase1 = input.showOnPhase1 !== undefined ? input.showOnPhase1 : existing.showOnPhase1;
+
+  // Validate guards
+  if (nextShowOnPhase1 && !nextIsKnockout) {
+    throw new AppError('showOnPhase1 can only be true if isKnockout is true', CONFLICT);
+  }
+
+  if (nextIsKnockout) {
+    const zeroScoreCount = existing.options.filter((o) => o.score === 0).length;
+    if (zeroScoreCount !== 1) {
+      throw new AppError('A knockout question must have exactly one option with a score of 0', CONFLICT);
+    }
+  }
 
   const question = await prisma.question.update({
     where: { id: questionId },
@@ -338,10 +361,27 @@ export async function updateQuestionService(
       ...(input.phase !== undefined ? { phase: input.phase } : {}),
       ...(input.businessSize !== undefined ? { businessSize: input.businessSize } : {}),
       ...(input.isPhase1Featured !== undefined ? { isPhase1Featured: input.isPhase1Featured } : {}),
+      ...(input.isKnockout !== undefined ? { isKnockout: input.isKnockout } : {}),
+      ...(input.showOnPhase1 !== undefined ? { showOnPhase1: input.showOnPhase1 } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     },
     select: adminQuestionSelect,
   });
+
+  if (input.isKnockout !== undefined) {
+    await prisma.$transaction(async (tx) => {
+      await resyncOptionRiskTypes(tx, questionId);
+    });
+    // Re-fetch to get updated riskTypes
+    const updatedQuestion = await prisma.question.findUniqueOrThrow({
+      where: { id: questionId },
+      select: adminQuestionSelect,
+    });
+    return {
+      message: 'Question updated successfully',
+      question: toAdminQuestion(updatedQuestion),
+    };
+  }
 
   return {
     message: 'Question updated successfully',
@@ -382,6 +422,12 @@ async function resyncOptionRiskTypes(
   tx: Prisma.TransactionClient,
   questionId: string
 ): Promise<void> {
+  const question = await tx.question.findUnique({
+    where: { id: questionId },
+    select: { isKnockout: true },
+  });
+  const isKnockout = question?.isKnockout ?? false;
+
   const options = await tx.questionOption.findMany({
     where: { questionId },
     select: { id: true, score: true },
@@ -392,14 +438,14 @@ async function resyncOptionRiskTypes(
     options.map((option) =>
       tx.questionOption.update({
         where: { id: option.id },
-        data: { riskType: deriveRiskType(option.score, maxScore) },
+        data: { riskType: deriveRiskType(option.score, maxScore, isKnockout) },
       })
     )
   );
 
   await tx.question.update({
     where: { id: questionId },
-    data: { hasKnockoutOption: options.some((option) => option.score === 0) },
+    data: { hasKnockoutOption: isKnockout && options.some((option) => option.score === 0) },
   });
 }
 
@@ -410,11 +456,20 @@ export async function addOptionService(
   const question = await prisma.$transaction(async (tx) => {
     const existing = await tx.question.findUnique({
       where: { id: questionId },
-      select: { id: true, options: { select: { displayOrder: true } } },
+      select: { id: true, isKnockout: true, options: { select: { displayOrder: true, score: true } } },
     });
     if (!existing) throw new AppError('Question not found', NOT_FOUND);
     if (existing.options.length >= OPTION_LABELS.length) {
       throw new AppError(`A question can have at most ${OPTION_LABELS.length} options`, CONFLICT);
+    }
+
+    if (existing.isKnockout) {
+      const currentZeros = existing.options.filter((o) => o.score === 0).length;
+      const newIsZero = input.score === 0;
+      const totalZeros = currentZeros + (newIsZero ? 1 : 0);
+      if (totalZeros !== 1) {
+        throw new AppError('A knockout question must have exactly one option with a score of 0', CONFLICT);
+      }
     }
 
     const nextOrder =
@@ -426,7 +481,7 @@ export async function addOptionService(
         optionLabel: OPTION_LABELS[existing.options.length],
         optionText: input.optionText,
         score: input.score,
-        riskType: deriveRiskType(input.score, input.score), // resynced below
+        riskType: deriveRiskType(input.score, input.score, existing.isKnockout), // resynced below
         observation: input.observation,
         recommendation: input.recommendation ?? '',
         actionPlanDays: input.actionPlanDays ?? null,
@@ -459,6 +514,20 @@ export async function updateOptionService(
       select: { id: true, questionId: true },
     });
     if (!option) throw new AppError('Option not found', NOT_FOUND);
+
+    if (input.score !== undefined) {
+      const parentQuestion = await tx.question.findUnique({
+        where: { id: option.questionId },
+        select: { isKnockout: true, options: { select: { id: true, score: true } } },
+      });
+      if (parentQuestion?.isKnockout) {
+        const otherZeros = parentQuestion.options.filter((o) => o.id !== optionId && o.score === 0).length;
+        const totalZeros = otherZeros + (input.score === 0 ? 1 : 0);
+        if (totalZeros !== 1) {
+          throw new AppError('A knockout question must have exactly one option with a score of 0', CONFLICT);
+        }
+      }
+    }
 
     await tx.questionOption.update({
       where: { id: optionId },
@@ -494,6 +563,7 @@ export async function deleteOptionService(optionId: string): Promise<AdminQuesti
       select: {
         id: true,
         questionId: true,
+        score: true,
         _count: { select: { responses: true } },
       },
     });
@@ -508,9 +578,23 @@ export async function deleteOptionService(optionId: string): Promise<AdminQuesti
       );
     }
 
-    const remaining = await tx.questionOption.count({ where: { questionId: option.questionId } });
-    if (remaining <= 2) {
+    const remaining = await tx.questionOption.findMany({
+      where: { questionId: option.questionId },
+      select: { id: true, score: true },
+    });
+    if (remaining.length <= 2) {
       throw new AppError('A question must keep at least 2 options', CONFLICT);
+    }
+
+    const parentQuestion = await tx.question.findUnique({
+      where: { id: option.questionId },
+      select: { isKnockout: true },
+    });
+    if (parentQuestion?.isKnockout) {
+      const remainingZeros = remaining.filter((o) => o.id !== optionId && o.score === 0).length;
+      if (remainingZeros !== 1) {
+        throw new AppError('A knockout question must have exactly one option with a score of 0', CONFLICT);
+      }
     }
 
     await tx.questionOption.delete({ where: { id: optionId } });

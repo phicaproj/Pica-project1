@@ -7,13 +7,22 @@ const requiredText = (label: string) =>
     .min(1, `${label} is required`)
     .max(200, `${label} must be under 200 characters`);
 
+// Staff size is a headcount: a whole positive integer. Reject decimals,
+// negatives, and non-numeric text so "25.5" no longer slips through silently.
+// The column is a string, so we validate the string shape and keep it as-is.
+export const staffSizeRule = z
+  .string({ error: 'Staff size is required' })
+  .trim()
+  .regex(/^\d+$/, 'Staff size must be a whole number (no decimals)')
+  .refine((v) => Number.parseInt(v, 10) >= 1, 'Staff size must be at least 1');
+
 export const startAssessmentInput = z.object({
   leadEmail: z
     .string({ error: 'Lead email is required' })
     .trim()
     .email('Lead email must be a valid email address')
     .max(255, 'Email must be under 255 characters'),
-  staffSize: requiredText('Staff size'),
+  staffSize: staffSizeRule,
   businessName: requiredText('Business name'),
   industry: requiredText('Industry'),
   location: requiredText('Location'),
