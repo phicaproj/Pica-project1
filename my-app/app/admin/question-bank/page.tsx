@@ -557,76 +557,89 @@ export default function QuestionBankPage() {
 
       <div className="w-full space-y-4">
         {/* Search & Filters */}
-        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-            <div className="relative lg:col-span-2">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by code or question text"
-                className={`${fieldClass} pl-9`}
-              />
+        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5 space-y-4">
+          {/* Top row: Long search box with centered icon */}
+          <div className="relative flex items-center w-full">
+            <Search className="absolute left-3.5 h-4 w-4 text-gray-500 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by code or question text..."
+              className={`${fieldClass} pl-10 w-full`}
+            />
+          </div>
+
+          {/* Bottom row: Dropdowns and checkboxes */}
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pillar:</span>
+              <select
+                value={pillarFilter}
+                onChange={(event) => setPillarFilter(event.target.value)}
+                className={`${fieldClass} !w-auto min-w-[180px]`}
+              >
+                <option value="">All pillars</option>
+                {pillars.map((pillar) => (
+                  <option key={pillar.id} value={pillar.id}>
+                    {pillar.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            <select
-              value={pillarFilter}
-              onChange={(event) => setPillarFilter(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="">All pillars</option>
-              {pillars.map((pillar) => (
-                <option key={pillar.id} value={pillar.id}>
-                  {pillar.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phase:</span>
+              <select
+                value={phaseFilter}
+                onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
+                className={`${fieldClass} !w-auto min-w-[140px]`}
+              >
+                <option value="">All phases</option>
+                {PHASES.map((phase) => (
+                  <option key={phase} value={phase}>
+                    {phaseLabel(phase)}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              value={phaseFilter}
-              onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
-              className={fieldClass}
-            >
-              <option value="">All phases</option>
-              {PHASES.map((phase) => (
-                <option key={phase} value={phase}>
-                  {phaseLabel(phase)}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Size:</span>
+              <select
+                value={businessFilter}
+                onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
+                className={`${fieldClass} !w-auto min-w-[140px]`}
+              >
+                <option value="">All business sizes</option>
+                {BUSINESS_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              value={businessFilter}
-              onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
-              className={fieldClass}
-            >
-              <option value="">All business sizes</option>
-              {BUSINESS_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(event) => setIncludeInactive(event.target.checked)}
+                  className="h-4 w-4 accent-blue-500"
+                />
+                Include archived
+              </label>
 
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 lg:col-span-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={(event) => setIncludeInactive(event.target.checked)}
-                className="h-4 w-4 accent-blue-500"
-              />
-              Include archived
-            </label>
-
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 lg:col-span-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={knockoutFilter}
-                onChange={(event) => setKnockoutFilter(event.target.checked)}
-                className="h-4 w-4 accent-blue-500"
-              />
-              Knockout only
-            </label>
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={knockoutFilter}
+                  onChange={(event) => setKnockoutFilter(event.target.checked)}
+                  className="h-4 w-4 accent-blue-500"
+                />
+                Knockout only
+              </label>
+            </div>
           </div>
         </div>
 
