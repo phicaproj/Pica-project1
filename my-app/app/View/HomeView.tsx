@@ -342,10 +342,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto space-y-4">
           <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
           <p>
-            © Beauvision 2026. All rights reserved. Powered by{" "}
-            <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition-colors">
-              SunDimension
-            </a>
+            © Beauvision 2026. All rights reserved.
           </p>
         </div>
       </footer>

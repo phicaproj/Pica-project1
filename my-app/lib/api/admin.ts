@@ -248,6 +248,7 @@ export const getAdminQuestions = async (params: {
 	businessSize?: BusinessSize
 	search?: string
 	includeInactive?: boolean
+	isKnockout?: boolean
 } = {}) => {
 	const qs = new URLSearchParams()
 	if (params.pillarId) qs.set('pillarId', params.pillarId)
@@ -256,6 +257,9 @@ export const getAdminQuestions = async (params: {
 	if (params.search) qs.set('search', params.search)
 	if (params.includeInactive !== undefined) {
 		qs.set('includeInactive', String(params.includeInactive))
+	}
+	if (params.isKnockout !== undefined) {
+		qs.set('isKnockout', String(params.isKnockout))
 	}
 	const query = qs.toString()
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
@@ -533,6 +533,8 @@ function QuestionStep({
 	const progress = ((currentIndex + 1) / totalQuestions) * 100
 	const isLast = currentIndex === totalQuestions - 1
 
+	const nextBtnRef = useRef<HTMLButtonElement | null>(null)
+
 	// When the user advances to a new question, scroll the page to the top so
 	// the question text + options are visible without manual scrolling. On
 	// mobile this matters a lot — the question block sits below a 200+px
@@ -541,6 +543,15 @@ function QuestionStep({
 		if (typeof window === 'undefined') return
 		window.scrollTo({ top: 0, behavior: 'smooth' })
 	}, [currentIndex])
+
+	// Once an answer is selected and successfully saved to the server,
+	// auto-scroll to bring the Next button into view.
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+		if (selectedOptionId && !answerInFlight && !answerError) {
+			nextBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+		}
+	}, [selectedOptionId, answerInFlight, answerError])
 
 	return (
 		<div
@@ -681,6 +692,7 @@ function QuestionStep({
 						<ArrowLeft className='w-4 h-4' /> Previous
 					</button>
 					<button
+						ref={nextBtnRef}
 						onClick={onNext}
 						disabled={
 							!selectedOptionId ||

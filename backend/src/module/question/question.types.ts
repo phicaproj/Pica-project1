@@ -297,6 +297,7 @@ export const listAdminQuestionsQuerySchema = z.object({
   businessSize: z.nativeEnum(BusinessSize).optional(),
   search: z.string().trim().min(1).max(120).optional(),
   includeInactive: z.coerce.boolean().optional(),
+  isKnockout: z.coerce.boolean().optional(),
 });
 
 export type CreateQuestionInput = z.infer<typeof createQuestionSchema>;

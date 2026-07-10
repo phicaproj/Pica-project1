@@ -169,12 +169,12 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* Pyramid graphic */}
+          {/* Stacked equal-sized blocks */}
           <div className="flex flex-col items-center gap-3 w-full">
             {[
-              { label: "INTELLIGENCE (2B)", bg: "bg-gradient-to-r from-red-500 to-red-600", width: "w-1/2 max-w-[220px]", py: "py-4 md:py-5" },
-              { label: "DIAGNOSIS (1B)",    bg: "bg-gradient-to-r from-orange-500 to-orange-600", width: "w-3/4 max-w-[340px]", py: "py-5 md:py-6" },
-              { label: "AWARENESS (1A)",    bg: "bg-gradient-to-r from-teal-500 to-teal-600", width: "w-full max-w-[460px]", py: "py-6 md:py-7" },
+              { label: "INTELLIGENCE (2B)", bg: "bg-gradient-to-r from-red-500 to-red-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
+              { label: "DIAGNOSIS (1B)",    bg: "bg-gradient-to-r from-orange-500 to-orange-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
+              { label: "AWARENESS (1A)",    bg: "bg-gradient-to-r from-teal-500 to-teal-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
             ].map(({ label, bg, width, py }) => (
               <div key={label} className={`${bg} ${py} ${width} rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 transition-all duration-300 hover:scale-[1.03] cursor-default text-center`}>
                 <p className="text-white text-xs md:text-sm font-black tracking-widest px-4">{label}</p>
@@ -330,8 +330,7 @@ export default function AboutPage() {
         <div className="max-w-7xl mx-auto space-y-4">
           <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
           <p>
-            © Beauvision 2026. All rights reserved. Powered by{" "}
-            <a href="https://sundimension.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-teal-400 transition-colors">SunDimension</a>
+            © Beauvision 2026. All rights reserved.
           </p>
         </div>
       </footer>

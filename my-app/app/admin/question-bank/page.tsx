@@ -137,6 +137,7 @@ export default function QuestionBankPage() {
   const [phaseFilter, setPhaseFilter] = useState<AdminQuestionPhase | "">("");
   const [businessFilter, setBusinessFilter] = useState<BusinessSize | "">("");
   const [includeInactive, setIncludeInactive] = useState(false);
+  const [knockoutFilter, setKnockoutFilter] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -189,6 +190,7 @@ export default function QuestionBankPage() {
       phase: phaseFilter || undefined,
       businessSize: businessFilter || undefined,
       includeInactive,
+      isKnockout: knockoutFilter || undefined,
     });
 
     if (res.error) {
@@ -207,7 +209,7 @@ export default function QuestionBankPage() {
     }
 
     setLoading(false);
-  }, [businessFilter, includeInactive, phaseFilter, pillarFilter, search]);
+  }, [businessFilter, includeInactive, phaseFilter, pillarFilter, search, knockoutFilter]);
 
   useEffect(() => {
     void loadPillars();
@@ -556,7 +558,7 @@ export default function QuestionBankPage() {
       <div className="w-full space-y-4">
         {/* Search & Filters */}
         <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
             <div className="relative lg:col-span-2">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
               <input
@@ -614,6 +616,16 @@ export default function QuestionBankPage() {
                 className="h-4 w-4 accent-blue-500"
               />
               Include archived
+            </label>
+
+            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3 py-2.5 text-sm text-gray-300 lg:col-span-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={knockoutFilter}
+                onChange={(event) => setKnockoutFilter(event.target.checked)}
+                className="h-4 w-4 accent-blue-500"
+              />
+              Knockout only
             </label>
           </div>
         </div>
@@ -1079,17 +1091,7 @@ export default function QuestionBankPage() {
               {/* Options */}
               <div>
                 <div className="mb-4 flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">Options</h3>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Risk type is recalculated by the backend from option scores.
-                    </p>
-                  </div>
-                  {activeQuestion.hasKnockoutOption && (
-                    <span className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-300">
-                      Knockout present
-                    </span>
-                  )}
+                  <h3 className="text-lg font-semibold text-white">Options</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -1101,9 +1103,6 @@ export default function QuestionBankPage() {
                           <div className="flex items-center gap-2">
                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-sm font-bold text-white">
                               {option.optionLabel}
-                            </span>
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${riskStyle(option.riskType)}`}>
-                              {option.riskType}
                             </span>
                           </div>
                           <div className="flex gap-2">

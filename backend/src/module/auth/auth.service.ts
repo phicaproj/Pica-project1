@@ -273,7 +273,7 @@ export async function forgotPasswordService(
   const targetEmail = data.email.trim().toLowerCase();
   const user = await prisma.user.findUnique({
     where: { email: targetEmail },
-    select: { id: true, email: true },
+    select: { id: true, email: true, passwordHash: true },
   });
 
   const code = generateOtpCode();
@@ -284,7 +284,7 @@ export async function forgotPasswordService(
     purpose,
   });
 
-  if (!user) {
+  if (!user || user.passwordHash === null) {
     return {
       message: 'Password reset code sent. Check your email.',
       otpToken,

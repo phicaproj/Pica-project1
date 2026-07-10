@@ -28,7 +28,7 @@ function VerifyCodeContent() {
     newOtp[index] = value;
     setOtp(newOtp);
     if (codeError) setCodeError("");
-    if (value && index < 4) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -184,13 +184,23 @@ function VerifyCodeContent() {
               </button>
             </p>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] to-[#f59e0b] hover:from-[#ea6c0a] hover:to-[#d97706] text-white font-semibold text-sm tracking-wide transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Verifying..." : "Verify"}
-            </button>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#f97316] to-[#f59e0b] hover:from-[#ea6c0a] hover:to-[#d97706] text-white font-semibold text-sm tracking-wide transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isLoading ? "Verifying..." : "Verify"}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => router.push(`/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`)}
+                className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 text-gray-300 font-semibold text-sm transition"
+              >
+                Back to forgot password
+              </button>
+            </div>
           </form>
         </div>
       </div>

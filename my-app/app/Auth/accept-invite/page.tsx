@@ -235,15 +235,7 @@ function AcceptInviteContent() {
 
 			{/* Footer */}
 			<div className='relative z-10 py-4 text-center text-sm text-gray-600 bg-white/80 backdrop-blur-sm'>
-				© Beauvision 2024 . All rights reserved. Powered By{' '}
-				<a
-					href='https://sundimension.com'
-					target='_blank'
-					rel='noopener noreferrer'
-					className='underline hover:text-[#017CA3] transition'
-				>
-					SunDimension
-				</a>
+				© Beauvision 2024 . All rights reserved.
 			</div>
 		</div>
 	)

@@ -225,6 +225,7 @@ export async function listAdminQuestionsService(
     ...(query.pillarId ? { pillarId: query.pillarId } : {}),
     ...(query.phase ? { phase: query.phase } : {}),
     ...(query.businessSize ? { businessSize: query.businessSize } : {}),
+    ...(query.isKnockout !== undefined ? { isKnockout: query.isKnockout } : {}),
     ...(query.search
       ? {
           OR: [

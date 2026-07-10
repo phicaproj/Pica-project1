@@ -34,9 +34,12 @@ import {
   getStoredUser,
   updateAdminUserStatus,
   resendAdminInvite,
+  getAdminAppSettings,
+  updateAdminAppSettings,
   type AdminUserRow,
   type AdminPillarDetailed,
   type ScoringSettings,
+  type AppSettingsPayload,
 } from "@/lib/authClient";
 
 // ─── Taxonomy of Granular Permissions ──────────────────────────────
@@ -68,12 +71,14 @@ const getInitials = (firstName: string | null, lastName: string | null, email: s
 function PillarTab() {
   const [pillars, setPillars] = useState<AdminPillarDetailed[]>([]);
   const [settings, setSettings] = useState<ScoringSettings | null>(null);
+  const [appSettings, setAppSettings] = useState<AppSettingsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   // Form states for Limits
+  const [p1Limit, setP1Limit] = useState(15);
   const [p2aLimit, setP2aLimit] = useState(40);
   const [p2bLimit, setP2bLimit] = useState(30);
 
@@ -89,9 +94,10 @@ function PillarTab() {
       setLoading(true);
       setError(null);
       
-      const [pillarsRes, settingsRes] = await Promise.all([
+      const [pillarsRes, settingsRes, appSettingsRes] = await Promise.all([
         getAdminPillarsDetailed(),
         getScoringSettings(),
+        getAdminAppSettings(),
       ]);
 
       if (pillarsRes.error) {
@@ -102,13 +108,21 @@ function PillarTab() {
         setError(settingsRes.error.message);
         return;
       }
+      if (appSettingsRes.error) {
+        setError(appSettingsRes.error.message);
+        return;
+      }
 
       setPillars(pillarsRes.data?.pillars || []);
       setSettings(settingsRes.data?.settings || null);
+      setAppSettings(appSettingsRes.data?.settings || null);
 
       if (settingsRes.data?.settings) {
         setP2aLimit(settingsRes.data.settings.phase2aQuestionLimit ?? 40);
         setP2bLimit(settingsRes.data.settings.phase2bQuestionLimit ?? 30);
+      }
+      if (appSettingsRes.data?.settings) {
+        setP1Limit(appSettingsRes.data.settings.phase1PullTotal ?? 15);
       }
     } catch (err: any) {
       console.error(err);
@@ -128,17 +142,27 @@ function PillarTab() {
       setError(null);
       setSuccess(false);
 
-      const res = await updateScoringSettings({
-        phase2aQuestionLimit: p2aLimit,
-        phase2bQuestionLimit: p2bLimit,
-      });
+      const [res, appSettingsRes] = await Promise.all([
+        updateScoringSettings({
+          phase2aQuestionLimit: p2aLimit,
+          phase2bQuestionLimit: p2bLimit,
+        }),
+        updateAdminAppSettings({
+          phase1PullTotal: p1Limit,
+        }),
+      ]);
 
       if (res.error) {
         setError(res.error.message);
         return;
       }
+      if (appSettingsRes.error) {
+        setError(appSettingsRes.error.message);
+        return;
+      }
 
       setSettings(res.data?.settings || null);
+      setAppSettings(appSettingsRes.data?.settings || null);
       setSuccess(true);
       setIsEditingLimits(false);
       setTimeout(() => setSuccess(false), 3000);
@@ -154,6 +178,9 @@ function PillarTab() {
     if (settings) {
       setP2aLimit(settings.phase2aQuestionLimit ?? 40);
       setP2bLimit(settings.phase2bQuestionLimit ?? 30);
+    }
+    if (appSettings) {
+      setP1Limit(appSettings.phase1PullTotal ?? 15);
     }
     setError(null);
     setIsEditingLimits(false);
@@ -198,7 +225,42 @@ function PillarTab() {
       )}
 
       {/* Row: Limit Configurations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Phase 1 Config */}
+        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
+              <Settings2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-lg">Phase 1 Question Limits</h3>
+              <p className="text-xs text-gray-500">Business snapshot assessment</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 leading-relaxed">
+            Configure the total number of general questions a user gets to answer. Questions will be sampled randomly and divided as evenly as possible among active pillars.
+          </p>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+              Total Target Questions Count
+            </label>
+            <div className="flex items-center gap-4">
+              <input
+                type="number"
+                min={7}
+                max={70}
+                value={p1Limit}
+                disabled={!isEditingLimits}
+                onChange={(e) => setP1Limit(Math.max(1, Number(e.target.value)))}
+                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <div className="text-xs text-gray-400">
+                questions total (plus active knockouts)
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Phase 2A Config */}
         <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-4">
           <div className="flex items-center gap-3">
