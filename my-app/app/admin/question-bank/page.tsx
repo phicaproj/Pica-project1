@@ -619,27 +619,25 @@ export default function QuestionBankPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-4 flex-wrap">
-              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={includeInactive}
-                  onChange={(event) => setIncludeInactive(event.target.checked)}
-                  className="h-4 w-4 accent-blue-500"
-                />
-                Include archived
-              </label>
+            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={includeInactive}
+                onChange={(event) => setIncludeInactive(event.target.checked)}
+                className="h-4 w-4 accent-blue-500"
+              />
+              Include archived
+            </label>
 
-              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={knockoutFilter}
-                  onChange={(event) => setKnockoutFilter(event.target.checked)}
-                  className="h-4 w-4 accent-blue-500"
-                />
-                Knockout only
-              </label>
-            </div>
+            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={knockoutFilter}
+                onChange={(event) => setKnockoutFilter(event.target.checked)}
+                className="h-4 w-4 accent-blue-500"
+              />
+              Knockout only
+            </label>
           </div>
         </div>
 
