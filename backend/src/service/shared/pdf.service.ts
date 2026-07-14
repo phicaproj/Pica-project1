@@ -3432,7 +3432,7 @@ export async function generateSnapshotPDF(
     const gaugeR = 45;
     
     // Band Details resolution
-    const bandDetails = getBandColors(result.colorBand, COLORS);
+    const bandDetails = getBandColors(result.colorBand, COLORS, theme);
 
     drawDonutGauge(doc, gaugeX, gaugeY, gaugeR, Math.round(result.totalScore), bandDetails, 'HEALTH SCORE');
 
@@ -3441,11 +3441,15 @@ export async function generateSnapshotPDF(
     doc.x = PAGE_MARGIN + 140;
     const textWidth = COLORS.pageWidth - 140;
 
-    doc.fontSize(14).font('Helvetica-Bold').fillColor(COLORS.primary).text(`Overall Rating: ${result.colorBand}`);
-    doc.moveDown(0.4);
+    const scoreDetails = getPdfBandDetails(result.totalScore, result.hasAnyKnockout);
+
+    doc.fontSize(13).font('Helvetica-Bold').fillColor(COLORS.primary).text('Overall Status: ', { continued: true })
+      .fillColor(scoreDetails.text).text(scoreDetails.label);
+    doc.moveDown(0.5);
+    
     doc.fontSize(9.5).font('Helvetica').fillColor(COLORS.bodyText).text(
-      `Your organization has achieved a composite health score of ${Math.round(result.totalScore)}/100, placing you in the ${result.colorBand} band. ` +
-      `This diagnostic evaluates your business operational strength, compliance profile, and resilience pillars.`,
+      `Your organization has achieved a composite health score of ${Math.round(result.totalScore)}/100, placing you in the ${scoreDetails.label} status. ` +
+      `${scoreDetails.interpretation} This diagnostic evaluates your business operational strength, compliance profile, and resilience pillars.`,
       { width: textWidth, lineBreak: true }
     );
 
@@ -3454,96 +3458,105 @@ export async function generateSnapshotPDF(
       doc.moveDown(0.8);
       doc.save();
       const alertY = doc.y;
-      doc.rect(PAGE_MARGIN + 140, alertY, textWidth, 24)
-        .fillColor(COLORS.redBg)
-        .fill();
-      doc.rect(PAGE_MARGIN + 140, alertY, 3, 24)
-        .fillColor(COLORS.redBorder)
-        .fill();
       
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(COLORS.red)
-        .text('CRITICAL GATES TRIGGERED: One or more knockout risk thresholds have been hit.', PAGE_MARGIN + 150, alertY + 7, {
+      // Draw alert card using roundedRect
+      roundedRect(doc, PAGE_MARGIN + 140, alertY, textWidth, 26, 4, COLORS.redBg, COLORS.redBorder);
+      
+      // Draw red indicator bar
+      doc.rect(PAGE_MARGIN + 140 + 1, alertY + 1, 3, 24)
+        .fillColor(COLORS.red)
+        .fill();
+
+      doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.red)
+        .text('CRITICAL GATES TRIGGERED: One or more knockout risk thresholds have been hit.', PAGE_MARGIN + 150, alertY + 9, {
           width: textWidth - 20,
           lineBreak: false
         });
       doc.restore();
-      doc.y = alertY + 30;
+      doc.y = alertY + 32;
     } else {
       doc.moveDown(1.5);
     }
 
     doc.x = PAGE_MARGIN; // Reset X
-    doc.y = startY + 115; // Set Y past gauge
+    doc.y = Math.max(doc.y, startY + 120); // Dynamic Y past gauge & summary
 
     hr(doc, doc.y, COLORS.borderGrey);
-    doc.moveDown(1.0);
+    doc.moveDown(1.2);
 
     // --- Pillar Breakdown Section ---
     doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.primary).text('Pillar Performance Breakdown');
-    doc.moveDown(0.6);
+    doc.moveDown(0.8);
 
     // Draw pillar strips
-    const pillarStripH = 26;
-    const spacing = 8;
+    const pillarStripH = 32;
+    const spacing = 10;
     
     for (const pillar of result.pillarScores) {
       const pY = doc.y;
-      const pColors = getBandColors(pillar.colorBand, COLORS);
+      const pColors = getBandColors(pillar.colorBand, COLORS, theme);
 
-      // Draw background bar
+      // 1. Draw card container
+      roundedRect(doc, PAGE_MARGIN, pY, COLORS.pageWidth, pillarStripH, 6, COLORS.lightGrey, COLORS.borderGrey);
+
+      // 2. Draw Left color band indicator strip
       doc.save();
-      doc.rect(PAGE_MARGIN, pY, COLORS.pageWidth, pillarStripH)
-        .fillColor(COLORS.lightGrey)
-        .fill();
-
-      // Draw color band indicator strip on the left
-      doc.rect(PAGE_MARGIN, pY, 5, pillarStripH)
+      doc.rect(PAGE_MARGIN + 1, pY + 1, 4, pillarStripH - 2)
         .fillColor(pColors.border)
         .fill();
+      doc.restore();
 
-      // Pillar name and code
+      // 3. Pillar Name and Code
       doc.fontSize(9.5).font('Helvetica-Bold').fillColor(COLORS.primary)
-        .text(`${pillar.pillarName} (${pillar.pillarCode})`, PAGE_MARGIN + 15, pY + 8, { lineBreak: false });
+        .text(`${pillar.pillarName} (${pillar.pillarCode})`, PAGE_MARGIN + 15, pY + 11, {
+          width: 250,
+          ellipsis: true,
+          lineBreak: false
+        });
 
-      // Score badge background
-      const badgeW = 40;
-      const badgeH = 16;
+      // 4. Progress Bar
+      const barX = PAGE_MARGIN + 280;
+      const barY = pY + 14;
+      const barW = 120;
+      const barH = 4;
+      
+      // Gray track background
+      roundedRect(doc, barX, barY, barW, barH, 2, COLORS.borderGrey);
+      // Filled colored progress track
+      const progressW = Math.max(0, Math.min(1, pillar.weightedScore / 100)) * barW;
+      if (progressW > 0) {
+        roundedRect(doc, barX, barY, progressW, barH, 2, pColors.border);
+      }
+
+      // 5. Score badge on the far right
+      const badgeW = 45;
+      const badgeH = 18;
       const badgeX = PAGE_MARGIN + COLORS.pageWidth - badgeW - 10;
-      const badgeY = pY + 5;
+      const badgeY = pY + 7;
 
-      doc.rect(badgeX, badgeY, badgeW, badgeH)
-        .fillColor(pColors.bg || COLORS.lightGrey)
-        .strokeColor(pColors.border)
-        .lineWidth(0.5)
-        .stroke()
-        .fill();
+      roundedRect(doc, badgeX, badgeY, badgeW, badgeH, 4, pColors.bg || COLORS.lightGrey, pColors.border);
 
       // Score value
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor(pColors.text)
-        .text(`${Math.round(pillar.rawScore)}/10`, badgeX, badgeY + 4, {
+        .text(`${Math.round(pillar.weightedScore)}%`, badgeX, badgeY + 5, {
           width: badgeW,
           align: 'center',
           lineBreak: false
         });
 
-      doc.restore();
       doc.y = pY + pillarStripH + spacing;
     }
 
-    doc.moveDown(1.2);
+    doc.moveDown(0.6);
     hr(doc, doc.y, COLORS.borderGrey);
-    doc.moveDown(1.2);
+    doc.moveDown(0.8);
 
     // --- Unlock strategic scan call to action ---
     const ctaY = doc.y;
     const ctaH = 65;
-    doc.save();
-    doc.rect(PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH)
-      .fillColor(COLORS.greenBg)
-      .strokeColor(COLORS.greenBorder)
-      .lineWidth(0.5)
-      .stroke()
-      .fill();
+    
+    // Draw rounded CTA card
+    roundedRect(doc, PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH, 8, COLORS.greenBg, COLORS.greenBorder);
 
     doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.green)
       .text('Unlock the full Strategic Scan & Diagnostic', PAGE_MARGIN + 15, ctaY + 12, { lineBreak: false });
@@ -3554,7 +3567,6 @@ export async function generateSnapshotPDF(
         'tailored, printable action plan to optimize your organization\'s efficiency and address compliance gaps.',
         PAGE_MARGIN + 15, ctaY + 28, { width: COLORS.pageWidth - 30 }
       );
-    doc.restore();
 
     // Footer at the bottom
     drawFooter(doc, businessName, metadata?.sessionId);
@@ -3563,24 +3575,25 @@ export async function generateSnapshotPDF(
   });
 }
 
-function getBandColors(band: string, COLORS: any) {
+function getBandColors(band: string, COLORS: any, theme: 'light' | 'dark' = 'light') {
+  const isDark = theme === 'dark';
   if (band === 'GREEN') {
     return {
-      text: COLORS.green,
-      bg: COLORS.greenBg,
-      border: COLORS.greenBorder,
+      text: isDark ? '#34D399' : '#15803D',
+      bg: isDark ? '#064E3B' : '#F0FDF4',
+      border: isDark ? '#10B981' : '#22C55E',
     };
   }
   if (band === 'AMBER') {
     return {
-      text: COLORS.amber,
-      bg: COLORS.amberBg,
-      border: COLORS.amberBorder,
+      text: isDark ? '#FBBF24' : '#B45309',
+      bg: isDark ? '#78350F' : '#FFFBEB',
+      border: isDark ? '#F59E0B' : '#F59E0B',
     };
   }
   return {
-    text: COLORS.red,
-    bg: COLORS.redBg,
-    border: COLORS.redBorder,
+    text: isDark ? '#F87171' : '#EF4444',
+    bg: isDark ? '#7F1D1D' : '#FEF2F2',
+    border: isDark ? '#F43F5E' : '#EF4444',
   };
 }
