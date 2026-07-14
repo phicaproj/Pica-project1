@@ -91,7 +91,7 @@ export async function startAssessmentService(
 
   if (existingSession?.status === SessionStatus.COMPLETED) {
     throw new AppError(
-      'An assessment session is already completed for this email. Please check your email for the assessment results.',
+      'An assessment session is already completed for this email. Please check your email for the assessment results or you login.',
       CONFLICT
     );
   }
@@ -140,7 +140,9 @@ export async function startAssessmentService(
       remainder--;
     }
 
-    const finalPillarDraws: string[][] = Array(numPillars).fill(null).map(() => []);
+    const finalPillarDraws: string[][] = Array(numPillars)
+      .fill(null)
+      .map(() => []);
     const availablePools: { index: number; pool: string[] }[] = [];
 
     for (let i = 0; i < numPillars; i++) {
