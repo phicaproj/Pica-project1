@@ -5,6 +5,7 @@ import type { UpdateProfileInput, UpdateBusinessInfoInput } from './user.types';
 import type { AuthUser } from '../auth/auth.types';
 import { deleteObject } from '../../service/shared/storage.service';
 import { R2_PUBLIC_BASE_URL } from '../../Config/env';
+import { BusinessSize } from '@prisma/client';
 
 export async function updateProfileService(
   userId: string,
@@ -74,6 +75,15 @@ export async function updateBusinessInfoService(
     throw new AppError('User not found', NOT_FOUND);
   }
 
+  // Derive businessSize from staffSize if staffSize is updated
+  let businessSize: BusinessSize | undefined = undefined;
+  if (data.staffSize !== undefined) {
+    const headcount = Number.parseInt(data.staffSize.trim(), 10);
+    if (!Number.isNaN(headcount)) {
+      businessSize = headcount > 50 ? BusinessSize.MEDIUM : BusinessSize.SMALL;
+    }
+  }
+
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
@@ -84,6 +94,7 @@ export async function updateBusinessInfoService(
       operatingYears: data.operatingYears,
       staffSize: data.staffSize,
       annualRevenue: data.annualRevenue,
+      ...(businessSize !== undefined ? { businessSize } : {}),
     },
     select: {
       id: true,
