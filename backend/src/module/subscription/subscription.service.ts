@@ -12,12 +12,14 @@ import {
   BAD_REQUEST,
   CONFLICT,
   NOT_FOUND,
+  INTERNAL_SERVER_ERROR,
 } from '../../service/shared/http';
 import { validateAndPriceCoupon } from '../coupon/coupon.service';
 import {
   newPaymentReference,
   initializeSubscriptionTransaction,
   disablePaystackSubscription,
+  fetchPaystackCustomerSubscriptions,
   createPaystackPlan,
   updatePaystackPlan,
   type PaystackCurrency,
@@ -485,10 +487,17 @@ export async function subscribeService(
 // USER — POST /api/subscription/cancel
 // ──────────────────────────────────────────────────────────────────────────
 //
-// Soft-cancel: we ask Paystack to stop billing and mark the row
-// cancelAtPeriodEnd. The subscription stays ACTIVE locally until the period
-// ends — users keep their quota through what they've already paid for.
+// Soft-cancel: we ask Paystack to stop billing FIRST, and only then mark the
+// row cancelAtPeriodEnd. The subscription stays ACTIVE locally until the
+// period ends — users keep their quota through what they've already paid for.
 // subscription.disable webhook eventually flips status to CANCELLED.
+//
+// Ordering matters: Paystack disable is the hard part and the one that
+// actually stops the money moving, so it runs before the local flip. If it
+// fails we throw and leave the row untouched — a subscription that reads
+// "cancelled" locally while Paystack keeps billing is the exact bug this
+// guards against (a real user hit it: cancelled locally, still charged the
+// next cycle, and no webhook landed to reconcile it).
 
 export async function cancelSubscriptionService(
   userId: string
@@ -512,36 +521,85 @@ export async function cancelSubscriptionService(
     throw new AppError('Subscription is already scheduled to cancel', CONFLICT);
   }
 
-  const updated = await prisma.userSubscription.update({
-    where: { id: sub.id },
-    data: { cancelAtPeriodEnd: true },
-    select: { currentPeriodEnd: true },
-  });
+  // Resolve the Paystack handles. Normally captured by the subscription.create
+  // / charge.success webhooks and stored on the row. But if those webhooks
+  // never landed (e.g. the backend wasn't reachable — localhost with no
+  // tunnel), the handles are null even though Paystack IS billing. In that
+  // case fall back to querying the customer's subscriptions live so cancel can
+  // still reach Paystack. We resolve by the customerCode when we have it
+  // (unambiguous), otherwise by email.
+  let subscriptionCode = sub.paystackSubscriptionCode;
+  let emailToken = sub.paystackEmailToken;
 
-  // If we don't have the Paystack handles yet (subscription.create webhook
-  // hasn't fired), we still mark our row — the webhook will see
-  // cancelAtPeriodEnd and skip the activation path.
-  if (sub.paystackSubscriptionCode && sub.paystackEmailToken) {
+  if (!subscriptionCode || !emailToken) {
+    const lookupKey = sub.paystackCustomerCode ?? sub.user.email;
     try {
-      await disablePaystackSubscription({
-        subscriptionCode: sub.paystackSubscriptionCode,
-        emailToken: sub.paystackEmailToken,
-      });
+      const remoteSubs = await fetchPaystackCustomerSubscriptions(lookupKey);
+      // Prefer a subscription still in a billable state; Paystack marks a
+      // cancelled one "cancelled"/"non-renewing" and disabling it again 404s.
+      const billable = remoteSubs.filter(
+        (s) => s.status === 'active' || s.status === 'attention'
+      );
+      // If the row already carried a code, honour it; otherwise if the
+      // customer has exactly one billable subscription it's unambiguously
+      // theirs. More than one with no code to disambiguate is a data problem
+      // we refuse to guess through.
+      const match = subscriptionCode
+        ? billable.find((s) => s.subscription_code === subscriptionCode)
+        : billable.length === 1
+          ? billable[0]
+          : undefined;
+      if (match) {
+        subscriptionCode = match.subscription_code;
+        emailToken = match.email_token;
+      }
     } catch (err) {
-      console.error(
-        `[subscription:cancel] Paystack API disable failed for sub ${sub.id} (code: ${sub.paystackSubscriptionCode}). Local DB updated to cancel. Error:`,
-        err
+      throw new AppError(
+        'Could not reach Paystack to cancel your subscription. Please try again in a moment.',
+        INTERNAL_SERVER_ERROR
       );
     }
   }
 
+  if (subscriptionCode && emailToken) {
+    // Hard part first. If Paystack rejects the disable we throw and DON'T
+    // touch the local row — the caller retries rather than believing a cancel
+    // that never happened. disablePaystackSubscription already throws AppError
+    // with a sensible status on non-2xx.
+    await disablePaystackSubscription({ subscriptionCode, emailToken });
+
+    // Persist the handles we just resolved so a future read/webhook lines up,
+    // and mark the cancel intent.
+    await prisma.userSubscription.update({
+      where: { id: sub.id },
+      data: {
+        cancelAtPeriodEnd: true,
+        paystackSubscriptionCode: subscriptionCode,
+        paystackEmailToken: emailToken,
+      },
+    });
+  } else {
+    // No handles on the row AND Paystack has no billable subscription for this
+    // customer. That means there's nothing on Paystack to keep charging (e.g.
+    // a 100%-off bootstrap sub, or the first charge never completed). Safe to
+    // flip locally — no billing can continue.
+    console.warn(
+      `[subscription:cancel] No billable Paystack subscription found for sub ${sub.id} (customer: ${sub.paystackCustomerCode ?? sub.user.email}). Marking local-only cancel.`
+    );
+    await prisma.userSubscription.update({
+      where: { id: sub.id },
+      data: { cancelAtPeriodEnd: true },
+    });
+  }
+
   // Fire-and-forget: "you're cancelled, you'll keep access until X, come back".
-  // Failures don't block the cancel response — the DB flip is the source of truth.
+  // Failures don't block the cancel response — Paystack is already stopped and
+  // the DB flip is committed, so the source of truth is settled.
   void sendSubscriptionCancelledEmail({
     toEmail: sub.user.email,
     businessName: sub.user.businessName,
     planName: sub.plan.name,
-    currentPeriodEnd: updated.currentPeriodEnd,
+    currentPeriodEnd: sub.currentPeriodEnd,
     resubscribeUrl: `${APP_URL}/dashboard/subscription`,
   }).catch((error) => {
     console.error('[subscription:cancel] email failed:', error);
@@ -550,7 +608,7 @@ export async function cancelSubscriptionService(
   return {
     message: 'Subscription will end at the current period',
     cancelAtPeriodEnd: true,
-    currentPeriodEnd: updated.currentPeriodEnd.toISOString(),
+    currentPeriodEnd: sub.currentPeriodEnd.toISOString(),
   };
 }
 

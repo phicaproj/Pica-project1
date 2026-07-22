@@ -287,6 +287,56 @@ export async function initializeSubscriptionTransaction(
 }
 
 /**
+ * A subscription as Paystack returns it inside the customer fetch payload.
+ * `email_token` is the customer-specific token disable requires — it only
+ * appears here and on the subscription.create webhook, so this fetch is our
+ * fallback source of the handles when the webhook never landed.
+ */
+export type PaystackCustomerSubscription = {
+  subscription_code: string;
+  email_token: string;
+  status: string; // "active" | "non-renewing" | "cancelled" | "attention" | ...
+  plan?: { plan_code?: string } | null;
+};
+
+/**
+ * Fetch a customer by email (or customer code) and return the subscriptions
+ * Paystack has on file for them. Used by the cancel path as a fallback when we
+ * never captured `subscription_code` / `email_token` locally — e.g. the
+ * subscription.create webhook never reached us (localhost with no tunnel), so
+ * the row's handles are null but Paystack is still billing.
+ *
+ * Returns an empty list if the customer exists but has no subscriptions.
+ * Throws if the customer can't be found at all.
+ */
+export async function fetchPaystackCustomerSubscriptions(
+  emailOrCode: string
+): Promise<PaystackCustomerSubscription[]> {
+  const response = await fetch(
+    `${PAYSTACK_BASE_URL}/customer/${encodeURIComponent(emailOrCode)}`,
+    {
+      method: 'GET',
+      headers: paystackHeaders(),
+    }
+  );
+
+  const body = (await response.json().catch(() => null)) as {
+    status?: boolean;
+    message?: string;
+    data?: { subscriptions?: PaystackCustomerSubscription[] };
+  } | null;
+
+  if (!response.ok || !body?.status || !body.data) {
+    throw new AppError(
+      body?.message ?? 'Failed to fetch Paystack customer',
+      response.status >= 400 && response.status < 500 ? BAD_REQUEST : INTERNAL_SERVER_ERROR
+    );
+  }
+
+  return body.data.subscriptions ?? [];
+}
+
+/**
  * Cancel a subscription. Paystack requires BOTH the subscription code AND the
  * customer-specific email_token (returned alongside the subscription on
  * subscription.create). We persist both on UserSubscription.
