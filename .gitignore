@@ -12,3 +12,4 @@ backend/src/test-pdf-run-2b.ts
 PICA Solution Specification v3.docx
 
 pica_compliance_check.md
+backend/src/test-snapshot-run.ts
