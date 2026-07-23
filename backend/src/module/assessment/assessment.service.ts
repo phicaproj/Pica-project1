@@ -91,7 +91,7 @@ export async function startAssessmentService(
 
   if (existingSession?.status === SessionStatus.COMPLETED) {
     throw new AppError(
-      'An assessment session is already completed for this email. Please check your email for the assessment results or you login.',
+      'You already completed this assessment. Check your email for your report, or log in to your dashboard to view it.',
       CONFLICT
     );
   }
@@ -700,14 +700,15 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
     };
   }
 
-  // Snapshot active question for the user's businessSize, ordered by pillar
-  // then question displayOrder. Gated by configured limit per pillar.
+  // Snapshot active PHASE2A question for the user's businessSize, ordered by
+  // pillar then question displayOrder. Gated by configured limit per pillar.
   const pillars = await prisma.pillar.findMany({
     where: { isActive: true },
     select: {
       id: true,
       questions: {
         where: {
+          phase: Phase.PHASE2A,
           businessSize: user.businessSize,
           isActive: true,
         },
@@ -720,11 +721,19 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
 
   const settings = await prisma.scoringSettings.findFirst();
   const targetLimit = settings?.phase2aQuestionLimit ?? 40;
-  const limitPerPillar = Math.floor(targetLimit / Math.max(pillars.length, 1));
 
-  const selectedQuestionIds = pillars.flatMap((p) =>
-    p.questions.slice(0, limitPerPillar).map((q) => q.id)
-  );
+  // Split the target across pillars as evenly as possible. flooring alone
+  // silently drops the remainder (e.g. 40/7 -> 5 each = 35), so hand the
+  // leftover to the first pillars: quotas differ by at most 1, keeping the
+  // set balanced without back-filling a short pillar from another one.
+  const numPillars = Math.max(pillars.length, 1);
+  const baseQuota = Math.floor(targetLimit / numPillars);
+  const remainder = targetLimit % numPillars;
+
+  const selectedQuestionIds = pillars.flatMap((p, i) => {
+    const quota = baseQuota + (i < remainder ? 1 : 0);
+    return p.questions.slice(0, quota).map((q) => q.id);
+  });
 
   if (selectedQuestionIds.length === 0) {
     throw new AppError(

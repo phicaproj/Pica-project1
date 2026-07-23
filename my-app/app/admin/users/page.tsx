@@ -9,7 +9,6 @@ import {
   Ban,
   ChevronLeft,
   ChevronRight,
-  Download,
   LayoutGrid,
   Table2,
   Loader,
@@ -211,10 +210,6 @@ export default function UsersPage() {
           >
             <LayoutGrid className="w-4 h-4" />
             Grid View
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 transition-colors">
-            <Download className="w-4 h-4" />
-            Export Data
           </button>
         </div>
       </div>

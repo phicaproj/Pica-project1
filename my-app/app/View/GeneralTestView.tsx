@@ -1002,7 +1002,7 @@ export default function GeneralTestPage() {
 			if (res.status === 409) {
 				setError(
 					data.message ||
-						'An assessment for this email is already completed. Please check your inbox.',
+						'You already completed this assessment. Check your email for your report, or log in to your dashboard to view it.',
 				)
 				return
 			}
