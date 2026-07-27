@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTheme } from "@/components/ThemeContext";
-import { Check, CheckCircle, Globe, Loader, Shield, Sparkles } from "lucide-react";
+import { Check, CheckCircle, Globe, Shield, Sparkles } from "lucide-react";
 import {
   getPublicPricing,
   getSubscriptionPlans,
@@ -32,6 +32,36 @@ function QuotaLine({ count, label, dark }: { count: number; label: string; dark:
         {label} per month
       </span>
     </li>
+  );
+}
+
+// Loading placeholder for the pricing grid. Rendered while the backend fetch is
+// in flight so the price cards don't flash their empty-state text (e.g. the
+// Deep Dive card's "Not configured", which is only a valid message once we know
+// no 2B prices exist — not while we're still fetching). Mirrors the 3-card
+// pay-per-use layout since that's the default initial mode.
+function PricingSkeleton({ dark }: { dark: boolean }) {
+  const block = dark ? "bg-white/10" : "bg-gray-200";
+  const card = dark ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm";
+  return (
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start"
+      aria-hidden="true"
+    >
+      {[0, 1, 2].map((i) => (
+        <div key={i} className={`rounded-2xl p-8 border animate-pulse ${card}`}>
+          <div className={`h-3 w-20 rounded ${block} mb-4`} />
+          <div className={`h-7 w-40 rounded ${block} mb-5`} />
+          <div className={`h-10 w-28 rounded ${block} mb-8`} />
+          <div className="space-y-3 mb-10">
+            {[0, 1, 2].map((j) => (
+              <div key={j} className={`h-4 w-full rounded ${block}`} />
+            ))}
+          </div>
+          <div className={`h-12 w-full rounded-xl ${block}`} />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -153,11 +183,11 @@ export default function PricingPage() {
 
       <section className={`px-4 sm:px-6 md:px-8 pb-20 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto">
-          {loading && (
-            <div className="mb-6 flex items-center justify-center gap-2 text-sm text-gray-400">
-              <Loader className="w-4 h-4 animate-spin" /> Loading pricing
-            </div>
-          )}
+          {/* While the backend fetch is in flight we show a skeleton instead of
+              the real cards. Rendering the cards early would surface their
+              empty-state copy (e.g. Deep Dive's "Not configured") before we
+              actually know whether prices exist. */}
+          {loading && <PricingSkeleton dark={d} />}
 
           {error && (
             <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300">
@@ -167,7 +197,7 @@ export default function PricingPage() {
 
           {/* Section I — Pay Per Use card grid. Only renders in payPerUse
               mode; the subscription mode below has its own grid. */}
-          {mode === "payPerUse" && (
+          {!loading && mode === "payPerUse" && (
           <>
           {/* Free Scan is a lead magnet, not a paid product — it always
               renders regardless of the pay-per-use toggle. When pay-per-use
@@ -296,7 +326,7 @@ export default function PricingPage() {
               users see consistent cards. Anonymous CTA points at signup;
               completion of signup lands the user on /dashboard/plans
               where they can actually subscribe. */}
-          {mode === "subscription" && (
+          {!loading && mode === "subscription" && (
             subscriptionActive ? (
               sortedPlans.length === 0 ? (
                 <div className={`rounded-2xl p-8 md:p-12 text-center border ${d ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
