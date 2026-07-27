@@ -13,7 +13,10 @@ const resultRouter = Router();
 resultRouter.get('/me/latest', authenticate, getMyLatestCompletedResult);
 resultRouter.get('/me', authenticate, getAllMyCompletedResults);
 
-resultRouter.get('/:sessionId', getResult);
+// Soft auth — an unclaimed anonymous Phase-1 result stays open to anyone
+// holding the sessionId, but once a session is claimed by a user the service
+// enforces owner-only access (prevents cross-user session bleed).
+resultRouter.get('/:sessionId', softAuthenticate, getResult);
 // Soft auth — Phase 1 PDF download is open (anyone with the sessionId);
 // Phase 2A download is gated inside the service on user ownership + payment.
 resultRouter.get('/:sessionId/pdf', softAuthenticate, downloadResultPdf);

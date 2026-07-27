@@ -493,20 +493,27 @@ function SubscriptionCard({
 
         <ul className="space-y-3 mb-8">
           <QuotaLine label={`${getPhaseLabel("PHASE2A")}s`} count={plan.phase2aPerMonth} />
-          <QuotaLine label={`${getPhaseLabel("PHASE2B")} Modules`} count={plan.phase2bPerMonth} />
+          <QuotaLine label={`${getPhaseLabel("PHASE2B")}s`} count={plan.phase2bPerMonth} />
           <QuotaLine
             label="Expert consultations"
             count={plan.consultationsPerMonth}
           />
-          {plan.features.map((feature) => (
-            <li
-              key={feature}
-              className="flex items-start gap-2 text-sm text-gray-300"
-            >
-              <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-              {feature}
-            </li>
-          ))}
+          {plan.features.map((feature) => {
+            const formatted = feature
+              .replace(/Phase 2A diagnostics?/gi, "Strategic Scans")
+              .replace(/Phase 2B deep dives?/gi, "Deep Dive Modules")
+              .replace(/Phase 2A/gi, "Strategic Scan")
+              .replace(/Phase 2B/gi, "Deep Dive Module");
+            return (
+              <li
+                key={feature}
+                className="flex items-start gap-2 text-sm text-gray-300"
+              >
+                <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                {formatted}
+              </li>
+            );
+          })}
         </ul>
       </div>
 

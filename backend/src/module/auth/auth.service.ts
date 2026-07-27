@@ -27,6 +27,7 @@ import {
 import {
   adminCodeEmail,
   sendPasswordResetEmail,
+  sendVerificationEmail,
   sendWelcomeEmail,
 } from '../../service/shared/email.service';
 import type {
@@ -40,10 +41,14 @@ import type {
   MeResponse,
   RegisterInput,
   RegisterResponse,
+  ResendVerificationInput,
+  ResendVerificationResponse,
   ResetPasswordInput,
   ResetPasswordResponse,
   VerifyAdminOTPInput,
   VerifyAdminOTPResponse,
+  VerifyEmailInput,
+  VerifyEmailResponse,
   VerifyResetOtpInput,
   VerifyResetOtpResponse,
 } from './auth.types';
@@ -118,6 +123,8 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     data: {
       email: normalizedEmail,
       passwordHash,
+      firstName: data.firstName,
+      lastName: data.lastName,
       businessName: data.businessName,
       phone: data.phone,
       businessSize: resolvedBusinessSize,
@@ -131,13 +138,6 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     select: {
       id: true,
       email: true,
-      firstName: true,
-      lastName: true,
-      businessName: true,
-      phone: true,
-      avatarUrl: true,
-      isVerified: true,
-      role: true,
     },
   });
 
@@ -146,27 +146,41 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     data: { userId: user.id },
   });
 
-  try {
-    await sendWelcomeEmail(user.email, user.businessName ?? user.email);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error('Error sending welcome email:', message);
-  }
+  // Hard email-verification gate: the account is created unverified and must
+  // confirm a one-time code before it can log in. We send the code now and
+  // hand the client an OTP token that carries the (hashed) code. The welcome
+  // email is deferred to the moment verification succeeds.
+  const otpToken = await issueEmailVerification(user.email);
 
   return {
-    message: 'Registration successful',
-    user: {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      businessName: user.businessName,
-      phone: user.phone,
-      avatarUrl: user.avatarUrl,
-      isVerified: user.isVerified,
-      role: user.role,
-    },
+    message: 'Registration successful. Check your email for a verification code.',
+    requiresVerification: true,
+    otpToken,
+    email: user.email,
   };
+}
+
+// Generates a verification code, emails it, and returns a signed OTP token that
+// carries the hashed code + purpose. Shared by registration, the not-yet-
+// verified login branch, and the explicit resend endpoint.
+async function issueEmailVerification(email: string): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const code = generateOtpCode();
+  const purpose = 'email-verify';
+  const otpToken = generateOtpToken({
+    email: normalizedEmail,
+    codeHash: hashOtpCode({ email: normalizedEmail, code, purpose }),
+    purpose,
+  });
+
+  try {
+    await sendVerificationEmail(normalizedEmail, code);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error sending verification email:', message);
+  }
+
+  return otpToken;
 }
 
 export async function loginService(data: LoginInput): Promise<LoginResponse> {
@@ -233,6 +247,20 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       requiresOtp: true,
       otpToken,
       role: 'ADMIN',
+      email: user.email,
+    };
+  }
+
+  // Hard email-verification gate for regular users: an unverified account can
+  // authenticate (correct password) but is not issued tokens. Instead we send a
+  // fresh verification code and bounce the client to the verification screen.
+  // Once verified, subsequent logins skip this branch entirely.
+  if (!user.isVerified) {
+    const otpToken = await issueEmailVerification(user.email);
+    return {
+      message: 'Please verify your email to continue. A new code has been sent.',
+      requiresVerification: true,
+      otpToken,
       email: user.email,
     };
   }
@@ -387,6 +415,116 @@ export async function resetPasswordService(
 
   return {
     message: 'Password reset successfully',
+  };
+}
+
+// Confirms an account's email via the one-time code, flips isVerified, and logs
+// the user straight in (returns access + refresh tokens). This is the only path
+// that sets isVerified=true for self-registered users.
+export async function verifyEmailService(data: VerifyEmailInput): Promise<VerifyEmailResponse> {
+  const payload = verifyOtpToken(data.otpToken);
+
+  if (payload.purpose !== 'email-verify') {
+    throw new AppError('Invalid verification token', BAD_REQUEST);
+  }
+
+  const normalizedEmail = data.email.trim().toLowerCase();
+  if (payload.email !== normalizedEmail) {
+    throw new AppError('Code does not match the provided email', BAD_REQUEST);
+  }
+
+  enforceOtpAttempts(payload.codeHash, data.code, payload);
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+      role: true,
+      status: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError('Account no longer exists', NOT_FOUND);
+  }
+
+  if (user.status === UserStatus.DISABLED) {
+    throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
+  }
+
+  if (!user.isVerified) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true },
+    });
+
+    // Welcome email is sent once, on first successful verification.
+    try {
+      await sendWelcomeEmail(user.email, user.businessName ?? user.email);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error sending welcome email:', message);
+    }
+  }
+
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  return {
+    message: 'Email verified successfully',
+    requiresOtp: false,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: true,
+      role: user.role,
+    },
+    accessToken,
+    refreshToken,
+  };
+}
+
+// Re-sends the verification code. Always returns a fresh OTP token and a
+// generic message so the endpoint can't be used to enumerate which emails are
+// registered (mirrors forgotPasswordService's privacy stance).
+export async function resendVerificationService(
+  data: ResendVerificationInput
+): Promise<ResendVerificationResponse> {
+  const normalizedEmail = data.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, isVerified: true },
+  });
+
+  // Only actually email a real, still-unverified account. Either way we hand
+  // back a token so the client flow is identical (no account enumeration).
+  const otpToken =
+    user && !user.isVerified
+      ? await issueEmailVerification(normalizedEmail)
+      : generateOtpToken({
+          email: normalizedEmail,
+          codeHash: hashOtpCode({ email: normalizedEmail, code: generateOtpCode(), purpose: 'email-verify' }),
+          purpose: 'email-verify',
+        });
+
+  return {
+    message: 'If that account needs verification, a new code has been sent.',
+    otpToken,
+    email: normalizedEmail,
   };
 }
 

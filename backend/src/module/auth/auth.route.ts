@@ -8,8 +8,10 @@ import {
   loginAdmin,
   me,
   register,
+  resendVerification,
   resetPassword,
   verifyAdminOTP,
+  verifyEmail,
   verifyResetOtp,
 } from './auth.controller';
 
@@ -17,6 +19,8 @@ const authRouter = Router();
 
 authRouter.post('/register', authLimiter, register);
 authRouter.post('/login', authLimiter, login);
+authRouter.post('/verify-email', authLimiter, verifyEmail);
+authRouter.post('/resend-verification', authLimiter, resendVerification);
 authRouter.post('/admin/login', authLimiter, loginAdmin);
 authRouter.post('/admin/verify-otp', authLimiter, verifyAdminOTP);
 authRouter.post('/forgot-password', authLimiter, forgotPassword);

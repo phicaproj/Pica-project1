@@ -16,6 +16,7 @@ export const REFRESH_TOKEN_KEY = 'pica.refreshToken'
 export const USER_KEY = 'pica.user'
 export const RESET_OTP_TOKEN_KEY = 'pica.resetOtpToken'
 export const ADMIN_LOGIN_OTP_TOKEN_KEY = 'pica.adminLoginOtpToken'
+export const EMAIL_VERIFY_OTP_TOKEN_KEY = 'pica.emailVerifyOtpToken'
 export const RESET_PASSWORD_TOKEN_KEY = 'pica.resetPasswordToken'
 export const LAST_SESSION_ID_KEY = 'pica.lastSessionId'
 
@@ -74,6 +75,10 @@ export function setSession(accessToken: string, refreshToken: string, user: Auth
 	localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
 	localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
 	localStorage.setItem(USER_KEY, JSON.stringify(user))
+	// Drop any anonymous free-scan pointer left in this browser by a previous
+	// visitor. Without this, signing in with a different email on a shared
+	// machine would load the prior user's Phase-1 scan (session bleed).
+	localStorage.removeItem(LAST_SESSION_ID_KEY)
 }
 
 export function getAccessToken(): string | null {

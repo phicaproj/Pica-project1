@@ -56,15 +56,19 @@ export default function SignUpPage() {
 
   const router = useRouter();
 
-  // Signup captures only what's needed to create the account: business name,
-  // email, phone, password. The full business profile (staff size, industry,
-  // country, state, years) is filled in from the dashboard's profile/settings
-  // page after signup. Staff size is still required before paid tests run but
-  // the user gets that gate from the dashboard, not from this form.
+  // Signup captures the baseline business profile at the front door: contact
+  // person name, business name, email, phone, staff size, sector, and years in
+  // operation are all mandatory (client UAT feedback). Country/state are still
+  // completed later from the dashboard profile page.
   const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
     businessName: "",
     email: "",
     phone: "",
+    staffSize: "",
+    industry: "",
+    operatingYears: "",
     password: "",
   });
   const [submitError, setSubmitError] = useState("");
@@ -78,10 +82,22 @@ export default function SignUpPage() {
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
+    if (!form.firstName.trim())
+      newErrors.firstName = "Contact first name is required";
+    if (!form.lastName.trim())
+      newErrors.lastName = "Contact last name is required";
     if (!form.businessName)
       newErrors.businessName = "Business name is required";
     if (!form.email) newErrors.email = "Email is required";
     if (!form.phone) newErrors.phone = "Phone number is required";
+    if (!form.staffSize.trim()) {
+      newErrors.staffSize = "Staff size is required";
+    } else if (!/^\d+$/.test(form.staffSize.trim())) {
+      newErrors.staffSize = "Staff size must be a whole number (no decimals)";
+    }
+    if (!form.industry.trim()) newErrors.industry = "Sector is required";
+    if (!form.operatingYears.trim())
+      newErrors.operatingYears = "Years in operation is required";
     if (!form.password) newErrors.password = "Password is required";
     if (!agreed) newErrors.agreed = "You must accept the terms";
     return newErrors;
@@ -102,7 +118,14 @@ export default function SignUpPage() {
       setSubmitError(res.error.message);
     } else {
       setIsLoading(false);
-      router.push("/Auth/login");
+      // Registration returns a verification-pending response; the OTP token is
+      // stashed by SignUp/Login helpers. Send the user to the code screen.
+      if (res.data && typeof window !== "undefined") {
+        sessionStorage.setItem("pica.emailVerifyOtpToken", res.data.otpToken);
+      }
+      router.push(
+        `/Auth/verify-code?email=${encodeURIComponent(form.email)}&type=email-verify`,
+      );
     }
   };
 
@@ -153,6 +176,42 @@ export default function SignUpPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Contact person name */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Contact first name*"
+                    value={form.firstName}
+                    onChange={(e) => handleChange("firstName", e.target.value)}
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                      errors.firstName
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-white/10 focus:ring-[#f97316]/50"
+                    }`}
+                  />
+                  {errors.firstName && (
+                    <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Contact last name*"
+                    value={form.lastName}
+                    onChange={(e) => handleChange("lastName", e.target.value)}
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                      errors.lastName
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-white/10 focus:ring-[#f97316]/50"
+                    }`}
+                  />
+                  {errors.lastName && (
+                    <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
+                  )}
+                </div>
+              </div>
+
               {/* Business Name */}
               <div>
                 <input
@@ -209,10 +268,76 @@ export default function SignUpPage() {
                 )}
               </div>
 
-              {/* Business profile fields (staff size, industry, country,
-                  years) live in the dashboard profile page now — users finish
-                  signup with just the essentials and complete their profile
-                  before they take paid tests. */}
+              {/* Staff size + years in operation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    placeholder="Staff size*"
+                    value={form.staffSize}
+                    onKeyDown={(e) => {
+                      // Whole numbers only — block decimals and exponent entry.
+                      if (["e", "E", "+", "-", "."].includes(e.key))
+                        e.preventDefault();
+                    }}
+                    onChange={(e) => handleChange("staffSize", e.target.value)}
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                      errors.staffSize
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-white/10 focus:ring-[#f97316]/50"
+                    }`}
+                  />
+                  {errors.staffSize && (
+                    <p className="text-red-500 text-xs mt-1">{errors.staffSize}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="Years in operation*"
+                    value={form.operatingYears}
+                    onKeyDown={(e) => {
+                      if (["e", "E", "+", "-", "."].includes(e.key))
+                        e.preventDefault();
+                    }}
+                    onChange={(e) =>
+                      handleChange("operatingYears", e.target.value)
+                    }
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                      errors.operatingYears
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-white/10 focus:ring-[#f97316]/50"
+                    }`}
+                  />
+                  {errors.operatingYears && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.operatingYears}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sector / industry */}
+              <div>
+                <input
+                  type="text"
+                  placeholder="Sector / industry*"
+                  value={form.industry}
+                  onChange={(e) => handleChange("industry", e.target.value)}
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                    errors.industry
+                      ? "border-red-500 focus:ring-red-400"
+                      : "border-white/10 focus:ring-[#f97316]/50"
+                  }`}
+                />
+                {errors.industry && (
+                  <p className="text-red-500 text-xs mt-1">{errors.industry}</p>
+                )}
+              </div>
 
               {/* Password with tooltip */}
               <div className="relative">
@@ -350,17 +475,24 @@ export default function SignUpPage() {
       {/* Footer */}
       <footer className="py-6 text-center border-t border-white/5">
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
-          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
-            (item) => (
-              <Link
-                key={item}
-                href="#"
-                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
-              >
-                {item}
-              </Link>
-            )
-          )}
+          <Link
+            href="/data-policy"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/terms"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Terms of Service
+          </Link>
+          <Link
+            href="#"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Security Architecture
+          </Link>
         </div>
         <p className="text-xs text-gray-600 uppercase tracking-wider">
           © 2024 PICA Intelligence Systems. All rights reserved.

@@ -7,8 +7,10 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resendVerificationSchema,
   resetPasswordSchema,
   verifyAdminOTPSchema,
+  verifyEmailSchema,
   verifyResetOtpSchema,
 } from './auth.types';
 import {
@@ -18,7 +20,9 @@ import {
   loginService,
   meService,
   registerService,
+  resendVerificationService,
   resetPasswordService,
+  verifyEmailService,
   verifyResetOtpService,
   verifyAdminOTPService,
 } from './auth.service';
@@ -61,6 +65,20 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
 export const verifyResetOtp = asyncHandler(async (req: Request, res: Response) => {
   const request = verifyResetOtpSchema.parse(req.body);
   const result = await verifyResetOtpService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
+  const request = verifyEmailSchema.parse(req.body);
+  const result = await verifyEmailService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const resendVerification = asyncHandler(async (req: Request, res: Response) => {
+  const request = resendVerificationSchema.parse(req.body);
+  const result = await resendVerificationService(request);
 
   return res.status(OK).json(result);
 });

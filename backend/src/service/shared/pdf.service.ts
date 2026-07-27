@@ -124,11 +124,12 @@ const BUILDING_IMG_BUFFER: Buffer | null = (() => {
   }
 })();
 
-// Phase → human label shown on the cover + summary header.
+// Phase → human label shown on the cover + summary header. Uses the agreed
+// commercial nomenclature (no internal "Phase 2A/2B" wording in any output).
 const phaseLabel = (phase: Phase): string => {
-  if (phase === Phase.PHASE2A) return 'PICA Level 2A – Structured Diagnosis';
-  if (phase === Phase.PHASE2B) return 'PICA Level 2B – Deep Dive';
-  return 'PICA Level 1 – Snapshot Assessment';
+  if (phase === Phase.PHASE2A) return 'PICA Strategic Scan – Structured Diagnosis';
+  if (phase === Phase.PHASE2B) return 'PICA Deep Dive – In-Depth Audit';
+  return 'PICA Business Snapshot – Assessment';
 };
 
 const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
@@ -2114,14 +2115,18 @@ const drawPillarPage = (
       });
   }
 
-  // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the bottom consistently)
+  // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the
+  // bottom consistently). Box height 165 ends at Y=800, inside the ~802 usable
+  // bottom of an A4 page — enlarged from 125 so each step gets a two-line title
+  // and a multi-line recommendation instead of single-line ellipsis clipping.
   const mapY = 635;
+  const mapH = 165;
   roundedRect(
     doc,
     PAGE_MARGIN,
     mapY,
     COLORS.pageWidth,
-    125,
+    mapH,
     8,
     COLORS.lightGrey,
     COLORS.borderGrey
@@ -2153,7 +2158,7 @@ const drawPillarPage = (
     const row = Math.floor(i / 2);
     const col = i % 2;
     const sx = rx + col * 250;
-    const sy = mapY + 44 + row * 38;
+    const sy = mapY + 46 + row * 56;
 
     doc.save();
     doc
@@ -2174,7 +2179,7 @@ const drawPillarPage = (
       .fontSize(8.5)
       .font('Helvetica-Bold')
       .fillColor(COLORS.primary)
-      .text(recTitle, sx + 22, sy + 1, { width: stepW - 25, height: 10, ellipsis: true });
+      .text(recTitle, sx + 22, sy + 1, { width: stepW - 25, height: 22, ellipsis: true });
 
     // Phase 2B options carry an "N-Day Action Plan" (window + to-do items) in
     // place of a single recommendation line. When present, surface the window
@@ -2187,14 +2192,14 @@ const drawPillarPage = (
         .fontSize(7)
         .font('Helvetica-Bold')
         .fillColor(COLORS.accent)
-        .text(planLabel, sx + 22, sy + 12, { width: stepW - 25, height: 9, ellipsis: true });
+        .text(planLabel, sx + 22, sy + 24, { width: stepW - 25, height: 9, ellipsis: true });
       doc
         .fontSize(7)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(planItems.join('  •  '), sx + 22, sy + 21, {
+        .text(planItems.join('  •  '), sx + 22, sy + 33, {
           width: stepW - 25,
-          height: 14,
+          height: 16,
           ellipsis: true,
           lineGap: 1,
         });
@@ -2203,9 +2208,9 @@ const drawPillarPage = (
         .fontSize(7.5)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(finding.recommendation, sx + 22, sy + 12, {
+        .text(finding.recommendation, sx + 22, sy + 24, {
           width: stepW - 25,
-          height: 20,
+          height: 24,
           ellipsis: true,
           lineGap: 1,
         });
@@ -2338,23 +2343,23 @@ const drawNextStepsPageCustom = (
   let bodyText = '';
 
   if (phase === Phase.PHASE1) {
-    line1Text = 'You have mapped your business core (Phase 1).';
-    line2Text = 'Upgrade to Phase 2A for full structural clarity.';
+    line1Text = 'You have mapped your business core (Business Snapshot).';
+    line2Text = 'Upgrade to the Strategic Scan for full structural clarity.';
     bodyText =
-      'The initial Phase 1 scan has successfully identified the high-level markers of your operations. While this core mapping is a critical first step, unlocking sustainable growth requires a deep dive into the architectural health of all 7 business units.\n\n' +
-      'Moving from high-level scanning to implementation requires deep diagnostic clarity. Upgrading to Phase 2A will provide detailed observations, concrete recommendations, and tailored checklists across every operational pillar, transforming weak links into competitive assets.';
+      'The initial Business Snapshot has successfully identified the high-level markers of your operations. While this core mapping is a critical first step, unlocking sustainable growth requires a deep dive into the architectural health of all 7 business units.\n\n' +
+      'Moving from high-level scanning to implementation requires deep diagnostic clarity. Upgrading to the Strategic Scan will provide detailed observations, concrete recommendations, and tailored checklists across every operational pillar, transforming weak links into competitive assets.';
   } else if (phase === Phase.PHASE2A) {
-    line1Text = 'You now have structural clarity (2A).';
-    line2Text = 'Execution strength requires deeper testing (2B).';
+    line1Text = 'You now have structural clarity (Strategic Scan).';
+    line2Text = 'Execution strength requires the deeper Deep Dive.';
     bodyText =
-      'The initial 2A diagnostic has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n' +
+      'The Strategic Scan has successfully mapped the architectural skeleton of your operations. While the foundational identification phase is complete, the bridge to sustainable growth is built through stress-testing these structures under high-load business scenarios.\n\n' +
       'Moving from identification to implementation is a non-linear process. It requires a pivot from broad observation to surgical precision. The following intelligence upgrades are designed to convert strategic theory into operational dominance, ensuring that every identified weakness is transformed into a competitive moat.';
   } else {
     // Phase.PHASE2B (Consultation CTA Copy)
-    line1Text = 'Your Deep Dive results are synthesized (2B).';
+    line1Text = 'Your Deep Dive results are synthesized.';
     line2Text = 'Move to execution with a Strategic Consultation.';
     bodyText =
-      'This Phase 2B deep dive audit has successfully stress-tested your targeted operational structures. Having identified both the baseline strengths and the bottleneck points, your roadmap for building long-term scaling capacity is now fully clear.\n\n' +
+      'This Deep Dive audit has successfully stress-tested your targeted operational structures. Having identified both the baseline strengths and the bottleneck points, your roadmap for building long-term scaling capacity is now fully clear.\n\n' +
       'The critical next step to bridge diagnostic strategy with day-to-day execution is securing professional advisory guidance. Booking a 1-on-1 strategic consultation will allow us to unpack your results, prioritize your action plan, and deploy resources for immediate operational scaling.';
   }
 
@@ -2511,7 +2516,7 @@ const drawNextStepsPageCustom = (
   const card2Desc =
     phase === Phase.PHASE2B
       ? 'Structure custom execution timelines and coordinate project teams to begin deploying the targeted bottleneck patches.'
-      : "Precision analysis of specific 'Red Zone' areas identified in 2A diagnostic to isolate variables causing drag.";
+      : "Precision analysis of specific 'Red Zone' areas identified in the Strategic Scan diagnostic to isolate variables causing drag.";
   const bulletList2 =
     phase === Phase.PHASE2B
       ? ['Timeline Structuring', 'Project Coordinator Assignment', 'Continuous Progress Audits']
@@ -2876,7 +2881,7 @@ const drawClosingAttestationPage = (
     .text('Validation and Advisory Closeout.', PAGE_MARGIN, topY);
 
   const closingText =
-    "This report completes the PICA Level 2A operational assessment. The conclusions presented here are designed to guide the client organization's leadership in prioritizing operational upgrades and mitigating systemic risks. Beauvision Associates remains committed to supporting your strategic path forward. We appreciate the opportunity to partner with you in strengthening your business foundations.";
+    "This report completes the PICA operational assessment. The conclusions presented here are designed to guide the client organization's leadership in prioritizing operational upgrades and mitigating systemic risks. Beauvision Associates remains committed to supporting your strategic path forward. We appreciate the opportunity to partner with you in strengthening your business foundations.";
 
   doc
     .fontSize(9.5)
@@ -3011,7 +3016,9 @@ const drawVisualizationPage = (
     .fillColor(COLORS.green)
     .text(displayId, tagX, headY + 8, { align: 'right', width: 120 });
 
-  // Executive Performance Summary Card
+  // Benchmark Performance Card (renamed from "Executive Performance Summary"
+  // to avoid colliding with the Executive Summary page at the front of the
+  // report — testers read this end-page card as a second, misplaced summary).
   const topY = headY + 45;
   roundedRect(doc, PAGE_MARGIN, topY, COLORS.pageWidth, 75, 6, COLORS.lightGrey, COLORS.borderGrey);
   roundedRect(doc, PAGE_MARGIN, topY, 4, 75, 2, '#3B82F6');
@@ -3020,7 +3027,7 @@ const drawVisualizationPage = (
     .fontSize(9.5)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('EXECUTIVE PERFORMANCE SUMMARY', PAGE_MARGIN + 16, topY + 12);
+    .text('BENCHMARK PERFORMANCE OVERVIEW', PAGE_MARGIN + 16, topY + 12);
   doc
     .fontSize(8)
     .font('Helvetica')

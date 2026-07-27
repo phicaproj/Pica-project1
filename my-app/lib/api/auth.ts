@@ -4,6 +4,7 @@ import {
 	setSession,
 	clearSession,
 	ADMIN_LOGIN_OTP_TOKEN_KEY,
+	EMAIL_VERIFY_OTP_TOKEN_KEY,
 	RESET_OTP_TOKEN_KEY,
 	RESET_PASSWORD_TOKEN_KEY,
 	USER_KEY,
@@ -17,15 +18,17 @@ import {
 // keeps `profileComplete` false and is later filled in via the dashboard
 // profile-completion banner.
 interface SignUpPayload {
+	firstName: string
+	lastName: string
 	businessName: string
 	email: string
 	phone: string
 	password: string
-	staffSize?: string
-	industry?: string
+	staffSize: string
+	industry: string
+	operatingYears: string
 	country?: string
 	state?: string
-	operatingYears?: string
 }
 
 interface LoginPayload {
@@ -83,23 +86,32 @@ export const getMe = async () => {
 	return res
 }
 
+export type RegisterResponse = {
+	message: string
+	requiresVerification: true
+	otpToken: string
+	email: string
+}
+
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
-	// Optional profile fields are forwarded only when filled. The backend
-	// snapshots any matching Phase 1 session data for fields we don't send,
-	// then leaves the rest null (and profileComplete=false).
+	// Contact name + staff size + sector + years are mandatory at signup; the
+	// backend still snapshots any matching Phase 1 session data for the
+	// optional location fields we don't send. Registration always returns a
+	// verification-pending response (no tokens) — the email must be confirmed.
 	const body: Record<string, string> = {
+		firstName: payload.firstName.trim(),
+		lastName: payload.lastName.trim(),
 		email: payload.email,
 		password: payload.password,
 		businessName: payload.businessName,
 		phone: payload.phone,
+		staffSize: payload.staffSize.trim(),
+		industry: payload.industry.trim(),
+		operatingYears: payload.operatingYears.trim(),
 	}
-	if (payload.staffSize?.trim()) body.staffSize = payload.staffSize.trim()
-	if (payload.industry?.trim()) body.industry = payload.industry.trim()
 	if (payload.country?.trim()) body.country = payload.country.trim()
 	if (payload.state?.trim()) body.state = payload.state.trim()
-	if (payload.operatingYears?.trim())
-		body.operatingYears = payload.operatingYears.trim()
-	return apiFetch<{ message: string; user: AuthUser }>('/auth/register', body)
+	return apiFetch<RegisterResponse>('/auth/register', body)
 }
 
 export type LoginResponse =
@@ -117,6 +129,12 @@ export type LoginResponse =
 			role: 'ADMIN'
 			email: string
 	  }
+	| {
+			message: string
+			requiresVerification: true
+			otpToken: string
+			email: string
+	  }
 
 export type VerifyAdminOtpResponse = {
 	message: string
@@ -128,12 +146,66 @@ export type VerifyAdminOtpResponse = {
 export const Login = async ({ payload }: { payload: LoginPayload }) => {
 	const res = await apiFetch<LoginResponse>('/auth/login', payload)
 
-	if (res.data?.requiresOtp) {
+	if (res.data && 'requiresOtp' in res.data && res.data.requiresOtp) {
 		if (typeof window !== 'undefined') {
 			sessionStorage.setItem(ADMIN_LOGIN_OTP_TOKEN_KEY, res.data.otpToken)
 		}
-	} else if (res.data) {
+	} else if (res.data && 'requiresVerification' in res.data && res.data.requiresVerification) {
+		// Account exists but email isn't verified: stash the fresh token so the
+		// verification screen can complete the code check.
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(EMAIL_VERIFY_OTP_TOKEN_KEY, res.data.otpToken)
+		}
+	} else if (res.data && 'accessToken' in res.data) {
 		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+	}
+
+	return res
+}
+
+// Completes email verification. On success the backend returns tokens and we
+// establish the session immediately (verified users are logged straight in).
+export const verifyEmail = async ({
+	email,
+	code,
+}: {
+	email: string
+	code: string
+}) => {
+	const otpToken =
+		typeof window !== 'undefined'
+			? sessionStorage.getItem(EMAIL_VERIFY_OTP_TOKEN_KEY)
+			: null
+
+	if (!otpToken) {
+		return {
+			data: null,
+			error: { message: 'Verification session expired. Please log in again.' },
+		}
+	}
+
+	const res = await apiFetch<VerifyAdminOtpResponse>('/auth/verify-email', {
+		email,
+		code,
+		otpToken,
+	})
+
+	if (res.data && typeof window !== 'undefined') {
+		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+		sessionStorage.removeItem(EMAIL_VERIFY_OTP_TOKEN_KEY)
+	}
+
+	return res
+}
+
+export const resendVerification = async ({ email }: { email: string }) => {
+	const res = await apiFetch<{ message: string; otpToken: string; email: string }>(
+		'/auth/resend-verification',
+		{ email },
+	)
+
+	if (res.data && typeof window !== 'undefined') {
+		sessionStorage.setItem(EMAIL_VERIFY_OTP_TOKEN_KEY, res.data.otpToken)
 	}
 
 	return res

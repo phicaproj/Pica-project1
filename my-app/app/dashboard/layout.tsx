@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeContext";
@@ -55,6 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pageTitle = getPageTitle(pathname);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = getStoredUser();
@@ -70,9 +72,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setAuthChecked(true);
   }, [router]);
 
-  const handleLogout = () => {
+  // Close the account dropdown on any outside click.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [menuOpen]);
+
+  // Auto log-out on inactivity (15 minutes)
+  useEffect(() => {
+    if (!authChecked || !user) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleLogout({ reason: "inactivity" });
+      }, 15 * 60 * 1000); // 15 minutes
+    };
+
+    const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    events.forEach((name) => {
+      document.addEventListener(name, resetTimer);
+    });
+
+    // Initialise timer
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach((name) => {
+        document.removeEventListener(name, resetTimer);
+      });
+    };
+  }, [authChecked, user, router]);
+
+  const handleLogout = (params?: { reason?: string }) => {
     clearSession();
-    router.push("/Auth/login");
+    if (params?.reason) {
+      router.push(`/Auth/login?reason=${params.reason}`);
+    } else {
+      router.push("/Auth/login");
+    }
   };
 
   const isActive = (href: string) => {
@@ -140,22 +187,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Bell className="w-5 h-5" />
           </button>
 
-          {/* User avatar */}
-          <div className="flex items-center gap-2">
-            {user?.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt="User Avatar"
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-teal-400/30"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-teal-400/30">
-                {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
+          {/* User avatar → account menu (Settings / Logout) */}
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="flex items-center gap-2 rounded-full p-0.5 pr-2 transition hover:bg-white/5"
+            >
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt="User Avatar"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-teal-400/30"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white text-xs font-bold ring-2 ring-teal-400/30">
+                  {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
+                </div>
+              )}
+              <span className="text-sm text-gray-300 hidden sm:block">
+                {user?.businessName || "User"}
+              </span>
+            </button>
+
+            {menuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 mt-2 w-48 rounded-lg border border-white/10 bg-[#161b22] py-1 shadow-lg shadow-black/40 z-50"
+              >
+                <Link
+                  href="/dashboard/settings"
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition"
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
               </div>
             )}
-            <span className="text-sm text-gray-300 hidden sm:block">
-              {user?.businessName || "User"}
-            </span>
           </div>
         </div>
       </header>
@@ -194,7 +278,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="mt-auto pt-6">
             <button
-              onClick={handleLogout}
+              onClick={() => handleLogout()}
               className="flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
             >
               <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
@@ -212,8 +296,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* ── Footer ── */}
           <footer className="text-center py-6 mt-8 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117]">
             <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
-              <span className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</span>
-              <span className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</span>
+              <Link href="/data-policy" className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</Link>
+              <Link href="/terms" className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</Link>
               <span className="hover:text-gray-300 cursor-pointer">SUPPORT</span>
             </div>
             <p>&copy; 2026 PICA</p>

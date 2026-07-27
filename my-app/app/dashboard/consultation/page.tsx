@@ -9,6 +9,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Crown,
@@ -229,9 +230,15 @@ export default function ConsultationPage() {
 
   // Booking Modal State
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
-  const [bookingStep, setBookingStep] = useState(1); // 1 = select expert/tier, 2 = schedule/details, 3 = confirmed
-  const [selectedExpert, setSelectedExpert] = useState<typeof EXPERTS[0] | null>(null);
-  const [selectedDate, setSelectedDate] = useState<number>(new Date().getDate() + 1); // Mock date selection day
+  const [bookingStep, setBookingStep] = useState(1); // 1 = select tier, 2 = schedule/details, 3 = confirmed
+  const [selectedTier, setSelectedTier] = useState<ConsultationTierPublic | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>((() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d;
+  })());
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("11:00 AM");
   const [topic, setTopic] = useState("");
   const [notes, setNotes] = useState("");
@@ -283,12 +290,18 @@ export default function ConsultationPage() {
   }, []);
 
   const openBookingModal = () => {
-    setSelectedExpert(EXPERTS[0]);
+    const defaultTier = tiers.length > 0 ? tiers[0] : null;
+    setSelectedTier(defaultTier);
     setBookingStep(1);
     setTopic("");
     setNotes("");
     setRelatedSessionResultId("");
     setCheckoutUrl(null);
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(d);
+    setCurrentYear(d.getFullYear());
+    setCurrentMonth(d.getMonth());
     setBookingModalOpen(true);
   };
 
@@ -297,6 +310,59 @@ export default function ConsultationPage() {
     if (results.length === 0) return 96.2;
     return Math.max(...results.map((r) => r.totalScore));
   }, [results]);
+
+  // Calendar helper functions
+  const getDaysInMonth = (year: number, month: number) => {
+    const date = new Date(year, month, 1);
+    const days = [];
+    let startDay = date.getDay(); // 0 is Sun, 1 is Mon...
+    // Adjust startDay so 0 is Mon, 6 is Sun
+    startDay = startDay === 0 ? 6 : startDay - 1;
+    
+    for (let i = 0; i < startDay; i++) {
+      days.push(null);
+    }
+    
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
+  };
+
+  const isPastDate = (d: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth((m) => {
+      if (m === 0) {
+        setCurrentYear((y) => y - 1);
+        return 11;
+      }
+      return m - 1;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth((m) => {
+      if (m === 11) {
+        setCurrentYear((y) => y + 1);
+        return 0;
+      }
+      return m + 1;
+    });
+  };
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthLabel = `${monthNames[currentMonth]} ${currentYear}`;
+  const days = useMemo(() => getDaysInMonth(currentYear, currentMonth), [currentYear, currentMonth]);
 
   const percentile = useMemo(() => {
     if (results.length === 0) return "96.2%";
@@ -334,10 +400,6 @@ export default function ConsultationPage() {
     );
   }, [mySub]);
 
-  // Maps expert config tier back to actual DB tier record
-  const getDbTierForExpert = (expert: typeof EXPERTS[0]) => {
-    return tiers.find((t) => t.tier === expert.tier) || tiers[0] || null;
-  };
 
   const verifyWithRetry = async (reference: string) => {
     let attempts = 0;
@@ -402,13 +464,9 @@ export default function ConsultationPage() {
 
   const handleBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedExpert) return;
+    if (!selectedTier) return;
 
-    const dbTier = getDbTierForExpert(selectedExpert);
-    if (!dbTier) {
-      alert("Consultation tiers are currently unavailable.");
-      return;
-    }
+    const dbTier = selectedTier;
 
     if (topic.trim().length < 3) {
       alert("Provide a briefing topic (minimum 3 characters).");
@@ -416,7 +474,12 @@ export default function ConsultationPage() {
     }
 
     setSubmittingBooking(true);
-    const mockPreferred = `September ${selectedDate}, 2024 at ${selectedTimeSlot} (CET)`;
+    const formattedDate = selectedDate.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    const mockPreferred = `${formattedDate} at ${selectedTimeSlot} (CET)`;
 
     const res = await bookConsultation({
       tierId: dbTier.id,
@@ -564,8 +627,6 @@ export default function ConsultationPage() {
                 {activeBookings.length > 0 ? (
                   <div className="space-y-4">
                     {activeBookings.map((b) => {
-                      const matchedExpert =
-                        EXPERTS.find((e) => e.tier === b.tier.tier) || EXPERTS[0];
                       const isConfirmed = b.status === "CONFIRMED";
                       const displayTitle = b.topic;
 
@@ -646,19 +707,17 @@ export default function ConsultationPage() {
                           )}
 
                           <div className="mt-6 pt-5 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
-                            {/* Expert Info */}
+                            {/* Package Info */}
                             <div className="flex items-center gap-3">
-                              <img
-                                src={matchedExpert.avatar}
-                                alt={matchedExpert.name}
-                                className="h-10 w-10 rounded-full object-cover border border-white/10"
-                              />
+                              <div className="h-10 w-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                                <Sparkles className="h-5 w-5 text-orange-400" />
+                              </div>
                               <div>
                                 <p className="text-sm font-bold text-white">
-                                  {matchedExpert.name}
+                                  {b.tier.name}
                                 </p>
                                 <p className="text-[10px] text-gray-500">
-                                  {matchedExpert.role}
+                                  Advisory Package
                                 </p>
                               </div>
                             </div>
@@ -998,7 +1057,7 @@ export default function ConsultationPage() {
                 <span>•</span>
                 <span>
                   {bookingStep === 1
-                    ? "Consultant Selection"
+                    ? "Package Selection"
                     : bookingStep === 2
                       ? "Scheduling & Protocol"
                       : "Booking Confirmed"}
@@ -1014,7 +1073,7 @@ export default function ConsultationPage() {
 
             {/* Modal Body Container */}
             <div className="flex-1 overflow-y-auto p-6 md:p-8">
-              {/* STEP 1: SELECT EXPERT / TIER */}
+              {/* STEP 1: SELECT TIER */}
               {bookingStep === 1 && (
                 <div className="space-y-6 animate-fadeIn">
                   <div>
@@ -1022,32 +1081,35 @@ export default function ConsultationPage() {
                       Architect your next breakthrough.
                     </h2>
                     <p className="mt-2 text-xs md:text-sm text-gray-400 max-w-3xl leading-relaxed">
-                      Select a specialized consultant to guide your celestial business
-                      transformation. Our experts are mathematically vetted for precision in their
-                      specific architecture pillars.
+                      Select an advisory package tier to schedule your operational strategy session.
+                      Our consultations are tailored to map your path to long-term scaling capacity.
                     </p>
                   </div>
 
-                  {/* Vetted Experts Card Grid */}
+                  {/* Consultation Tiers Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                    {EXPERTS.map((exp) => {
-                      const dbTier = getDbTierForExpert(exp);
-                      const isSelected = selectedExpert?.id === exp.id;
-                      if (!dbTier) return null;
-
-                      const isCovered = mySub && mySub.plan.tier >= dbTier.tier;
+                    {[...tiers].sort((a, b) => a.displayOrder - b.displayOrder).map((tierItem) => {
+                      const isSelected = selectedTier?.id === tierItem.id;
+                      const isCovered = mySub && mySub.plan.tier >= tierItem.tier;
                       const hasQuotaLeft = isCovered && consultationsRemaining > 0;
                       const priceConverted = convertFromUsd(
-                        dbTier.priceUsd,
+                        tierItem.priceUsd,
                         displayCurrency,
                         usdToNgn,
                       );
 
+                      const tierIcons: Record<number, React.ReactNode> = {
+                        1: <Sparkles className="h-6 w-6 text-blue-400" />,
+                        2: <Sparkles className="h-6 w-6 text-orange-400" />,
+                        3: <Crown className="h-6 w-6 text-purple-400" />,
+                      };
+                      const icon = tierIcons[tierItem.tier] || <Sparkles className="h-6 w-6 text-emerald-400" />;
+
                       return (
                         <div
-                          key={exp.id}
-                          onClick={() => setSelectedExpert(exp)}
-                          className={`relative flex flex-col justify-between rounded-xl border p-5 cursor-pointer transition duration-200 hover:scale-[1.01] ${
+                          key={tierItem.id}
+                          onClick={() => setSelectedTier(tierItem)}
+                          className={`relative flex flex-col justify-between rounded-xl border p-6 cursor-pointer transition duration-200 hover:scale-[1.01] ${
                             isSelected
                               ? "border-orange-500 bg-orange-500/[0.03] ring-1 ring-orange-500/20"
                               : "border-white/5 bg-[#111318] hover:border-white/10"
@@ -1060,58 +1122,42 @@ export default function ConsultationPage() {
                             </span>
                           )}
 
-                          {/* Profile Header */}
                           <div>
-                            <div className="flex items-center gap-3">
-                              <div className="relative">
-                                <img
-                                  src={exp.avatar}
-                                  alt={exp.name}
-                                  className="h-12 w-12 rounded-full object-cover border border-white/15"
-                                />
-                                <span className="absolute -bottom-1.5 -right-1 rounded-full bg-emerald-500 px-1 py-0.5 text-[7px] font-black text-black tracking-wide uppercase">
-                                  Verified
-                                </span>
+                            {/* Icon & Duration */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                                {icon}
                               </div>
-                              <div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-bold text-orange-400">
-                                    ★ {exp.rating}
-                                  </span>
-                                  <span className="text-[9px] text-gray-500">
-                                    ({exp.reviews} reviews)
-                                  </span>
-                                </div>
-                                <h4 className="text-sm font-bold text-white mt-0.5">
-                                  {exp.name}
-                                </h4>
-                              </div>
+                              <span className="text-[10px] uppercase font-bold text-gray-500 bg-white/[0.03] px-2 py-1 rounded-md">
+                                {tierItem.durationMinutes} Min Session
+                              </span>
                             </div>
 
-                            {/* Expertise info */}
-                            <p className="mt-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                              {exp.title}
+                            {/* Name & Description */}
+                            <h4 className="text-base font-bold text-white mt-2">
+                              {tierItem.name}
+                            </h4>
+                            <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+                              {tierItem.description}
                             </p>
-                            <p className="mt-1.5 text-[11px] text-gray-400 leading-relaxed">
-                              {exp.specialty}
-                            </p>
-                            <p className="mt-3 text-[10px] text-gray-500">
-                              Next availability:{" "}
-                              <span className="text-white font-semibold">
-                                {exp.availability}
-                              </span>
-                            </p>
+
+                            {tierItem.freeP2ARuns > 0 && (
+                              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-[9px] font-bold text-blue-400">
+                                <Sparkles className="h-3 w-3" />
+                                Includes {tierItem.freeP2ARuns} Free Strategic Scan credit{tierItem.freeP2ARuns > 1 ? 's' : ''}
+                              </div>
+                            )}
                           </div>
 
                           {/* Price Tag Info */}
                           <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
                             <span className="text-[10px] uppercase font-bold text-gray-600">
-                              {dbTier.name}
+                              Level {tierItem.tier} Package
                             </span>
                             {hasQuotaLeft ? (
                               <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full">
                                 <Crown className="h-3 w-3" />
-                                Included
+                                Included with Sub
                               </span>
                             ) : (
                               <span className="text-sm font-extrabold text-white">
@@ -1127,7 +1173,7 @@ export default function ConsultationPage() {
                   <div className="flex justify-end pt-6">
                     <button
                       onClick={() => setBookingStep(2)}
-                      disabled={!selectedExpert}
+                      disabled={!selectedTier}
                       className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-3 text-xs font-bold text-white uppercase tracking-wider transition disabled:opacity-50"
                     >
                       Proceed to Schedule
@@ -1138,34 +1184,62 @@ export default function ConsultationPage() {
               )}
 
               {/* STEP 2: SCHEDULING & PROTOCOL */}
-              {bookingStep === 2 && selectedExpert && (
+              {bookingStep === 2 && selectedTier && (
                 <form onSubmit={handleBookSubmit} className="space-y-8 animate-fadeIn">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setBookingStep(1)}
-                        className="text-xs font-semibold text-orange-400 hover:underline"
-                      >
-                        ← Back to experts
-                      </button>
-                    </div>
                     <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
                       Architectural <span className="text-orange-500">Consultation</span>
                     </h2>
                     <p className="mt-2 text-xs md:text-sm text-gray-400 max-w-3xl leading-relaxed">
                       Map your operational trajectory with our leads. Dates highlighted in emerald
-                      represent peak architectural availability for your sector.
+                      represent peak availability for your sector.
                     </p>
                   </div>
 
+                  {/* Booking fee details box moved to the top */}
+                  <div className="p-4 rounded-xl border border-white/5 bg-[#111318] flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Consultation Service Charge</span>
+                    {mySub && mySub.plan.tier >= selectedTier.tier && consultationsRemaining > 0 ? (
+                      <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/10">
+                        <Crown className="h-3.5 w-3.5" />
+                        Included with subscription ({consultationsRemaining} left)
+                      </span>
+                    ) : (
+                      <span className="text-sm font-extrabold text-white">
+                        {formatMoney(
+                          convertFromUsd(
+                            selectedTier.priceUsd,
+                            displayCurrency,
+                            usdToNgn,
+                          ) ?? 0,
+                          displayCurrency,
+                        )}
+                      </span>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                    {/* Left Column: Calendar Slots Mock */}
+                    {/* Left Column: Dynamic Calendar Slots */}
                     <div className="lg:col-span-3 space-y-6">
                       <div className="p-5 rounded-xl border border-white/5 bg-[#111318]">
                         <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm font-bold text-white">September 2024</span>
-                          <span className="text-[10px] text-gray-500">CET Timezone</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handlePrevMonth(); }}
+                            className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white transition"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <span className="text-sm font-bold text-white">
+                            {monthLabel}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handleNextMonth(); }}
+                            className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white transition"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
                         </div>
                         {/* Grid representing days of the week */}
                         <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-gray-600 mb-2 uppercase">
@@ -1177,29 +1251,33 @@ export default function ConsultationPage() {
                           <span>Sat</span>
                           <span>Sun</span>
                         </div>
-                        {/* Custom Mock Calendar Grid */}
+                        {/* Dynamic Calendar Grid */}
                         <div className="grid grid-cols-7 gap-2">
-                          {Array.from({ length: 14 }).map((_, idx) => {
-                            const dayNum = idx + 1;
-                            const isSelectable = [4, 5, 11, 12].includes(dayNum);
-                            const isSelected = selectedDate === dayNum;
+                          {days.map((day, idx) => {
+                            if (!day) {
+                              return <div key={`empty-${idx}`} className="h-9" />;
+                            }
+                            const isPast = isPastDate(day);
+                            const isSelected = selectedDate.getDate() === day.getDate() &&
+                                               selectedDate.getMonth() === day.getMonth() &&
+                                               selectedDate.getFullYear() === day.getFullYear();
 
                             return (
                               <button
                                 key={idx}
                                 type="button"
-                                disabled={!isSelectable}
-                                onClick={() => setSelectedDate(dayNum)}
+                                disabled={isPast}
+                                onClick={() => setSelectedDate(day)}
                                 className={`h-9 rounded-lg flex items-center justify-center text-xs font-bold transition relative ${
                                   isSelected
                                     ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20"
-                                    : isSelectable
+                                    : !isPast
                                       ? "border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:border-emerald-500/60"
-                                      : "text-gray-700 cursor-not-allowed"
+                                      : "text-gray-700 cursor-not-allowed line-through"
                                 }`}
                               >
-                                {dayNum}
-                                {isSelectable && !isSelected && (
+                                {day.getDate()}
+                                {!isPast && !isSelected && (
                                   <span className="absolute bottom-1 h-1 w-1 rounded-full bg-emerald-400" />
                                 )}
                               </button>
@@ -1208,22 +1286,20 @@ export default function ConsultationPage() {
                         </div>
                       </div>
 
-                      {/* Expert Detail Card */}
+                      {/* Selected Tier Card */}
                       <div className="flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-[#111318]">
-                        <img
-                          src={selectedExpert.avatar}
-                          alt={selectedExpert.name}
-                          className="h-12 w-12 rounded-full object-cover border border-white/10"
-                        />
+                        <div className="h-12 w-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                          <Sparkles className="h-6 w-6 text-orange-400" />
+                        </div>
                         <div>
                           <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
-                            Selected Strategist
+                            Selected Advisory Package
                           </p>
                           <h4 className="text-sm font-bold text-white mt-0.5">
-                            {selectedExpert.name}
+                            {selectedTier.name}
                           </h4>
                           <p className="text-[10px] text-orange-400 mt-0.5">
-                            {selectedExpert.title}
+                            Level {selectedTier.tier} · {selectedTier.durationMinutes} Minute Strategic Session
                           </p>
                         </div>
                       </div>
@@ -1299,48 +1375,32 @@ export default function ConsultationPage() {
                           <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            rows={3}
-                            placeholder="Detail any specific anomalies or metrics you want reviewed..."
-                            className="w-full bg-[#111318] border border-white/5 rounded-lg px-3 py-2.5 text-xs text-white outline-none resize-none focus:border-orange-500 transition"
+                            placeholder="Provide any specific context, operational bottlenecks, or briefing notes you want the advisor to review prior to the call."
+                            rows={4}
+                            className="w-full bg-[#111318] border border-white/5 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-orange-500 transition resize-none"
                           />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Footer checkout bar */}
-                  <div className="border-t border-white/5 pt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="text-xs text-gray-500 max-w-md">
-                      {getDbTierForExpert(selectedExpert) && (
-                        <>
-                          {mySub && mySub.plan.tier >= selectedExpert.tier && consultationsRemaining > 0 ? (
-                            <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                              <Crown className="h-3.5 w-3.5" />
-                              Included with subscription ({consultationsRemaining} left)
-                            </span>
-                          ) : (
-                            <span>
-                              Booking fee:{" "}
-                              <span className="font-semibold text-white">
-                                {formatMoney(
-                                  convertFromUsd(
-                                    getDbTierForExpert(selectedExpert)!.priceUsd,
-                                    displayCurrency,
-                                    usdToNgn,
-                                  ) ?? 0,
-                                  displayCurrency,
-                                )}
-                              </span>{" "}
-                              will apply.
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </div>
+                  {/* Footer checkout bar with Back to Packages aligned */}
+                  <div className="border-t border-white/5 pt-6 flex items-center justify-between gap-4">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setBookingStep(1); }}
+                      className="py-3 px-5 text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1"
+                    >
+                      ← Back to packages
+                    </button>
                     <div className="flex gap-3 justify-end">
                       <button
                         type="button"
-                        onClick={() => setBookingStep(1)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setBookingStep(1);
+                          setSelectedTier(null);
+                        }}
                         className="py-3 px-5 text-xs font-semibold text-gray-400 hover:text-white transition"
                       >
                         Cancel
@@ -1359,7 +1419,7 @@ export default function ConsultationPage() {
               )}
 
               {/* STEP 3: SUCCESS CONFIRMATION / PAY CHEKOUT */}
-              {bookingStep === 3 && selectedExpert && (
+              {bookingStep === 3 && selectedTier && (
                 <div className="text-center py-8 max-w-md mx-auto space-y-6 animate-fadeIn">
                   <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
                     <Check className="h-8 w-8 stroke-[3]" />
@@ -1369,7 +1429,7 @@ export default function ConsultationPage() {
                     <>
                       <h2 className="text-2xl font-black text-white">Payment Secure Checkout</h2>
                       <p className="text-xs text-gray-400 leading-relaxed">
-                        To lock in your strategic advisory call with {selectedExpert.name}, please
+                        To lock in your strategic advisory call, please
                         complete the secure card checkout using the link below.
                       </p>
                       <div className="pt-4 flex flex-col gap-2">
@@ -1395,24 +1455,22 @@ export default function ConsultationPage() {
                         Your Strategy Session is Locked In
                       </h2>
                       <p className="text-xs text-gray-400 leading-relaxed">
-                        The Celestial Architect is preparing your deep-dive workspace. We&apos;ve
-                        notified {selectedExpert.name} of your high-priority request.
+                        The Celestial Architect is preparing your deep-dive workspace. We have
+                        notified the advisory team of your request.
                       </p>
 
                       {/* Briefing Details Card */}
                       <div className="text-left rounded-xl border border-white/5 bg-[#111318] p-5 space-y-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={selectedExpert.avatar}
-                            alt={selectedExpert.name}
-                            className="h-10 w-10 rounded-full object-cover border border-white/10"
-                          />
+                          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                            <Sparkles className="h-5 w-5 text-emerald-400" />
+                          </div>
                           <div>
                             <h4 className="text-xs font-bold text-white">
-                              {selectedExpert.name}
+                              {selectedTier.name}
                             </h4>
                             <p className="text-[10px] text-gray-500">
-                              {selectedExpert.role}
+                              Level {selectedTier.tier} Session
                             </p>
                           </div>
                         </div>
@@ -1425,7 +1483,7 @@ export default function ConsultationPage() {
                               Consultation Date
                             </p>
                             <p className="font-semibold text-white mt-0.5">
-                              September {selectedDate}, 2024
+                              {selectedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                             </p>
                           </div>
                           <div>
@@ -1433,7 +1491,7 @@ export default function ConsultationPage() {
                               Scheduled Time
                             </p>
                             <p className="font-semibold text-white mt-0.5">
-                              {selectedTimeSlot} EST
+                              {selectedTimeSlot} (CET)
                             </p>
                           </div>
                         </div>
@@ -1444,7 +1502,7 @@ export default function ConsultationPage() {
                           </p>
                           <p className="text-xs font-semibold text-emerald-400 mt-0.5 flex items-center gap-1.5">
                             <Lock className="h-3.5 w-3.5" />
-                            Celestial Architecture Suite (Secure Link)
+                            Strategic Advisory Call (Secure Link)
                           </p>
                         </div>
                       </div>
@@ -1505,8 +1563,6 @@ function HistoryRow({
         .join(" ")
     : "PICA Consultant";
 
-  const matchedExpert =
-    EXPERTS.find((e) => e.tier === booking.tier.tier) || EXPERTS[0];
 
   const feedbacks = useMemo(() => {
     if (!booking.adminNotes) return [];
@@ -1543,7 +1599,7 @@ function HistoryRow({
             <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-2">
               <span>{formatDate(booking.requestedAt)}</span>
               <span>•</span>
-              <span>Consultant: {consultantName}</span>
+              <span>{booking.tier.name}</span>
             </p>
           </div>
         </div>
@@ -1611,14 +1667,11 @@ function ViewBookingModal({
     tone: "bg-gray-500/15 text-gray-300 border border-gray-500/20",
   };
 
-  const matchedExpert =
-    EXPERTS.find((e) => e.tier === booking.tier.tier) || EXPERTS[0];
-
   const consultantName = booking.adminNotesUpdatedBy
     ? [booking.adminNotesUpdatedBy.firstName, booking.adminNotesUpdatedBy.lastName]
         .filter(Boolean)
         .join(" ")
-    : matchedExpert.name;
+    : "PICA Consultant";
 
   const feedbacks = useMemo(() => {
     if (!booking.adminNotes) return [];
@@ -1682,23 +1735,21 @@ function ViewBookingModal({
 
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Consultant / Expert Assigned */}
+            {/* Advisor Assigned */}
             <div className="p-4 rounded-xl border border-white/5 bg-[#111318]">
               <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
                 Assigned Advisor
               </p>
               <div className="flex items-center gap-3 mt-2">
-                <img
-                  src={matchedExpert.avatar}
-                  alt={consultantName}
-                  className="h-10 w-10 rounded-full object-cover border border-white/15"
-                />
+                <div className="h-10 w-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                  <User className="h-5 w-5 text-orange-400" />
+                </div>
                 <div>
                   <h4 className="text-sm font-bold text-white leading-tight">
-                    {consultantName}
+                    {consultantName === "PICA Consultant" ? "PICA Advisory Team" : consultantName}
                   </h4>
                   <p className="text-[10px] text-gray-500">
-                    {matchedExpert.role}
+                    {consultantName === "PICA Consultant" ? "Strategic Advisory Division" : "PICA Advisor"}
                   </p>
                 </div>
               </div>

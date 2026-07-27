@@ -195,6 +195,29 @@ export async function sendPasswordResetEmail(
   });
 }
 
+// Account email-verification one-time code, sent at registration (and on any
+// login attempt by a not-yet-verified account).
+export async function sendVerificationEmail(
+  toEmail: string,
+  code: string
+): Promise<SendEmailResponse> {
+  const html = renderEmail({
+    heading: `Verify your ${BRAND} account`,
+    preheader: 'Use this code to confirm your email address.',
+    bodyHtml: `
+      <p style="margin:0 0 8px 0; text-align:center;">Welcome to ${BRAND}! Use the code below to verify your email address and activate your account. It expires in 10 minutes.</p>
+      ${codeBlock(code)}
+      <p style="margin:0; text-align:center; color:${MUTED_COLOR}; font-size:13px;">If you didn't create this account, you can safely ignore this email.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your ${BRAND} verification code`,
+    htmlContent: html,
+  });
+}
+
 // Admin LOGIN one-time code, sent during admin sign-in verification.
 export async function adminCodeEmail(toEmail: string, code: string): Promise<SendEmailResponse> {
   const html = renderEmail({
@@ -264,10 +287,10 @@ export async function sendPaymentSuccessEmail({
   const greetingName = businessName ?? 'there';
 
   const isPhase2B = plan === 'PHASE2B_PILLAR';
-  const planName = isPhase2B ? 'Phase 2B Module' : 'Phase 2A report';
+  const planName = isPhase2B ? 'Deep Dive Module' : 'Strategic Scan report';
   const description = isPhase2B
-    ? 'Your Phase 2B Deep Dive module is now unlocked. You can start your session any time from your dashboard.'
-    : 'Your full Phase 2A diagnostic report is now unlocked. You can download it any time from your dashboard.';
+    ? 'Your Deep Dive module is now unlocked. You can start your session any time from your dashboard.'
+    : 'Your full Strategic Scan diagnostic report is now unlocked. You can download it any time from your dashboard.';
   const actionText = isPhase2B ? 'Start your Deep Dive' : 'Download your report';
 
   const html = renderEmail({
@@ -349,9 +372,9 @@ export async function sendCouponEmail({
 
   let targetPlanStr = 'any diagnostic package';
   if (plan === 'PHASE2A') {
-    targetPlanStr = 'the Phase 2A Strategic Scan';
+    targetPlanStr = 'the Strategic Scan';
   } else if (plan === 'PHASE2B_PILLAR') {
-    targetPlanStr = `the Phase 2B Deep Dive module (${pillarName || 'selected pillar'})`;
+    targetPlanStr = `the Deep Dive module (${pillarName || 'selected pillar'})`;
   }
 
   const html = renderEmail({
@@ -579,11 +602,11 @@ export async function sendConsultationNoteUpdatedEmail({
   const greetingName = businessName ?? 'there';
 
   const html = renderEmail({
-    heading: 'Your consultant left feedback',
+    heading: 'Your advisor left feedback',
     preheader: `Notes on "${topic}" are ready to read.`,
     bodyHtml: `
       <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
-      <p style="margin:0 0 16px 0;">Your PICA consultant just left notes on your <strong>${topic}</strong> consultation.</p>
+      <p style="margin:0 0 16px 0;">Your PICA advisor just left notes on your <strong>${topic}</strong> consultation.</p>
       <p style="margin:0 0 16px 0;">Sign in to your dashboard and open your consultation booking to read what they wrote.</p>
       <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">You'll only receive this notification once — re-edits won't email you again.</p>
     `,
@@ -591,7 +614,7 @@ export async function sendConsultationNoteUpdatedEmail({
 
   return sendBrevoEmail({
     toEmail,
-    subject: `${BRAND} — your consultant left feedback`,
+    subject: `${BRAND} — your advisor left feedback`,
     htmlContent: html,
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -58,6 +58,16 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [inactivityLoggedOut, setInactivityLoggedOut] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reason") === "inactivity") {
+        setInactivityLoggedOut(true);
+      }
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,9 +82,21 @@ export default function LoginPage() {
         return;
       }
 
-      if (res.data?.requiresOtp) {
+      if (res.data && "requiresOtp" in res.data && res.data.requiresOtp) {
         router.push(
           `/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=admin-login`,
+        );
+        return;
+      }
+
+      if (
+        res.data &&
+        "requiresVerification" in res.data &&
+        res.data.requiresVerification
+      ) {
+        // Unverified account: a fresh code was sent — send them to verify.
+        router.push(
+          `/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=email-verify`,
         );
         return;
       }
@@ -117,9 +139,14 @@ export default function LoginPage() {
             <h2 className="text-2xl font-bold text-white mb-2">
               Welcome Back
             </h2>
-            <p className="text-sm text-gray-400 mb-10">
+            <p className="text-sm text-gray-400 mb-6">
               Hello, welcome back to your special place
             </p>
+            {inactivityLoggedOut && (
+              <div className="mb-6 p-4 rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400 text-sm animate-pulse">
+                You have been logged out due to inactivity. Please login again.
+              </div>
+            )}
 
             <form onSubmit={handleLogin} className="space-y-5">
               {/* Email */}
@@ -226,17 +253,24 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="py-6 text-center border-t border-white/5">
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
-          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
-            (item) => (
-              <Link
-                key={item}
-                href="#"
-                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
-              >
-                {item}
-              </Link>
-            )
-          )}
+          <Link
+            href="/data-policy"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/terms"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Terms of Service
+          </Link>
+          <Link
+            href="#"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Security Architecture
+          </Link>
         </div>
         <p className="text-xs text-gray-600 uppercase tracking-wider">
           © 2024 PICA Intelligence Systems. All rights reserved.

@@ -24,7 +24,7 @@ export interface TokenPayload {
 export interface OtpTokenPayload {
   email: string;
   codeHash: string;
-  purpose: 'password-reset' | 'admin-login';
+  purpose: 'password-reset' | 'admin-login' | 'email-verify';
 }
 
 export interface PasswordResetTokenPayload {

@@ -65,12 +65,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    if (pathname === "/admin/login") {
+      setAuthChecked(true);
+      return;
+    }
+
     const user = getStoredUser();
     const token = getAccessToken();
 
     if (!token || !user || user.role !== "ADMIN") {
       clearSession();
-      router.replace("/Auth/login");
+      router.replace("/admin/login");
       return;
     }
 
@@ -119,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const confirmLogout = () => {
     clearSession();
     setLogoutModal(false);
-    router.push("/");
+    router.push("/admin/login");
   };
 
   const NavItem = ({ item }: { item: NavItemConfig }) => {
@@ -149,6 +154,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="text-sm text-gray-400">Checking admin session...</div>
       </div>
     );
+  }
+
+  if (pathname === "/admin/login") {
+    return <div className="bg-[#111318] text-white min-h-screen w-full">{children}</div>;
   }
 
   return (

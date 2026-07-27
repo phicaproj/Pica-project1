@@ -2,6 +2,7 @@ export const phaseLabels = {
   PHASE1: 'Business Snapshot',
   PHASE2A: 'Strategic Scan',
   PHASE2B: 'Deep Dive Module',
+  PHASE2B_PILLAR: 'Deep Dive Module',
 } as const;
 
 export type PhaseKey = keyof typeof phaseLabels;

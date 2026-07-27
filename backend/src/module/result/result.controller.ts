@@ -12,7 +12,7 @@ import {
 
 export const getResult = asyncHandler(async (req: Request, res: Response) => {
   const { sessionId } = assessmentSessionParams.parse(req.params);
-  const result = await getResultService(sessionId);
+  const result = await getResultService(sessionId, req.user?.id);
 
   return res.status(OK).json(result);
 });

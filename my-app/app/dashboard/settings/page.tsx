@@ -544,9 +544,11 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-36 disabled:opacity-60 disabled:cursor-not-allowed"
+              readOnly
+              onClick={() => {
+                alert("Please contact support at support@pica.com if you want to change your email address.");
+              }}
+              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none transition duration-300 pr-36 opacity-60 cursor-pointer"
             />
             {isVerified ? (
               <span className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400 border border-teal-500/10">
@@ -591,13 +593,13 @@ function PhoneIcon(props: any) {
 
 // ─── Business Info Settings ──────────────────────────────────────────────────
 function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate: () => void }) {
-  const [businessName, setBusinessName] = useState(initialUser?.businessName || "Aether Dynamics Global");
-  const [industry, setIndustry] = useState(initialUser?.industry || "Aerospace & Engineering");
+  const [businessName, setBusinessName] = useState(initialUser?.businessName || "");
+  const [industry, setIndustry] = useState(initialUser?.industry || "");
   const [country, setCountry] = useState(initialUser?.country || "");
   const [stateVal, setStateVal] = useState(initialUser?.state || "");
   const [years, setYears] = useState(initialUser?.operatingYears || "");
-  const [staffSize, setStaffSize] = useState(initialUser?.staffSize || "248");
-  const [revenue, setRevenue] = useState(initialUser?.annualRevenue || "$10M - $50M");
+  const [staffSize, setStaffSize] = useState(initialUser?.staffSize || "");
+  const [revenue, setRevenue] = useState(initialUser?.annualRevenue || "");
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -631,13 +633,13 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
 
   useEffect(() => {
     if (initialUser) {
-      setBusinessName(initialUser.businessName || "Aether Dynamics Global");
-      setIndustry(initialUser.industry || "Aerospace & Engineering");
+      setBusinessName(initialUser.businessName || "");
+      setIndustry(initialUser.industry || "");
       setCountry(initialUser.country || "");
       setStateVal(initialUser.state || "");
       setYears(initialUser.operatingYears || "");
-      setStaffSize(initialUser.staffSize || "248");
-      setRevenue(initialUser.annualRevenue || "$10M - $50M");
+      setStaffSize(initialUser.staffSize || "");
+      setRevenue(initialUser.annualRevenue || "");
     }
   }, [initialUser]);
 

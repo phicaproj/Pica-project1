@@ -229,7 +229,7 @@ export default function PricingPage() {
 
                 <div className="rounded-2xl p-8 bg-[#2a3520] border border-[#4a6030]/40">
                   <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 03</p>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Plan 2B Deep Dive</h3>
+                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Deep Dive</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
                     {phase2BFrom === null ? (
                       "Not configured"
@@ -273,7 +273,7 @@ export default function PricingPage() {
                 Paid diagnostics paused
               </h3>
               <p className={`text-sm md:text-base mb-6 max-w-xl mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
-                One-off Plan 2A and Plan 2B purchases are currently disabled.
+                One-off Strategic Scan and Deep Dive purchases are currently disabled.
                 {subscriptionActive
                   ? " Subscribe to a monthly plan to unlock all diagnostics, or take the free scan above."
                   : " The free scan above is still available — please check back later for paid diagnostics."}
@@ -409,12 +409,19 @@ export default function PricingPage() {
                             <QuotaLine count={plan.phase2aPerMonth} label="Strategic Scans" dark={d} />
                             <QuotaLine count={plan.phase2bPerMonth} label="Deep Dive Modules" dark={d} />
                             <QuotaLine count={plan.consultationsPerMonth} label="Expert consultations" dark={d} />
-                            {plan.features.map((feature) => (
-                              <li key={feature} className={`flex items-start gap-2 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}>
-                                <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                                {feature}
-                              </li>
-                            ))}
+                            {plan.features.map((feature) => {
+                              const formatted = feature
+                                .replace(/Phase 2A diagnostics?/gi, "Strategic Scans")
+                                .replace(/Phase 2B deep dives?/gi, "Deep Dive Modules")
+                                .replace(/Phase 2A/gi, "Strategic Scan")
+                                .replace(/Phase 2B/gi, "Deep Dive Module");
+                              return (
+                                <li key={feature} className={`flex items-start gap-2 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}>
+                                  <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                  {formatted}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                         {/* Anonymous CTA — sign up first, then land on the

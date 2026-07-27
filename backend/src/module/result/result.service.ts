@@ -26,7 +26,10 @@ const allowedResultStatuses = new Set<SessionStatus>([
   SessionStatus.REPORT_GENERATED,
 ]);
 
-export async function getResultService(sessionId: string): Promise<GetResultResponse> {
+export async function getResultService(
+  sessionId: string,
+  authenticatedUserId?: string
+): Promise<GetResultResponse> {
   const session = await prisma.assessmentSession.findUnique({
     where: { id: sessionId },
     select: {
@@ -39,6 +42,15 @@ export async function getResultService(sessionId: string): Promise<GetResultResp
 
   if (!session) {
     throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+
+  // Ownership gate. A session that has been claimed by a user (userId set) is
+  // private: only that user may read it. Unclaimed anonymous Phase-1 scans
+  // (userId null) stay capability-based — knowing the random sessionId is the
+  // only entitlement, same as the auto-emailed result link. This closes the
+  // cross-user "session bleed" IDOR where any sessionId was publicly readable.
+  if (session.userId && session.userId !== authenticatedUserId) {
+    throw new AppError('You are not authorized to view this result', FORBIDDEN);
   }
 
   if (!allowedResultStatuses.has(session.status)) {
@@ -143,7 +155,7 @@ export async function getLatestCompletedResultForUserService(
 
   if (!session) return null;
 
-  return getResultService(session.id);
+  return getResultService(session.id, userId);
 }
 
 export async function getAllCompletedResultsForUserService(
@@ -158,7 +170,7 @@ export async function getAllCompletedResultsForUserService(
     select: { id: true },
   });
 
-  return Promise.all(sessions.map((s) => getResultService(s.id)));
+  return Promise.all(sessions.map((s) => getResultService(s.id, userId)));
 }
 
 /**

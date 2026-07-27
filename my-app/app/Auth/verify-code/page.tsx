@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   forgotPassword,
+  resendVerification,
   verifyAdminOtp,
+  verifyEmail,
   verifyResetOtp,
 } from "@/lib/authClient";
 
@@ -15,6 +17,7 @@ function VerifyCodeContent() {
   const email = searchParams.get("email") || "";
   const type = searchParams.get("type") || "forget-password";
   const isAdminLogin = type === "admin-login";
+  const isEmailVerify = type === "email-verify";
 
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [codeError, setCodeError] = useState("");
@@ -67,7 +70,9 @@ function VerifyCodeContent() {
     try {
       const res = isAdminLogin
         ? await verifyAdminOtp({ code })
-        : await verifyResetOtp({ code, email });
+        : isEmailVerify
+          ? await verifyEmail({ code, email })
+          : await verifyResetOtp({ code, email });
 
       if (res.error) {
         setCodeError(
@@ -78,6 +83,12 @@ function VerifyCodeContent() {
 
       if (isAdminLogin) {
         router.push("/admin");
+        return;
+      }
+
+      if (isEmailVerify) {
+        // verifyEmail establishes the session on success — go straight in.
+        router.push("/dashboard");
         return;
       }
 
@@ -103,7 +114,9 @@ function VerifyCodeContent() {
     }
 
     try {
-      const res = await forgotPassword({ email });
+      const res = isEmailVerify
+        ? await resendVerification({ email })
+        : await forgotPassword({ email });
       if (res.error) {
         setCodeError(res.error.message ?? "Failed to resend code.");
       }
@@ -114,10 +127,16 @@ function VerifyCodeContent() {
     }
   };
 
-  const heading = isAdminLogin ? "Admin Verification" : "Reset Password";
+  const heading = isAdminLogin
+    ? "Admin Verification"
+    : isEmailVerify
+      ? "Verify Your Email"
+      : "Reset Password";
   const subtext = isAdminLogin
     ? "Enter the admin login code sent to your email"
-    : "We have sent a code to your email";
+    : isEmailVerify
+      ? "Enter the verification code sent to your email to activate your account"
+      : "We have sent a code to your email";
 
   return (
     <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
@@ -195,10 +214,18 @@ function VerifyCodeContent() {
               
               <button
                 type="button"
-                onClick={() => router.push(`/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`)}
+                onClick={() =>
+                  router.push(
+                    isEmailVerify || isAdminLogin
+                      ? "/Auth/login"
+                      : `/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`,
+                  )
+                }
                 className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 text-gray-300 font-semibold text-sm transition"
               >
-                Back to forgot password
+                {isEmailVerify || isAdminLogin
+                  ? "Back to login"
+                  : "Back to forgot password"}
               </button>
             </div>
           </form>
@@ -208,17 +235,24 @@ function VerifyCodeContent() {
       {/* Footer */}
       <footer className="py-6 text-center border-t border-white/5">
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
-          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
-            (item) => (
-              <Link
-                key={item}
-                href="#"
-                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
-              >
-                {item}
-              </Link>
-            )
-          )}
+          <Link
+            href="/data-policy"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/terms"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Terms of Service
+          </Link>
+          <Link
+            href="#"
+            className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+          >
+            Security Architecture
+          </Link>
         </div>
         <p className="text-xs text-gray-600 uppercase tracking-wider">
           © 2024 PICA Intelligence Systems. All rights reserved.
