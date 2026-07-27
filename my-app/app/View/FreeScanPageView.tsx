@@ -25,15 +25,14 @@ export default function FreeScanPage() {
             <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
               <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-widest text-[#f97316]">
-                Free Individual Plan
+                Free Business Scan
               </span>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
-              Awareness 1A: <br />
               The First Step to <span className="text-[#f97316]">Clarity.</span>
             </h1>
             <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
-              Experience the precision of the Clinical Architect Framework at zero cost. Designed for individual professionals seeking immediate baseline visibility into their operational health.
+              Get a clear, honest read on your business at zero cost. Built for Nigerian founders who want immediate visibility into where their business stands today.
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <Link href="/pages/generaltest"
@@ -61,7 +60,7 @@ export default function FreeScanPage() {
         <div className="max-w-6xl mx-auto space-y-12">
           <div className="space-y-3">
             <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The Quick Scan Toolkit</h2>
-            <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>Essential diagnostics for the modern architect.</p>
+            <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>Essential diagnostics for the modern founder.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
@@ -72,7 +71,7 @@ export default function FreeScanPage() {
               </div>
               <h3 className={`text-xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>15-Minute Express Audit</h3>
               <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
-                Our proprietary algorithmic assessment identifies core structural gaps in record time. No integration required—just pure clinical analysis.
+                Our assessment identifies the core gaps in your business in record time. No setup required—just clear, honest analysis.
               </p>
             </div>
 

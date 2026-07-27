@@ -262,7 +262,7 @@ export default function PricingPage() {
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Deep Dive</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
                     {phase2BFrom === null ? (
-                      "Not configured"
+                      "Coming soon"
                     ) : (
                       <>
                         <span className="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider mr-2 align-middle">From</span>
@@ -539,8 +539,17 @@ export default function PricingPage() {
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Beauvision</p>
           <div className="flex flex-wrap items-center justify-center gap-3 md:gap-8">
-            {["Privacy Policy", "Terms of Service", "Contact Support", "Documentation"].map((item) => (
-              <Link key={item} href="#" className={`text-xs transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{item}</Link>
+            {/* Privacy Policy and Terms already have real routes (/data-policy,
+                /terms — both render the LegalComingSoon placeholder). Contact
+                Support and Documentation have no destination yet, so they stay
+                as inert "#" until the client confirms where they should point. */}
+            {[
+              { label: "Privacy Policy", href: "/data-policy" },
+              { label: "Terms of Service", href: "/terms" },
+              { label: "Contact Support", href: "#" },
+              { label: "Documentation", href: "#" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className={`text-xs transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>
             ))}
           </div>
           <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>
