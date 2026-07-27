@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { Phase } from '@prisma/client';
+import prisma from '../../Config/db';
 import type {
   ScoringResultPayload,
   ScoringPillarPayload,
@@ -886,7 +887,8 @@ const drawExecutiveSummaryPage = (
   doc: PDFKit.PDFDocument,
   result: ScoringResultPayload,
   businessName: string,
-  date: string
+  date: string,
+  dbScoreLabel?: { label: string; description: string } | null
 ) => {
   const COLORS = getColors(doc);
   drawPageBackground(doc);
@@ -901,7 +903,8 @@ const drawExecutiveSummaryPage = (
   const ringW = 16; // Wider ring width for a thick gauge
 
   const details = getPdfBandDetails(result.totalScore, result.hasAnyKnockout);
-  const narDetails = getExecutiveNarrativeDetails(result.totalScore, result.hasAnyKnockout);
+  const narTitle = dbScoreLabel ? dbScoreLabel.label : getExecutiveNarrativeDetails(result.totalScore, result.hasAnyKnockout).title;
+  const narDesc = dbScoreLabel ? dbScoreLabel.description : getExecutiveNarrativeDetails(result.totalScore, result.hasAnyKnockout).desc;
 
   drawDonutGauge(doc, centerScoreX, dialY + 75, radius, result.totalScore, details, '', ringW);
 
@@ -919,7 +922,7 @@ const drawExecutiveSummaryPage = (
     .fontSize(16)
     .font('Helvetica-Bold')
     .fillColor(details.text)
-    .text(narDetails.title, PAGE_MARGIN, dialY + 176, {
+    .text(narTitle, PAGE_MARGIN, dialY + 176, {
       width: COLORS.pageWidth,
       align: 'center',
     });
@@ -945,7 +948,7 @@ const drawExecutiveSummaryPage = (
       .fontSize(9.5)
       .font('Helvetica')
       .fillColor(COLORS.bodyText)
-      .text(`"${narDetails.desc}"`, PAGE_MARGIN + 30, dialY + 200, {
+      .text(`"${narDesc}"`, PAGE_MARGIN + 30, dialY + 200, {
         width: COLORS.pageWidth - 60,
         align: 'center',
         lineGap: 2.5,
@@ -3279,6 +3282,14 @@ export async function generateReportPDF(
     theme?: 'light' | 'dark';
   }
 ): Promise<Buffer> {
+  const roundedScore = Math.max(0, Math.min(100, Math.round(result.totalScore)));
+  const dbScoreLabel = await prisma.scoreLabel.findFirst({
+    where: {
+      minScore: { lte: roundedScore },
+      maxScore: { gte: roundedScore },
+    },
+  });
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       margin: PAGE_MARGIN,
@@ -3315,7 +3326,7 @@ export async function generateReportPDF(
     // --- Page 2: Executive Summary (only for full scan) ---
     if (!isSinglePillar) {
       doc.addPage();
-      drawExecutiveSummaryPage(doc, result, businessName, dateStr);
+      drawExecutiveSummaryPage(doc, result, businessName, dateStr, dbScoreLabel);
     }
 
     // --- Pages 3-9: The 7 Pillars ---
@@ -3377,6 +3388,14 @@ export async function generateSnapshotPDF(
     theme?: 'light' | 'dark';
   }
 ): Promise<Buffer> {
+  const roundedScore = Math.max(0, Math.min(100, Math.round(result.totalScore)));
+  const dbScoreLabel = await prisma.scoreLabel.findFirst({
+    where: {
+      minScore: { lte: roundedScore },
+      maxScore: { gte: roundedScore },
+    },
+  });
+
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       margin: PAGE_MARGIN,
@@ -3449,14 +3468,16 @@ export async function generateSnapshotPDF(
     const textWidth = COLORS.pageWidth - 140;
 
     const scoreDetails = getPdfBandDetails(result.totalScore, result.hasAnyKnockout);
+    const overallLabel = dbScoreLabel ? dbScoreLabel.label : scoreDetails.label;
+    const overallDesc = dbScoreLabel ? dbScoreLabel.description : scoreDetails.interpretation;
 
     doc.fontSize(13).font('Helvetica-Bold').fillColor(COLORS.primary).text('Overall Status: ', { continued: true })
-      .fillColor(scoreDetails.text).text(scoreDetails.label);
+      .fillColor(scoreDetails.text).text(overallLabel);
     doc.moveDown(0.5);
     
     doc.fontSize(9.5).font('Helvetica').fillColor(COLORS.bodyText).text(
-      `Your organization has achieved a composite health score of ${Math.round(result.totalScore)}/100, placing you in the ${scoreDetails.label} status. ` +
-      `${scoreDetails.interpretation} This diagnostic evaluates your business operational strength, compliance profile, and resilience pillars.`,
+      `Your organization has achieved a composite health score of ${Math.round(result.totalScore)}/100, placing you in the ${overallLabel} status. ` +
+      `${overallDesc} This diagnostic evaluates your business operational strength, compliance profile, and resilience pillars.`,
       { width: textWidth, lineBreak: true }
     );
 

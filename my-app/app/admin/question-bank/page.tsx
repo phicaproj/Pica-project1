@@ -31,6 +31,12 @@ import {
   type BusinessSize,
   type PillarMeta,
   type UpdateAdminQuestionOptionPayload,
+  getAdminScoreLabels,
+  createAdminScoreLabel,
+  updateAdminScoreLabel,
+  deleteAdminScoreLabel,
+  type AdminScoreLabel,
+  getStoredUser,
 } from "@/lib/authClient";
 
 type QuestionDraft = {
@@ -150,9 +156,34 @@ export default function QuestionBankPage() {
   const [optionDrafts, setOptionDrafts] = useState<Record<string, AdminQuestionOptionPayload>>({});
   const [newOption, setNewOption] = useState<AdminQuestionOptionPayload>(emptyOption(0));
 
+  // Score Labels state
+  const [mode, setMode] = useState<"questions" | "labels">("questions");
+  const [scoreLabels, setScoreLabels] = useState<AdminScoreLabel[]>([]);
+  const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
+  const [editLabelOpen, setEditLabelOpen] = useState(false);
+  const [createLabelOpen, setCreateLabelOpen] = useState(false);
+  const [hasWriteAccess, setHasWriteAccess] = useState(false);
+  const [labelDraft, setLabelDraft] = useState<{
+    minScore: number;
+    maxScore: number;
+    label: string;
+    description: string;
+  } | null>(null);
+  const [createLabelDraft, setCreateLabelDraft] = useState({
+    minScore: 0,
+    maxScore: 30,
+    label: "",
+    description: "",
+  });
+
   const activeQuestion = useMemo(
     () => questions.find((question) => question.id === activeId) ?? null,
     [activeId, questions],
+  );
+
+  const activeScoreLabel = useMemo(
+    () => scoreLabels.find((label) => label.id === activeLabelId) ?? null,
+    [activeLabelId, scoreLabels],
   );
 
   const pillarById = useMemo(() => {
@@ -211,17 +242,156 @@ export default function QuestionBankPage() {
     setLoading(false);
   }, [businessFilter, includeInactive, phaseFilter, pillarFilter, search, knockoutFilter]);
 
+  const loadScoreLabels = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await getAdminScoreLabels();
+    if (res.error) {
+      setError(res.error.message);
+    } else if (res.data) {
+      setScoreLabels(res.data.scoreLabels);
+    }
+    setLoading(false);
+  }, []);
+
+  const saveScoreLabel = async () => {
+    if (!activeLabelId || !labelDraft) return;
+    if (labelDraft.minScore < 0 || labelDraft.minScore > 100 || labelDraft.maxScore < 0 || labelDraft.maxScore > 100) {
+      setError("Scores must be between 0 and 100.");
+      return;
+    }
+    if (labelDraft.minScore > labelDraft.maxScore) {
+      setError("Min score cannot be greater than Max score.");
+      return;
+    }
+    if (!labelDraft.label.trim() || !labelDraft.description.trim()) {
+      setError("Label name and description are required.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const res = await updateAdminScoreLabel(activeLabelId, {
+      minScore: Number(labelDraft.minScore),
+      maxScore: Number(labelDraft.maxScore),
+      label: labelDraft.label.trim(),
+      description: labelDraft.description.trim(),
+    });
+
+    if (res.error) {
+      setError(res.error.message);
+    } else if (res.data) {
+      setScoreLabels((current) =>
+        current.map((row) => (row.id === activeLabelId ? res.data!.scoreLabel : row))
+      );
+      setEditLabelOpen(false);
+      showNotice("Score label updated.");
+    }
+    setSaving(false);
+  };
+
+  const createScoreLabelAction = async () => {
+    if (createLabelDraft.minScore < 0 || createLabelDraft.minScore > 100 || createLabelDraft.maxScore < 0 || createLabelDraft.maxScore > 100) {
+      setError("Scores must be between 0 and 100.");
+      return;
+    }
+    if (createLabelDraft.minScore > createLabelDraft.maxScore) {
+      setError("Min score cannot be greater than Max score.");
+      return;
+    }
+    if (!createLabelDraft.label.trim() || !createLabelDraft.description.trim()) {
+      setError("Label name and description are required.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const res = await createAdminScoreLabel({
+      minScore: Number(createLabelDraft.minScore),
+      maxScore: Number(createLabelDraft.maxScore),
+      label: createLabelDraft.label.trim(),
+      description: createLabelDraft.description.trim(),
+    });
+
+    if (res.error) {
+      setError(res.error.message);
+    } else if (res.data) {
+      setScoreLabels((current) => [...current, res.data!.scoreLabel].sort((a, b) => a.minScore - b.minScore));
+      setCreateLabelOpen(false);
+      setCreateLabelDraft({ minScore: 0, maxScore: 30, label: "", description: "" });
+      showNotice("Score label created.");
+    }
+    setSaving(false);
+  };
+
+  const deleteScoreLabelAction = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this score label?")) return;
+
+    setSaving(true);
+    setError(null);
+    const res = await deleteAdminScoreLabel(id);
+
+    if (res.error) {
+      setError(res.error.message);
+    } else {
+      setScoreLabels((current) => current.filter((row) => row.id !== id));
+      setEditLabelOpen(false);
+      showNotice("Score label deleted.");
+    }
+    setSaving(false);
+  };
+
+  useEffect(() => {
+    const user = getStoredUser();
+    if (user) {
+      const hasWrite =
+        user.adminRoleName === "SUPER ADMIN" ||
+        (user.permissions && user.permissions.includes("questions:write"));
+      setHasWriteAccess(!!hasWrite);
+    }
+  }, []);
+
   useEffect(() => {
     void loadPillars();
   }, [loadPillars]);
 
   useEffect(() => {
+    if (mode === "labels") {
+      void loadScoreLabels();
+      return;
+    }
     const timer = window.setTimeout(() => {
       void loadQuestions();
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [loadQuestions]);
+  }, [loadQuestions, loadScoreLabels, mode, search, pillarFilter, phaseFilter, businessFilter, includeInactive, knockoutFilter]);
+
+  const filteredLabels = useMemo(() => {
+    if (mode !== "labels") return [];
+    const query = search.toLowerCase().trim();
+    if (!query) return scoreLabels;
+    return scoreLabels.filter(
+      (l) =>
+        l.label.toLowerCase().includes(query) ||
+        l.description.toLowerCase().includes(query) ||
+        String(l.minScore).includes(query) ||
+        String(l.maxScore).includes(query)
+    );
+  }, [mode, scoreLabels, search]);
+
+  useEffect(() => {
+    if (!activeScoreLabel) {
+      setLabelDraft(null);
+      return;
+    }
+    setLabelDraft({
+      minScore: activeScoreLabel.minScore,
+      maxScore: activeScoreLabel.maxScore,
+      label: activeScoreLabel.label,
+      description: activeScoreLabel.description,
+    });
+  }, [activeScoreLabel]);
 
   useEffect(() => {
     if (!activeQuestion) {
@@ -502,21 +672,48 @@ export default function QuestionBankPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={() => void loadQuestions()}
+            onClick={() => setMode(mode === "questions" ? "labels" : "questions")}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10"
+          >
+            <Database className="h-4 w-4" />
+            {mode === "questions" ? "Overall Recommendations" : "Questions View"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (mode === "questions") {
+                void loadQuestions();
+              } else {
+                void loadScoreLabels();
+              }
+            }}
             disabled={loading}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
-          >
-            <Plus className="h-4 w-4" />
-            New Question
-          </button>
+          {mode === "questions" ? (
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+            >
+              <Plus className="h-4 w-4" />
+              New Question
+            </button>
+          ) : (
+            hasWriteAccess && (
+              <button
+                type="button"
+                onClick={() => setCreateLabelOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+              >
+                <Plus className="h-4 w-4" />
+                New Score Label
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -564,146 +761,194 @@ export default function QuestionBankPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by code or question text..."
+              placeholder={mode === "questions" ? "Search by code or question text..." : "Search by score label or description..."}
               className={`${fieldClass} pl-10 w-full`}
             />
           </div>
 
-          {/* Bottom row: Dropdowns and checkboxes */}
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pillar:</span>
-              <select
-                value={pillarFilter}
-                onChange={(event) => setPillarFilter(event.target.value)}
-                className={`${fieldClass} !w-auto min-w-[180px]`}
-              >
-                <option value="">All pillars</option>
-                {pillars.map((pillar) => (
-                  <option key={pillar.id} value={pillar.id}>
-                    {pillar.name}
-                  </option>
-                ))}
-              </select>
+          {/* Bottom row: Dropdowns and checkboxes (only visible in questions mode) */}
+          {mode === "questions" && (
+            <div className="flex flex-wrap items-center gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pillar:</span>
+                <select
+                  value={pillarFilter}
+                  onChange={(event) => setPillarFilter(event.target.value)}
+                  className={`${fieldClass} !w-auto min-w-[180px]`}
+                >
+                  <option value="">All pillars</option>
+                  {pillars.map((pillar) => (
+                    <option key={pillar.id} value={pillar.id}>
+                      {pillar.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phase:</span>
+                <select
+                  value={phaseFilter}
+                  onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
+                  className={`${fieldClass} !w-auto min-w-[140px]`}
+                >
+                  <option value="">All phases</option>
+                  {PHASES.map((phase) => (
+                    <option key={phase} value={phase}>
+                      {phaseLabel(phase)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Size:</span>
+                <select
+                  value={businessFilter}
+                  onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
+                  className={`${fieldClass} !w-auto min-w-[140px]`}
+                >
+                  <option value="">All business sizes</option>
+                  {BUSINESS_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={includeInactive}
+                  onChange={(event) => setIncludeInactive(event.target.checked)}
+                  className="h-4 w-4 accent-blue-500"
+                />
+                Include archived
+              </label>
+
+              <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={knockoutFilter}
+                  onChange={(event) => setKnockoutFilter(event.target.checked)}
+                  className="h-4 w-4 accent-blue-500"
+                />
+                Knockout only
+              </label>
             </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phase:</span>
-              <select
-                value={phaseFilter}
-                onChange={(event) => setPhaseFilter(event.target.value as AdminQuestionPhase | "")}
-                className={`${fieldClass} !w-auto min-w-[140px]`}
-              >
-                <option value="">All phases</option>
-                {PHASES.map((phase) => (
-                  <option key={phase} value={phase}>
-                    {phaseLabel(phase)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Size:</span>
-              <select
-                value={businessFilter}
-                onChange={(event) => setBusinessFilter(event.target.value as BusinessSize | "")}
-                className={`${fieldClass} !w-auto min-w-[140px]`}
-              >
-                <option value="">All business sizes</option>
-                {BUSINESS_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={(event) => setIncludeInactive(event.target.checked)}
-                className="h-4 w-4 accent-blue-500"
-              />
-              Include archived
-            </label>
-
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-[#111318] px-3.5 py-2.5 text-sm text-gray-300 cursor-pointer hover:bg-white/[0.02] transition whitespace-nowrap">
-              <input
-                type="checkbox"
-                checked={knockoutFilter}
-                onChange={(event) => setKnockoutFilter(event.target.checked)}
-                className="h-4 w-4 accent-blue-500"
-              />
-              Knockout only
-            </label>
-          </div>
+          )}
         </div>
 
-        {/* Question cards list */}
-        {loading ? (
-          <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
-            <Loader className="h-6 w-6 animate-spin text-blue-300" />
-          </div>
-        ) : questions.length === 0 ? (
-          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-8 text-center text-sm text-gray-500">
-            No questions match the current filters.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {questions.map((question) => (
-              <button
-                type="button"
-                key={question.id}
-                onClick={() => {
-                  setActiveId(question.id);
-                  setEditOpen(true);
-                }}
-                className={`rounded-xl border p-5 text-left transition border-white/5 bg-[#1C1F2E] hover:border-white/15 hover:bg-white/[0.01] flex flex-col justify-between ${
-                  question.isActive ? "" : "opacity-60"
-                }`}
-              >
-                <div className="w-full">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
-                        {question.questionCode}
-                      </span>
-                      <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
-                        {phaseLabel(question.phase)}
-                      </span>
-                      <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
-                        {question.businessSize}
-                      </span>
-                      {question.isKnockout && (
-                        <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
-                          KNOCKOUT
+        {/* Dynamic List Selection based on Mode */}
+        {mode === "questions" ? (
+          loading ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
+              <Loader className="h-6 w-6 animate-spin text-blue-300" />
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-8 text-center text-sm text-gray-500">
+              No questions match the current filters.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {questions.map((question) => (
+                <button
+                  type="button"
+                  key={question.id}
+                  onClick={() => {
+                    setActiveId(question.id);
+                    setEditOpen(true);
+                  }}
+                  className={`rounded-xl border p-5 text-left transition border-white/5 bg-[#1C1F2E] hover:border-white/15 hover:bg-white/[0.01] flex flex-col justify-between ${
+                    question.isActive ? "" : "opacity-60"
+                  }`}
+                >
+                  <div className="w-full">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
+                          {question.questionCode}
                         </span>
-                      )}
-                      {question.showOnPhase1 && (
-                        <span className="rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
-                          PHASE 1
+                        <span className="rounded-md bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-300">
+                          {phaseLabel(question.phase)}
+                        </span>
+                        <span className="rounded-md bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-gray-300">
+                          {question.businessSize}
+                        </span>
+                        {question.isKnockout && (
+                          <span className="rounded-md bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-400">
+                            KNOCKOUT
+                          </span>
+                        )}
+                        {question.showOnPhase1 && (
+                          <span className="rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">
+                            PHASE 1
+                          </span>
+                        )}
+                      </div>
+                      {!question.isActive && (
+                        <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                          Archived
                         </span>
                       )}
                     </div>
-                    {!question.isActive && (
-                      <span className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                        Archived
-                      </span>
-                    )}
+                    <p className="line-clamp-3 text-sm leading-relaxed text-gray-200 min-h-[60px]">
+                      {question.questionText}
+                    </p>
                   </div>
-                  <p className="line-clamp-3 text-sm leading-relaxed text-gray-200 min-h-[60px]">
-                    {question.questionText}
-                  </p>
-                </div>
-                <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-gray-500 w-full">
-                  <Database className="h-3.5 w-3.5" />
-                  {question.pillarCode} / {question.options.length} options
-                </div>
-              </button>
-            ))}
-          </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2 text-xs text-gray-500 w-full">
+                    <Database className="h-3.5 w-3.5" />
+                    {question.pillarCode} / {question.options.length} options
+                  </div>
+                </button>
+              ))}
+            </div>
+          )
+        ) : (
+          loading ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
+              <Loader className="h-6 w-6 animate-spin text-blue-300" />
+            </div>
+          ) : filteredLabels.length === 0 ? (
+            <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-8 text-center text-sm text-gray-500">
+              No score labels found matching the current search.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredLabels.map((l) => (
+                <button
+                  type="button"
+                  key={l.id}
+                  onClick={() => {
+                    setActiveLabelId(l.id);
+                    setEditLabelOpen(true);
+                  }}
+                  className="rounded-xl border p-5 text-left transition border-white/5 bg-[#1C1F2E] hover:border-white/15 hover:bg-white/[0.01] flex flex-col justify-between"
+                >
+                  <div className="w-full">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-md bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-extrabold text-blue-300">
+                          SCORE RANGE: {l.minScore} - {l.maxScore}
+                        </span>
+                      </div>
+                    </div>
+                    <h3 className="text-base font-extrabold text-white mb-2 uppercase tracking-wide">
+                      {l.label}
+                    </h3>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-gray-400 min-h-[50px]">
+                      {l.description}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2 text-[10px] font-semibold text-gray-600 w-full uppercase tracking-wider">
+                    <Database className="h-3.5 w-3.5" />
+                    Overall Recommendation Bank
+                  </div>
+                </button>
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -1363,6 +1608,227 @@ export default function QuestionBankPage() {
                 >
                   {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   Save Question
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Score Label Modal */}
+      {editLabelOpen && activeScoreLabel && labelDraft && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">Edit Score Label</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Update score range thresholds, label title, and overall recommendation.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditLabelOpen(false)}
+                className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Min Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    disabled={!hasWriteAccess}
+                    value={labelDraft.minScore}
+                    onChange={(e) => setLabelDraft({ ...labelDraft, minScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Max Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    disabled={!hasWriteAccess}
+                    value={labelDraft.maxScore}
+                    onChange={(e) => setLabelDraft({ ...labelDraft, maxScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Label Title
+                </label>
+                <input
+                  type="text"
+                  disabled={!hasWriteAccess}
+                  value={labelDraft.label}
+                  onChange={(e) => setLabelDraft({ ...labelDraft, label: e.target.value })}
+                  placeholder="e.g. REACTIVE, CELESTIAL"
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Overall Recommendation / Summary Description
+                </label>
+                <textarea
+                  rows={6}
+                  disabled={!hasWriteAccess}
+                  value={labelDraft.description}
+                  onChange={(e) => setLabelDraft({ ...labelDraft, description: e.target.value })}
+                  placeholder="Enter the detailed recommendation copy..."
+                  className={textareaClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
+              {hasWriteAccess ? (
+                <button
+                  type="button"
+                  onClick={() => void deleteScoreLabelAction(activeScoreLabel.id)}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Label
+                </button>
+              ) : (
+                <div />
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditLabelOpen(false)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition"
+                >
+                  {hasWriteAccess ? "Cancel" : "Close"}
+                </button>
+                {hasWriteAccess && (
+                  <button
+                    type="button"
+                    onClick={() => void saveScoreLabel()}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Label
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Score Label Modal */}
+      {createLabelOpen && hasWriteAccess && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">New Score Label</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Define a score range threshold, label title, and overall recommendation.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateLabelOpen(false)}
+                className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Min Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={createLabelDraft.minScore}
+                    onChange={(e) => setCreateLabelDraft({ ...createLabelDraft, minScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Max Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={createLabelDraft.maxScore}
+                    onChange={(e) => setCreateLabelDraft({ ...createLabelDraft, maxScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Label Title
+                </label>
+                <input
+                  type="text"
+                  value={createLabelDraft.label}
+                  onChange={(e) => setCreateLabelDraft({ ...createLabelDraft, label: e.target.value })}
+                  placeholder="e.g. REACTIVE, CELESTIAL"
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Overall Recommendation / Summary Description
+                </label>
+                <textarea
+                  rows={6}
+                  value={createLabelDraft.description}
+                  onChange={(e) => setCreateLabelDraft({ ...createLabelDraft, description: e.target.value })}
+                  placeholder="Enter the detailed recommendation copy..."
+                  className={textareaClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCreateLabelOpen(false)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void createScoreLabelAction()}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                >
+                  {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Create Label
                 </button>
               </div>
             </div>

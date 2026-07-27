@@ -29,6 +29,10 @@ import {
   savePillarWeights,
   updateOption,
   updateQuestion,
+  listScoreLabels,
+  createScoreLabel,
+  updateScoreLabel,
+  deleteScoreLabel,
 } from '../question/question.admin.controller';
 import { createCoupon, deleteCoupon, listCoupons, updateCoupon } from '../coupon/coupon.controller';
 import {
@@ -135,6 +139,11 @@ adminRouter.delete('/questions/:id', hasPermission('questions:write'), deleteQue
 adminRouter.post('/questions/:id/options', hasPermission('questions:write'), addOption);
 adminRouter.patch('/options/:id', hasPermission('questions:write'), updateOption);
 adminRouter.delete('/options/:id', hasPermission('questions:write'), deleteOption);
+
+adminRouter.get('/score-labels', hasPermission('questions:read'), listScoreLabels);
+adminRouter.post('/score-labels', hasPermission('questions:write'), createScoreLabel);
+adminRouter.patch('/score-labels/:id', hasPermission('questions:write'), updateScoreLabel);
+adminRouter.delete('/score-labels/:id', hasPermission('questions:write'), deleteScoreLabel);
 
 // Per-user coupons / discounts.
 adminRouter.get('/coupons', hasPermission('coupons:read'), listCoupons);

@@ -1083,3 +1083,15 @@ model AdminAuditLog {
 
   @@map("admin_audit_logs")
 }
+
+model ScoreLabel {
+  id          String   @id @default(uuid())
+  minScore    Int      @map("min_score")
+  maxScore    Int      @map("max_score")
+  label       String
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("score_labels")
+}

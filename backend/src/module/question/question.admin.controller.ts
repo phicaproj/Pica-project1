@@ -9,6 +9,8 @@ import {
   savedPillarWeightsSchema,
   updateOptionSchema,
   updateQuestionSchema,
+  createScoreLabelSchema,
+  updateScoreLabelSchema,
 } from './question.types';
 import {
   addOptionService,
@@ -21,6 +23,10 @@ import {
   savePillarWeightsService,
   updateOptionService,
   updateQuestionService,
+  listScoreLabelsService,
+  createScoreLabelService,
+  updateScoreLabelService,
+  deleteScoreLabelService,
 } from './question.admin.service';
 
 export const listAdminPillars = asyncHandler(async (_req: Request, res: Response) => {
@@ -82,5 +88,29 @@ export const updateOption = asyncHandler(async (req: Request, res: Response) => 
 export const deleteOption = asyncHandler(async (req: Request, res: Response) => {
   const { id } = idParamSchema.parse(req.params);
   const result = await deleteOptionService(id);
+  return res.status(OK).json(result);
+});
+
+export const listScoreLabels = asyncHandler(async (_req: Request, res: Response) => {
+  const result = await listScoreLabelsService();
+  return res.status(OK).json(result);
+});
+
+export const createScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const input = createScoreLabelSchema.parse(req.body);
+  const result = await createScoreLabelService(input);
+  return res.status(CREATED).json(result);
+});
+
+export const updateScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = idParamSchema.parse(req.params);
+  const input = updateScoreLabelSchema.parse(req.body);
+  const result = await updateScoreLabelService(id, input);
+  return res.status(OK).json(result);
+});
+
+export const deleteScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = idParamSchema.parse(req.params);
+  const result = await deleteScoreLabelService(id);
   return res.status(OK).json(result);
 });

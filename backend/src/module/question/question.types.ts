@@ -349,3 +349,18 @@ export type AdminQuestionDetailResponse = {
   message: string;
   question: AdminQuestionResponse;
 };
+
+export const createScoreLabelSchema = z.object({
+  minScore: z.number().int().min(0).max(100),
+  maxScore: z.number().int().min(0).max(100),
+  label: z.string().trim().min(1, 'Label is required'),
+  description: z.string().trim().min(1, 'Description is required'),
+});
+
+export const updateScoreLabelSchema = z.object({
+  minScore: z.number().int().min(0).max(100).optional(),
+  maxScore: z.number().int().min(0).max(100).optional(),
+  label: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
+});
+

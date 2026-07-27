@@ -841,3 +841,63 @@ export const updateAdminAppSettings = async (input: {
 		body: JSON.stringify(input),
 	})
 }
+
+export type AdminScoreLabel = {
+	id: string
+	minScore: number
+	maxScore: number
+	label: string
+	description: string
+	createdAt: string
+	updatedAt: string
+}
+
+export type AdminScoreLabelListResponse = {
+	message: string
+	scoreLabels: AdminScoreLabel[]
+}
+
+export type AdminScoreLabelDetailResponse = {
+	message: string
+	scoreLabel: AdminScoreLabel
+}
+
+export const getAdminScoreLabels = async () => {
+	return authedFetch<AdminScoreLabelListResponse>('/admin/score-labels', {
+		method: 'GET',
+	})
+}
+
+export const createAdminScoreLabel = async (payload: {
+	minScore: number
+	maxScore: number
+	label: string
+	description: string
+}) => {
+	return authedFetch<AdminScoreLabelDetailResponse>('/admin/score-labels', {
+		method: 'POST',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const updateAdminScoreLabel = async (
+	id: string,
+	payload: {
+		minScore?: number
+		maxScore?: number
+		label?: string
+		description?: string
+	},
+) => {
+	return authedFetch<AdminScoreLabelDetailResponse>(`/admin/score-labels/${id}`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
+export const deleteAdminScoreLabel = async (id: string) => {
+	return authedFetch<{ message: string }>(`/admin/score-labels/${id}`, {
+		method: 'DELETE',
+	})
+}
+

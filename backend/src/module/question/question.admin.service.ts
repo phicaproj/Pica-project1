@@ -612,3 +612,56 @@ export async function deleteOptionService(optionId: string): Promise<AdminQuesti
     question: toAdminQuestion(question),
   };
 }
+
+export async function listScoreLabelsService() {
+  const scoreLabels = await prisma.scoreLabel.findMany({
+    orderBy: { minScore: 'asc' },
+  });
+  return {
+    message: 'Score labels fetched successfully',
+    scoreLabels,
+  };
+}
+
+export async function createScoreLabelService(data: {
+  minScore: number;
+  maxScore: number;
+  label: string;
+  description: string;
+}) {
+  const scoreLabel = await prisma.scoreLabel.create({
+    data,
+  });
+  return {
+    message: 'Score label created successfully',
+    scoreLabel,
+  };
+}
+
+export async function updateScoreLabelService(
+  id: string,
+  data: {
+    minScore?: number;
+    maxScore?: number;
+    label?: string;
+    description?: string;
+  }
+) {
+  const scoreLabel = await prisma.scoreLabel.update({
+    where: { id },
+    data,
+  });
+  return {
+    message: 'Score label updated successfully',
+    scoreLabel,
+  };
+}
+
+export async function deleteScoreLabelService(id: string) {
+  await prisma.scoreLabel.delete({
+    where: { id },
+  });
+  return {
+    message: 'Score label deleted successfully',
+  };
+}
