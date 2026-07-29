@@ -270,7 +270,7 @@ function IntelligenceProductPage({
               d ? "text-gray-400" : "text-gray-600"
             }`}
           >
-            Every data point within the Intelligence 2B ecosystem is scrubbed
+            Every data point within the PICA Intelligence ecosystem is scrubbed
             for noise and verified through our proprietary Tier-4 security
             protocols.
           </p>
@@ -292,14 +292,14 @@ function IntelligenceProductPage({
                 d ? "text-white" : "text-gray-900"
               }`}
             >
-              Intelligence 2B
+              PICA Intelligence
             </p>
             <p
               className={`text-xs ${
                 d ? "text-gray-500" : "text-gray-400"
               }`}
             >
-              © 2024 Intelligence 2B. Engineered for Architectural
+              © 2024 PICA. Engineered for Strategic
               Intelligence.
             </p>
           </div>
@@ -712,7 +712,7 @@ function IntelligenceCheckoutPage({
               d ? "text-gray-500" : "text-gray-400"
             }`}
           >
-            © 2024 PICA Clinical Architect. Secure Encrypted Payment.
+            © 2024 PICA. Secure Encrypted Payment.
           </p>
           <div className="flex items-center gap-6">
             {["Privacy Policy", "Terms of Service", "Security Standards"].map(
@@ -787,7 +787,7 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
           }`}
         >
           Your intelligence unit is now fully operational. We have activated
-          your $1,200 yearly Intelligence 2B plan.
+          your $1,200 yearly PICA Intelligence plan.
         </p>
 
         {/* Summary cards */}
@@ -820,7 +820,7 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
                     d ? "text-white" : "text-gray-900"
                   }`}
                 >
-                  Intelligence 2B
+                  PICA Intelligence
                 </p>
               </div>
               <div className="text-right">
@@ -928,7 +928,7 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
                   : "bg-green-100 text-gray-500"
               }`}
             >
-              All analytical models for Intelligence 2B are now recalibrating
+              All analytical models for PICA Intelligence are now recalibrating
               based on your profile. First institutional report delivery
               expected within 4 hours.
             </p>

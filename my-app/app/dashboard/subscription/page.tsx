@@ -131,7 +131,7 @@ function buildPlans(
 
   const phase2BLabel =
     phase2BStartPriceDisplay === null
-      ? "Not configured"
+      ? "Coming soon"
       : `From ${formatMoney(phase2BStartPriceDisplay, display)}`;
 
   return [

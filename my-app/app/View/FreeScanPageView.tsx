@@ -32,12 +32,12 @@ export default function FreeScanPage() {
               The First Step to <span className="text-[#f97316]">Clarity.</span>
             </h1>
             <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
-              Get a clear, honest read on your business at zero cost. Built for Nigerian founders who want immediate visibility into where their business stands today.
+              Get a clear, honest read on your business at zero cost. Built for founders and entrepreneurs who want immediate visibility into where their business stands today.
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <Link href="/pages/generaltest"
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
-                Start Quick Scan <ArrowRight className="w-4 h-4" />
+                Start Free Scan <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -77,11 +77,11 @@ export default function FreeScanPage() {
 
             {/* Health Score metric card */}
             <div className="rounded-2xl p-8 bg-teal-400 flex flex-col items-center justify-center text-center shadow-lg shadow-teal-400/10 transition-transform duration-300 hover:-translate-y-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">Platform Metric</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">Example Metric</p>
               <p className="text-6xl md:text-7xl font-black text-gray-900 leading-none mb-3">84</p>
-              <p className="text-lg font-bold text-gray-900 mb-2">Health Score Baseline</p>
+              <p className="text-lg font-bold text-gray-900 mb-2">Sample Health Score Baseline</p>
               <p className="text-xs text-gray-800 max-w-xs leading-relaxed">
-                A singular, authoritative metric reflecting your overall alignment with the Clinical Architect Framework.
+                A singular, authoritative metric reflecting your overall alignment with the Business Resilience Framework.
               </p>
             </div>
           </div>
@@ -100,15 +100,38 @@ export default function FreeScanPage() {
             </div>
             <div className="space-y-4">
               {[
-                { num: "01", title: "Operational Friction",  desc: "High latency in decision pipelines."              },
-                { num: "02", title: "Protocol Drift",        desc: "Deviation from core architectural standards."     },
-                { num: "03", title: "Resilience Deficit",    desc: "Lack of redundancy in critical workflows."        },
-              ].map(({ num, title, desc }) => (
+                {
+                  num: "01",
+                  tag: "CRITICAL",
+                  tagColor: "text-rose-400 bg-rose-400/10 border border-rose-500/20",
+                  title: "Decisions are taking too long to make",
+                  desc: "High latency in decision pipelines slows execution and stalls growth."
+                },
+                {
+                  num: "02",
+                  tag: "CRITICAL",
+                  tagColor: "text-rose-400 bg-rose-400/10 border border-rose-500/20",
+                  title: "Process Drift",
+                  desc: "You've drifted from the processes and standards that used to work."
+                },
+                {
+                  num: "03",
+                  tag: "ADVISORY",
+                  tagColor: "text-amber-400 bg-amber-400/10 border border-amber-500/20",
+                  title: "Resilience Gaps",
+                  desc: "Lack of backup plans or redundancy in critical workflows."
+                },
+              ].map(({ num, tag, tagColor, title, desc }) => (
                 <div key={num} className={`flex items-start gap-4 p-4 rounded-xl transition-colors duration-200 ${d ? "bg-[#0d1117]/80 hover:bg-[#0d1117]" : "bg-gray-50 hover:bg-gray-100/80"}`}>
                   <span className={`text-xs font-bold ${d ? "text-gray-500" : "text-gray-400"}`}>{num}</span>
-                  <div>
-                    <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
-                    <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${tagColor}`}>
+                        {tag}
+                      </span>
+                      <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
+                    </div>
+                    <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
                   </div>
                 </div>
               ))}
@@ -145,7 +168,7 @@ export default function FreeScanPage() {
       <section className={`py-20 md:py-28 px-6 lg:px-8 text-center border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
         <div className="max-w-2xl mx-auto space-y-6">
           <h2 className={`text-3xl md:text-5xl font-black leading-tight ${d ? "text-white" : "text-gray-900"}`}>
-            Ready for a Clinical Appraisal?
+            Ready to Diagnose Your Business?
           </h2>
           <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>
             No credit card, no commitment. Just the data you need to understand your current operational standing.
@@ -153,24 +176,43 @@ export default function FreeScanPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <Link href="/pages/generaltest"
               className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
-              Start Assessment
+              Start Free Scan
             </Link>
             <Link href="/pages/pricing"
               className="px-8 py-4 rounded-xl text-sm font-bold border transition-all hover:bg-white/5 active:scale-95 border-white/10 text-teal-400 hover:text-teal-300">
               Compare All Plans
             </Link>
           </div>
-          <p className={`text-[10px] uppercase font-bold tracking-wider pt-2 ${d ? "text-gray-500" : "text-gray-400"}`}>
-            Trusted by 12,000+ individual architects worldwide.
-          </p>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className={`py-12 px-6 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
-        <div className="max-w-7xl mx-auto space-y-4">
-          <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
-          <p>
+      <footer className={`px-6 py-12 border-t text-xs ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-200"}`}>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/favicon.png"
+              alt="Beauvision"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain"
+            />
+            <span className={`text-sm font-bold tracking-tight ${d ? "text-white" : "text-gray-900"}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            {[
+              { label: "Privacy Policy", href: "/data-policy" },
+              { label: "Terms of Service", href: "/terms" },
+              { label: "Contact Support", href: "#" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>
+                {label}
+              </Link>
+            ))}
+          </div>
+          <p className={d ? "text-gray-500" : "text-gray-400"}>
             © Beauvision 2026. All rights reserved.
           </p>
         </div>

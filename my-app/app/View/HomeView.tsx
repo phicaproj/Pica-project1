@@ -50,7 +50,7 @@ export default function HomePage() {
               You Try to Grow It
             </h1>
             <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
-              PICA provides Nigerian founders with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
+              PICA provides business owners with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
@@ -86,9 +86,9 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             {[
-              { icon: <Search className="w-6 h-6 text-teal-400" />, title: "Blind Spot Discovery", desc: "Identify structural weaknesses in your business model that standard accounting software misses." },
-              { icon: <BarChart2 className="w-6 h-6 text-teal-400" />, title: "Performance Benchmarking", desc: "Compare your KPIs against top-performing Nigerian businesses in your specific sector." },
-              { icon: <Zap className="w-6 h-6 text-teal-400" />, title: "Growth Readiness", desc: "Determine if your infrastructure is truly ready for high-velocity scaling without breaking." },
+              { icon: <Search className="w-6 h-6 text-teal-400" />, title: "Exposing Operational Vulnerabilities", desc: "Identify structural weaknesses in your business model that standard accounting software misses." },
+              { icon: <BarChart2 className="w-6 h-6 text-teal-400" />, title: "Performance Benchmarking", desc: "Compare your KPIs against top-performing businesses in your specific sector." },
+              { icon: <Zap className="w-6 h-6 text-teal-400" />, title: "Auditing Systems for Scale", desc: "Determine if your infrastructure is truly ready for high-velocity scaling without breaking." },
             ].map(({ icon, title, desc }) => (
               <div key={title} className={`group p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30 hover:shadow-xl hover:shadow-teal-500/[0.02]" : "bg-gray-50 border-gray-200 hover:border-teal-500/30 hover:shadow-xl hover:shadow-gray-200/50"}`}>
                 <div className="mb-6 w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center group-hover:scale-105 group-hover:bg-teal-500/20 transition-all duration-200">{icon}</div>
@@ -175,11 +175,11 @@ export default function HomePage() {
             <div className="space-y-3">
               <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Structural Foundation</p>
               <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>
-                The 7 Pillars of Nigerian Business Resilience
+                The 7 Pillars of Business Resilience
               </h2>
             </div>
             <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
-              Every diagnostic explores these interconnected areas to build a bulletproof operation, optimized specifically for local economic realities.
+              Every diagnostic explores these interconnected areas to build a bulletproof operation, optimized specifically for your operational realities.
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
@@ -219,7 +219,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Risk Identification</p>
-                  <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>Immediate flags for legal or financial exposure unique to Nigeria.</p>
+                  <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>Immediate flags for legal, financial, or operational exposure.</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -227,7 +227,7 @@ export default function HomePage() {
                   <Zap className="w-5 h-5 text-[#f97316]" />
                 </div>
                 <div>
-                  <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Efficiency Multipliers</p>
+                  <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Profit Margin Leak Identification</p>
                   <p className={`text-xs mt-1 ${d ? "text-gray-400" : "text-gray-600"}`}>Actionable steps to increase margin without raising prices.</p>
                 </div>
               </div>
@@ -324,7 +324,7 @@ export default function HomePage() {
             Get Instant Clarity on Your Business
           </h2>
           <p className="text-base md:text-lg text-gray-900/80 font-medium max-w-xl mx-auto">
-            Join 500+ Nigerian founders who stopped guessing and started scaling with precision.
+            Join founders and business owners who stopped guessing and started scaling with precision.
           </p>
           <div className="pt-2">
             <Link href="/pages/freescan" className="inline-block px-8 py-4 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-black/20 hover:scale-105 active:scale-95">
@@ -338,10 +338,32 @@ export default function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className={`py-12 px-6 lg:px-8 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
-        <div className="max-w-7xl mx-auto space-y-4">
-          <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
-          <p>
+      <footer className={`px-6 py-12 border-t text-xs ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-200"}`}>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/favicon.png"
+              alt="Beauvision"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain"
+            />
+            <span className={`text-sm font-bold tracking-tight ${d ? "text-white" : "text-gray-900"}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            {[
+              { label: "Privacy Policy", href: "/data-policy" },
+              { label: "Terms of Service", href: "/terms" },
+              { label: "Contact Support", href: "#" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>
+                {label}
+              </Link>
+            ))}
+          </div>
+          <p className={d ? "text-gray-500" : "text-gray-400"}>
             © Beauvision 2026. All rights reserved.
           </p>
         </div>

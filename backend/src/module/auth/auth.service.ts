@@ -220,35 +220,7 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
   }
 
   if (user.role === 'ADMIN') {
-    const code = generateOtpCode();
-    const purpose = 'admin-login';
-    const otpToken = generateOtpToken({
-      email: user.email,
-      codeHash: hashOtpCode({ email: user.email, code, purpose }),
-      purpose,
-    });
-
-    try {
-      const sent = await adminCodeEmail(user.email, code);
-      if (!sent.success) {
-        throw new Error(sent.error ?? 'Admin login code email failed');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error('Error sending admin login code:', message);
-      throw new AppError(
-        'Could not send admin login code. Please try again.',
-        INTERNAL_SERVER_ERROR
-      );
-    }
-
-    return {
-      message: 'Admin login requires OTP verification',
-      requiresOtp: true,
-      otpToken,
-      role: 'ADMIN',
-      email: user.email,
-    };
+    throw new AppError('Admin login is not permitted on this portal. Please use the admin login page.', FORBIDDEN);
   }
 
   // Hard email-verification gate for regular users: an unverified account can
@@ -584,9 +556,13 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
+  if (user.role !== 'ADMIN') {
+    throw new AppError('Access denied. This login page is reserved for administrators only.', FORBIDDEN);
+  }
+
   const passwordMatches = await bcrypt.compare(data.password, user.passwordHash);
 
-  if (!passwordMatches || user.role !== 'ADMIN') {
+  if (!passwordMatches) {
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 

@@ -41,7 +41,7 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
               <span className="text-[#f97316]">Full Diagnostic</span>
             </h1>
             <p className={`text-sm leading-relaxed mb-8 max-w-md ${d ? "text-gray-400" : "text-gray-600"}`}>
-              A clinical analysis of your architectural infrastructure. We identify bottlenecks, hidden risks, and untapped scalability vectors before they impact your growth.
+              A comprehensive analysis of your business infrastructure. We identify bottlenecks, hidden risks, and untapped scalability vectors before they impact your growth.
             </p>
             <div className="mb-10 flex items-center gap-6">
               <span className={`text-3xl md:text-5xl font-extrabold ${d ? "text-white" : "text-gray-900"}`}>$249</span>
@@ -291,7 +291,7 @@ function CheckoutPage({ dark, setDark, onSuccess }: { dark: boolean; setDark: (v
       {/* Footer */}
       <footer className={`px-8 py-6 border-t ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>© 2024 PICA Clinical Architect. Secure Encrypted Payment.</p>
+          <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>© 2024 PICA. Secure Encrypted Payment.</p>
           <div className="flex items-center gap-6">
             {["Privacy Policy", "Terms of Service", "Security Standards"].map((item) => (
               <Link key={item} href="#" className={`text-xs hover:opacity-70 transition ${d ? "text-gray-400" : "text-gray-500"}`}>{item}</Link>

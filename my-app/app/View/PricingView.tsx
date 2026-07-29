@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "@/components/ThemeContext";
 import { Check, CheckCircle, Globe, Shield, Sparkles } from "lucide-react";
 import {
@@ -144,7 +145,7 @@ export default function PricingPage() {
             Strategic Intelligence
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-2xl mx-auto">
-            Architectural Pricing for <span className="text-[#00ffaa]">African Enterprise.</span>
+            Strategic Pricing for <span className="text-[#00ffaa]">Growing Enterprises.</span>
           </h1>
           <p className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
             Choose a framework designed to scale with your organizational complexity. Pricing is served from the platform backend.
@@ -222,8 +223,8 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/pages/freescan" className={`block w-full py-3.5 rounded-xl text-sm font-semibold border transition text-center ${d ? "border-white/20 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-                Start Scanning
+              <Link href="/pages/freescan" className="block w-full py-3.5 rounded-xl text-sm font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95">
+                Start Free Scan
               </Link>
             </div>
 
@@ -252,7 +253,7 @@ export default function PricingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href="/dashboard/subscription" className="block w-full py-3.5 rounded-xl text-sm font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center">
+                  <Link href="/dashboard/subscription" className="block w-full py-3.5 rounded-xl text-sm font-bold bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950 transition text-center hover:scale-[1.02] active:scale-95">
                     Get Diagnostic
                   </Link>
                 </div>
@@ -501,7 +502,7 @@ export default function PricingPage() {
                 </h2>
                 <div className="space-y-5">
                   {[
-                    { icon: <Globe className="w-4 h-4 text-[#00ffaa]" />, title: "Pan-African Context", desc: "Our diagnostics account for local market dynamics and operational realities." },
+                    { icon: <Globe className="w-4 h-4 text-[#00ffaa]" />, title: "Local Market Context", desc: "Our diagnostics account for regional market dynamics and operational realities." },
                     { icon: <Shield className="w-4 h-4 text-[#00ffaa]" />, title: "Compliance-First Design", desc: "Governance and risk checks are built into the assessment framework." },
                   ].map((item) => (
                     <div key={item.title} className="flex items-start gap-3">
@@ -519,9 +520,9 @@ export default function PricingPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { value: "94%", label: "Accuracy in Predictive Scaling" },
-                  { value: "12k+", label: "Enterprises Audited" },
-                  { value: "<2hr", label: "Assessment Turnaround" },
+                  { value: "7 Core", label: "Diagnostic Pillars" },
+                  { value: "Forensic", label: "Risk & Leak Audits" },
+                  { value: "Instant", label: "Dashboard Diagnostics" },
                   { value: "Tier 4", label: "Data Security Protocols" },
                 ].map(({ value, label }) => (
                   <div key={label} className={`rounded-xl p-5 border-l-4 border-[#00ffaa] ${d ? "bg-[#0d1117]" : "bg-white"}`}>
@@ -535,21 +536,27 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <footer className={`px-4 sm:px-6 md:px-8 py-8 border-t ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>Beauvision</p>
-          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-8">
-            {/* Privacy Policy and Terms already have real routes (/data-policy,
-                /terms — both render the LegalComingSoon placeholder). Contact
-                Support and Documentation have no destination yet, so they stay
-                as inert "#" until the client confirms where they should point. */}
+      <footer className={`px-6 py-12 border-t text-xs ${d ? "bg-[#111111] border-white/10" : "bg-white border-gray-200"}`}>
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/favicon.png"
+              alt="Beauvision"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain"
+            />
+            <span className={`text-sm font-bold tracking-tight ${d ? "text-white" : "text-gray-900"}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
             {[
               { label: "Privacy Policy", href: "/data-policy" },
               { label: "Terms of Service", href: "/terms" },
               { label: "Contact Support", href: "#" },
-              { label: "Documentation", href: "#" },
             ].map(({ label, href }) => (
-              <Link key={label} href={href} className={`text-xs transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>
+              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>
             ))}
           </div>
           <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>

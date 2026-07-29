@@ -12,7 +12,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "PICA",
-  description: "Business Intelligence for African Enterprise",
+  description: "Business Intelligence for Growing Enterprises",
 };
 
 export default function RootLayout({
