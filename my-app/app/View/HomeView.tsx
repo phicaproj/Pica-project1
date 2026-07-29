@@ -53,23 +53,23 @@ export default function HomePage() {
               PICA provides business owners with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
-              <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
+              <Link href="/pages/freescan" className="px-12 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95">
                 Start Free Scan
               </Link>
-              <Link href="/pages/about" className={`px-8 py-4 rounded-xl text-base font-bold border transition-all text-center hover:scale-[1.03] active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
+              <Link href="/pages/about" className={`px-6 py-4 rounded-xl text-base font-bold border transition-all text-center hover:scale-[1.01] active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 PICA Onboarding Guide
               </Link>
             </div>
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[250px] sm:h-[350px] lg:h-[420px] ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`}>
+          <div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
             <Image
               src="/images/landing1.png"
               alt="PICA Dashboard Preview"
               fill
               priority
-              className="object-contain w-full h-full p-2"
+              className="object-contain"
             />
           </div>
         </div>

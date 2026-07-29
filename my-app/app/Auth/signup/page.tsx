@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ChevronDown, MapPin } from "lucide-react";
 import { SignUp } from "@/lib/authClient";
 import { useRouter } from "next/navigation";
 
@@ -48,6 +49,19 @@ const EyeOffIcon = () => (
   </svg>
 );
 
+const INDUSTRIES = [
+  "Technology & SaaS",
+  "Retail & E-commerce",
+  "Healthcare",
+  "Finance & Banking",
+  "Agriculture",
+  "Manufacturing",
+  "Logistics",
+  "Education",
+  "Real Estate",
+  "Other",
+];
+
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordHint, setShowPasswordHint] = useState(false);
@@ -56,10 +70,32 @@ export default function SignUpPage() {
 
   const router = useRouter();
 
-  // Signup captures the baseline business profile at the front door: contact
-  // person name, business name, email, phone, staff size, sector, and years in
-  // operation are all mandatory (client UAT feedback). Country/state are still
-  // completed later from the dashboard profile page.
+  const [countriesData, setCountriesData] = useState<any[]>([]);
+  const [apiFailed, setApiFailed] = useState(false);
+  const [loadingCountries, setLoadingCountries] = useState(false);
+
+  useEffect(() => {
+    const fetchCountries = async () => {
+      setLoadingCountries(true);
+      try {
+        const res = await fetch("https://countriesnow.space/api/v0.1/countries/states");
+        const json = await res.json();
+        if (json && !json.error && Array.isArray(json.data)) {
+          const sorted = [...json.data].sort((a: any, b: any) => a.name.localeCompare(b.name));
+          setCountriesData(sorted);
+        } else {
+          setApiFailed(true);
+        }
+      } catch (err) {
+        console.error("Error fetching countries API:", err);
+        setApiFailed(true);
+      } finally {
+        setLoadingCountries(false);
+      }
+    };
+    fetchCountries();
+  }, []);
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -70,7 +106,12 @@ export default function SignUpPage() {
     industry: "",
     operatingYears: "",
     password: "",
+    country: "",
+    state: "",
   });
+
+  const selectedCountryObj = countriesData.find((c: any) => c.name === form.country);
+  const statesList = selectedCountryObj?.states || [];
   const [submitError, setSubmitError] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,6 +139,8 @@ export default function SignUpPage() {
     if (!form.industry.trim()) newErrors.industry = "Sector is required";
     if (!form.operatingYears.trim())
       newErrors.operatingYears = "Years in operation is required";
+    if (!form.country.trim()) newErrors.country = "Country is required";
+    if (!form.state.trim()) newErrors.state = "State is required";
     if (!form.password) newErrors.password = "Password is required";
     if (!agreed) newErrors.agreed = "You must accept the terms";
     return newErrors;
@@ -321,22 +364,94 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* Sector / industry */}
-              <div>
-                <input
-                  type="text"
-                  placeholder="Sector / industry*"
+              {/* Sector / industry dropdown */}
+              <div className="relative">
+                <select
                   value={form.industry}
                   onChange={(e) => handleChange("industry", e.target.value)}
-                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                  className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
                     errors.industry
                       ? "border-red-500 focus:ring-red-400"
                       : "border-white/10 focus:ring-[#f97316]/50"
                   }`}
-                />
+                >
+                  <option value="" disabled className="text-gray-500 bg-[#0d1117]">Select Sector / Industry*</option>
+                  {INDUSTRIES.map((ind) => (
+                    <option key={ind} value={ind} className="bg-[#0d1117] text-white">{ind}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                 {errors.industry && (
                   <p className="text-red-500 text-xs mt-1">{errors.industry}</p>
                 )}
+              </div>
+
+              {/* Country and State dropdowns */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <select
+                    value={form.country}
+                    onChange={(e) => {
+                      handleChange("country", e.target.value);
+                      handleChange("state", "");
+                    }}
+                    className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
+                      errors.country
+                        ? "border-red-500 focus:ring-red-400"
+                        : "border-white/10 focus:ring-[#f97316]/50"
+                    }`}
+                  >
+                    <option value="" disabled className="text-gray-500 bg-[#0d1117]">Select Country*</option>
+                    {countriesData.map((c) => (
+                      <option key={c.name} value={c.name} className="bg-[#0d1117] text-white">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  {errors.country && (
+                    <p className="text-red-500 text-xs mt-1">{errors.country}</p>
+                  )}
+                </div>
+
+                <div className="relative">
+                  {statesList.length === 0 ? (
+                    <input
+                      type="text"
+                      placeholder="State / Province*"
+                      value={form.state}
+                      onChange={(e) => handleChange("state", e.target.value)}
+                      className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+                        errors.state
+                          ? "border-red-500 focus:ring-red-400"
+                          : "border-white/10 focus:ring-[#f97316]/50"
+                      }`}
+                    />
+                  ) : (
+                    <select
+                      value={form.state}
+                      onChange={(e) => handleChange("state", e.target.value)}
+                      className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
+                        errors.state
+                          ? "border-red-500 focus:ring-red-400"
+                          : "border-white/10 focus:ring-[#f97316]/50"
+                      }`}
+                    >
+                      <option value="" disabled className="text-gray-500 bg-[#0d1117]">Select State*</option>
+                      {statesList.map((s: any) => (
+                        <option key={s.name} value={s.name} className="bg-[#0d1117] text-white">
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {statesList.length > 0 && (
+                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  )}
+                  {errors.state && (
+                    <p className="text-red-500 text-xs mt-1">{errors.state}</p>
+                  )}
+                </div>
               </div>
 
               {/* Password with tooltip */}

@@ -57,13 +57,13 @@ export default function AboutPage() {
           </div>
 
           {/* Right — chart/dashboard with about1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[250px] sm:h-[350px] lg:h-[420px] ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`}>
+          <div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
             <Image
               src="/images/about1.png"
               alt="Analytics Dashboard Preview"
               fill
               priority
-              className="object-contain w-full h-full p-2"
+              className="object-contain"
             />
           </div>
         </div>
