@@ -163,6 +163,20 @@ export const Login = async ({ payload }: { payload: LoginPayload }) => {
 	return res
 }
 
+export const AdminLogin = async ({ payload }: { payload: LoginPayload }) => {
+	const res = await apiFetch<LoginResponse>('/auth/admin/login', payload)
+
+	if (res.data && 'requiresOtp' in res.data && res.data.requiresOtp) {
+		if (typeof window !== 'undefined') {
+			sessionStorage.setItem(ADMIN_LOGIN_OTP_TOKEN_KEY, res.data.otpToken)
+		}
+	} else if (res.data && 'accessToken' in res.data) {
+		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+	}
+
+	return res
+}
+
 // Completes email verification. On success the backend returns tokens and we
 // establish the session immediately (verified users are logged straight in).
 export const verifyEmail = async ({

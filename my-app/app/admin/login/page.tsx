@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Login, verifyAdminOtp } from "@/lib/authClient";
+import { AdminLogin, verifyAdminOtp } from "@/lib/authClient";
 import { Eye, EyeOff, ShieldCheck, KeyRound, AlertTriangle } from "lucide-react";
 
 export default function AdminLoginPage() {
@@ -27,7 +27,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await Login({ payload: { email, password } });
+      const res = await AdminLogin({ payload: { email, password } });
 
       if (res.error) {
         setError(res.error.message ?? "Invalid admin credentials.");
