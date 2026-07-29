@@ -21,20 +21,20 @@ export default function FreeScanPage() {
       <section className={`relative min-h-[calc(100vh-50px)] flex items-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
-          <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
-            <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
+          <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6">
+            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-[#f97316]/10 border border-[#f97316]/20">
               <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-widest text-[#f97316]">
                 Free Business Scan
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight text-center lg:text-left">
               The First Step to <span className="text-[#f97316]">Clarity.</span>
             </h1>
-            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 ${d ? "text-gray-400" : "text-gray-600"}`}>
               Get a clear, honest read on your business at zero cost. Built for founders and entrepreneurs who want immediate visibility into where their business stands today.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none">
               <Link href="/pages/generaltest"
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
                 Start Free Scan <ArrowRight className="w-4 h-4" />

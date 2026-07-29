@@ -37,22 +37,22 @@ export default function HomePage() {
         {d && <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
           {/* Left */}
-          <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
-            <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
+          <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6">
+            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
                 Precision Business Intelligence
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight text-center lg:text-left">
               Understand Your <br className="hidden lg:inline" />
               Business <span className="text-teal-400">Before</span> <br />
               You Try to Grow It
             </h1>
-            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA provides business owners with the diagnostic clarity needed to identify blind spots, optimize operations, and scale with confidence.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none">
               <Link href="/pages/freescan" className="px-12 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95">
                 Start Free Scan
               </Link>

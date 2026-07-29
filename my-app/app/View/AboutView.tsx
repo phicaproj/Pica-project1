@@ -31,22 +31,22 @@ export default function AboutPage() {
       <section className={`relative min-h-[calc(100vh-50px)] flex items-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
-          <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
-            <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
+          <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6">
+            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
                 Strategic Intelligence
               </span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight text-center lg:text-left">
               We Help Businesses <br />
               Understand Themselves <br />
               <span className="text-teal-400">Before</span> They Try to Grow
             </h1>
-            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 ${d ? "text-gray-400" : "text-gray-600"}`}>
               PICA is a structured diagnostic system designed to replace guesswork with analytical clarity. Scale on a foundation of truth, not assumptions.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none">
               <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
                 Start Free Scan
               </Link>
