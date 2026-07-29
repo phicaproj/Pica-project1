@@ -28,14 +28,14 @@ export default function AboutPage() {
     <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative min-h-[calc(100vh-50px)] flex items-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
           <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
             <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
-                Architectural Intelligence
+                Strategic Intelligence
               </span>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
@@ -48,7 +48,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
               <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
-                Start Assessment
+                Start Free Scan
               </Link>
               <Link href="#pica-ecosystem" className={`px-8 py-4 rounded-xl text-base font-bold border transition-all text-center hover:scale-[1.03] active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
                 View Framework
@@ -57,13 +57,13 @@ export default function AboutPage() {
           </div>
 
           {/* Right — chart/dashboard with about1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-full ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[250px] sm:h-[350px] lg:h-[420px] ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`}>
             <Image
               src="/images/about1.png"
               alt="Analytics Dashboard Preview"
               fill
               priority
-              className="object-cover w-full h-full"
+              className="object-contain w-full h-full p-2"
             />
           </div>
         </div>
@@ -319,17 +319,37 @@ export default function AboutPage() {
           </p>
           <div className="pt-2">
             <Link href="/pages/freescan" className="inline-block px-10 py-5 rounded-2xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
-              Start Your Free Assessment
+              Start Free Scan
             </Link>
           </div>
         </div>
       </section>
 
       {/* ── Footer ── */}
-      <footer className={`py-12 px-6 border-t text-center text-xs ${d ? "bg-[#0d1117] border-white/5 text-gray-500" : "bg-white border-gray-200 text-gray-400"}`}>
-        <div className="max-w-7xl mx-auto space-y-4">
-          <p className="font-bold text-sm tracking-wider text-teal-400">Beauvision</p>
-          <p>
+      <footer className={`px-6 py-12 border-t text-xs ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-200"}`}>
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/favicon.png"
+              alt="Beauvision"
+              width={20}
+              height={20}
+              className="h-5 w-5 object-contain"
+            />
+            <span className={`text-sm font-bold tracking-tight ${d ? "text-white" : "text-gray-900"}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            {[
+              { label: "Privacy Policy", href: "/data-policy" },
+              { label: "Terms of Service", href: "/terms" },
+              { label: "Contact Support", href: "#" },
+            ].map(({ label, href }) => (
+              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>
+            ))}
+          </div>
+          <p className={d ? "text-gray-500" : "text-gray-400"}>
             © Beauvision 2026. All rights reserved.
           </p>
         </div>

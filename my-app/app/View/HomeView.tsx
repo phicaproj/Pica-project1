@@ -32,10 +32,10 @@ export default function HomePage() {
     <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
 
       {/* ── Hero ── */}
-      <section className={`relative min-h-[calc(100vh-50px)] lg:h-[calc(100vh-50px)] flex items-center py-6 md:py-8 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative min-h-[calc(100vh-50px)] flex items-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Background glow */}
         {d && <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 w-full h-[90%] items-stretch relative z-10">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
           {/* Left */}
           <div className="flex flex-col justify-center space-y-6 md:space-y-7 md:pr-6">
             <div className="inline-flex self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
@@ -63,13 +63,13 @@ export default function HomePage() {
           </div>
 
           {/* Right — Dashboard mockup with landing1 image */}
-          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-full ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`} style={{ minHeight: "350px" }}>
+          <div className={`relative rounded-3xl overflow-hidden border shadow-2xl w-full h-[250px] sm:h-[350px] lg:h-[420px] ${d ? "border-white/10 shadow-black/40 bg-[#161b22]" : "border-gray-200 shadow-gray-200/55 bg-white"}`}>
             <Image
               src="/images/landing1.png"
               alt="PICA Dashboard Preview"
               fill
               priority
-              className="object-cover w-full h-full"
+              className="object-contain w-full h-full p-2"
             />
           </div>
         </div>

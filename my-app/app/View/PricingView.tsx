@@ -206,7 +206,7 @@ export default function PricingPage() {
               Free Scan sits alone above a "paid plans paused" callout. */}
           <div
             className={`grid grid-cols-1 ${
-              payPerUseActive ? "md:grid-cols-2 lg:grid-cols-3" : ""
+              payPerUseActive ? "lg:grid-cols-3" : ""
             } gap-4 md:gap-6 items-start`}
           >
             <div className={`rounded-2xl p-8 border ${d ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
@@ -378,7 +378,7 @@ export default function PricingPage() {
                       </button>
                     </div>
                   </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
                   {sortedPlans.map((plan, idx) => {
                     // Middle tier picks up the "Most Popular" badge by
                     // convention — same heuristic the dashboard uses.
