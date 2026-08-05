@@ -3,10 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Activity, Search, AlertCircle, Loader } from "lucide-react";
 import { getAdminAuditLogs, type AdminAuditLog } from "@/lib/authClient";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
-
-dayjs.extend(relativeTime);
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AdminAuditLog[]>([]);
@@ -88,8 +84,21 @@ export default function AuditLogsPage() {
                 {logs.map((log) => (
                   <tr key={log.id} className="hover:bg-white/[0.01] transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-white">{dayjs(log.createdAt).format("MMM D, YYYY")}</div>
-                      <div className="text-xs text-gray-500 mt-1">{dayjs(log.createdAt).format("HH:mm:ss")}</div>
+                      <div className="text-white">
+                        {new Date(log.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(log.createdAt).toLocaleTimeString("en-US", {
+                          hour12: false,
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-white font-medium">

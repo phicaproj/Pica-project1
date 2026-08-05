@@ -913,7 +913,7 @@ export default function QuestionBankPage() {
               ))}
             </div>
           )
-        ) : (
+        ) : mode === "labels" ? (
           loading ? (
             <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-white/5 bg-[#1C1F2E]">
               <Loader className="h-6 w-6 animate-spin text-blue-300" />
