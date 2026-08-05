@@ -1,7 +1,7 @@
 import { BusinessSize, Phase, Prisma, RiskType } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
-import { CONFLICT, NOT_FOUND } from '../../service/shared/http';
+import { CONFLICT, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
 import type {
   AddOptionInput,
   AdminOptionResponse,
@@ -13,6 +13,7 @@ import type {
   ListAdminQuestionsQuery,
   SavePillarWeightsInput,
   UpdateOptionInput,
+  UpdatePillarCopyInput,
   UpdateQuestionInput,
 } from './question.types';
 
@@ -215,6 +216,39 @@ export async function savePillarWeightsService(
 
   const result = await listAdminPillarsService();
   return { ...result, message: 'Pillar weights saved successfully' };
+}
+
+/**
+ * Edit a pillar's display copy (name / description). The description prints
+ * under the pillar title on every pillar page of the report — it used to be a
+ * hardcoded map in pdf.service.ts, so changing it needed a deploy.
+ */
+export async function updatePillarCopyService(
+  pillarId: string,
+  input: UpdatePillarCopyInput
+): Promise<AdminPillarListResponse> {
+  if (input.name === undefined && input.description === undefined) {
+    throw new AppError('Provide a name or description to update', UNPROCESSABLE_CONTENT);
+  }
+
+  const pillar = await prisma.pillar.findUnique({
+    where: { id: pillarId },
+    select: { id: true },
+  });
+  if (!pillar) {
+    throw new AppError(`Pillar not found: ${pillarId}`, NOT_FOUND);
+  }
+
+  await prisma.pillar.update({
+    where: { id: pillarId },
+    data: {
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.description !== undefined ? { description: input.description } : {}),
+    },
+  });
+
+  const result = await listAdminPillarsService();
+  return { ...result, message: 'Pillar copy saved successfully' };
 }
 
 export async function listAdminQuestionsService(

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
 import { CREATED, OK, UNAUTHORIZED } from '../../service/shared/http';
+import { logAudit } from '../../service/shared/audit.service';
 import {
   bookConsultationSchema,
   confirmBookingSchema,
@@ -93,17 +94,47 @@ export const adminListTiers = asyncHandler(async (_req: Request, res: Response) 
 export const adminCreateTier = asyncHandler(async (req: Request, res: Response) => {
   const input = createConsultationTierSchema.parse(req.body);
   const result = await adminCreateTierService(input);
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'CREATE',
+      entityType: 'ConsultationTier',
+      entityId: result.tier.id,
+      field: 'tier',
+      ipAddress: req.ip,
+    });
+  }
   return res.status(CREATED).json(result);
 });
 
 export const adminUpdateTier = asyncHandler(async (req: Request, res: Response) => {
   const input = updateConsultationTierSchema.parse(req.body);
   const result = await adminUpdateTierService(String(req.params.id), input);
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'UPDATE',
+      entityType: 'ConsultationTier',
+      entityId: String(req.params.id),
+      field: 'tier',
+      ipAddress: req.ip,
+    });
+  }
   return res.status(OK).json(result);
 });
 
 export const adminDeleteTier = asyncHandler(async (req: Request, res: Response) => {
   const result = await adminDeleteTierService(String(req.params.id));
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'DELETE',
+      entityType: 'ConsultationTier',
+      entityId: String(req.params.id),
+      field: 'tier',
+      ipAddress: req.ip,
+    });
+  }
   return res.status(OK).json(result);
 });
 
@@ -116,6 +147,16 @@ export const adminListBookings = asyncHandler(async (req: Request, res: Response
 export const adminConfirmBooking = asyncHandler(async (req: Request, res: Response) => {
   const input = confirmBookingSchema.parse(req.body);
   const result = await adminConfirmBookingService(String(req.params.id), input);
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'CONFIRM',
+      entityType: 'ConsultationBooking',
+      entityId: String(req.params.id),
+      field: 'booking',
+      ipAddress: req.ip,
+    });
+  }
   return res.status(OK).json(result);
 });
 
@@ -123,6 +164,17 @@ export const adminUpdateBookingStatus = asyncHandler(
   async (req: Request, res: Response) => {
     const input = updateBookingStatusSchema.parse(req.body);
     const result = await adminUpdateBookingStatusService(String(req.params.id), input);
+    if (req.user?.id) {
+      await logAudit({
+        adminId: req.user.id,
+        action: 'UPDATE_STATUS',
+        entityType: 'ConsultationBooking',
+        entityId: String(req.params.id),
+        field: 'status',
+        newValue: input.status,
+        ipAddress: req.ip,
+      });
+    }
     return res.status(OK).json(result);
   },
 );
@@ -139,6 +191,16 @@ export const adminUpdateBookingNotes = asyncHandler(
       adminId,
       input,
     );
+    if (req.user?.id) {
+      await logAudit({
+        adminId: req.user.id,
+        action: 'UPDATE_NOTES',
+        entityType: 'ConsultationBooking',
+        entityId: String(req.params.id),
+        field: 'notes',
+        ipAddress: req.ip,
+      });
+    }
     return res.status(OK).json(result);
   },
 );

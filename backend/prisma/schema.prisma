@@ -1071,15 +1071,18 @@ model Phase2ACredit {
 }
 
 model AdminAuditLog {
-  id        String   @id @default(uuid())
-  adminId   String   @map("admin_id")
-  field     String
-  oldValue  String?  @map("old_value")
-  newValue  String?  @map("new_value")
-  ipAddress String?  @map("ip_address")
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  adminId     String   @map("admin_id")
+  action      String   @default("UPDATE")
+  entityType  String   @default("Admin") @map("entity_type")
+  entityId    String?  @map("entity_id")
+  field       String
+  oldValue    String?  @map("old_value") @db.Text
+  newValue    String?  @map("new_value") @db.Text
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  admin     User     @relation(fields: [adminId], references: [id])
+  admin       User     @relation(fields: [adminId], references: [id])
 
   @@map("admin_audit_logs")
 }

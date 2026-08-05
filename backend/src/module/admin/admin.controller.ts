@@ -3,6 +3,7 @@ import z from 'zod';
 import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
 import { OK, CREATED, UNAUTHORIZED } from '../../service/shared/http';
+import { logAudit } from '../../service/shared/audit.service';
 import {
   listUsersQuery,
   showUserQuery,
@@ -32,6 +33,7 @@ import {
   updateAdminAccessService,
   getAdminProfileService,
   updateAdminProfileService,
+  listAuditLogsService,
 } from './admin.service';
 
 export const listUsers = asyncHandler(async (req: Request, res: Response) => {
@@ -50,6 +52,19 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
   const { id } = showUserQuery.parse(req.params);
   const input = updateUserStatusSchema.parse(req.body);
   const result = await updateUserStatusService(id, input, req.user?.id);
+  
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'UPDATE_STATUS',
+      entityType: 'User',
+      entityId: id,
+      field: 'status',
+      newValue: input.status,
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(OK).json(result);
 });
 
@@ -83,6 +98,19 @@ export const listRoles = asyncHandler(async (req: Request, res: Response) => {
 export const createRole = asyncHandler(async (req: Request, res: Response) => {
   const input = createRoleSchema.parse(req.body);
   const result = await createRoleService(input);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'CREATE',
+      entityType: 'AdminRole',
+      entityId: result.id,
+      field: 'name',
+      newValue: result.name,
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(CREATED).json({ message: 'Role created successfully', role: result });
 });
 
@@ -90,12 +118,36 @@ export const updateRole = asyncHandler(async (req: Request, res: Response) => {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
   const input = updateRoleSchema.parse(req.body);
   const result = await updateRoleService(id, input);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'UPDATE',
+      entityType: 'AdminRole',
+      entityId: id,
+      field: 'role',
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(OK).json({ message: 'Role updated successfully', role: result });
 });
 
 export const deleteRole = asyncHandler(async (req: Request, res: Response) => {
   const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
   await deleteRoleService(id);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'DELETE',
+      entityType: 'AdminRole',
+      entityId: id,
+      field: 'role',
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(OK).json({ message: 'Role deleted successfully' });
 });
 
@@ -103,6 +155,19 @@ export const assignRoleToAdmin = asyncHandler(async (req: Request, res: Response
   const { id: adminId } = showUserQuery.parse(req.params);
   const { adminRoleId } = assignRoleSchema.parse(req.body);
   const result = await assignRoleToAdminService(adminId, adminRoleId);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'ASSIGN_ROLE',
+      entityType: 'User',
+      entityId: adminId,
+      field: 'adminRoleId',
+      newValue: adminRoleId ?? 'null',
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(OK).json({ message: 'Role assigned successfully', user: result });
 });
 
@@ -111,6 +176,18 @@ export const assignRoleToAdmin = asyncHandler(async (req: Request, res: Response
 export const inviteAdmin = asyncHandler(async (req: Request, res: Response) => {
   const input = inviteAdminSchema.parse(req.body);
   const result = await inviteAdminService(input);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'INVITE',
+      entityType: 'User',
+      entityId: result.admin.id,
+      field: 'admin',
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(CREATED).json(result);
 });
 
@@ -125,6 +202,18 @@ export const updateAdminAccess = asyncHandler(async (req: Request, res: Response
   const { id } = showUserQuery.parse(req.params);
   const input = updateAdminAccessSchema.parse(req.body);
   const result = await updateAdminAccessService(id, input);
+
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'UPDATE_ACCESS',
+      entityType: 'User',
+      entityId: id,
+      field: 'access',
+      ipAddress: req.ip,
+    });
+  }
+
   return res.status(OK).json({ message: 'Admin access updated successfully', user: result });
 });
 
@@ -144,5 +233,10 @@ export const updateMyProfile = asyncHandler(async (req: Request, res: Response) 
   }
   const input = updateAdminProfileSchema.parse(req.body);
   const result = await updateAdminProfileService(req.user.id, input, req.ip);
+  return res.status(OK).json(result);
+});
+
+export const listAuditLogs = asyncHandler(async (req: Request, res: Response) => {
+  const result = await listAuditLogsService();
   return res.status(OK).json(result);
 });

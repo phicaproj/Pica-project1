@@ -798,6 +798,7 @@ export async function updateAdminAccessService(adminId: string, input: UpdateAdm
   if (!admin) {
     throw new AppError('Admin user not found', NOT_FOUND);
   }
+
   if (admin.role !== UserRole.ADMIN) {
     throw new AppError('User is not an administrator', CONFLICT);
   }
@@ -936,4 +937,14 @@ export async function updateAdminProfileService(
   });
 
   return { ...shapeAdminProfile(updated), message: 'Profile updated successfully' };
+}
+
+export async function listAuditLogsService() {
+  const logs = await prisma.adminAuditLog.findMany({
+    orderBy: { createdAt: 'desc' },
+  });
+  return {
+    message: 'Audit logs fetched successfully',
+    logs,
+  };
 }

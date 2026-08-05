@@ -267,6 +267,22 @@ export const savedPillarWeightsSchema = z.object({
 
 export type SavePillarWeightsInput = z.infer<typeof savedPillarWeightsSchema>;
 
+// Pillar display copy. `description` prints under the pillar title on every
+// pillar page of the report, so it's admin-editable per the CMS rule that any
+// text on the PDF must be changeable without a deploy. Capped at 200 chars
+// because the PDF draws it into a fixed 360pt-wide, two-line slot.
+export const updatePillarCopySchema = z.object({
+  name: z.string().trim().min(1, 'name cannot be empty').max(60).optional(),
+  description: z
+    .string()
+    .trim()
+    .min(1, 'description cannot be empty')
+    .max(200, 'description cannot exceed 200 characters')
+    .optional(),
+});
+
+export type UpdatePillarCopyInput = z.infer<typeof updatePillarCopySchema>;
+
 export type AdminPillarResponse = {
   id: string;
   code: string;

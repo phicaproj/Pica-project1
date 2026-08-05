@@ -36,6 +36,7 @@ const NAV_MAIN: NavItemConfig[] = [
   // permission so ops staff can manage bookings without ledger access.
   { label: "Consultations", icon: Inbox, href: "/admin/consultations" },
   { label: "Payments", icon: DollarSign, href: "/admin/payments" },
+  { label: "Audit Logs", icon: Activity, href: "/admin/audit" },
 ];
 
 const NAV_ASSESSMENT: NavItemConfig[] = [
@@ -55,6 +56,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/admin/question-bank": "questions:read",
   "/admin/scoring": "scoring:read",
   "/admin/settings": "settings:read",
+  "/admin/audit": "settings:read",
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

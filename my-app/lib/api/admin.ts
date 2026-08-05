@@ -149,6 +149,18 @@ export const saveAdminPillarWeights = async (
 	})
 }
 
+// Pillar display copy. `description` prints under the pillar title on every
+// pillar page of the generated report, so the admin team owns this text.
+export const saveAdminPillarCopy = async (
+	pillarId: string,
+	payload: { name?: string; description?: string },
+) => {
+	return authedFetch<AdminPillarsDetailedResponse>(`/admin/pillars/${pillarId}/copy`, {
+		method: 'PATCH',
+		body: JSON.stringify(payload),
+	})
+}
+
 export const getScoringSettings = async () => {
 	return authedFetch<ScoringSettingsResponse>('/admin/scoring-settings', {
 		method: 'GET',
@@ -901,3 +913,31 @@ export const deleteAdminScoreLabel = async (id: string) => {
 	})
 }
 
+export type AdminAuditLog = {
+	id: string
+	adminId: string
+	action: string
+	entityType: string
+	entityId: string | null
+	field: string
+	oldValue: string | null
+	newValue: string | null
+	ipAddress: string | null
+	createdAt: string
+	admin?: {
+		id: string
+		firstName: string
+		lastName: string
+		email: string
+	}
+}
+
+export type AdminAuditLogListResponse = {
+	logs: AdminAuditLog[]
+}
+
+export const getAdminAuditLogs = async (params?: { search?: string }) => {
+	const query = new URLSearchParams()
+	if (params?.search) query.append('search', params.search)
+	return authedFetch<AdminAuditLogListResponse>(`/admin/audit?${query.toString()}`)
+}

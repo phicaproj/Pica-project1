@@ -317,8 +317,17 @@ export async function downloadResultPdfService(
 
   const scoringPayload = result.insightPayload as unknown as ScoringResultPayload;
 
+  // Pillar descriptions are display copy, not scored data, so they are always
+  // re-read from the Pillar table rather than replayed from the frozen
+  // insightPayload. That way an admin edit shows up on re-downloads of old
+  // reports too, and results scored before the field existed don't fall back to
+  // the generic blurb.
+  const pillarCopy = await prisma.pillar.findMany({ select: { id: true, description: true } });
+  const descriptionByPillarId = new Map(pillarCopy.map((p) => [p.id, p.description]));
+
   // Dynamically backfill descriptive option labels for older session results if they are single letters
   for (const pillar of scoringPayload.pillarScores || []) {
+    pillar.pillarDescription = descriptionByPillarId.get(pillar.pillarId) ?? null;
     const findings = pillar.allFindings || pillar.findings || [];
     for (const finding of findings) {
       if (finding.selectedLabel && finding.selectedLabel.length === 1) {

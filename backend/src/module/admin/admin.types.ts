@@ -253,6 +253,8 @@ export const PERMISSION_KEYS = [
   'coupons:read',
   'coupons:write',
   'analytics:read',
+  'consultations:read',
+  'consultations:write',
   'ledger:read',
   'ledger:write',
   'settings:read',

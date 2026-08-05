@@ -21,6 +21,12 @@ export interface ScoringPillarPayload {
   pillarId: string;
   pillarName: string; // ← ADDED: human-readable name e.g. "Founder & Leadership"
   pillarCode: string; // ← ADDED: short code e.g. "FL"
+  /**
+   * Admin-editable blurb printed under the pillar title on each pillar page of
+   * the report. Optional so results scored before this field existed (and the
+   * PDF test harnesses) still typecheck; the PDF falls back to generic copy.
+   */
+  pillarDescription?: string | null;
   rawScore: number;
   maxPossibleScore: number;
   weightedScore: number;

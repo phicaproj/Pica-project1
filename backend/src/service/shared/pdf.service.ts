@@ -1259,18 +1259,10 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
     .fillColor(COLORS.primary)
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
-  // Description text under the title
-  const pillarDescriptions: Record<string, string> = {
-    FL: 'An evaluation of leadership continuity, key-person risk, and strategic management frameworks.',
-    FR: 'An institutional-grade evaluation of capital efficiency, reserve resilience, and fiscal governance models.',
-    BM: 'An analysis of revenue streams, customer concentration, pricing structures, and product market fit.',
-    OP: 'An audit of operational redundancy, system maturity, disaster recovery readiness, and process scaling.',
-    MS: 'An assessment of marketing execution, customer acquisition cost efficiency, and brand growth velocity.',
-    GC: 'An evaluation of regulatory compliance, board oversight, employee NDA policies, and data privacy frameworks.',
-    SS: 'An audit of scaling capability, quarterly strategic targets, addressable market mapping, and milestone execution.',
-  };
+  // Description text under the title. Admin-editable via
+  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
   const descText =
-    pillarDescriptions[pillar.pillarCode] ??
+    pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
 
   doc
@@ -1679,18 +1671,10 @@ const drawPillarPage = (
     .fillColor(COLORS.primary)
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
-  // Description text under the title
-  const pillarDescriptions: Record<string, string> = {
-    FL: 'An evaluation of leadership continuity, key-person risk, and strategic management frameworks.',
-    FR: 'An institutional-grade evaluation of capital efficiency, reserve resilience, and fiscal governance models.',
-    BM: 'An analysis of revenue streams, customer concentration, pricing structures, and product market fit.',
-    OP: 'An audit of operational redundancy, system maturity, disaster recovery readiness, and process scaling.',
-    MS: 'An assessment of marketing execution, customer acquisition cost efficiency, and brand growth velocity.',
-    GC: 'An evaluation of regulatory compliance, board oversight, employee NDA policies, and data privacy frameworks.',
-    SS: 'An audit of scaling capability, quarterly strategic targets, addressable market mapping, and milestone execution.',
-  };
+  // Description text under the title. Admin-editable via
+  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
   const descText =
-    pillarDescriptions[pillar.pillarCode] ??
+    pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
 
   doc

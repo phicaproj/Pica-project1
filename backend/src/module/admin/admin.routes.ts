@@ -17,6 +17,7 @@ import {
   updateAdminAccess,
   getMyProfile,
   updateMyProfile,
+  listAuditLogs,
 } from './admin.controller';
 import {
   addOption,
@@ -28,6 +29,7 @@ import {
   listAdminQuestions,
   savePillarWeights,
   updateOption,
+  updatePillarCopy,
   updateQuestion,
   listScoreLabels,
   createScoreLabel,
@@ -87,6 +89,9 @@ adminRouter.use(authenticate, isAdmin);
 adminRouter.get('/me', getMyProfile);
 adminRouter.patch('/me', updateMyProfile);
 
+// Audit logs
+adminRouter.get('/audit', hasPermission('settings:read'), listAuditLogs);
+
 // Admin roles and permissions routes
 adminRouter.get('/roles', hasPermission('settings:read'), listRoles);
 adminRouter.post('/roles', hasPermission('settings:write'), createRole);
@@ -119,6 +124,11 @@ adminRouter.get('/sessions/:id', hasPermission('users:read'), showSessionById);
 // keep working. Bulk weight save backs the scoring page's single Save button.
 adminRouter.get('/pillars', hasPermission('questions:read'), listAdminPillars);
 adminRouter.patch('/pillars/weights', hasPermission('questions:write'), savePillarWeights);
+// Pillar display copy (name + description). The description prints under the
+// pillar title on every pillar page of the report, so it has to be editable
+// without a deploy. Declared after /pillars/weights so "weights" is never
+// captured as an id.
+adminRouter.patch('/pillars/:id/copy', hasPermission('questions:write'), updatePillarCopy);
 
 // Score interpretation — the RED/AMBER/GREEN band cutoffs + display copy.
 // Singleton settings row; edits apply to future submissions only.
