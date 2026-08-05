@@ -32,6 +32,8 @@ interface Finding {
   recommendation: string;
   riskType: string;
   score: number;
+  actionPlanDays?: number | null;
+  actionPlanItems?: string[];
 }
 
 interface PillarMeta {
@@ -370,6 +372,12 @@ export default function ReportDetailPage() {
                 <Target className="h-4 w-4" />
                 Deep Dive Into Operations
               </button>
+              <Link
+                href="/dashboard/consultation"
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-600 hover:bg-teal-700 px-5 py-3 text-sm font-bold text-white transition"
+              >
+                Book Consultant
+              </Link>
               <button
                 onClick={() => handleDownloadPdf('standard')}
                 disabled={downloadMode !== null}
@@ -538,6 +546,24 @@ export default function ReportDetailPage() {
         </motion.section>
       )}
 
+      {!paywalled && (
+        <div className="rounded-3xl bg-gradient-to-br from-[#121927] to-[#0a0f18] border border-white/5 p-10 flex flex-col md:flex-row md:items-center justify-between gap-8 mt-6">
+          <div className="max-w-xl">
+            <h2 className="text-2xl font-bold text-white mb-3">Ready to optimize?</h2>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              Our strategic partners specialize in transformation for high-growth firms. 
+              Secure a 30-minute deep dive session today to start implementing these findings.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/consultation"
+            className="shrink-0 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition text-center"
+          >
+            Consult with PICA Expert
+          </Link>
+        </div>
+      )}
+
       {downloadMode !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
@@ -588,6 +614,22 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { result
     GREEN: { ring: "from-emerald-500 to-emerald-400/50", border: "#10b981", text: "text-emerald-400", label: "Optimized" }
   }[band];
 
+  // Try to load all 4 findings from the raw scoring payload inside insightPayload, otherwise fallback to standard findings list
+  const insight = result.insightPayload as any;
+  const insightPillar = insight?.pillarScores?.find(
+    (p: any) => p.pillarId === pillarScore.pillarId || p.pillarCode === pillarScore.pillar.code
+  );
+  const rawFindings: Finding[] = insightPillar?.allFindings || pillarScore.findings || [];
+
+  // Sort findings by severity: highest risk levels (KNOCKOUT / CRITICAL) first
+  const severityRank = (risk: string) => {
+    const r = (risk || "").toUpperCase();
+    if (r === "KNOCKOUT" || r === "CRITICAL") return 3;
+    if (r === "RISK" || r === "AMBER" || r === "MAJOR") return 2;
+    return 1;
+  };
+  const sortedFindings = [...rawFindings].sort((a, b) => severityRank(b.riskType) - severityRank(a.riskType));
+
   return (
     <div className="space-y-12 pb-20 max-w-6xl mx-auto pt-6">
       <div className="flex flex-col lg:flex-row gap-12 lg:items-center">
@@ -603,13 +645,16 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { result
           
           <p className="text-gray-400 text-sm md:text-base max-w-xl mb-8 leading-relaxed">
             Diagnostic overview of the {pillarScore.pillar.name} pillar. 
-            {pillarScore.findings[0] ? ` ${pillarScore.findings[0].observation}` : ' Your deep dive analysis has been processed and your findings are ready for review.'}
+            {sortedFindings[0] ? ` ${sortedFindings[0].observation}` : ' Your deep dive analysis has been processed and your findings are ready for review.'}
           </p>
           
           <div className="flex flex-wrap gap-4">
-            <button className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition flex items-center gap-2">
-               Book Consultant
-            </button>
+            <Link
+              href="/dashboard/consultation"
+              className="px-6 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition flex items-center justify-center gap-2"
+            >
+              Book Consultant
+            </Link>
             <button
               onClick={() => handleDownloadPdf('standard')}
               disabled={downloadMode !== null}
@@ -665,30 +710,53 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { result
           <h2 className="text-xl font-bold text-white">Diagnostic Findings</h2>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {pillarScore.findings.map((finding, idx) => {
-            const riskLower = finding.riskType.toLowerCase();
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {sortedFindings.map((finding, idx) => {
+            const riskLower = (finding.riskType || "").toLowerCase();
             const isCritical = riskLower === "critical" || riskLower === "knockout";
             const severityColor = isCritical ? "text-rose-400 bg-rose-400/10 border border-rose-400/20" : "text-amber-400 bg-amber-400/10 border border-amber-400/20";
             
             return (
-              <div key={idx} className="rounded-2xl bg-[#111827] border border-white/5 p-6 hover:bg-[#161f31] transition">
-                <div className="flex justify-between items-start mb-4">
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${severityColor}`}>
-                    {finding.riskType || "FINDING"}
-                  </span>
+              <div key={idx} className="rounded-2xl bg-[#111827] border border-white/5 p-6 hover:bg-[#161f31] transition flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${severityColor}`}>
+                      {finding.riskType || "FINDING"}
+                    </span>
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-white mb-3">
+                    {finding.observation}
+                  </h3>
+                  
+                  <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                    {finding.recommendation}
+                  </p>
                 </div>
                 
-                <h3 className="text-lg font-bold text-white mb-3">
-                  {finding.observation}
-                </h3>
-                
-                <p className="text-sm text-gray-400 leading-relaxed mb-6">
-                  {finding.recommendation}
-                </p>
-                
-                <div className="flex items-center gap-4 text-xs font-semibold text-gray-500">
-                  <span className="flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5"/> Action Required</span>
+                {/* Render Phase 2B Action Plan if attached to the finding */}
+                {(finding.actionPlanDays || (finding.actionPlanItems && finding.actionPlanItems.length > 0)) && (
+                  <div className="mt-4 p-4 rounded-xl border bg-[#0d1421] border-teal-500/20 space-y-3">
+                    <p className="text-xs font-black uppercase text-teal-400 tracking-wider flex items-center gap-1.5">
+                      ⚡ {finding.actionPlanDays ? `${finding.actionPlanDays}-Day` : ""} Action Plan
+                    </p>
+                    {finding.actionPlanItems && finding.actionPlanItems.length > 0 && (
+                      <ul className="space-y-2">
+                        {finding.actionPlanItems.map((item, itemIdx) => (
+                          <li key={itemIdx} className="flex items-start gap-2 text-xs leading-relaxed text-gray-300">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 mt-1.5 flex-shrink-0" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 text-xs font-semibold text-gray-500 mt-4 pt-4 border-t border-white/5">
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-orange-400" /> Action Required
+                  </span>
                 </div>
               </div>
             );
@@ -704,9 +772,12 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { result
             Secure a 30-minute deep dive session today to start implementing these findings.
           </p>
         </div>
-        <button className="shrink-0 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition">
+        <Link
+          href="/dashboard/consultation"
+          className="shrink-0 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold shadow-lg shadow-orange-500/20 transition text-center"
+        >
           Consult with PICA Expert
-        </button>
+        </Link>
       </div>
     </div>
   );

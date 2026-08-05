@@ -205,6 +205,7 @@ export default function FreeScanPage() {
             {[
               { label: "Privacy Policy", href: "/data-policy" },
               { label: "Terms of Service", href: "/terms" },
+              { label: "Documentation", href: "/documentation" },
               { label: "Contact Support", href: "#" },
             ].map(({ label, href }) => (
               <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>

@@ -4,20 +4,17 @@ import Link from "next/link";
 import { useTheme } from "@/components/ThemeContext";
 import Image from "next/image";
 import {
-  AlertCircle,
-  HelpCircle,
-  Layers,
-  ChevronRight,
-  CheckCircle,
-  Users,
-  Briefcase,
-  ShoppingCart,
-  DollarSign,
-  Settings,
+  CheckCircle2,
+  Clock,
+  Compass,
+  ArrowRight,
   Shield,
-  MapPin,
-  TrendingUp,
-  Quote,
+  Activity,
+  Layers,
+  HelpCircle,
+  AlertTriangle,
+  Target,
+  Sparkles,
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -25,303 +22,286 @@ export default function AboutPage() {
   const d = dark;
 
   return (
-    <div className={`antialiased min-h-screen transition-colors duration-300 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
-
-      {/* ── Hero ── */}
-      <section className={`relative min-h-[calc(100vh-50px)] flex items-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
-        {d && <div className="absolute top-10 right-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10">
-          <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6">
-            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest text-teal-400">
-                Strategic Intelligence
-              </span>
+    <div className={`antialiased min-h-screen transition-colors duration-300 pb-24 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
+      
+      {/* ── Hero Section ── */}
+      <section className={`relative min-h-[85vh] flex items-center py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+        {/* Decorative background glows */}
+        {d && (
+          <>
+            <div className="absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-10 right-1/4 w-96 h-96 rounded-full bg-orange-500/5 blur-3xl pointer-events-none" />
+          </>
+        )}
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 w-full items-center relative z-10">
+          
+          {/* Hero Left Content */}
+          <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-8 px-4 sm:px-6 lg:px-0">
+            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+              <Compass className="w-4 h-4 animate-spin-slow" />
+              <span className="text-xs font-black uppercase tracking-widest">PICA Onboarding Guide</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight text-center lg:text-left">
-              We Help Businesses <br />
-              Understand Themselves <br />
-              <span className="text-teal-400">Before</span> They Try to Grow
+            
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
+              Prepare for <br />
+              Business <span className="text-teal-400">Clarity</span>
             </h1>
-            <p className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 ${d ? "text-gray-400" : "text-gray-600"}`}>
-              PICA is a structured diagnostic system designed to replace guesswork with analytical clarity. Scale on a foundation of truth, not assumptions.
+            
+            <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
+              PICA is a structured business intelligence system designed to diagnose how your business is actually operating &mdash; and what needs to change for it to grow.
             </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none">
-              <Link href="/pages/freescan" className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
-                Start Free Scan
+
+            <div className={`p-5 rounded-2xl border max-w-md ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#f97316] mb-1.5 flex items-center justify-center lg:justify-start gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                This is not a survey
+              </p>
+              <p className={`text-xs leading-relaxed ${d ? "text-gray-300" : "text-gray-600"}`}>
+                This is a <span className="font-black text-teal-400">diagnostic and execution tool</span>. In a few minutes, you’ll get clarity across the most important areas of your business.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-2 w-full max-w-sm lg:max-w-none">
+              <Link href="/pages/generaltest" className="w-full sm:w-auto px-10 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95 flex items-center justify-center gap-2">
+                Start Assessment <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link href="#pica-ecosystem" className={`px-8 py-4 rounded-xl text-base font-bold border transition-all text-center hover:scale-[1.03] active:scale-95 ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}>
-                View Framework
-              </Link>
+              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <Clock className="w-4 h-4 text-teal-400" />
+                ⏱ Takes 5–10 minutes
+              </div>
             </div>
           </div>
 
-          {/* Right — chart/dashboard with about1 image */}
-          <div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
-            <Image
-              src="/images/about1.png"
-              alt="Analytics Dashboard Preview"
-              fill
-              priority
-              className="object-contain"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ── Misdiagnosis Section ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="space-y-3">
-            <h2 className={`text-3xl md:text-4xl font-black leading-tight ${d ? "text-white" : "text-gray-900"}`}>
-              Most Businesses Are Not Broken — <br className="hidden md:inline" /> They Are Misdiagnosed
-            </h2>
-            <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>
-              Growth failure is rarely a lack of effort; it&apos;s a lack of clarity in the initial assessment.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {[
-              { icon: <AlertCircle className="w-6 h-6 text-teal-400" />, title: "Misdiagnosis", desc: "Treating symptoms (low sales) instead of the root cause (market misalignment or poor operations)." },
-              { icon: <HelpCircle className="w-6 h-6 text-teal-400" />, title: "Guesswork Decisions", desc: "Relying on 'gut feeling' in complex scaling environments leads to expensive structural dials." },
-              { icon: <Layers className="w-6 h-6 text-teal-400" />, title: "Surface-Level Solutions", desc: "Implementing software or hiring staff to fix problems that require foundational restructuring." },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} className={`group p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30 hover:shadow-xl hover:shadow-teal-500/[0.02]" : "bg-gray-50 border-gray-200 hover:border-teal-500/30 hover:shadow-xl hover:shadow-gray-200/50"}`}>
-                <div className="mb-6 w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center group-hover:scale-105 group-hover:bg-teal-500/20 transition-all duration-200">{icon}</div>
-                <h3 className={`text-lg font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>{title}</h3>
-                <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
+          {/* Hero Right Mockup Frame */}
+          <div className="relative w-full flex items-center justify-center lg:justify-end">
+            <div className={`w-full max-w-[540px] rounded-3xl overflow-hidden border ${d ? "bg-[#161b22] border-white/10 shadow-black/40" : "bg-white border-gray-200"} shadow-2xl relative p-4`}>
+              <div className="relative w-full h-[320px] sm:h-[400px] rounded-2xl overflow-hidden">
+                <Image
+                  src="/images/about1.png"
+                  alt="PICA Diagnostic System"
+                  fill
+                  priority
+                  className="object-cover"
+                />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Quote Section ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <blockquote className={`text-3xl md:text-5xl font-black italic leading-tight ${d ? "text-white" : "text-gray-900"}`}>
-            &quot;You cannot fix what you <br />
-            cannot <span className="text-[#f97316] not-italic">see.</span>&quot;
-          </blockquote>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 md:gap-12 pt-4">
-            <div className="text-center space-y-2">
-              <div className="w-8 h-8 rounded-full bg-[#f97316] flex items-center justify-center text-white text-xs font-bold mx-auto">01</div>
-              <p className={`text-xs font-bold uppercase tracking-widest ${d ? "text-gray-400" : "text-gray-600"}`}>Clarity Before Strategy</p>
-            </div>
-            <div className="hidden sm:block w-px h-8 bg-gray-600/30" />
-            <div className="text-center space-y-2">
-              <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold mx-auto">02</div>
-              <p className={`text-xs font-bold uppercase tracking-widest ${d ? "text-gray-400" : "text-gray-600"}`}>Diagnosis Before Growth</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── PICA Ecosystem ── */}
-      <section id="pica-ecosystem" className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The PICA Ecosystem</h2>
-            <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>A unified framework that transforms raw business energy into structured intelligence.</p>
-          </div>
-          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { letter: "P", color: "text-[#f97316]", title: "Pain-point",      desc: "Isolating the core friction points that drain resources and energy." },
-              { letter: "I", color: "text-[#f97316]", title: "Identification",  desc: "Pinpointing the structural root causes within the business architecture." },
-              { letter: "C", color: "text-[#f97316]", title: "Classification",  desc: "Sorting obstacles into the 7 architectural pillars for targeted action." },
-              { letter: "A", color: "text-[#f97316]", title: "Assessment",      desc: "Validating solutions through data-driven scoring and feedback loops." },
-            ].map(({ letter, color, title, desc }, i) => (
-              <div key={letter} className="flex items-start gap-2 h-full">
-                <div className={`flex-1 p-6 rounded-2xl border text-center h-full transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30" : "bg-gray-50 border-gray-200 hover:shadow-md"}`}>
-                  <p className={`text-3xl md:text-5xl font-black mb-3 ${color}`}>{letter}</p>
-                  <p className={`text-sm font-extrabold mb-2 ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
-                  <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
-                </div>
-                {i < 3 && <ChevronRight className="hidden lg:block w-5 h-5 text-gray-600 mt-16 flex-shrink-0" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 3-Layer Intelligence Model ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
-          <div className="space-y-6">
-            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The 3-Layer Intelligence Model</h2>
-            <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
-              We don&apos;t just give you a dashboard; we build a layered hierarchy of understanding.
-            </p>
-            <div className="space-y-5">
-              {[
-                { num: "2B", color: "bg-red-500",      title: "Intelligence", desc: "Predictive modeling for future growth and risk mitigation." },
-                { num: "1B", color: "bg-[#f97316]",   title: "Diagnosis",    desc: "Automated identification of structural inefficiencies and risk factors." },
-                { num: "1A", color: "bg-teal-500",    title: "Awareness",    desc: "Full visibility across all operational channels. No more dark spots." },
-              ].map(({ num, color, title, desc }) => (
-                <div key={title} className="flex items-start gap-4">
-                  <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5`}>{num}</div>
-                  <div>
-                    <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
-                    <p className={`text-xs mt-0.5 ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
 
-          {/* Stacked equal-sized blocks */}
-          <div className="flex flex-col items-center gap-3 w-full">
-            {[
-              { label: "INTELLIGENCE (2B)", bg: "bg-gradient-to-r from-red-500 to-red-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
-              { label: "DIAGNOSIS (1B)",    bg: "bg-gradient-to-r from-orange-500 to-orange-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
-              { label: "AWARENESS (1A)",    bg: "bg-gradient-to-r from-teal-500 to-teal-600", width: "w-full max-w-[400px]", py: "py-5 md:py-6" },
-            ].map(({ label, bg, width, py }) => (
-              <div key={label} className={`${bg} ${py} ${width} rounded-2xl flex items-center justify-center shadow-lg shadow-black/10 transition-all duration-300 hover:scale-[1.03] cursor-default text-center`}>
-                <p className="text-white text-xs md:text-sm font-black tracking-widest px-4">{label}</p>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* ── 7 Pillars of Business Logic ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The 7 Pillars of Business Logic</h2>
-          </div>
-          <div className="max-w-5xl mx-auto flex flex-wrap justify-center gap-6 md:gap-8">
-            {[
-              { icon: <Users className="w-6 h-6 text-teal-400" />,       label: "Leadership"  },
-              { icon: <DollarSign className="w-6 h-6 text-teal-400" />,  label: "Finance"     },
-              { icon: <Settings className="w-6 h-6 text-teal-400" />,    label: "Operations"  },
-              { icon: <ShoppingCart className="w-6 h-6 text-teal-400"/>, label: "Marketing"   },
-              { icon: <Users className="w-6 h-6 text-teal-400" />,       label: "HR"          },
-              { icon: <TrendingUp className="w-6 h-6 text-teal-400" />,  label: "Strategy"    },
-              { icon: <Briefcase className="w-6 h-6 text-teal-400" />,   label: "IP"          },
-            ].map(({ icon, label }) => (
-              <div key={label} className={`flex flex-col items-center gap-3 p-5 rounded-2xl border text-center transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30" : "bg-gray-50 border-gray-200 hover:shadow-md"}`}>
-                <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center">{icon}</div>
-                <p className={`text-xs font-bold uppercase tracking-wider ${d ? "text-gray-300" : "text-gray-700"}`}>{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Path to Clarity ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto space-y-12">
-          <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>The Path to Clarity</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              { step: "1. Take Assessment",  desc: "A 15-minute precision inquiry into your current operations."                          },
-              { step: "2. Get Scored",       desc: "Our engine evaluates your data against the 7-pillar framework."                       },
-              { step: "3. Receive Report",   desc: "A comprehensive architectural map of your business health."                           },
-              { step: "4. Take Action",      desc: "Execute on specific, prioritized steps for structured growth."                        },
-            ].map(({ step, desc }) => (
-              <div key={step} className="flex items-start gap-4">
-                <div className="w-3.5 h-3.5 rounded-full bg-teal-400 flex-shrink-0 mt-1 shadow-lg shadow-teal-400/50" />
-                <div>
-                  <p className={`text-base font-bold mb-1.5 ${d ? "text-white" : "text-gray-900"}`}>{step}</p>
-                  <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Business Types ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* ── Key Metrics Overview ── */}
+      <section className={`py-8 border-t border-b ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
           {[
-            {
-              title: "Small Businesses",
-              subtitle: "Ideal for founders feeling the 'complexity wall.' We help you modularize your foundation so you can scale without breaking.",
-              items: ["Process Audit", "Founder Freedom Roadmap", "Unit Economics Clarity"],
-              accent: "teal",
-            },
-            {
-              title: "Medium Businesses",
-              subtitle: "For established teams suffering from departmental silos. We provide the cross-pillar intelligence to optimize efficiency.",
-              items: ["Silo Integration", "Executive Alignment", "Scale Prediction"],
-              accent: "orange",
-            },
-          ].map(({ title, subtitle, items, accent }) => (
-            <div key={title} className={`group rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30" : "bg-gray-50 border-gray-200 hover:shadow-md hover:border-teal-500/30"}`}>
-              <h3 className={`text-2xl font-black mb-3 ${accent === "teal" ? "text-teal-400" : "text-[#f97316]"}`}>{title}</h3>
-              <p className={`text-sm leading-relaxed mb-6 ${d ? "text-gray-400" : "text-gray-600"}`}>{subtitle}</p>
-              <ul className="space-y-3">
-                {items.map((item) => (
-                  <li key={item} className="flex items-center gap-2.5 text-sm text-gray-400">
-                    <CheckCircle className={`w-4.5 h-4.5 flex-shrink-0 ${accent === "teal" ? "text-teal-400" : "text-[#f97316]"}`} />
-                    {item}
-                  </li>
-                ))}
-              </ul>
+            { title: "DIAGNOSTIC PROCESS", value: "7-Pillar Framework", desc: "Holistic evaluation of operations, finance, and product." },
+            { title: "TIME COMMITMENT", value: "5-10 Minutes", desc: "Distilled inquiries that skip high-level fluff." },
+            { title: "DELIVERABLE OUTCOME", value: "Action Roadmap", desc: "Prioritized steps mapped out against real bottlenecks." }
+          ].map(({ title, value, desc }) => (
+            <div key={title} className="p-4 space-y-1">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</p>
+              <h4 className="text-lg font-black text-teal-400">{value}</h4>
+              <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Built on Structured Logic ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? "bg-[#161b22] border-white/5" : "bg-gray-50 border-gray-100"}`}>
-        <div className="max-w-7xl mx-auto space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
-            <div className="space-y-4">
-              <h2 className={`text-3xl md:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>Built on Structured Logic, Not Hype</h2>
-              <p className={`text-sm md:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
-                PICA was born from the observation of thousands of business failures. Our methodology is a synthesis of industrial logic and modern data science.
-              </p>
+      {/* ── How This Works (Linear Process Stepper) ── */}
+      <section className="py-20 max-w-7xl mx-auto px-6 lg:px-8 space-y-12">
+        <div className="text-center max-w-xl mx-auto space-y-3">
+          <p className="text-xs font-bold tracking-widest text-[#f97316] uppercase">Assessment Pipeline</p>
+          <h2 className={`text-3xl sm:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>How This Works</h2>
+          <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+            A simple, empirical flow designed to extract clear operating realities.
+          </p>
+        </div>
+
+        {/* 3-Step Horizontal Progress Flow */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
+          {[
+            {
+              step: "01",
+              title: "Structured Assessment",
+              desc: "Answer precision-crafted diagnostic questions checking key architectural areas of your organization."
+            },
+            {
+              step: "02",
+              title: "Analyze Realities",
+              desc: "Each question outlines real operational states. Choose the path that matches what is actually happening in your business."
+            },
+            {
+              step: "03",
+              title: "Generate Insights",
+              desc: "Get your unified Business Health Score, highlight primary constraints, and receive detailed execution roadmaps."
+            }
+          ].map(({ step, title, desc }, idx) => (
+            <div key={step} className={`p-8 rounded-2xl border relative transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#161b22] border-white/10 hover:border-teal-500/30" : "bg-gray-50 border-gray-200 hover:shadow-md"}`}>
+              <div className="absolute -top-5 left-8 w-10 h-10 rounded-xl bg-teal-500 text-white flex items-center justify-center font-black shadow-lg">
+                {step}
+              </div>
+              <h3 className={`text-lg font-bold mb-3 mt-2 ${d ? "text-white" : "text-gray-900"}`}>{title}</h3>
+              <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
             </div>
-            <div className="flex gap-6 md:gap-8">
-              <div className={`flex-1 rounded-2xl p-6 border text-center transition-all duration-200 hover:-translate-y-0.5 ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
-                <p className="text-3xl md:text-4xl font-black text-teal-400 mb-1">94%</p>
-                <p className={`text-xs font-bold uppercase tracking-wider ${d ? "text-gray-400" : "text-gray-500"}`}>Accuracy Rate</p>
+          ))}
+        </div>
+      </section>
+
+      {/* ── What You'll Get (Perfectly Aligned 4-Column Grid) ── */}
+      <section className={`py-20 border-t ${d ? "bg-[#161b22]/40 border-white/5" : "bg-gray-50/50 border-gray-100"}`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 space-y-12">
+          <div className="text-center max-w-xl mx-auto space-y-3">
+            <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Actionable Deliverables</p>
+            <h2 className={`text-3xl sm:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>What You&apos;ll Get</h2>
+            <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+              At the end of this assessment, you will receive a comprehensive view of your operational strength.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: <Activity className="w-5 h-5 text-teal-400" />,
+                title: "Business Health Score",
+                desc: "A singular metric rating your organizational alignment with structural best practices."
+              },
+              {
+                icon: <Layers className="w-5 h-5 text-teal-400" />,
+                title: "Strongest & Weakest Areas",
+                desc: "Identify exactly where your organization excels and where resources are currently being drained."
+              },
+              {
+                icon: <AlertTriangle className="w-5 h-5 text-[#f97316]" />,
+                title: "Key Growth Gaps",
+                desc: "Pinpoint constraints, process drifts, and vulnerabilities blocking structural scaling."
+              },
+              {
+                icon: <Target className="w-5 h-5 text-teal-400" />,
+                title: "Execution Roadmap",
+                desc: "A priority-ordered list of next steps, detailing what to repair, replace, or optimize next."
+              }
+            ].map(({ icon, title, desc }) => (
+              <div key={title} className={`p-6 rounded-2xl border flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#0d1117] border-white/10 hover:border-teal-500/30" : "bg-white border-gray-200 hover:shadow-md"}`}>
+                <div className="space-y-4">
+                  <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
+                    {icon}
+                  </div>
+                  <h3 className={`text-base font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</h3>
+                  <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
+                </div>
               </div>
-              <div className={`flex-1 rounded-2xl p-6 border text-center transition-all duration-200 hover:-translate-y-0.5 ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
-                <p className="text-3xl md:text-4xl font-black text-teal-400 mb-1">500+</p>
-                <p className={`text-xs font-bold uppercase tracking-wider ${d ? "text-gray-400" : "text-gray-500"}`}>Diagnoses</p>
-              </div>
+            ))}
+          </div>
+
+          <div className="text-center pt-2">
+            <p className={`text-xs italic ${d ? "text-gray-400" : "text-gray-500"}`}>
+              * You may also unlock deeper diagnostics for more advanced strategic insights.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── What Makes This Different ── */}
+      <section className="py-20 max-w-7xl mx-auto px-6 lg:px-8 space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f97316]/10 border border-[#f97316]/20 text-[#f97316]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-wider">Operational Logic</span>
+            </div>
+            <h2 className={`text-3xl sm:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>
+              What Makes This Different
+            </h2>
+            <p className={`text-sm sm:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
+              PICA does not just tell you what is wrong. It displays the structural bottlenecks causing constraints, and at deeper levels, provides <span className="font-extrabold text-teal-400">execution steps</span> &mdash; not just surface-level advice.
+            </p>
+            <div className={`p-6 rounded-2xl border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
+              <p className="text-sm font-bold text-teal-400 mb-2">Empirical Foundation</p>
+              <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
+                By testing across the 7 critical pillars, PICA analyzes operational resilience mathematically, skipping the subjective answers traditional surveys yield.
+              </p>
             </div>
           </div>
 
-          {/* Testimonials */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          {/* List of features in visual grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { quote: "PICA revealed that our marketing wasn't failing—our operations couldn't support the leads. We fixed the foundation and doubled revenue in 6 months.", name: "Amara Okafor" },
-              { quote: "The clarity PICA provided was jarring but necessary. We were building on sand. Today, every decision we make is backed by the 3-Layer model.", name: "Kofi Mensah" },
-            ].map(({ quote, name }) => (
-              <div key={name} className={`group rounded-2xl p-6 border relative ${d ? "bg-[#0d1117] border-white/10 hover:border-teal-500/30" : "bg-white border-gray-200 shadow-sm hover:shadow-md"}`}>
-                <Quote className="absolute right-6 top-6 h-8 w-8 text-teal-400/10" />
-                <p className={`text-sm italic leading-relaxed mb-4 relative z-10 ${d ? "text-gray-300" : "text-gray-700"}`}>&quot;{quote}&quot;</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-black">
-                    {name.charAt(0)}
-                  </div>
-                  <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{name}</p>
-                </div>
+              { title: "Empirical Strength Mapping", desc: "Find exactly where your business model excels." },
+              { title: "Weakness Identification", desc: "Shine a light on operational leakages." },
+              { title: "Constraint Detection", desc: "Identify barriers stopping your next stage of scaling." },
+              { title: "Execution Roadmap", desc: "Action-ready guides for your team." }
+            ].map(({ title, desc }) => (
+              <div key={title} className={`p-5 rounded-xl border ${d ? "bg-[#161b22]/50 border-white/5" : "bg-white border-gray-200 shadow-sm"}`}>
+                <CheckCircle2 className="w-5 h-5 text-teal-400 mb-2" />
+                <h4 className={`text-sm font-bold mb-1.5 ${d ? "text-white" : "text-gray-900"}`}>{title}</h4>
+                <p className={`text-[11px] leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA ── */}
-      <section className={`py-20 md:py-28 px-6 lg:px-8 text-center border-t ${d ? "bg-[#0d1117] border-white/5" : "bg-white border-gray-100"}`}>
-        <div className="max-w-3xl mx-auto space-y-6">
-          <h2 className={`text-3xl md:text-5xl font-black leading-tight ${d ? "text-white" : "text-gray-900"}`}>
-            Understand your business <br /> before you try to grow it.
-          </h2>
-          <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"}`}>
-            The diagnostic assessment takes 15 minutes. The clarity it provides lasts a lifetime.
-          </p>
-          <div className="pt-2">
-            <Link href="/pages/freescan" className="inline-block px-10 py-5 rounded-2xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
-              Start Free Scan
-            </Link>
+      {/* ── Before You Start - How to Answer (Warning Highlights) ── */}
+      <section className={`py-20 border-t ${d ? "bg-[#161b22]/40 border-white/5" : "bg-gray-50 border-gray-100"}`}>
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 space-y-10">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <h2 className={`text-2xl sm:text-3xl font-black ${d ? "text-white" : "text-gray-900"}`}>
+              Before You Start - How to Answer
+            </h2>
+            <p className={`text-xs sm:text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+              Read carefully to ensure the diagnostic engine yields optimal insights.
+            </p>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            {/* Reality check card */}
+            <div className={`p-6 rounded-2xl border flex flex-col justify-between ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
+              <div className="space-y-4">
+                <p className="text-xs font-black uppercase text-[#f97316] tracking-wider flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4" />
+                  Answer based on actual operations
+                </p>
+                <p className={`text-xs leading-relaxed ${d ? "text-gray-300" : "text-gray-600"}`}>
+                  Do not select answers based on what you <span className="italic font-bold">plan</span> to do or what you <span className="italic font-bold">wish</span> was working. The tool requires a picture of your current state.
+                </p>
+              </div>
+              <div className={`mt-6 p-4 rounded-xl text-xs font-semibold ${d ? "bg-[#161b22] text-teal-400" : "bg-teal-50 text-teal-700"}`}>
+                💡 Be honest &mdash; even if the answer is uncomfortable. Clarity starts with honesty.
+              </div>
+            </div>
+
+            {/* Assessment Goal card */}
+            <div className={`p-6 rounded-2xl border flex flex-col justify-between ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
+              <div className="space-y-4">
+                <p className="text-xs font-black uppercase text-teal-400 tracking-wider flex items-center gap-1.5">
+                  <Target className="w-4 h-4" />
+                  Your Single Goal: Clear Vision
+                </p>
+                <p className={`text-xs leading-relaxed ${d ? "text-gray-300" : "text-gray-600"}`}>
+                  This is not a test to impress, justify actions, or guess results. It is an internal mirror designed to align your model for future scaling.
+                </p>
+              </div>
+              <div className={`mt-6 p-4 rounded-xl text-xs font-semibold ${d ? "bg-[#161b22] text-[#f97316]" : "bg-orange-50 text-[#ea6c0a]"}`}>
+                🛡 Don’t overthink &mdash; go with the choice that feels closest to your actual reality.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── Ready? CTA Banner ── */}
+      <section className="py-20 max-w-4xl mx-auto px-6 text-center space-y-8 relative z-10">
+        <h2 className={`text-3xl sm:text-5xl font-black ${d ? "text-white" : "text-gray-900"}`}>Ready?</h2>
+        <p className={`text-sm sm:text-base max-w-md mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
+          Let&apos;s find out what is really happening inside your business.
+        </p>
+        <div className="pt-2">
+          <Link href="/pages/generaltest" className="inline-flex items-center gap-2.5 px-12 py-5 rounded-2xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-black uppercase tracking-wider transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
+            Start Assessment <ArrowRight className="w-5.5 h-5.5" />
+          </Link>
         </div>
       </section>
 
@@ -344,9 +324,12 @@ export default function AboutPage() {
             {[
               { label: "Privacy Policy", href: "/data-policy" },
               { label: "Terms of Service", href: "/terms" },
+              { label: "Documentation", href: "/documentation" },
               { label: "Contact Support", href: "#" },
             ].map(({ label, href }) => (
-              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>
+              <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>
+                {label}
+              </Link>
             ))}
           </div>
           <p className={d ? "text-gray-500" : "text-gray-400"}>
@@ -354,6 +337,7 @@ export default function AboutPage() {
           </p>
         </div>
       </footer>
+
     </div>
   );
 }

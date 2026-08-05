@@ -8,7 +8,6 @@ import { ThemeProvider, useTheme } from "@/components/ThemeContext";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "About", href: "/pages/about" },
   { label: "Free Scan", href: "/pages/freescan" },
   { label: "Pricing", href: "/pages/pricing" },
 ];
@@ -62,14 +61,15 @@ function useScrollAnimations(containerRef: React.RefObject<HTMLElement | null>) 
       const sectionObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
+            const el = entry.target as HTMLElement;
+            const idx = Array.from(sections).indexOf(el);
+            const animClass = SECTION_ANIMS[idx % SECTION_ANIMS.length];
             if (entry.isIntersecting) {
-              const el = entry.target as HTMLElement;
               el.classList.remove("anim-hidden");
-              // Pick animation based on section index for variety
-              const idx = Array.from(sections).indexOf(el);
-              const animClass = SECTION_ANIMS[idx % SECTION_ANIMS.length];
               el.classList.add(animClass);
-              sectionObserver.unobserve(el);
+            } else {
+              el.classList.add("anim-hidden");
+              el.classList.remove(animClass);
             }
           });
         },
@@ -82,21 +82,21 @@ function useScrollAnimations(containerRef: React.RefObject<HTMLElement | null>) 
       const gridObserver = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              const el = entry.target as HTMLElement;
-              // Find index among siblings for stagger
-              const parent = el.parentElement;
-              const siblings = parent
-                ? Array.from(parent.children).filter((c) =>
-                    c.classList.contains("anim-hidden")  || c.classList.contains("anim-fade-up")
-                  )
-                : [];
-              const sibIdx = siblings.indexOf(el);
-              const delay = Math.min(sibIdx, 5); // max 6 stagger levels
+            const el = entry.target as HTMLElement;
+            const parent = el.parentElement;
+            const siblings = parent
+              ? Array.from(parent.children)
+              : [];
+            const sibIdx = siblings.indexOf(el);
+            const delay = Math.min(sibIdx, 5); // max 6 stagger levels
+            const delayClass = `anim-delay-${delay + 1}`;
 
+            if (entry.isIntersecting) {
               el.classList.remove("anim-hidden");
-              el.classList.add("anim-fade-up", `anim-delay-${delay + 1}`);
-              gridObserver.unobserve(el);
+              el.classList.add("anim-fade-up", delayClass);
+            } else {
+              el.classList.add("anim-hidden");
+              el.classList.remove("anim-fade-up", delayClass);
             }
           });
         },

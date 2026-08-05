@@ -10,9 +10,7 @@ import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { CONFLICT, FORBIDDEN, NOT_FOUND } from '../../service/shared/http';
 import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
-import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
-import { APP_URL } from '../../Config/env';
 import {
   assertSubscriptionQuota,
   consumeSubscriptionQuota,
@@ -396,26 +394,6 @@ export async function downloadResultPdfService(
     }
   }
 
-  // Fire-and-forget: send the report email without blocking the download.
-  // For Phase 2A / 2B use the authenticated user's email (their account).
-  // For Phase 1 fall back to leadEmail (no user yet).
-  const recipientEmail =
-    session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B
-      ? (session.user?.email ?? null)
-      : (session.leadEmail ?? session.user?.email ?? null);
-
-  if (recipientEmail) {
-    void sendReportEmail({
-      toEmail: recipientEmail,
-      businessName,
-      pdfBuffer,
-      // Prefer the durable R2 URL; fall back to the backend route if the
-      // upload didn't succeed so the email still works.
-      reportPdfUrl: reportPdfUrl ?? `${APP_URL}/result/${sessionId}/pdf`,
-    }).catch((error) => {
-      console.error('downloadResultPdfService: email send failed:', error);
-    });
-  }
 
   // For Phase 2A / Phase 2B, mark the session REPORT_GENERATED on first download
   // so session status reflects that the report has been issued. generatedAt is
