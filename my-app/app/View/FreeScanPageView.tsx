@@ -77,7 +77,7 @@ export default function FreeScanPage() {
 
             {/* Health Score metric card */}
             <div className="rounded-2xl p-8 bg-teal-400 flex flex-col items-center justify-center text-center shadow-lg shadow-teal-400/10 transition-transform duration-300 hover:-translate-y-1">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">Example Metric</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">Metric</p>
               <p className="text-6xl md:text-7xl font-black text-gray-900 leading-none mb-3">84</p>
               <p className="text-lg font-bold text-gray-900 mb-2">Sample Health Score Baseline</p>
               <p className="text-xs text-gray-800 max-w-xs leading-relaxed">

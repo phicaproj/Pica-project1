@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, ScanSearch } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import Link from "next/link";
 import { ThemeProvider, useTheme } from "@/components/ThemeContext";
 
 const navItems = [
@@ -67,13 +68,11 @@ function useScrollAnimations(containerRef: React.RefObject<HTMLElement | null>) 
             if (entry.isIntersecting) {
               el.classList.remove("anim-hidden");
               el.classList.add(animClass);
-            } else {
-              el.classList.add("anim-hidden");
-              el.classList.remove(animClass);
+              sectionObserver.unobserve(el); // Only animate once
             }
           });
         },
-        { threshold: 0.1, rootMargin: "0px 0px -40px 0px" }
+        { threshold: 0, rootMargin: "0px 0px -40px 0px" }
       );
 
       sections.forEach((section) => sectionObserver.observe(section));
@@ -94,13 +93,11 @@ function useScrollAnimations(containerRef: React.RefObject<HTMLElement | null>) 
             if (entry.isIntersecting) {
               el.classList.remove("anim-hidden");
               el.classList.add("anim-fade-up", delayClass);
-            } else {
-              el.classList.add("anim-hidden");
-              el.classList.remove("anim-fade-up", delayClass);
+              gridObserver.unobserve(el); // Only animate once
             }
           });
         },
-        { threshold: 0.05, rootMargin: "0px 0px -20px 0px" }
+        { threshold: 0, rootMargin: "0px 0px -20px 0px" }
       );
 
       grids.forEach((el) => gridObserver.observe(el));

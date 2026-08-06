@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
 import Image from 'next/image'
+import { useEffect, useState } from 'react'
+import { getStoredUser } from '@/lib/authClient'
 import {
 	Search,
 	Target,
@@ -41,6 +43,11 @@ import {
 export default function HomePage() {
 	const { dark } = useTheme()
 	const d = dark
+
+	const [user, setUser] = useState<any>(null)
+	useEffect(() => {
+		setUser(getStoredUser())
+	}, [])
 
 	return (
 		<div
@@ -405,43 +412,43 @@ export default function HomePage() {
 								icon: (
 									<Users className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Leadership & People',
+								label: 'Founder & Leadership Capacity',
 							},
 							{
 								icon: (
 									<GitFork className='w-6 h-6 text-teal-400 rotate-90' />
 								),
-								label: 'Business Model',
+								label: 'Business Model Strenght',
 							},
 							{
 								icon: (
 									<MousePointerClick className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Customer Acquisition',
+								label: 'Market & Competitive Position',
 							},
 							{
 								icon: (
 									<Banknote className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Financial Health',
+								label: 'Financial Readiness/Control',
 							},
 							{
 								icon: (
 									<Sparkles className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Operations',
+								label: 'Operations Processes & Execution',
 							},
 							{
 								icon: (
 									<Shield className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Legal & Compliance',
+								label: 'Governance Culture & Structure',
 							},
 							{
 								icon: (
 									<Lightbulb className='w-6 h-6 text-teal-400' />
 								),
-								label: 'Product-Market Fit',
+								label: 'Growth Scalability and Sustainability',
 							},
 						].map(({ icon, label }) => (
 							<div
@@ -545,7 +552,7 @@ export default function HomePage() {
 								</ul>
 							</div>
 							<Link
-								href='/pages/fulldiagnostic'
+								href={user ? '/dashboard/strategic-scan' : '/Auth/signup'}
 								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#FFAF66] hover:bg-[#ea9c53] text-gray-900 transition-all text-center block shadow-lg active:scale-95'>
 								Get Diagnostic
 							</Link>
@@ -580,9 +587,9 @@ export default function HomePage() {
 								</ul>
 							</div>
 							<Link
-								href='/Auth/signup'
+								href={user ? '/dashboard/deep-dive' : '/Auth/signup'}
 								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#1f2937] hover:bg-gray-800 text-white text-center block active:scale-95 transition-all shadow-md'>
-								Contact Expert
+								Get deep dive
 							</Link>
 						</div>
 					</div>
@@ -605,10 +612,7 @@ export default function HomePage() {
 						</div>
 						<p
 							className={`text-sm md:text-base leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-							No generic advice. Our reports provide
-							forensic-level detail on where your
-							money is leaking and where your next
-							10x growth will come from.
+							No generic advice. Our reports provide pinpoint detail on where your money is leaking and where your next 10x growth will come from.
 						</p>
 						<div className='space-y-4 pt-2'>
 							<div className='flex items-start gap-4'>
