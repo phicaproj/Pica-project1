@@ -187,3 +187,25 @@ export async function updateAvatarUrlService(userId: string, avatarUrl: string):
 
   return updated;
 }
+
+export async function deleteAccountService(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError('User not found', NOT_FOUND);
+  }
+  
+  await prisma.$transaction(async (tx) => {
+    // Anonymize user info and set status to DISABLED
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        firstName: 'Deleted',
+        lastName: 'User',
+        email: `deleted_${userId}@pica.com`,
+        phone: null,
+        avatarUrl: null,
+        status: 'DISABLED',
+      },
+    });
+  });
+}

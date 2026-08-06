@@ -34,6 +34,7 @@ import {
   getMyBillingHistory,
   getMySubscription,
   cancelMySubscription,
+  deleteMyAccount,
   type MySubscriptionPayload
 } from "@/lib/authClient";
 import { formatMoney, type Currency } from "@/lib/utils";
@@ -216,6 +217,8 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form Fields State
@@ -276,6 +279,25 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       alert("An unexpected error occurred while saving profile.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const res = await deleteMyAccount();
+      if (res.error) {
+        alert(res.error.message);
+      } else {
+        alert("Your account has been deleted successfully.");
+        // Redirect to login or home
+        window.location.href = "/Auth/login";
+      }
+    } catch (err) {
+      alert("An unexpected error occurred while deleting your account.");
+    } finally {
+      setDeletingAccount(false);
+      setShowDeleteModal(false);
     }
   };
 
@@ -568,6 +590,52 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
           </p>
         </div>
       </div>
+
+      {/* Danger Zone */}
+      <div className="mt-12 p-6 rounded-xl border border-red-500/20 bg-red-500/5">
+        <h3 className="text-lg font-bold text-red-400 mb-2">Danger Zone</h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Once you delete your account, there is no going back. Please be certain.
+        </p>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors text-sm font-semibold"
+        >
+          Delete Account
+        </button>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4" onClick={() => !deletingAccount && setShowDeleteModal(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-[#111827] border border-red-500/30 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
+              <Info className="w-6 h-6 text-red-400" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Delete Account?</h2>
+            <p className="text-sm text-gray-400 mb-6">
+              Are you sure you want to delete your account? This action cannot be undone. All your personal data will be permanently removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {deletingAccount && <Loader className="w-4 h-4 animate-spin" />}
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -946,6 +1014,8 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
           Last updated: Mar 24, 2026. Configured values are used for diagnostics tailoring.
         </div>
       </div>
+
+
     </div>
   );
 }

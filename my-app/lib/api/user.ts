@@ -72,3 +72,9 @@ export const uploadAvatar = async (file: File) => {
 		return { data: null, error: { message } }
 	}
 }
+
+export const deleteMyAccount = async () => {
+	return authedFetch<{ message: string }>('/user/account', {
+		method: 'DELETE',
+	})
+}

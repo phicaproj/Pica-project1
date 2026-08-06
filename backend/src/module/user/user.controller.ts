@@ -8,6 +8,7 @@ import {
   updateBusinessInfoService,
   verifyUserEmailService,
   updateAvatarUrlService,
+  deleteAccountService,
 } from './user.service';
 import { uploadAvatar as uploadToR2, deleteObject } from '../../service/shared/storage.service';
 import prisma from '../../Config/db';
@@ -45,6 +46,16 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   return res.status(OK).json({
     message: 'Email verified successfully',
     user: result,
+  });
+});
+
+export const deleteAccount = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user?.id || req.user?.role !== 'USER') {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  await deleteAccountService(req.user.id);
+  return res.status(OK).json({
+    message: 'Account deleted successfully',
   });
 });
 

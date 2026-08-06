@@ -1297,6 +1297,7 @@ export async function listPaymentsService(query: ListPaymentsQuery): Promise<Lis
     ...(query.search
       ? {
           OR: [
+            { id: { equals: query.search } },
             { providerReference: { contains: query.search, mode: 'insensitive' } },
             { customerEmail: { contains: query.search, mode: 'insensitive' } },
             { customerBusinessName: { contains: query.search, mode: 'insensitive' } },

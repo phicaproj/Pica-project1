@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { authenticate } from '../../service/middleware/authMiddleware';
-import { updateProfile, updateBusinessInfo, verifyEmail, uploadAvatar } from './user.controller';
+import { updateProfile, updateBusinessInfo, verifyEmail, uploadAvatar, deleteAccount } from './user.controller';
 
 const userRouter = Router();
 
@@ -17,5 +17,6 @@ userRouter.patch('/profile', authenticate, updateProfile);
 userRouter.patch('/business', authenticate, updateBusinessInfo);
 userRouter.post('/verify-email', authenticate, verifyEmail);
 userRouter.post('/avatar', authenticate, upload.single('avatar'), uploadAvatar);
+userRouter.delete('/account', authenticate, deleteAccount);
 
 export default userRouter;

@@ -42,6 +42,7 @@ export async function getAllUsersService(query: ListUsersQuery): Promise<ListUse
     ...(search
       ? {
           OR: [
+            { id: { equals: search } },
             { firstName: { contains: search, mode: 'insensitive' } },
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
@@ -889,22 +890,30 @@ export async function updateAdminProfileService(
     throw new AppError('Admin user not found', NOT_FOUND);
   }
 
-  // Calculate changed fields and prepare audit log entries
+  // Group changed fields into a single log entry if there are any
   const auditLogs: Prisma.AdminAuditLogCreateManyInput[] = [];
   const fields = ['firstName', 'lastName', 'phone', 'businessName'] as const;
+  const changedFields: Record<string, { old: any, new: any }> = {};
 
   for (const field of fields) {
     const newValue = input[field];
     const oldValue = user[field];
     if (newValue !== undefined && newValue !== oldValue) {
-      auditLogs.push({
-        adminId: userId,
-        field,
-        oldValue: oldValue || null,
-        newValue: newValue || null,
-        ipAddress: ipAddress || null,
-      });
+      changedFields[field] = { old: oldValue, new: newValue };
     }
+  }
+
+  if (Object.keys(changedFields).length > 0) {
+    auditLogs.push({
+      adminId: userId,
+      action: 'UPDATE_PROFILE',
+      entityType: 'User',
+      entityId: userId,
+      field: Object.keys(changedFields).join(', '),
+      oldValue: JSON.stringify(Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.old]))),
+      newValue: JSON.stringify(Object.fromEntries(Object.entries(changedFields).map(([k, v]) => [k, v.new]))),
+      ipAddress: ipAddress || null,
+    });
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -942,6 +951,15 @@ export async function updateAdminProfileService(
 export async function listAuditLogsService() {
   const logs = await prisma.adminAuditLog.findMany({
     orderBy: { createdAt: 'desc' },
+    include: {
+      admin: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+    },
   });
   return {
     message: 'Audit logs fetched successfully',
