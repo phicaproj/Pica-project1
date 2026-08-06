@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
 import { OK, CREATED, UNAUTHORIZED } from '../../service/shared/http';
+import { logAudit } from '../../service/shared/audit.service';
 import {
   subscribeSchema,
   createPlanSchema,
@@ -108,9 +109,19 @@ export const adminCreatePlan = asyncHandler(async (req: Request, res: Response) 
   return res.status(CREATED).json(result);
 });
 
-export const adminUpdatePlan = asyncHandler(async (req: Request, res: Response) => {
+export const adminUpdatePlan = asyncHandler(async (req: AuthedRequest, res: Response) => {
   const input = updatePlanSchema.parse(req.body);
   const result = await adminUpdatePlanService(String(req.params.id), input);
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'UPDATE',
+      entityType: 'SubscriptionPlan',
+      entityId: String(req.params.id),
+      field: 'plan',
+      ipAddress: req.ip,
+    });
+  }
   return res.status(OK).json(result);
 });
 

@@ -23,7 +23,7 @@ export const listUsersQuery = z.object({
 });
 
 export const showUserQuery = z.object({
-  id: z.uuid(),
+  id: z.string(),
 });
 
 export type ListUsersQuery = z.infer<typeof listUsersQuery>;

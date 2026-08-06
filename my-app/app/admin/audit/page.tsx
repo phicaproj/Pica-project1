@@ -9,6 +9,7 @@ export default function AuditLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedLog, setSelectedLog] = useState<AdminAuditLog | null>(null);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
@@ -82,7 +83,11 @@ export default function AuditLogsPage() {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-white/[0.01] transition-colors">
+                  <tr 
+                    key={log.id} 
+                    className="hover:bg-white/[0.05] transition-colors cursor-pointer"
+                    onClick={() => setSelectedLog(log)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-white">
                         {new Date(log.createdAt).toLocaleDateString("en-US", {
@@ -145,6 +150,88 @@ export default function AuditLogsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal for detailed view */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4" onClick={() => setSelectedLog(null)}>
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#161925] p-6 shadow-2xl border border-white/10" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedLog(null)}
+              className="absolute right-4 top-4 text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+            <h2 className="text-xl font-bold text-white mb-4">Audit Log Details</h2>
+            
+            <div className="space-y-4 text-sm text-gray-300">
+              <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-4">
+                <div>
+                  <div className="text-gray-500 text-xs">Timestamp</div>
+                  <div className="text-white mt-1">
+                    {new Date(selectedLog.createdAt).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs">IP Address</div>
+                  <div className="text-white mt-1 font-mono">{selectedLog.ipAddress || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-4">
+                <div>
+                  <div className="text-gray-500 text-xs">Admin Name</div>
+                  <div className="text-white mt-1">{selectedLog.admin?.firstName} {selectedLog.admin?.lastName}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs">Admin Email</div>
+                  <div className="text-white mt-1">{selectedLog.admin?.email}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-b border-white/5 pb-4">
+                <div>
+                  <div className="text-gray-500 text-xs">Action</div>
+                  <div className="mt-1">
+                    <span className="rounded-md bg-blue-500/10 px-2.5 py-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                      {selectedLog.action}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs">Entity Type & ID</div>
+                  <div className="text-white mt-1">
+                    {selectedLog.entityType} <br/>
+                    <span className="font-mono text-xs text-gray-500">{selectedLog.entityId || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-gray-500 text-xs mb-2">Field Changes (Field: {selectedLog.field || 'N/A'})</div>
+                <div className="bg-[#111318] p-4 rounded-lg font-mono text-xs overflow-x-auto">
+                  <div className="text-red-400 mb-2 whitespace-pre-wrap break-all">
+                    <span className="select-none font-bold mr-2">-</span>
+                    {selectedLog.oldValue || 'None'}
+                  </div>
+                  <div className="text-emerald-400 whitespace-pre-wrap break-all">
+                    <span className="select-none font-bold mr-2">+</span>
+                    {selectedLog.newValue || 'None'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="rounded-lg bg-gray-700 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-600 transition"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

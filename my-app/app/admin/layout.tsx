@@ -249,7 +249,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative bg-black/40 backdrop-blur-sm">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative bg-black/40">
           {/* Mobile hamburger button */}
           <button
             className="lg:hidden fixed top-4 left-4 z-30 text-gray-300 hover:text-white"
