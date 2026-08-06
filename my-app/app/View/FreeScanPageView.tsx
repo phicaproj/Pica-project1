@@ -45,7 +45,7 @@ export default function FreeScanPage() {
           {/* Image placeholder */}
           <div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
             <Image
-              src="/images/freescan1.png"
+              src="/images/landing1.png"
               alt="Quick Scan Preview"
               fill
               priority

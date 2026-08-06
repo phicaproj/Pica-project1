@@ -157,6 +157,15 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
+      {/* Floating CTA */}
+      <Link 
+        href="/pages/freescan"
+        className="fixed bottom-24 right-6 md:bottom-6 md:right-6 z-50 flex flex-col items-center justify-center p-3 rounded-2xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
+      >
+        <ScanSearch className="w-6 h-6 mb-1" />
+        <span className="text-[10px] font-black uppercase tracking-wider text-center max-w-[80px] leading-tight">Start Free Scan</span>
+      </Link>
+
       {/* Floating dark/light mode toggle — bottom right on mobile */}
       <button
         onClick={() => setDark(!dark)}

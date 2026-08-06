@@ -101,7 +101,7 @@ export default function HomePage() {
 					{/* Right — Dashboard mockup with landing1 image */}
 					<div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
 						<Image
-							src="/images/landing1.png"
+							src="/images/dashboard img.png"
 							alt="PICA Dashboard Preview"
 							fill
 							priority

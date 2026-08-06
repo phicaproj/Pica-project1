@@ -28,7 +28,7 @@ const NAV_MAIN = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Strategic Scan", icon: Radar, href: "/dashboard/strategic-scan" },
   { label: "Deep Dive Module", icon: Box, href: "/dashboard/deep-dive" },
-  { label: "Benchmarks", icon: TrendingUp, href: "/dashboard/benchmarks" },
+  { label: "Consultation", icon: MessageSquare, href: "/dashboard/consultation" },
   { label: "Reports", icon: FileText, href: "/dashboard/reports" },
 ];
 
@@ -36,7 +36,6 @@ const NAV_SUPPORT = [
   // Monthly plans (recurring subscription tiers) — distinct from
   // /dashboard/subscription which is the one-off pay-per-use checkout.
   { label: "Plans", icon: Crown, href: "/dashboard/plans" },
-  { label: "Consultation", icon: MessageSquare, href: "/dashboard/consultation" },
   { label: "Pay-per-use", icon: CreditCard, href: "/dashboard/subscription" },
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
