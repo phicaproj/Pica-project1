@@ -163,9 +163,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="h-screen bg-[#111318] text-white flex flex-col font-sans overflow-hidden">
+    <div 
+      className="h-screen text-white flex flex-col font-sans overflow-hidden bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: "url('/images/hero-background.png')" }}
+    >
       {/* Top Nav */}
-      <header className="flex items-center justify-between px-6 py-4 bg-[#111318] border-b border-white/5 sticky top-0 z-50">
+      <header className="flex items-center justify-between px-6 py-4 bg-[#111318]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
         <div className="flex items-center gap-8">
           {/* Mobile hamburger */}
           <button
@@ -215,7 +218,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Sidebar */}
         <aside
-          className={`fixed lg:static top-0 left-0 bottom-0 z-50 w-60 bg-[#161925] border-r border-white/5 flex flex-col py-6 px-3 transition-transform duration-300 ${
+          className={`fixed lg:static top-0 left-0 bottom-0 z-50 w-60 bg-[#161925]/80 backdrop-blur-md border-r border-white/5 flex flex-col py-6 px-3 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           } lg:flex-shrink-0 h-full`}
         >
@@ -246,7 +249,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative bg-[#111318]">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative bg-black/40 backdrop-blur-sm">
           {/* Mobile hamburger button */}
           <button
             className="lg:hidden fixed top-4 left-4 z-30 text-gray-300 hover:text-white"

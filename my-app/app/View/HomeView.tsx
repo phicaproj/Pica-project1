@@ -54,7 +54,8 @@ export default function HomePage() {
 			className={`antialiased min-h-screen transition-colors duration-300 ${d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}`}>
 			{/* ── Hero ── */}
 			<section
-				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden ${d ? 'bg-[#0d1117]' : 'bg-gray-50'}`}>
+				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center py-12 lg:py-16 px-6 lg:px-8 overflow-hidden bg-cover bg-center ${d ? 'bg-[#0d1117]/90 bg-blend-overlay' : 'bg-gray-50/90 bg-blend-overlay'}`}
+				style={{ backgroundImage: "url('/images/hero-background.png')" }}>
 				{/* Background glows */}
 				{d && (
 					<div className='absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none' />
