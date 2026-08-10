@@ -11,7 +11,7 @@ const navItems = [
   { label: "Home", href: "/" },
   { label: "Free Scan", href: "/pages/about" },
   { label: "Pricing", href: "/pages/pricing" },
-  { label: "Contact Support", href: "/pages/contact" },
+  { label: "Support", href: "/pages/contact" },
 ];
 
 // Animation patterns to cycle through for variety
@@ -153,7 +153,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       <main
         key={pathname}
         ref={mainRef}
-        className="pt-[53px] animate-page-in"
+        className="animate-page-in"
       >
         {children}
       </main>

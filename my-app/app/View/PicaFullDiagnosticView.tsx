@@ -243,7 +243,7 @@ function IntelligenceProductPage({
           d ? "bg-[#0d1117]" : "bg-white"
         }`}
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
           <h2
             className={`text-2xl md:text-3xl font-extrabold leading-tight mb-4 ${
               d ? "text-white" : "text-gray-900"
@@ -268,43 +268,56 @@ function IntelligenceProductPage({
 
       {/* ── Footer ── */}
       <footer
-        className={`px-4 sm:px-6 md:px-8 py-8 border-t ${
-          d
-            ? "bg-[#0d1117] border-white/10"
-            : "bg-white border-gray-200"
-        }`}
-      >
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <p
-              className={`text-sm font-extrabold ${
-                d ? "text-white" : "text-gray-900"
-              }`}
-            >
-              PICA Intelligence
-            </p>
-            <p
-              className={`text-xs ${
-                d ? "text-gray-500" : "text-gray-400"
-              }`}
-            >
-              © 2024 PICA. Engineered for Strategic
-              Intelligence.
-            </p>
-          </div>
-          <div className="flex items-center gap-4 md:gap-8">
-            {["Privacy", "Terms", "API", "Status"].map((item) => (
+        className={`px-6 py-12 border-t text-xs ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
+        <div className='max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6'>
+          <Link
+            href='/'
+            className='flex items-center gap-2'>
+            <Image
+              src='/images/favicon.png'
+              alt='Beauvision'
+              width={20}
+              height={20}
+              className='h-5 w-5 object-contain'
+            />
+            <span
+              className={`text-sm font-bold tracking-tight ${d ? 'text-white' : 'text-gray-900'}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className='flex flex-wrap items-center justify-center gap-4 md:gap-8'>
+            {[
+              {
+                label: 'Privacy Policy',
+                href: '/data-policy',
+              },
+              {
+                label: 'Terms of Service',
+                href: '/terms',
+              },
+              {
+                label: 'Platform Guide',
+                href: '/documentation',
+              },
+              {
+                label: 'Contact Support',
+                href: '/pages/contact',
+              },
+            ].map(({ label, href }) => (
               <Link
-                key={item}
-                href="#"
-                className={`text-xs font-semibold uppercase tracking-wider transition hover:opacity-70 ${
-                  d ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                {item}
+                key={label}
+                href={href}
+                className={`transition hover:opacity-70 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+                {label}
               </Link>
             ))}
           </div>
+          <p
+            className={
+              d ? 'text-gray-500' : 'text-gray-400'
+            }>
+            © Beauvision 2026. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
@@ -891,42 +904,56 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
 
       {/* Footer */}
       <footer
-        className={`px-4 sm:px-6 md:px-8 py-6 border-t ${
-          d
-            ? "bg-[#0d1117] border-white/10"
-            : "bg-white border-gray-200"
-        }`}
-      >
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <p
-              className={`text-sm font-extrabold ${
-                d ? "text-white" : "text-gray-900"
-              }`}
-            >
-              Pica Obsidian
-            </p>
-            <p
-              className={`text-xs ${
-                d ? "text-gray-500" : "text-gray-400"
-              }`}
-            >
-              © 2024 Intelligence Unit. Institutional Access.
-            </p>
-          </div>
-          <div className="flex items-center gap-8">
-            {["Privacy", "Terms", "Audit", "Support"].map((item) => (
+        className={`px-6 py-12 border-t text-xs ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
+        <div className='max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6'>
+          <Link
+            href='/'
+            className='flex items-center gap-2'>
+            <Image
+              src='/images/favicon.png'
+              alt='Beauvision'
+              width={20}
+              height={20}
+              className='h-5 w-5 object-contain'
+            />
+            <span
+              className={`text-sm font-bold tracking-tight ${d ? 'text-white' : 'text-gray-900'}`}>
+              Beauvision
+            </span>
+          </Link>
+          <div className='flex flex-wrap items-center justify-center gap-4 md:gap-8'>
+            {[
+              {
+                label: 'Privacy Policy',
+                href: '/data-policy',
+              },
+              {
+                label: 'Terms of Service',
+                href: '/terms',
+              },
+              {
+                label: 'Platform Guide',
+                href: '/documentation',
+              },
+              {
+                label: 'Contact Support',
+                href: '/pages/contact',
+              },
+            ].map(({ label, href }) => (
               <Link
-                key={item}
-                href="#"
-                className={`text-xs font-semibold uppercase tracking-wider hover:opacity-70 transition ${
-                  d ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                {item}
+                key={label}
+                href={href}
+                className={`transition hover:opacity-70 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+                {label}
               </Link>
             ))}
           </div>
+          <p
+            className={
+              d ? 'text-gray-500' : 'text-gray-400'
+            }>
+            © Beauvision 2026. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

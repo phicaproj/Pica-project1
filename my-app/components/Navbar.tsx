@@ -308,8 +308,6 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Add padding to body content if navbar is fixed */}
-      {isFixed && <div className="h-[53px]" />}
     </>
   );
 }
