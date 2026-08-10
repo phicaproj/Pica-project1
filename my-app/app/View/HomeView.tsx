@@ -986,7 +986,7 @@ export default function HomePage() {
 							},
 							{
 								label: 'Contact Support',
-								href: '#',
+								href: '/pages/contact',
 							},
 						].map(({ label, href }) => (
 							<Link
