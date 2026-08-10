@@ -249,12 +249,9 @@ function ProfileStep({
 			>
 				{/* Smart Classification badge — hidden on mobile because it
 				    overlaps the headline at narrow widths. Reappears at sm+. */}
-				<div className='hidden sm:block absolute -top-12 right-6 md:right-8 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs z-10 shadow-lg'>
-					<p className='text-gray-400 uppercase tracking-wider text-[10px] mb-0.5'>
-						Smart Classification
-					</p>
-					<p className='text-[#00ffaa] font-bold flex items-center gap-1'>
-						✦ Small Business
+				<div className='hidden sm:block absolute top-6 right-6 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs z-10'>
+					<p className='text-[#00ffaa] font-bold uppercase tracking-wider text-[10px] flex items-center gap-1 mb-0'>
+						✦ Smart Classification
 					</p>
 				</div>
 

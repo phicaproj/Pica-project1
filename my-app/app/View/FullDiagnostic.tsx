@@ -90,26 +90,27 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
       </section>
 
       {/* ── Methodology ── */}
-      <section className={`px-4 sm:px-6 md:px-12 py-8 md:py-12 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-8 items-start">
-          <div className="col-span-1">
+      <section className={`px-4 sm:px-6 md:px-12 py-12 md:py-16 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+        <div className="max-w-6xl mx-auto flex flex-col items-center">
+          <div className="text-center max-w-2xl mx-auto mb-12">
             <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-3">Methodology</p>
-            <h2 className={`text-2xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Quantitative Intelligence</h2>
+            <h2 className={`text-2xl md:text-3xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Quantitative Intelligence</h2>
             <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
               Our proprietary diagnostic engine processes over 150 data points per architectural node, delivering a risk-score that is 4x more accurate than traditional manual audits.
             </p>
           </div>
-          <div className="col-span-1 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          
+          <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-12">
             {[
               { label: "Resource Efficiency", sub: "Industry Average: 64%", pct: 64, color: "#f97316" },
               { label: "Growth Potential", sub: "Top Decile: 88%", pct: 88, color: "#00ffaa" },
               { label: "Compliance Readiness", sub: "Global Standard: 70%", pct: 70, color: "#3b82f6" },
             ].map(({ label, sub, pct, color }) => (
-              <div key={label}>
-                <div className={`h-1 rounded-full mb-3 ${d ? "bg-white/10" : "bg-gray-200"}`}>
+              <div key={label} className="flex flex-col text-center">
+                <div className={`h-1.5 rounded-full mb-4 w-full ${d ? "bg-white/10" : "bg-gray-200"}`}>
                   <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
                 </div>
-                <p className={`text-sm font-semibold mb-0.5 ${d ? "text-white" : "text-gray-900"}`}>{label}</p>
+                <p className={`text-base font-semibold mb-1 ${d ? "text-white" : "text-gray-900"}`}>{label}</p>
                 <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>{sub}</p>
               </div>
             ))}
