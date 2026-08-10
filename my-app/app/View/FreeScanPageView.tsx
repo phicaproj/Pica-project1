@@ -35,7 +35,7 @@ export default function FreeScanPage() {
               Get a clear, honest read on your business at zero cost. Built for founders and entrepreneurs who want immediate visibility into where their business stands today.
             </p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none">
-              <Link href="/pages/generaltest"
+              <Link href="/pages/about"
                 className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95">
                 Start Free Scan <ArrowRight className="w-4 h-4" />
               </Link>
@@ -174,7 +174,7 @@ export default function FreeScanPage() {
             No credit card, no commitment. Just the data you need to understand your current operational standing.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <Link href="/pages/generaltest"
+            <Link href="/pages/about"
               className="px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition-all shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95">
               Start Free Scan
             </Link>
@@ -205,7 +205,7 @@ export default function FreeScanPage() {
             {[
               { label: "Privacy Policy", href: "/data-policy" },
               { label: "Terms of Service", href: "/terms" },
-              { label: "Documentation", href: "/documentation" },
+              { label: "Platform Guide", href: "/documentation" },
               { label: "Contact Support", href: "#" },
             ].map(({ label, href }) => (
               <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>

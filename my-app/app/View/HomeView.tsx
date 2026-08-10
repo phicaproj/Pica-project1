@@ -92,7 +92,7 @@ export default function HomePage() {
 						</p>
 						<div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none'>
 							<Link
-								href='/pages/freescan'
+								href='/pages/about'
 								className='px-12 py-4 rounded-full bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95'>
 								Start Free Scan
 							</Link>
@@ -516,7 +516,7 @@ export default function HomePage() {
 								</ul>
 							</div>
 							<Link
-								href='/pages/freescan'
+								href='/pages/about'
 								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#1f2937] hover:bg-gray-800 text-white text-center block active:scale-95 transition-all shadow-md'>
 								Start Free Scan
 							</Link>
@@ -981,7 +981,7 @@ export default function HomePage() {
 								href: '/terms',
 							},
 							{
-								label: 'Documentation',
+								label: 'Platform Guide',
 								href: '/documentation',
 							},
 							{

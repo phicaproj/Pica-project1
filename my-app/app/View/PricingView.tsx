@@ -50,7 +50,12 @@ function PricingSkeleton({ dark }: { dark: boolean }) {
       aria-hidden="true"
     >
       {[0, 1, 2].map((i) => (
-        <div key={i} className={`rounded-2xl p-8 border animate-pulse ${card}`}>
+        <div key={i} className={`relative overflow-hidden rounded-2xl p-8 border ${card}`}>
+          {/* Shimmer Overlay */}
+          <div 
+            className={`absolute inset-0 z-10 w-full h-full bg-gradient-to-r from-transparent ${dark ? "via-white/[0.05]" : "via-white/60"} to-transparent anim-shimmer pointer-events-none`}
+            style={{ animationDelay: `${i * 0.15}s` }} 
+          />
           <div className={`h-3 w-20 rounded ${block} mb-4`} />
           <div className={`h-7 w-40 rounded ${block} mb-5`} />
           <div className={`h-10 w-28 rounded ${block} mb-8`} />
@@ -210,7 +215,7 @@ export default function PricingPage() {
             } gap-4 md:gap-6 items-start`}
           >
             <div className={`rounded-2xl p-8 border ${d ? "bg-[#1a2535] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
-              <p className={`text-xs font-semibold uppercase tracking-widest mb-2 ${d ? "text-gray-400" : "text-gray-500"}`}>Layer 01</p>
+              <p className={`text-xs font-semibold uppercase tracking-widest mb-2 ${d ? "text-gray-400" : "text-gray-500"}`}>Awareness</p>
               <h3 className={`text-2xl md:text-3xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Free Scan</h3>
               <p className="text-3xl md:text-5xl font-extrabold mb-6">{formatMoney(0, "USD")}</p>
               {/* Free Scan is a fixed lead-magnet, not an admin-priced row, so
@@ -223,7 +228,7 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/pages/freescan" className="block w-full py-3.5 rounded-xl text-sm font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95">
+              <Link href="/pages/about" className="block w-full py-3.5 rounded-xl text-sm font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95">
                 Start Free Scan
               </Link>
             </div>
@@ -234,7 +239,7 @@ export default function PricingPage() {
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00ffaa] text-gray-900 text-xs font-extrabold px-4 py-1 rounded-full uppercase tracking-wider">
                     Most Selected
                   </div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 02</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Full Diagnostics</p>
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Strategic Scan Full Diagnostic</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
                     {formatMoney(phase2A?.price, phase2A?.currency ?? "USD")}
@@ -259,7 +264,7 @@ export default function PricingPage() {
                 </div>
 
                 <div className="rounded-2xl p-8 bg-[#2a3520] border border-[#4a6030]/40">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Layer 03</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Intelligence</p>
                   <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Deep Dive</h3>
                   <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
                     {phase2BFrom === null ? (
@@ -554,7 +559,7 @@ export default function PricingPage() {
             {[
               { label: "Privacy Policy", href: "/data-policy" },
               { label: "Terms of Service", href: "/terms" },
-              { label: "Documentation", href: "/documentation" },
+              { label: "Platform Guide", href: "/documentation" },
               { label: "Contact Support", href: "#" },
             ].map(({ label, href }) => (
               <Link key={label} href={href} className={`transition hover:opacity-70 ${d ? "text-gray-400" : "text-gray-500"}`}>{label}</Link>

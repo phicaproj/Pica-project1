@@ -181,7 +181,7 @@ export default function Navbar({
                 Login
               </Link>
               <Link
-                href="/Auth/signup"
+                href="/pages/about"
                 className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
               >
                 Get Started
@@ -296,7 +296,7 @@ export default function Navbar({
                   Login
                 </Link>
                 <Link
-                  href="/Auth/signup"
+                  href="/pages/about"
                   onClick={() => setMobileMenuOpen(false)}
                   className="px-3 py-2 rounded-lg text-sm font-semibold text-center bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
                 >

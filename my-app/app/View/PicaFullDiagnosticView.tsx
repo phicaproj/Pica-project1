@@ -53,14 +53,14 @@ function IntelligenceProductPage({
       }`}
     >
       {/* ── Hero ── */}
-      {/* Centered in one viewport so the headline + tagline + CTAs read as a
-          single first impression rather than scrolling through padding. */}
+      {/* Adjusted spacing to sit nicely below the nav and added background image */}
       <section
-        className={`min-h-screen flex flex-col justify-center px-4 sm:px-6 md:px-12 py-8 md:py-12 ${
-          d ? "bg-[#0d1117]" : "bg-gray-50"
+        className={`relative pt-32 pb-16 md:pt-40 md:pb-24 px-4 sm:px-6 md:px-12 flex flex-col justify-center bg-cover bg-center ${
+          d ? "bg-[#0d1117]/95 bg-blend-overlay" : "bg-gray-50/95 bg-blend-overlay"
         }`}
+        style={{ backgroundImage: "url('/images/hero-background.png')" }}
       >
-        <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
+        <div className="relative z-10 max-w-6xl mx-auto flex flex-col items-center text-center">
           <div className="inline-flex items-center px-3 py-1 rounded-md border border-[#f97316]/40 text-[#f97316] text-xs font-bold uppercase tracking-widest mb-6">
             Architectural Intelligence Systems
           </div>
@@ -103,7 +103,7 @@ function IntelligenceProductPage({
                     d ? "text-white" : "text-gray-900"
                   }`}
                 >
-                  Layer 03: Intelligence
+                  Intelligence
                 </h2>
                 <p
                   className={`text-xs ${
@@ -113,18 +113,7 @@ function IntelligenceProductPage({
                   Engineered for medium-scale operations
                 </p>
               </div>
-              <div className="text-right">
-                <p
-                  className={`text-2xl md:text-3xl font-extrabold ${
-                    d ? "text-white" : "text-gray-900"
-                  }`}
-                >
-                  $1,200
-                </p>
-                <p className="text-xs font-bold uppercase tracking-widest text-[#f97316]">
-                  Yearly Billing
-                </p>
-              </div>
+
             </div>
 
             {/* Features grid */}
@@ -157,7 +146,7 @@ function IntelligenceProductPage({
               onClick={onCheckout}
               className="mt-auto w-full sm:w-auto px-12 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-extrabold uppercase tracking-widest transition"
             >
-              Contact Expert
+              Start Deep Dive
             </button>
           </div>
 
@@ -218,7 +207,7 @@ function IntelligenceProductPage({
                   d ? "text-gray-300" : "text-gray-600"
                 }`}
               >
-                Layer 03 includes dedicated success management and 24/7
+                The Intelligence tier includes dedicated success management and 24/7
                 technical surveillance to ensure your API uptime never drops
                 below 99.99%.
               </p>
@@ -411,26 +400,12 @@ function IntelligenceCheckoutPage({
             Selected Subscription
           </p>
           <h1
-            className={`text-2xl md:text-4xl font-extrabold leading-tight mb-3 ${
+            className={`text-2xl md:text-4xl font-extrabold leading-tight mb-8 ${
               d ? "text-white" : "text-gray-900"
             }`}
           >
-            Layer 03
-            <br />
             Intelligence
           </h1>
-          <div className="mb-8">
-            <span className="text-2xl md:text-4xl font-extrabold text-[#00ffaa]">
-              $1,200
-            </span>
-            <span
-              className={`text-sm ml-2 ${
-                d ? "text-gray-400" : "text-gray-500"
-              }`}
-            >
-              / yearly
-            </span>
-          </div>
 
           <div className="space-y-5">
             {features.map(({ title, desc }) => (
@@ -787,7 +762,7 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
           }`}
         >
           Your intelligence unit is now fully operational. We have activated
-          your $1,200 yearly PICA Intelligence plan.
+          your PICA Intelligence plan.
         </p>
 
         {/* Summary cards */}
@@ -836,34 +811,12 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
                     d ? "text-white" : "text-gray-900"
                   }`}
                 >
-                  Yearly (Layer 03)
+                  Yearly
                 </p>
               </div>
             </div>
 
-            <div
-              className={`border-t pt-6 mb-8 ${
-                d ? "border-white/10" : "border-gray-200"
-              }`}
-            >
-              <p
-                className={`text-xs mb-1 ${
-                  d ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                Total Amount Processed
-              </p>
-              <p
-                className={`text-xs mb-1 ${
-                  d ? "text-gray-600" : "text-gray-400"
-                }`}
-              >
-                Including all applicable institutional taxes
-              </p>
-              <p className="text-3xl font-extrabold text-[#00ffaa]">
-                $1,200.00
-              </p>
-            </div>
+
 
             <div className="flex gap-3">
               <Link

@@ -9,8 +9,9 @@ import { ThemeProvider, useTheme } from "@/components/ThemeContext";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "Free Scan", href: "/pages/freescan" },
+  { label: "Free Scan", href: "/pages/about" },
   { label: "Pricing", href: "/pages/pricing" },
+  { label: "Contact Support", href: "/pages/contact" },
 ];
 
 // Animation patterns to cycle through for variety
@@ -158,13 +159,15 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Floating CTA */}
-      <Link 
-        href="/pages/freescan"
-        className="fixed bottom-24 right-6 md:bottom-6 md:right-6 z-50 flex flex-col items-center justify-center p-3 rounded-2xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
-      >
-        <ScanSearch className="w-6 h-6 mb-1" />
-        <span className="text-[10px] font-black uppercase tracking-wider text-center max-w-[80px] leading-tight">Start Free Scan</span>
-      </Link>
+      {pathname === "/" && (
+        <Link 
+          href="/pages/about"
+          className="fixed bottom-28 right-6 md:bottom-20 md:right-6 z-50 flex flex-col items-center justify-center p-2 rounded-xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
+        >
+          <ScanSearch className="w-5 h-5 mb-0.5" />
+          <span className="text-[9px] font-black uppercase tracking-wider text-center max-w-[70px] leading-tight">Start Free Scan</span>
+        </Link>
+      )}
 
       {/* Floating dark/light mode toggle — bottom right on mobile */}
       <button

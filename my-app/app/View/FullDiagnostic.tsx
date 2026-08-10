@@ -37,17 +37,15 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
               Full Diagnostic
             </div>
             <h1 className="text-3xl md:text-5xl font-extrabold leading-tight mb-4">
-              Layer 02<br />
               <span className="text-[#f97316]">Full Diagnostic</span>
             </h1>
             <p className={`text-sm leading-relaxed mb-8 max-w-md ${d ? "text-gray-400" : "text-gray-600"}`}>
               A comprehensive analysis of your business infrastructure. We identify bottlenecks, hidden risks, and untapped scalability vectors before they impact your growth.
             </p>
             <div className="mb-10 flex items-center gap-6">
-              <span className={`text-3xl md:text-5xl font-extrabold ${d ? "text-white" : "text-gray-900"}`}>$249</span>
               <button onClick={onCheckout}
                 className="px-4 sm:px-6 md:px-8 py-4 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-bold transition">
-                Get Diagnostic
+                Get Started
               </button>
             </div>
 
@@ -84,7 +82,7 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
                 <p className={`text-xs font-bold uppercase tracking-wider ${d ? "text-gray-300" : "text-gray-700"}`}>Trusted by 2,400+ Founders</p>
               </div>
               <p className={`text-xs leading-relaxed italic ${d ? "text-gray-300" : "text-gray-600"}`}>
-                "The Layer 02 diagnostic exposed architectural bottlenecks we hadn't even considered. It changed our entire Q4 strategy."
+                "The Full Diagnostic exposed architectural bottlenecks we hadn't even considered. It changed our entire Q4 strategy."
               </p>
             </div>
           </div>
@@ -174,12 +172,9 @@ function CheckoutPage({ dark, setDark, onSuccess }: { dark: boolean; setDark: (v
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-4">Selected Subscription</p>
           <h1 className={`text-2xl md:text-4xl font-extrabold leading-tight mb-3 ${d ? "text-white" : "text-gray-900"}`}>
-            Layer 02 Full<br />Diagnostic
+            Full<br />Diagnostic
           </h1>
-          <div className="mb-8">
-            <span className="text-2xl md:text-4xl font-extrabold text-[#00ffaa]">$249</span>
-            <span className={`text-sm ml-2 ${d ? "text-gray-400" : "text-gray-500"}`}>/ yearly</span>
-          </div>
+
 
           <div className="space-y-5">
             {features.map(({ title, desc }) => (
@@ -380,19 +375,59 @@ function PaymentSuccessPage({ dark, setDark }: { dark: boolean; setDark: (v: boo
       </div>
 
       {/* Footer */}
-      <footer className={`px-8 py-6 border-t ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div>
-            <p className={`text-sm font-extrabold ${d ? "text-white" : "text-gray-900"}`}>Pica Obsidian</p>
-            <p className={`text-xs ${d ? "text-gray-500" : "text-gray-400"}`}>© 2024 Intelligence Unit. All rights reserved.</p>
-          </div>
-          <div className="flex items-center gap-8">
-            {["Privacy Policy", "Terms of Service", "Compliance Audit", "Contact Support"].map((item) => (
-              <Link key={item} href="#" className={`text-xs hover:opacity-70 transition ${d ? "text-gray-400" : "text-gray-500"}`}>{item}</Link>
-            ))}
-          </div>
-        </div>
-      </footer>
+			<footer
+				className={`px-6 py-12 border-t text-xs ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
+				<div className='max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6'>
+					<Link
+						href='/'
+						className='flex items-center gap-2'>
+						<Image
+							src='/images/favicon.png'
+							alt='Beauvision'
+							width={20}
+							height={20}
+							className='h-5 w-5 object-contain'
+						/>
+						<span
+							className={`text-sm font-bold tracking-tight ${d ? 'text-white' : 'text-gray-900'}`}>
+							Beauvision
+						</span>
+					</Link>
+					<div className='flex flex-wrap items-center justify-center gap-4 md:gap-8'>
+						{[
+							{
+								label: 'Privacy Policy',
+								href: '/data-policy',
+							},
+							{
+								label: 'Terms of Service',
+								href: '/terms',
+							},
+							{
+								label: 'Platform Guide',
+								href: '/documentation',
+							},
+							{
+								label: 'Contact Support',
+								href: '#',
+							},
+						].map(({ label, href }) => (
+							<Link
+								key={label}
+								href={href}
+								className={`transition hover:opacity-70 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+								{label}
+							</Link>
+						))}
+					</div>
+					<p
+						className={
+							d ? 'text-gray-500' : 'text-gray-400'
+						}>
+						© Beauvision 2026. All rights reserved.
+					</p>
+				</div>
+			</footer>
     </div>
   );
 }
@@ -403,12 +438,7 @@ export default function FullDiagnosticFlow() {
   const router = useRouter();
 
   const handleCheckout = () => {
-    const token = getAccessToken();
-    if (token) {
-      router.push("/dashboard/subscription");
-    } else {
-      router.push("/Auth/login");
-    }
+    router.push("/pages/about");
   };
 
   return <FullDiagnosticPage dark={dark} setDark={setDark} onCheckout={handleCheckout} />;
