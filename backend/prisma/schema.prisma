@@ -111,10 +111,10 @@ enum UserStatus {
 // (e.g. "non-renewing", "attention") collapse to PAST_DUE or CANCELLED based
 // on whether the user can still consume quota.
 enum SubscriptionStatus {
-  ACTIVE     // current period valid, quota consumable
-  PAST_DUE   // renewal charge failed; access until period end then EXPIRED
-  CANCELLED  // user (or admin) ended it; access until period end if cancelAtPeriodEnd
-  EXPIRED    // no current period; user must resubscribe
+  ACTIVE // current period valid, quota consumable
+  PAST_DUE // renewal charge failed; access until period end then EXPIRED
+  CANCELLED // user (or admin) ended it; access until period end if cancelAtPeriodEnd
+  EXPIRED // no current period; user must resubscribe
 }
 
 // Subscribe cadence. Snapshot on UserSubscription at subscribe time so the
@@ -197,39 +197,18 @@ model ScoringSettings {
   @@map("scoring_settings")
 }
 
-/// Singleton (one row) — admin-editable app-wide settings. Today this owns the
-/// USD→NGN exchange rate used to display/charge Nigerian users in Naira while
-/// non-NG users see USD. Kept as its own table (rather than bolted onto
-/// ScoringSettings) because the lifecycle and ownership are different.
-/// `updatedBy` is the admin User.id so we can attribute rate changes.
 model AppSettings {
-  id String @id @default(uuid())
+  id                          String  @id @default(uuid())
+  usdToNgn                    Decimal @map("usd_to_ngn") @db.Decimal(12, 4)
+  payPerUseActive             Boolean @default(true) @map("pay_per_use_active")
+  subscriptionActive          Boolean @default(true) @map("subscription_active")
+  phase2bDiscountPctPerPillar Int     @default(5) @map("phase2b_discount_pct_per_pillar")
+  phase2bDiscountMaxPillars   Int     @default(5) @map("phase2b_discount_max_pillars")
 
-  // Rate to convert USD (base) → NGN at display/charge time. Decimal(12, 4)
-  // gives 4dp precision, enough for any realistic FX value; the seed below
-  // installs a reasonable starting rate that the admin is expected to update.
-  usdToNgn Decimal @map("usd_to_ngn") @db.Decimal(12, 4)
+  phase1PullTotal Int @default(15) @map("phase1_pull_total")
 
-  // Storefront section toggles for the public pricing page (Section F).
-  // Both default to true so the page renders as-is until an admin flips one
-  // off. The service layer enforces the "at least one section must stay
-  // live" invariant — turning both off at once is rejected.
-  payPerUseActive   Boolean @default(true) @map("pay_per_use_active")
-  subscriptionActive Boolean @default(true) @map("subscription_active")
-
-  // Phase 2B multi-pillar bundle discount (BE-1). `pctPerPillar` is the
-  // percentage shaved off the bundle total for each EXTRA pillar beyond the
-  // first; `maxPillars` caps how many pillars count toward the discount (the
-  // customer is not told about the cap). Discount % =
-  //   min(count - 1, maxPillars - 1) × pctPerPillar.
-  // Defaults 5 / 5 give the agreed ladder 1→0%, 2→5%, … 5→20%, 6+→20%.
-  phase2bDiscountPctPerPillar Int @default(5) @map("phase2b_discount_pct_per_pillar")
-  phase2bDiscountMaxPillars   Int @default(5) @map("phase2b_discount_max_pillars")
-
-  phase1PullTotal             Int @default(15) @map("phase1_pull_total")
-
-  updatedBy String? @map("updated_by")
-  updatedByUser User? @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
+  updatedBy     String? @map("updated_by")
+  updatedByUser User?   @relation("AppSettingsUpdatedBy", fields: [updatedBy], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -242,15 +221,8 @@ model Question {
   pillarId          String       @map("pillar_id")
   questionCode      String       @unique @map("question_code") // e.g. "FL-001"
   questionText      String       @map("question_text")
-  // A single question can serve both phases. Phase 2A draws from the full active set
-  // for the user's businessSize; Phase 1 surfaces only those flagged isPhase1Featured.
   businessSize      BusinessSize @map("business_size")
   isPhase1Featured  Boolean      @default(false) @map("is_phase1_featured")
-  // Which deep-dive phase this question belongs to.
-  //   PHASE2A — Phase 1 and Phase 2A draw from these rows.
-  //   PHASE2B — pillar-specific deep-dive content, surfaced only when a user
-  //             starts a Phase 2B session for the matching pillar.
-  // Existing rows default to PHASE2A so the migration is non-destructive.
   phase             Phase        @default(PHASE2A) @map("phase")
   displayOrder      Int          @map("display_order")
   isKnockout        Boolean      @default(false) @map("is_knockout")
@@ -270,23 +242,18 @@ model Question {
 }
 
 model QuestionOption {
-  id             String   @id @default(uuid())
-  questionId     String   @map("question_id")
-  optionLabel    String   @map("option_label") // "A", "B", "C", "D"
-  optionText     String   @map("option_text")
-  score          Int // 0, 3, 5, 6, 7, 10
-  riskType       RiskType @map("risk_type")
-  observation    String // e.g. "High focus"
-  recommendation String // e.g. "Maintain this; you are in the Growth Zone"
-
-  // Phase 2B only — the option's "N-Day Action Plan". `actionPlanDays` is the
-  // admin-set window (30/50/60/90 or any 1–365 value); `actionPlanItems` is the
-  // ordered list of ~4–5 to-dos shown under it. For Phase 1 / 2A options these
-  // stay null / empty and the report uses `recommendation` instead.
+  id              String   @id @default(uuid())
+  questionId      String   @map("question_id")
+  optionLabel     String   @map("option_label") // "A", "B", "C", "D"
+  optionText      String   @map("option_text")
+  score           Int // 0, 3, 5, 6, 7, 10
+  riskType        RiskType @map("risk_type")
+  observation     String
+  recommendation  String
   actionPlanDays  Int?     @map("action_plan_days")
   actionPlanItems String[] @default([]) @map("action_plan_items")
 
-  displayOrder   Int      @map("display_order")
+  displayOrder Int @map("display_order")
 
   // Relations
   question  Question          @relation(fields: [questionId], references: [id])
@@ -295,7 +262,7 @@ model QuestionOption {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([questionId, optionLabel]) // no duplicate A/B/C/D per question
+  @@unique([questionId, optionLabel])
   @@map("question_options")
 }
 
@@ -304,28 +271,23 @@ model QuestionOption {
 // ============================================================
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String?  @map("password_hash") // null for Phase 1 lead-only users
-  firstName    String?  @map("first_name")
-  lastName     String?  @map("last_name")
-  businessName String?  @map("business_name")
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String?    @map("password_hash") // null for Phase 1 lead-only users
+  firstName    String?    @map("first_name")
+  lastName     String?    @map("last_name")
+  businessName String?    @map("business_name")
   phone        String?
-  avatarUrl    String?  @map("avatar_url")
-  isVerified   Boolean  @default(false) @map("is_verified")
-  role         UserRole @default(USER)
+  avatarUrl    String?    @map("avatar_url")
+  isVerified   Boolean    @default(false) @map("is_verified")
+  role         UserRole   @default(USER)
   status       UserStatus @default(ACTIVE)
 
   // Per-admin access control. `permissions` is this admin's own granular
   // permission set (chosen at invite time); `department` is an org label
-  // ("Finance", "Audit", "SUPER ADMIN", or custom). For ADMIN users these are
-  // the source of truth — the legacy adminRole relation is only a fallback for
-  // admins onboarded before per-person permissions existed.
-  permissions  String[] @default([])
-  department   String?
-
-  // Snapshotted from the originating Phase 1 AssessmentSession at registration.
-  // Source of truth for Phase 2A `businessSize` filtering.
+  // ("Finance", "Audit", "SUPER ADMIN", or custom). 
+  permissions    String[]      @default([])
+  department     String?
   businessSize   BusinessSize? @map("business_size")
   staffSize      String?       @map("staff_size")
   industry       String?
@@ -335,23 +297,16 @@ model User {
   annualRevenue  String?       @map("annual_revenue_range")
 
   // Relations
-  sessions       AssessmentSession[]
-  payments       Payment[]
-  phase2bUnlocks Phase2BPillarUnlock[]
-  discounts      Discount[]
-  adminRoleId    String?               @map("admin_role_id")
-  adminRole      AdminRole?            @relation(fields: [adminRoleId], references: [id])
-  // Reverse side of AppSettings.updatedBy — kept here only so the relation
-  // type-checks; admins shouldn't need to enumerate the AppSettings rows they
-  // edited (there's only one row anyway).
-  appSettingsUpdates     AppSettings[]      @relation("AppSettingsUpdatedBy")
+  sessions               AssessmentSession[]
+  payments               Payment[]
+  phase2bUnlocks         Phase2BPillarUnlock[]
+  discounts              Discount[]
+  adminRoleId            String?               @map("admin_role_id")
+  adminRole              AdminRole?            @relation(fields: [adminRoleId], references: [id])
+  appSettingsUpdates     AppSettings[]         @relation("AppSettingsUpdatedBy")
   subscriptions          UserSubscription[]
   consultations          ConsultationBooking[]
   adminAuditLogs         AdminAuditLog[]
-  // Back-relation for ConsultationBooking.adminNotesUpdatedById — every
-  // staff edit on a client's booking notes points back at the staff user
-  // who last wrote it. Distinct from `consultations` (those are bookings
-  // the user OWNS).
   consultationAdminNotes ConsultationBooking[] @relation("ConsultationAdminNotes")
   // PICA 2A credits granted by paid consultation bookings (see ConsultationTier
   // .freeP2ARuns / .freeP2ACreditWindowDays). Consumed before the subscription
@@ -369,32 +324,24 @@ model User {
 // ============================================================
 
 model AssessmentSession {
-  id     String        @id @default(uuid())
-  userId String?       @map("user_id")
-  phase  Phase
-  status SessionStatus @default(IN_PROGRESS)
-
-  // Phase 2B only — the pillar being deep-dived. Null for PHASE1 / PHASE2A.
-  pillarId String? @map("pillar_id")
-
-  // Phase 1 lead capture fields (filled before account creation)
-  leadEmail      String?       @unique @map("lead_email")
-  staffSize      String?       @map("lead_staff_size")
-  businessName   String        @map("lead_business_name")
-  industry       String        @map("lead_industry")
-  location       String        @map("lead_location")
-  operatingYears String        @map("lead_operating_years")
-  annualRevenue  String        @map("lead_annual_revenue_range")
-  businessSize   BusinessSize? @map("business_size")
-
-  // Phase 2A snapshot: array of question UUIDs (length = 7 pillars × 10 = 70)
-  // Frozen on Phase 2A start so admin edits to questions mid-session do not change the user's set.
-  selectedQuestionIds Json? @map("selected_question_ids")
+  id                  String        @id @default(uuid())
+  userId              String?       @map("user_id")
+  phase               Phase
+  status              SessionStatus @default(IN_PROGRESS)
+  pillarId            String?       @map("pillar_id")
+  leadEmail           String?       @unique @map("lead_email")
+  staffSize           String?       @map("lead_staff_size")
+  businessName        String        @map("lead_business_name")
+  industry            String        @map("lead_industry")
+  location            String        @map("lead_location")
+  operatingYears      String        @map("lead_operating_years")
+  annualRevenue       String        @map("lead_annual_revenue_range")
+  businessSize        BusinessSize? @map("business_size")
+  selectedQuestionIds Json?         @map("selected_question_ids")
 
   startedAt   DateTime  @default(now()) @map("started_at")
   completedAt DateTime? @map("completed_at")
 
-  // Relations
   user          User?                @relation(fields: [userId], references: [id])
   pillar        Pillar?              @relation(fields: [pillarId], references: [id])
   responses     SessionResponse[]
@@ -409,14 +356,12 @@ model AssessmentSession {
 }
 
 model SessionResponse {
-  id               String @id @default(uuid())
-  sessionId        String @map("session_id")
-  questionId       String @map("question_id")
-  selectedOptionId String @map("selected_option_id")
-
-  // Captured at answer time so reports are immune to future admin edits on the question/option content.
-  scoreAtTime    Int      @map("score_at_time")
-  riskTypeAtTime RiskType @map("risk_type_at_time")
+  id               String   @id @default(uuid())
+  sessionId        String   @map("session_id")
+  questionId       String   @map("question_id")
+  selectedOptionId String   @map("selected_option_id")
+  scoreAtTime      Int      @map("score_at_time")
+  riskTypeAtTime   RiskType @map("risk_type_at_time")
 
   answeredAt DateTime @default(now()) @map("answered_at")
 
@@ -425,7 +370,6 @@ model SessionResponse {
   question       Question          @relation(fields: [questionId], references: [id])
   selectedOption QuestionOption    @relation(fields: [selectedOptionId], references: [id])
 
-  // One answer per question per session
   @@unique([sessionId, questionId])
   @@map("session_responses")
 }
@@ -482,9 +426,7 @@ model SessionResult {
   // Array of question_ids that triggered a knockout, e.g. ["uuid-1", "uuid-2"]
   knockoutQuestionIds Json @map("knockout_question_ids")
 
-  insightPayload Json @map("insight_payload")
-
-  // Populated after payment + PDF generation
+  insightPayload  Json      @map("insight_payload")
   reportPdfUrl    String?   @map("report_pdf_url")
   generatedAt     DateTime? @map("generated_at")
   isPaid          Boolean   @default(false) @map("is_paid")
@@ -511,26 +453,13 @@ model SessionResult {
 /// `providerReference` is unique so retries on the same Paystack reference
 /// idempotently update the same row instead of duplicating.
 model Payment {
-  id        String  @id @default(uuid())
-  userId    String  @map("user_id")
-  // PHASE2A: required (set at init time, identifies the SessionResult being paid for).
-  // PHASE2B_PILLAR: null (no session exists yet at payment time; pillarId is set instead).
-  sessionId String? @map("session_id")
-  // PHASE2B_PILLAR: required for a single-pillar purchase (the pillar being
-  // unlocked). PHASE2A: null. For a multi-pillar bundle this is null and the
-  // full set lives on `pillarIds` below.
-  pillarId  String? @map("pillar_id")
-  // PHASE2B_PILLAR multi-pillar bundle (BE-1): the full set of pillars bought
-  // in one transaction. Empty for PHASE2A / single-pillar / subscription rows.
-  // One bundle Payment grants one Phase2BPillarUnlock per entry here.
-  pillarIds String[] @map("pillar_ids")
-  // SUBSCRIPTION: required (the UserSubscription this charge funds).
-  // PHASE2A / PHASE2B_PILLAR: null.
-  userSubscriptionId String? @map("user_subscription_id")
-  // CONSULTATION: required (the ConsultationBooking this paywall row funds).
-  // All other plans: null. Booking is created REQUESTED up front and becomes
-  // "ready to confirm" once Payment.status = SUCCESS.
-  consultationBookingId String? @unique @map("consultation_booking_id")
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  sessionId             String?  @map("session_id")
+  pillarId              String?  @map("pillar_id")
+  pillarIds             String[] @map("pillar_ids")
+  userSubscriptionId    String?  @map("user_subscription_id")
+  consultationBookingId String?  @unique @map("consultation_booking_id")
 
   plan     Plan
   provider PaymentProvider @default(PAYSTACK)
@@ -539,55 +468,31 @@ model Payment {
   providerReference String  @unique @map("provider_reference") // Paystack `reference`
   accessCode        String? @map("access_code") // Paystack init response
   authorizationUrl  String? @map("authorization_url") // Paystack init response
+  amount            Decimal @db.Decimal(12, 2)
+  currency          String  @default("USD")
 
-  // Amount in MAJOR units of `currency` — this is the FINAL charged amount
-  // after any coupon discount. Paystack works in kobo (NGN) or cents (USD);
-  // convert at the boundary. `currency` is the wire currency the user was
-  // actually billed in (NGN for Nigerian users, USD for everyone else).
-  amount   Decimal @db.Decimal(12, 2)
-  currency String  @default("USD")
-
-  // The USD-equivalent of `amount` at charge time. Lets admin roll-ups and
-  // analytics aggregate revenue in one currency even when individual rows
-  // span NGN and USD. For USD charges this equals `amount`; for NGN charges
-  // it is `amount / usdToNgn` snapshotted from app_settings at init time.
   amountUsd Decimal? @map("amount_usd") @db.Decimal(12, 2)
 
-  // Coupon applied at init time (if any). discountAmount is in the same major
-  // units as `amount` (whichever currency the user was charged in). Both null
-  // when no coupon was used. Kept for the admin transactions view / audit.
-  appliedCouponCode String?  @map("applied_coupon_code")
-  discountAmount    Decimal? @map("discount_amount") @db.Decimal(12, 2)
-
-  status        PaymentStatus @default(PENDING)
-  paymentMethod String?       @map("payment_method") // "card" | "bank" | "ussd" | "qr" | "transfer" | etc.
-  paidAt        DateTime?     @map("paid_at")
-  grantedAt     DateTime?     @map("granted_at")
-  failureReason String?       @map("failure_reason")
-
-  // Snapshot of customer details at init time so the admin transaction page
-  // shows the exact business name / email at the moment of payment, even if
-  // the user later changes them.
-  customerEmail        String  @map("customer_email")
-  customerBusinessName String? @map("customer_business_name")
-
-  // Raw provider responses kept for forensics. Not exposed via list endpoints.
-  initPayload   Json? @map("init_payload")
-  verifyPayload Json? @map("verify_payload")
+  appliedCouponCode    String?       @map("applied_coupon_code")
+  discountAmount       Decimal?      @map("discount_amount") @db.Decimal(12, 2)
+  status               PaymentStatus @default(PENDING)
+  paymentMethod        String?       @map("payment_method")
+  paidAt               DateTime?     @map("paid_at")
+  grantedAt            DateTime?     @map("granted_at")
+  failureReason        String?       @map("failure_reason")
+  customerEmail        String        @map("customer_email")
+  customerBusinessName String?       @map("customer_business_name")
+  initPayload          Json?         @map("init_payload")
+  verifyPayload        Json?         @map("verify_payload")
 
   // Relations
-  user                 User                  @relation(fields: [userId], references: [id])
-  pillar               Pillar?               @relation(fields: [pillarId], references: [id])
-  userSubscription     UserSubscription?     @relation(fields: [userSubscriptionId], references: [id])
-  consultationBooking  ConsultationBooking?  @relation(fields: [consultationBookingId], references: [id])
-  webhookEvents        WebhookEvent[]
-  // One row per pillar granted by this payment — a single-pillar purchase has
-  // one, a multi-pillar bundle has many (BE-1).
-  phase2bUnlocks       Phase2BPillarUnlock[]
-  // PICA 2A credits consumed by THIS payment (when the Phase 2A short-circuit
-  // resolves to free via a consultation-granted credit). Always 0 or 1 in
-  // practice; modelled as a list because the relation belongs to Phase2ACredit.
-  phase2aCreditsConsumed Phase2ACredit[] @relation("Phase2ACreditConsumedBy")
+  user                   User                  @relation(fields: [userId], references: [id])
+  pillar                 Pillar?               @relation(fields: [pillarId], references: [id])
+  userSubscription       UserSubscription?     @relation(fields: [userSubscriptionId], references: [id])
+  consultationBooking    ConsultationBooking?  @relation(fields: [consultationBookingId], references: [id])
+  webhookEvents          WebhookEvent[]
+  phase2bUnlocks         Phase2BPillarUnlock[]
+  phase2aCreditsConsumed Phase2ACredit[]       @relation("Phase2ACreditConsumedBy")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -599,9 +504,6 @@ model Payment {
   @@map("payments")
 }
 
-/// Append-only log of every webhook the provider sends us.
-/// Idempotent on (provider, providerEventId) — Paystack retries the same event
-/// id, so we ack but skip re-processing.
 model WebhookEvent {
   id String @id @default(uuid())
 
@@ -610,11 +512,10 @@ model WebhookEvent {
   eventType       String          @map("event_type") // "charge.success" etc.
   signatureValid  Boolean         @default(false) @map("signature_valid")
 
-  // Resolved Payment row (by reference) — null if we couldn't match yet.
   paymentId String?  @map("payment_id")
   payment   Payment? @relation(fields: [paymentId], references: [id])
 
-  rawBody Json @map("raw_body") // full event body for forensics
+  rawBody Json @map("raw_body")
 
   processingStatus WebhookProcessingStatus @default(RECEIVED) @map("processing_status")
   processingError  String?                 @map("processing_error")
@@ -633,18 +534,6 @@ model WebhookEvent {
 
 /// One row per successful Phase 2B pillar purchase.
 ///
-/// Lifecycle:
-///   1. POST /api/payment/init (plan PHASE2B_PILLAR) creates a Payment.
-///   2. On verify/webhook SUCCESS, an unlock row is created with
-///      sessionId = null. The user now holds a redeemable credit for that
-///      pillar.
-///   3. POST /api/assessment/phase2b/start claims the unlock, creating a
-///      new AssessmentSession and setting unlock.sessionId.
-///   4. POST /api/assessment/:sessionId/submit consumes the unlock:
-///      consumedAt is set, the linked SessionResult.isPaid flips to true
-///      (so the existing result/PDF code path works without 2B-specific
-///      branching).
-///
 /// "One open unlock per (user, pillar)" is enforced in application code
 /// (see initPaymentService) rather than via a DB partial-unique index —
 /// users can have many historical CONSUMED unlocks for the same pillar
@@ -656,9 +545,6 @@ model Phase2BPillarUnlock {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
   pillarId   String    @map("pillar_id")
-  // The SUCCESS Payment that granted this. No longer unique on its own: a
-  // single multi-pillar bundle Payment grants one unlock per pillar, so the
-  // uniqueness moved to the composite (paymentId, pillarId) index below.
   paymentId  String    @map("payment_id")
   sessionId  String?   @unique @map("session_id") // null = unstarted; set when user starts test
   unlockedAt DateTime  @default(now()) @map("unlocked_at")
@@ -670,31 +556,18 @@ model Phase2BPillarUnlock {
   payment Payment            @relation(fields: [paymentId], references: [id])
   session AssessmentSession? @relation(fields: [sessionId], references: [id])
 
-  // One unlock per (payment, pillar). Single-pillar purchases still get a
-  // single row; multi-pillar bundles get one row per pillar under the same
-  // paymentId. The upsert in grantSuccessEntitlements keys on this so a
-  // webhook+verify race can't double-grant.
   @@unique([paymentId, pillarId])
-  // Open-unlock lookup is hot (every init payment + every start session
-  // hits this index).
   @@index([userId, pillarId])
   @@map("phase2b_pillar_unlocks")
 }
 
 // PLAN PRICES (authoritative payment pricing; admin-managed and read by checkout)
-
 model PlanPrice {
-  id       String  @id @default(uuid())
+  id       String   @id @default(uuid())
   plan     Plan
   // null for PHASE2A; the specific Pillar for PHASE2B_PILLAR (per-pillar pricing).
-  pillarId String? @map("pillar_id")
-  price    Decimal @db.Decimal(12, 2) // in MAJOR units (USD post-Slice 2)
-
-  // Feature bullets shown on the public pricing card. Stored as text[] so the
-  // admin can re-order them; mirrors SubscriptionPlan.features. Seeded by the
-  // 20260617000000_plan_price_features migration with the bullets the FE used
-  // to hardcode in admin/subscription/page.tsx, so no visible change on
-  // rollout.
+  pillarId String?  @map("pillar_id")
+  price    Decimal  @db.Decimal(12, 2)
   features String[] @default([])
 
   pillar Pillar? @relation(fields: [pillarId], references: [id])
@@ -702,7 +575,6 @@ model PlanPrice {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  // One price per (plan, pillar). For PHASE2A pillarId is null → a single 2A row.
   @@unique([plan, pillarId])
   @@map("plan_prices")
 }
@@ -711,34 +583,23 @@ model Discount {
   id          String  @id @default(uuid())
   code        String  @unique
   description String?
-  // Both are always stored: the admin enters one, the FE derives the other, and
-  // the backend cross-verifies the pair on redemption.
-  amountOff   Decimal @db.Decimal(12, 2) @map("amount_off") // absolute discount in MAJOR units (NGN)
-  percentOff  Decimal @db.Decimal(5, 2)  @map("percent_off") // percentage discount (0–100)
+  amountOff   Decimal @map("amount_off") @db.Decimal(12, 2) // absolute discount in MAJOR units (NGN)
+  percentOff  Decimal @map("percent_off") @db.Decimal(5, 2) // percentage discount (0–100)
   isActive    Boolean @default(true) @map("is_active")
   status      String  @default("ACTIVE")
 
-  // Usage limits. maxUses = how many distinct redemptions the code allows
-  // (defaults to 1 so a forgotten field can't create an unlimited promo);
-  // usedCount tracks SUCCESS redemptions so far. When usedCount reaches
-  // maxUses the status flips to USED. A user-scoped coupon (userId set) is
-  // always maxUses = 1. Per-user reuse is blocked via the payments table
-  // (one SUCCESS payment per user per code), not a column here.
-  maxUses     Int     @default(1) @map("max_uses")
-  usedCount   Int     @default(0) @map("used_count")
-  userId      String? @map("user_id") // optional link to a User for user-specific discounts
-  plan        Plan? // optional target plan; null = usable on any paid plan
-  pillarId    String? @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons
+  maxUses            Int               @default(1) @map("max_uses")
+  usedCount          Int               @default(0) @map("used_count")
+  userId             String?           @map("user_id") // optional link to a User for user-specific discounts
+  plan               Plan? // optional target plan; null = usable on any paid plan
+  pillarId           String?           @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons
   // SUBSCRIPTION-plan tier target. Only meaningful when plan = SUBSCRIPTION.
   // null = coupon applies to any subscription tier; set = coupon only valid
-  // for that specific tier (mirrors how pillarId narrows PHASE2B_PILLAR
-  // coupons). Existing SUBSCRIPTION coupons keep working because null means
-  // "any tier" — no backfill required.
-  subscriptionPlanId String? @map("subscription_plan_id")
-
-  user             User?             @relation(fields: [userId], references: [id])
-  pillar           Pillar?           @relation(fields: [pillarId], references: [id])
-  subscriptionPlan SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
+  // for that specific tier
+  subscriptionPlanId String?           @map("subscription_plan_id")
+  user               User?             @relation(fields: [userId], references: [id])
+  pillar             Pillar?           @relation(fields: [pillarId], references: [id])
+  subscriptionPlan   SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -756,67 +617,36 @@ model AdminRole {
   permissions String[]
   users       User[]
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("admin_roles")
 }
 
-// ============================================================
-// LAYER E — SUBSCRIPTIONS (Paystack recurring, 3 tiers)
-// ============================================================
-
-/// Admin-defined subscription tier. Three rows are seeded by the migration —
-/// Starter / Growth / Scale — and the admin can edit every field below. The
-/// description renders inline with the feature list on the dashboard card.
-///
-/// Paystack Plans are per-currency, so each tier carries TWO plan codes: one
-/// for NGN-billed users and one for USD-billed users. The codes are populated
-/// by the admin create/update path after it calls Paystack; nullable so a
-/// row can exist briefly between insert and the Paystack round-trip.
 model SubscriptionPlan {
   id String @id @default(uuid())
 
-  // Display tier (1 = Starter, 2 = Growth, 3 = Scale). An int rather than an
-  // enum so the admin can re-order or add tiers without a schema migration.
   tier        Int
   name        String
   description String  @default("")
   priceUsd    Decimal @map("price_usd") @db.Decimal(12, 2)
 
   // Monthly quotas — what one period of this subscription buys. 0 means the
-  // tier doesn't include that benefit (e.g. a future "view-only" tier).
-  phase2aPerMonth        Int @map("phase2a_per_month")
-  phase2bPerMonth        Int @map("phase2b_per_month")
-  consultationsPerMonth  Int @map("consultations_per_month")
+  // tier doesn't include that benefit
+  phase2aPerMonth       Int      @map("phase2a_per_month")
+  phase2bPerMonth       Int      @map("phase2b_per_month")
+  consultationsPerMonth Int      @map("consultations_per_month")
+  features              String[] @default([])
+  paystackPlanCodeUsd   String?  @map("paystack_plan_code_usd")
+  paystackPlanCodeNgn   String?  @map("paystack_plan_code_ngn")
 
-  // Feature bullets shown on the storefront card. Stored as text[] so the
-  // admin can re-order them; the dashboard renders these *after* `description`
-  // on the same card.
-  features String[] @default([])
-
-  // Paystack-side plan codes, one per wire currency. Populated by the admin
-  // create/update flow via paystack.service.createPlan; null only in the brief
-  // window before that call returns.
-  paystackPlanCodeUsd String? @map("paystack_plan_code_usd")
-  paystackPlanCodeNgn String? @map("paystack_plan_code_ngn")
-
-  // Annual cadence. `annualDiscountPct` is the % shaved off `priceUsd × 12`
-  // when the user picks ANNUAL on subscribe; 0 means "no annual option" and
-  // the FE Monthly/Annual toggle hides the annual side. Annual Paystack plan
-  // codes mirror the monthly ones — created eagerly on admin save when
-  // discount > 0 (USD) and lazily on first NGN annual subscriber.
-  annualDiscountPct      Int     @default(0)  @map("annual_discount_pct")
+  annualDiscountPct         Int     @default(0) @map("annual_discount_pct")
   paystackPlanCodeUsdAnnual String? @map("paystack_plan_code_usd_annual")
   paystackPlanCodeNgnAnnual String? @map("paystack_plan_code_ngn_annual")
 
-  isActive     Boolean @default(true) @map("is_active")
-  displayOrder Int     @default(0)    @map("display_order")
-
+  isActive      Boolean            @default(true) @map("is_active")
+  displayOrder  Int                @default(0) @map("display_order")
   subscriptions UserSubscription[]
-  // Reverse side of Discount.subscriptionPlan — coupons that target this
-  // specific tier. Read-only from the plan side; admins manage targeting
-  // from the coupon create/edit screen.
   discounts     Discount[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -826,10 +656,6 @@ model SubscriptionPlan {
   @@map("subscription_plans")
 }
 
-/// One row per user-subscription lifecycle. New row on every fresh subscribe;
-/// the renewal webhook rolls `currentPeriodStart/End` in place rather than
-/// creating new rows so a single UserSubscription represents the whole
-/// relationship with Paystack until cancelled.
 model UserSubscription {
   id     String @id @default(uuid())
   userId String @map("user_id")
@@ -837,50 +663,31 @@ model UserSubscription {
 
   status SubscriptionStatus @default(ACTIVE)
 
-  // Paystack identifiers — `subscriptionCode` is what we call cancel/disable
-  // against; `customerCode` is reusable across subscriptions for the same user.
-  // `emailToken` is required by Paystack disable but only known after the
-  // first subscription.create webhook lands.
   paystackSubscriptionCode String? @unique @map("paystack_subscription_code")
   paystackCustomerCode     String? @map("paystack_customer_code")
   paystackEmailToken       String? @map("paystack_email_token")
 
-  // The currency this subscription is billed in. Locked at subscribe time —
-  // changing currency requires cancelling and resubscribing because Paystack
-  // Plans are currency-specific.
   currency String @default("USD")
 
-  // Billing cadence snapshotted at subscribe time. Drives the 30 vs 365 day
-  // period roll on every charge.success webhook, and the "billed monthly /
-  // annually" label in Settings. Existing rows backfill to MONTHLY via the
-  // column default.
   billingInterval BillingInterval @default(MONTHLY) @map("billing_interval")
 
-  // Card-on-file snapshot for the Settings → Payments screen. Paystack
-  // returns these on the first charge.success in `data.authorization`. We
-  // ONLY store masked / non-PAN fields — last4, type, bank, expiry — plus
-  // the reusable `authorizationCode` token that Paystack uses for charging
-  // future renewals on the same card. Never the full PAN, never the CVV.
-  cardLast4              String? @map("card_last4")
-  cardBrand              String? @map("card_brand")
-  cardBank               String? @map("card_bank")
-  cardExpMonth           String? @map("card_exp_month")
-  cardExpYear            String? @map("card_exp_year")
-  cardAuthorizationCode  String? @map("card_authorization_code")
+  cardLast4             String? @map("card_last4")
+  cardBrand             String? @map("card_brand")
+  cardBank              String? @map("card_bank")
+  cardExpMonth          String? @map("card_exp_month")
+  cardExpYear           String? @map("card_exp_year")
+  cardAuthorizationCode String? @map("card_authorization_code")
 
   // Current billing period. Rolled forward by the charge.success webhook on
-  // each successful renewal. EXPIRED rows still carry the last period for
-  // audit; new periods are gated on status === ACTIVE.
+  // each successful renewal.
   currentPeriodStart DateTime @map("current_period_start")
   currentPeriodEnd   DateTime @map("current_period_end")
 
-  // If true, the subscription stops at the next period end (user clicked
-  // cancel mid-period). The actual flip to EXPIRED happens when Paystack
-  // sends `subscription.disable` or the period rolls past `currentPeriodEnd`.
+  // If true, the subscription stops at the next period end (user clicked cancel mid-period).
   cancelAtPeriodEnd Boolean @default(false) @map("cancel_at_period_end")
 
-  user     User              @relation(fields: [userId], references: [id])
-  plan     SubscriptionPlan  @relation(fields: [planId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  plan     SubscriptionPlan    @relation(fields: [planId], references: [id])
   usage    SubscriptionUsage[]
   payments Payment[]
 
@@ -891,16 +698,9 @@ model UserSubscription {
   @@map("user_subscriptions")
 }
 
-/// Per-period usage counters. A new row is created at the start of each
-/// billing period (subscribe + every successful renewal); old rows are kept
-/// so we can show the user a history of what they consumed when.
-///
-/// `(userSubscriptionId, periodStart)` is unique — the renewal webhook is
-/// idempotent and the upsert here is what guards against duplicate periods
-/// if Paystack ever delivers the same event twice past WebhookEvent dedupe.
 model SubscriptionUsage {
-  id                   String @id @default(uuid())
-  userSubscriptionId   String @map("user_subscription_id")
+  id                 String @id @default(uuid())
+  userSubscriptionId String @map("user_subscription_id")
 
   periodStart DateTime @map("period_start")
   periodEnd   DateTime @map("period_end")
@@ -919,43 +719,20 @@ model SubscriptionUsage {
   @@map("subscription_usage")
 }
 
-// ============================================================
-// LAYER F — CONSULTATIONS (Section E)
-// ============================================================
-//
-// One-off advisory calls. Unlike subscription plans, ConsultationTier rows
-// are NOT mirrored to Paystack — every booking that needs payment generates a
-// fresh one-off transaction via initializeTransaction (same path as Phase 2A
-// / 2B). The tier is a price + duration template; the booking is the actual
-// event.
-//
-// Quota integration: subscribers consume `consultationsPerMonth` from their
-// active UserSubscription via assertSubscriptionQuota('consultation'). If
-// quota is available, the booking is coveredBySubscription=true with no
-// Payment row attached. Otherwise a paywall Payment is created and the
-// booking sits in REQUESTED until the Payment lands as SUCCESS.
-
-/// Admin-defined consultation tier (e.g. 30min / 60min / 90min). Prices are
-/// USD-base like subscription plans; NGN users see the converted price at
-/// checkout via the same FX rate.
 model ConsultationTier {
   id String @id @default(uuid())
 
-  tier         Int
-  name         String
-  description  String  @default("")
-  priceUsd     Decimal @map("price_usd") @db.Decimal(12, 2)
-  durationMinutes Int  @map("duration_minutes")
+  tier            Int
+  name            String
+  description     String  @default("")
+  priceUsd        Decimal @map("price_usd") @db.Decimal(12, 2)
+  durationMinutes Int     @map("duration_minutes")
 
-  // PICA 2A bonus: each confirmed booking on this tier grants the user
-  // `freeP2ARuns` credits valid for `freeP2ACreditWindowDays` days. Default
-  // 5 / 90 per the PDF; admin can edit per tier. Setting freeP2ARuns to 0
-  // disables the bonus for that tier without removing the column.
-  freeP2ARuns              Int @default(5) @map("free_p2a_runs")
-  freeP2ACreditWindowDays  Int @default(90) @map("free_p2a_credit_window_days")
+  freeP2ARuns             Int @default(5) @map("free_p2a_runs")
+  freeP2ACreditWindowDays Int @default(90) @map("free_p2a_credit_window_days")
 
   isActive     Boolean @default(true) @map("is_active")
-  displayOrder Int     @default(0)    @map("display_order")
+  displayOrder Int     @default(0) @map("display_order")
 
   bookings ConsultationBooking[]
 
@@ -966,66 +743,37 @@ model ConsultationTier {
   @@map("consultation_tiers")
 }
 
-/// One row per request. Created in REQUESTED state as soon as the user
-/// submits — quota path keeps it as-is, paywall path attaches a Payment via
-/// Payment.consultationBookingId. The booking stays REQUESTED until the
-/// admin confirms (sets scheduledAt + meetingLink); subsequent state changes
-/// are ATTENDED / NO_SHOW / CANCELLED.
 model ConsultationBooking {
   id     String @id @default(uuid())
   userId String @map("user_id")
   tierId String @map("tier_id")
 
-  status ConsultationBookingStatus @default(REQUESTED)
-
-  // Form fields. `topic` is short ("hiring plan review"); `notes` is the
-  // longer-form context the consultant wants to read before the call.
-  // `preferredTimes` is free-form for now (user types like "Mon AM, Wed
-  // afternoon") — kept simple; we don't try to parse it.
-  topic          String
-  notes          String  @default("")
-  preferredTimes String? @map("preferred_times")
-
-  // Optional link back to the SessionResult the user wants to discuss. The
-  // form populates this from the user's completed+paid Phase 2A / Phase 2B
-  // results so the consultant lands with context.
-  relatedSessionResultId String? @map("related_session_result_id")
+  status                 ConsultationBookingStatus @default(REQUESTED)
+  topic                  String
+  notes                  String                    @default("")
+  preferredTimes         String?                   @map("preferred_times")
+  relatedSessionResultId String?                   @map("related_session_result_id")
 
   // Admin-set after confirm.
   scheduledAt DateTime? @map("scheduled_at")
   meetingLink String?   @map("meeting_link")
 
-  // Admin-authored client feedback on this booking. Single-row by design (no
-  // separate thread) — the textarea on the admin ClientHistoryModal writes
-  // straight into `adminNotes`. `adminNotesNotifiedAt` is a one-shot gate so
-  // the user only receives an email on the FIRST non-empty save; subsequent
-  // edits never fire another email.
-  adminNotes              String?   @map("admin_notes")
-  adminNotesUpdatedAt     DateTime? @map("admin_notes_updated_at")
-  adminNotesUpdatedById   String?   @map("admin_notes_updated_by_id")
-  adminNotesNotifiedAt    DateTime? @map("admin_notes_notified_at")
+  adminNotes            String?   @map("admin_notes")
+  adminNotesUpdatedAt   DateTime? @map("admin_notes_updated_at")
+  adminNotesUpdatedById String?   @map("admin_notes_updated_by_id")
+  adminNotesNotifiedAt  DateTime? @map("admin_notes_notified_at")
 
-  // Quota path: true when a subscription consultation slot was consumed.
-  // No Payment row exists in that case; the entitlement IS the
-  // SubscriptionUsage decrement.
-  coveredBySubscription Boolean @default(false) @map("covered_by_subscription")
-
-  // Paywall path: linked Payment row. The Payment.consultationBookingId
-  // side is @unique, so this is effectively 1:1 from the booking side too.
-  // Read via `payment` relation rather than carrying paymentId here.
-
-  requestedAt DateTime @default(now()) @map("requested_at")
+  coveredBySubscription Boolean  @default(false) @map("covered_by_subscription")
+  requestedAt           DateTime @default(now()) @map("requested_at")
 
   // Relations
-  user                     User             @relation(fields: [userId], references: [id])
-  tier                     ConsultationTier @relation(fields: [tierId], references: [id])
-  relatedResult            SessionResult?   @relation(fields: [relatedSessionResultId], references: [id])
-  payment                  Payment?
-  adminNotesUpdatedByUser  User?            @relation("ConsultationAdminNotes", fields: [adminNotesUpdatedById], references: [id])
-  // PICA 2A credits granted when this booking was confirmed (see
-  // ConsultationTier.freeP2ARuns). Empty when the tier had freeP2ARuns=0 or
-  // the booking is still REQUESTED.
-  phase2aCredits           Phase2ACredit[]
+  user                    User             @relation(fields: [userId], references: [id])
+  tier                    ConsultationTier @relation(fields: [tierId], references: [id])
+  relatedResult           SessionResult?   @relation(fields: [relatedSessionResultId], references: [id])
+  payment                 Payment?
+  adminNotesUpdatedByUser User?            @relation("ConsultationAdminNotes", fields: [adminNotesUpdatedById], references: [id])
+
+  phase2aCredits Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1035,27 +783,14 @@ model ConsultationBooking {
   @@map("consultation_bookings")
 }
 
-/// One row per PICA 2A credit granted by a confirmed consultation booking.
-/// Tier-configurable count (`ConsultationTier.freeP2ARuns`) and validity
-/// window (`freeP2ACreditWindowDays`). Consumed by initPaymentService Phase 2A
-/// branch BEFORE the subscription quota path — so a user who has both a
-/// fresh credit and a subscription burns the credit first.
-///
-/// Uniqueness model: `(consultationBookingId, sequence)` is unique so the
-/// confirm flow can idempotently upsert N rows per booking. A re-confirm of
-/// the same booking yields the same rows.
 model Phase2ACredit {
-  id                      String   @id @default(uuid())
-  userId                  String   @map("user_id")
-  consultationBookingId   String   @map("consultation_booking_id")
-  // 1..freeP2ARuns at grant time. Used only as the second half of the
-  // (booking, sequence) uniqueness key so confirm is idempotent.
-  sequence                Int
-
-  expiresAt   DateTime  @map("expires_at")
-  // null = available; set when consumed by an initPaymentService short-circuit.
-  consumedAt        DateTime? @map("consumed_at")
-  consumedPaymentId String?   @map("consumed_payment_id")
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
+  consultationBookingId String    @map("consultation_booking_id")
+  sequence              Int
+  expiresAt             DateTime  @map("expires_at")
+  consumedAt            DateTime? @map("consumed_at")
+  consumedPaymentId     String?   @map("consumed_payment_id")
 
   user                User                @relation(fields: [userId], references: [id])
   consultationBooking ConsultationBooking @relation(fields: [consultationBookingId], references: [id])
@@ -1071,18 +806,18 @@ model Phase2ACredit {
 }
 
 model AdminAuditLog {
-  id          String   @id @default(uuid())
-  adminId     String   @map("admin_id")
-  action      String   @default("UPDATE")
-  entityType  String   @default("Admin") @map("entity_type")
-  entityId    String?  @map("entity_id")
-  field       String
-  oldValue    String?  @map("old_value") @db.Text
-  newValue    String?  @map("new_value") @db.Text
-  ipAddress   String?  @map("ip_address")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  adminId    String   @map("admin_id")
+  action     String   @default("UPDATE")
+  entityType String   @default("Admin") @map("entity_type")
+  entityId   String?  @map("entity_id")
+  field      String
+  oldValue   String?  @map("old_value") @db.Text
+  newValue   String?  @map("new_value") @db.Text
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  admin       User     @relation(fields: [adminId], references: [id])
+  admin User @relation(fields: [adminId], references: [id])
 
   @@map("admin_audit_logs")
 }
