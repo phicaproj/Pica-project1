@@ -73,7 +73,7 @@ export default function HomePage() {
 							</span>
 						</div>
 						<h1 className='text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight text-center lg:text-left'>
-							Most Business Are{' '}
+							Most Businesses Are{' '}
 							<br className='hidden lg:inline' />
 							Not{' '}
 							<span className='text-teal-400'>
