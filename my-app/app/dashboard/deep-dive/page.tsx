@@ -34,6 +34,7 @@ import {
 } from "@/lib/authClient";
 import { convertFromUsd, resolveDisplayCurrency } from "@/lib/utils";
 import { PillarPickerModal } from "./PillarPickerModal";
+import { useTheme } from "@/components/ThemeContext";
 
 const PILLAR_ICONS: Record<string, any> = {
   FINANCE: Banknote,
@@ -43,6 +44,8 @@ const PILLAR_ICONS: Record<string, any> = {
 };
 
 export default function DeepDivePage() {
+  const { dark } = useTheme();
+  const d = dark;
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,21 +277,21 @@ export default function DeepDivePage() {
       {/* Top area: Main card + Pain points */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Action Card (Left) */}
-        <div className="lg:col-span-2 rounded-2xl bg-[#111827] border border-white/5 p-6 flex flex-col justify-between relative overflow-hidden">
+        <div className={`lg:col-span-2 rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 flex flex-col justify-between relative overflow-hidden`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10">
             {activeSession ? (
               <>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-orange-500/20 text-orange-400">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${d ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-50 text-orange-700'}`}>
                     Ongoing Analysis
                   </span>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-1">
+                <h2 className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
                   {activeSession.pillarName}
                 </h2>
-                <h3 className="text-2xl font-bold text-orange-400 mb-3">Deep Dive</h3>
-                <p className="text-sm text-gray-400 max-w-lg mb-8">
+                <h3 className={`text-2xl font-bold ${d ? 'text-orange-400' : 'text-orange-600'} mb-3`}>Deep Dive</h3>
+                <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'} max-w-lg mb-8`}>
                   You have an active Deep Dive session in progress. Continue answering the diagnostic questions to uncover detailed insights and recommendations.
                 </p>
                 <div className="flex flex-wrap items-center gap-4">
@@ -301,7 +304,7 @@ export default function DeepDivePage() {
                   {activeProgress && (
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] text-gray-500 uppercase font-bold">Progress</span>
-                      <div className="w-32 h-1.5 rounded-full bg-white/5">
+                      <div className={`w-32 h-1.5 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'}`}>
                         <div
                           className="h-full rounded-full bg-teal-400"
                           style={{
@@ -309,7 +312,7 @@ export default function DeepDivePage() {
                           }}
                         />
                       </div>
-                      <span className="text-xs text-teal-400 font-mono">
+                      <span className={`text-xs ${d ? 'text-teal-400' : 'text-teal-700'} font-mono`}>
                         {Math.round((activeProgress.answeredCount / activeProgress.totalCount) * 100)}%
                       </span>
                     </div>
@@ -319,14 +322,14 @@ export default function DeepDivePage() {
             ) : (
               <>
                 <div className="flex flex-wrap items-center gap-3 mb-4">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${d ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-50 text-teal-700'}`}>
                     High-Fidelity Diagnostics
                   </span>
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-1">
+                <h2 className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
                   Architectural Intelligence
                 </h2>
-                <p className="text-sm text-gray-400 max-w-lg mb-8">
+                <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'} max-w-lg mb-8`}>
                   The Deep Dive Modules provide granular, high-fidelity insights into your business ecosystem. Select a specific pillar to establish your baseline and generate actionable findings.
                 </p>
                 <button
@@ -345,11 +348,11 @@ export default function DeepDivePage() {
         {/* Critical Pain Points */}
         <div className="flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold text-white">Critical Pain Points</h3>
+            <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Critical Pain Points</h3>
             {allFindings.length > 0 && (
               <button 
                 onClick={() => setShowPainPoints(true)}
-                className="text-orange-400 text-xs font-semibold hover:text-orange-300"
+                className={`text-xs font-semibold ${d ? 'text-orange-400 hover:text-orange-300' : 'text-orange-600 hover:text-orange-700'}`}
               >
                 View All
               </button>
@@ -363,9 +366,9 @@ export default function DeepDivePage() {
                 const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
                 
                 return (
-                  <div key={i} className="rounded-xl bg-[#111827] border border-white/5 p-4">
+                  <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-4`}>
                     <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                      <div className={`w-9 h-9 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
                         <Icon className={`w-4 h-4 ${severityColor.split(" ")[0]}`} />
                       </div>
                       <div className="min-w-0">
@@ -374,7 +377,7 @@ export default function DeepDivePage() {
                             {finding.pillarName} • {finding.riskType || "Finding"}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-white truncate" title={finding.observation}>
+                        <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'} truncate`} title={finding.observation}>
                           {finding.observation}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
@@ -386,9 +389,9 @@ export default function DeepDivePage() {
                 );
               })
             ) : (
-              <div className="rounded-xl bg-[#111827] border border-white/5 p-6 flex flex-col items-center justify-center h-full text-center">
+              <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 flex flex-col items-center justify-center h-full text-center`}>
                 <Sparkles className="w-8 h-8 text-gray-600 mb-3" />
-                <p className="text-sm text-gray-400">
+                <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   Complete a Deep Dive to surface findings here
                 </p>
               </div>
@@ -401,7 +404,7 @@ export default function DeepDivePage() {
       <div>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-xl font-bold text-white">Architectural Modules</h2>
+            <h2 className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Architectural Modules</h2>
             <p className="text-xs text-gray-500">
               Your purchased and completed Deep Dive modules.
             </p>
@@ -424,7 +427,7 @@ export default function DeepDivePage() {
               let statusLabel = "";
               
               if (session.status === "OPEN") {
-                statusColor = "text-gray-400 bg-white/5";
+                statusColor = d ? "text-gray-400 bg-white/5" : "text-gray-600 bg-gray-100";
                 statusLabel = "Ready to Start";
               } else if (session.status === "IN_PROGRESS") {
                 statusColor = "text-orange-400 bg-orange-400/10";
@@ -435,13 +438,13 @@ export default function DeepDivePage() {
               }
 
               return (
-                <div key={session.pillarId} className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col">
+                <div key={session.pillarId} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5 flex flex-col`}>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-teal-400" />
+                    <div className={`w-10 h-10 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center`}>
+                      <Icon className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">{session.pillarName}</h3>
+                      <h3 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{session.pillarName}</h3>
                       <p className="text-[10px] text-gray-500 font-mono uppercase">{session.pillarCode}</p>
                     </div>
                   </div>
@@ -466,19 +469,19 @@ export default function DeepDivePage() {
               );
             })
           ) : (
-            <div className="col-span-full rounded-xl bg-[#111827] border border-white/5 p-10 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+            <div className={`col-span-full rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-10 flex flex-col items-center justify-center text-center`}>
+              <div className={`w-16 h-16 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center mb-4`}>
                 <Globe className="w-8 h-8 text-gray-600" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">No active modules</h3>
-              <p className="text-sm text-gray-400 mb-6 max-w-sm">
+              <h3 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>No active modules</h3>
+              <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'} mb-6 max-w-sm`}>
                 You haven't started any Deep Dive modules yet. Choose a pillar to begin your in-depth architectural analysis.
               </p>
               <button
                 onClick={() => setShowPicker(true)}
                 disabled={profileIncomplete}
                 title={profileIncomplete ? "Complete your business profile first" : undefined}
-                className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                className={`px-6 py-3 rounded-xl ${d ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-200 text-gray-900 hover:bg-gray-200'} border text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed transition`}
               >
                 Start your first Deep Dive
               </button>
@@ -508,6 +511,8 @@ export default function DeepDivePage() {
 }
 
 function PainPointsModal({ findings, onClose }: { findings: any[]; onClose: () => void }) {
+  const { dark } = useTheme();
+  const d = dark;
   const grouped = findings.reduce((acc: any, f: any) => {
     if (!acc[f.pillarName]) acc[f.pillarName] = [];
     acc[f.pillarName].push(f);
@@ -515,28 +520,28 @@ function PainPointsModal({ findings, onClose }: { findings: any[]; onClose: () =
   }, {});
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-3xl rounded-2xl bg-[#0d1117] border border-white/10 shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${d ? 'bg-black/60' : 'bg-gray-50/60'} backdrop-blur-sm`} onClick={onClose}>
+      <div className={`w-full max-w-3xl rounded-2xl ${d ? 'bg-[#0d1117] border-white/10' : 'bg-white border-gray-200'} border shadow-2xl flex flex-col max-h-[90vh]`} onClick={e => e.stopPropagation()}>
+        <div className={`flex items-center justify-between p-6 border-b ${d ? 'border-white/5' : 'border-gray-100'}`}>
           <div>
-            <h2 className="text-xl font-bold text-white">All Critical Pain Points</h2>
+            <h2 className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>All Critical Pain Points</h2>
             <p className="text-sm text-gray-500">Comprehensive findings from your Deep Dive modules.</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition">
+          <button onClick={onClose} className={`w-10 h-10 rounded-full ${d ? 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:text-gray-900 hover:bg-gray-200'} flex items-center justify-center transition`}>
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6 overflow-y-auto space-y-8">
           {Object.keys(grouped).map(pillarName => (
             <div key={pillarName}>
-              <h3 className="text-lg font-bold text-white mb-4 border-b border-white/10 pb-2">{pillarName}</h3>
+              <h3 className={`text-lg font-bold ${d ? 'text-white border-white/10' : 'text-gray-900 border-gray-100'} mb-4 border-b pb-2`}>{pillarName}</h3>
               <div className="space-y-3">
                 {grouped[pillarName].map((finding: any, i: number) => {
                   const Icon = finding.riskType === "Critical" ? AlertTriangle : Zap;
                   const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
                   return (
-                    <div key={i} className="rounded-xl bg-[#111827] border border-white/5 p-4 flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                    <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-4 flex items-start gap-3`}>
+                      <div className={`w-9 h-9 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
                         <Icon className={`w-4 h-4 ${severityColor.split(" ")[0]}`} />
                       </div>
                       <div className="min-w-0">
@@ -545,7 +550,7 @@ function PainPointsModal({ findings, onClose }: { findings: any[]; onClose: () =
                             {finding.riskType || "Finding"}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-white">{finding.observation}</p>
+                        <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{finding.observation}</p>
                         <p className="text-xs text-gray-500 mt-1">{finding.recommendation}</p>
                       </div>
                     </div>

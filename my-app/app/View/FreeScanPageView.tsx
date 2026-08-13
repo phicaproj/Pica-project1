@@ -67,7 +67,7 @@ export default function FreeScanPage() {
             {/* 15-Minute Express Audit card */}
             <div className={`group rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-1 ${d ? "bg-[#0d1117] border-white/10 hover:border-teal-500/30" : "bg-white border-gray-200 shadow-sm hover:shadow-md"}`}>
               <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-teal-500/20 transition-all duration-200">
-                <Timer className="w-6 h-6 text-teal-400" />
+                <Timer className={`w-6 h-6 ${d ? "text-teal-400" : "text-teal-700"}`} />
               </div>
               <h3 className={`text-xl font-bold mb-3 ${d ? "text-white" : "text-gray-900"}`}>15-Minute Express Audit</h3>
               <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
@@ -94,30 +94,30 @@ export default function FreeScanPage() {
 
           {/* Risk Priority Matrix */}
           <div className={`rounded-2xl p-6 lg:p-8 border ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/5">
-              <AlertTriangle className="w-5 h-5 text-teal-400" />
-              <p className="text-sm font-bold uppercase tracking-wider text-teal-400">Risk Priority Matrix</p>
+            <div className={`flex items-center gap-2 mb-6 pb-4 border-b ${d ? "border-white/5" : "border-gray-200"}`}>
+              <AlertTriangle className={`w-5 h-5 ${d ? "text-teal-400" : "text-teal-700"}`} />
+              <p className={`text-sm font-bold uppercase tracking-wider ${d ? "text-teal-400" : "text-teal-700"}`}>Risk Priority Matrix</p>
             </div>
             <div className="space-y-4">
               {[
                 {
                   num: "01",
                   tag: "CRITICAL",
-                  tagColor: "text-rose-400 bg-rose-400/10 border border-rose-500/20",
+                  tagColor: d ? "text-rose-400 bg-rose-400/10 border border-rose-500/20" : "text-rose-700 bg-rose-50 border border-rose-200",
                   title: "Decisions are taking too long to make",
                   desc: "High latency in decision pipelines slows execution and stalls growth."
                 },
                 {
                   num: "02",
                   tag: "CRITICAL",
-                  tagColor: "text-rose-400 bg-rose-400/10 border border-rose-500/20",
+                  tagColor: d ? "text-rose-400 bg-rose-400/10 border border-rose-500/20" : "text-rose-700 bg-rose-50 border border-rose-200",
                   title: "Process Drift",
                   desc: "You've drifted from the processes and standards that used to work."
                 },
                 {
                   num: "03",
                   tag: "ADVISORY",
-                  tagColor: "text-amber-400 bg-amber-400/10 border border-amber-500/20",
+                  tagColor: d ? "text-amber-400 bg-amber-400/10 border border-amber-500/20" : "text-amber-700 bg-amber-50 border border-amber-200",
                   title: "Resilience Gaps",
                   desc: "Lack of backup plans or redundancy in critical workflows."
                 },
@@ -148,7 +148,7 @@ export default function FreeScanPage() {
               {/* Progress bars */}
               <div className="flex gap-2">
                 <div className="h-1.5 w-16 rounded-full bg-teal-400 shadow-sm shadow-teal-400/20" />
-                <div className="h-1.5 w-8 rounded-full bg-teal-400/30" />
+                <div className={`h-1.5 w-8 rounded-full ${d ? "bg-teal-400/30" : "bg-teal-200"}`} />
               </div>
             </div>
             {/* Tablet image placeholder */}
@@ -179,7 +179,7 @@ export default function FreeScanPage() {
               Start Free Scan
             </Link>
             <Link href="/pages/pricing"
-              className="px-8 py-4 rounded-xl text-sm font-bold border transition-all hover:bg-white/5 active:scale-95 border-white/10 text-teal-400 hover:text-teal-300">
+              className={`px-8 py-4 rounded-xl text-sm font-bold border transition-all active:scale-95 ${d ? "hover:bg-white/5 border-white/10 text-teal-400 hover:text-teal-300" : "hover:bg-gray-100 border-gray-200 text-teal-700 hover:text-teal-800"}`}>
               Compare All Plans
             </Link>
           </div>

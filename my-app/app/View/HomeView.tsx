@@ -68,7 +68,7 @@ export default function HomePage() {
 					<div className='flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6'>
 						<div className='inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20'>
 							<span className='w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse' />
-							<span className='text-xs font-bold uppercase tracking-widest text-teal-400'>
+							<span className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 								Precision Business Intelligence
 							</span>
 						</div>
@@ -76,7 +76,7 @@ export default function HomePage() {
 							Most Businesses Are{' '}
 							<br className='hidden lg:inline' />
 							Not{' '}
-							<span className='text-teal-400'>
+							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
 								Broken
 							</span>{' '}
 							<br />
@@ -115,8 +115,8 @@ export default function HomePage() {
 				<div className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-0 relative z-10'>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className='w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center'>
-							<Shield className='w-5 h-5 text-teal-400' />
+						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Shield className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -131,8 +131,8 @@ export default function HomePage() {
 					</div>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className='w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center'>
-							<Brain className='w-5 h-5 text-teal-400' />
+						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Brain className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -147,8 +147,8 @@ export default function HomePage() {
 					</div>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className='w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center'>
-							<Layers className='w-5 h-5 text-teal-400' />
+						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Layers className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -191,7 +191,7 @@ export default function HomePage() {
 					{/* Three pillars stepper */}
 					<div className='flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto pt-8 relative'>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className='text-3xl font-black text-teal-500 mb-2'>
+							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								01
 							</span>
 							<p
@@ -203,7 +203,7 @@ export default function HomePage() {
 							className={`hidden md:block h-px flex-1 border-t border-dashed ${d ? 'border-white/10' : 'border-gray-200'} max-w-[80px]`}
 						/>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className='text-3xl font-black text-teal-500 mb-2'>
+							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								02
 							</span>
 							<p
@@ -215,7 +215,7 @@ export default function HomePage() {
 							className={`hidden md:block h-px flex-1 border-t border-dashed ${d ? 'border-white/10' : 'border-gray-200'} max-w-[80px]`}
 						/>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className='text-3xl font-black text-teal-500 mb-2'>
+							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								03
 							</span>
 							<p
@@ -250,7 +250,7 @@ export default function HomePage() {
 								title: 'Pain-point',
 								desc: 'Isolating the core friction points that drain resources and energy.',
 								icon: (
-									<Eye className='w-6 h-6 text-teal-400' />
+									<Eye className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								color: 'from-teal-500/20 to-teal-500/5',
 								hasNext: true,
@@ -270,7 +270,7 @@ export default function HomePage() {
 								title: 'Classification',
 								desc: 'Sorting obstacles into the 7 architectural pillars for targeted action.',
 								icon: (
-									<Lightbulb className='w-6 h-6 text-teal-400' />
+									<Lightbulb className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								color: 'from-teal-500/20 to-teal-500/5',
 								hasNext: true,
@@ -345,21 +345,21 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Search className='w-6 h-6 text-teal-400' />
+									<Search className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Blind Spot Discovery',
 								desc: 'Identify structural weaknesses in your business model that standard accounting software misses.',
 							},
 							{
 								icon: (
-									<BarChart2 className='w-6 h-6 text-teal-400' />
+									<BarChart2 className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Performance Benchmarking',
 								desc: 'Compare your KPIs against top-performing businesses in your specific sector.',
 							},
 							{
 								icon: (
-									<Rocket className='w-6 h-6 text-teal-400' />
+									<Rocket className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Growth Readiness',
 								desc: 'Determine if your infrastructure is truly ready for high-velocity scaling without breaking.',
@@ -389,7 +389,7 @@ export default function HomePage() {
 			<section
 				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
-					<div className='grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b border-white/5 pb-8'>
+					<div className={`grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b pb-8 ${d ? 'border-white/5' : 'border-gray-100'}`}>
 						<div className='space-y-3'>
 							<p className='text-xs font-bold tracking-widest text-teal-400 uppercase'>
 								Structural Foundation
@@ -411,43 +411,43 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Users className='w-6 h-6 text-teal-400' />
+									<Users className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Founder & Leadership Capacity',
 							},
 							{
 								icon: (
-									<GitFork className='w-6 h-6 text-teal-400 rotate-90' />
+									<GitFork className={`w-6 h-6 rotate-90 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Business Model Strenght',
 							},
 							{
 								icon: (
-									<MousePointerClick className='w-6 h-6 text-teal-400' />
+									<MousePointerClick className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Market & Competitive Position',
 							},
 							{
 								icon: (
-									<Banknote className='w-6 h-6 text-teal-400' />
+									<Banknote className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Financial Readiness/Control',
 							},
 							{
 								icon: (
-									<Sparkles className='w-6 h-6 text-teal-400' />
+									<Sparkles className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Operations Processes & Execution',
 							},
 							{
 								icon: (
-									<Shield className='w-6 h-6 text-teal-400' />
+									<Shield className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Governance Culture & Structure',
 							},
 							{
 								icon: (
-									<Lightbulb className='w-6 h-6 text-teal-400' />
+									<Lightbulb className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								label: 'Growth Scalability and Sustainability',
 							},
@@ -508,8 +508,8 @@ export default function HomePage() {
 									].map((item) => (
 										<li
 											key={item}
-											className='flex items-center gap-2.5 text-sm text-gray-400'>
-											<CheckCircle className='w-4 h-4 text-teal-400 flex-shrink-0' />
+											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 											{item}
 										</li>
 									))}
@@ -517,13 +517,13 @@ export default function HomePage() {
 							</div>
 							<Link
 								href='/pages/about'
-								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#1f2937] hover:bg-gray-800 text-white text-center block active:scale-95 transition-all shadow-md'>
+								className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition-all shadow-md ${d ? 'bg-[#1f2937] hover:bg-gray-800' : 'bg-[#1f2937] hover:bg-gray-800'}`}>
 								Start Free Scan
 							</Link>
 						</div>
 
 						{/* Layer 02 - Full Diagnostics (featured) */}
-						<div className='rounded-2xl p-6 lg:p-8 bg-[#152e22] border border-teal-500/40 relative flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/[0.03]'>
+						<div className={`rounded-2xl p-6 lg:p-8 border border-teal-500/40 relative flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/[0.03] ${d ? 'bg-[#152e22]' : 'bg-teal-50'}`}>
 							<div className='absolute -top-3.5 left-1/2 -translate-x-1/2 bg-teal-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg'>
 								MOST SELECTED
 							</div>
@@ -546,7 +546,7 @@ export default function HomePage() {
 										<li
 											key={item}
 											className='flex items-center gap-2.5 text-sm text-gray-200'>
-											<CheckCircle className='w-4 h-4 text-teal-400 flex-shrink-0' />
+											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 											{item}
 										</li>
 									))}
@@ -580,8 +580,8 @@ export default function HomePage() {
 									].map((item) => (
 										<li
 											key={item}
-											className='flex items-center gap-2.5 text-sm text-gray-400'>
-											<CheckCircle className='w-4 h-4 text-teal-400 flex-shrink-0' />
+											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 											{item}
 										</li>
 									))}
@@ -589,7 +589,7 @@ export default function HomePage() {
 							</div>
 							<Link
 								href='/pages/picafulldiagnostic'
-								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#1f2937] hover:bg-gray-800 text-white text-center block active:scale-95 transition-all shadow-md'>
+								className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition-all shadow-md ${d ? 'bg-[#1f2937] hover:bg-gray-800' : 'bg-[#1f2937] hover:bg-gray-800'}`}>
 								Get deep dive
 							</Link>
 						</div>
@@ -659,7 +659,7 @@ export default function HomePage() {
 					{/* Executive Summary Card */}
 					<div
 						className={`rounded-2xl border p-6 lg:p-8 shadow-2xl ${d ? 'bg-[#161b22] border-white/10 shadow-black/40' : 'bg-white border-gray-200'}`}>
-						<div className='flex items-center justify-between mb-4 border-b border-white/5 pb-3'>
+						<div className={`flex items-center justify-between mb-4 border-b pb-3 ${d ? 'border-white/5' : 'border-gray-200'}`}>
 							<p className='text-[10px] font-bold text-gray-500 uppercase tracking-wider'>
 								DIAGNOSTIC REPORT V2.4
 							</p>
@@ -684,7 +684,7 @@ export default function HomePage() {
 								<p className='text-xs text-gray-500 mb-1'>
 									Risk Profile
 								</p>
-								<p className='text-lg font-bold text-red-400'>
+								<p className={`text-lg font-bold ${d ? 'text-red-400' : 'text-red-600'}`}>
 									Moderate High
 								</p>
 							</div>
@@ -692,7 +692,7 @@ export default function HomePage() {
 						<div className='space-y-3'>
 							<div
 								className={`rounded-xl p-4 border-l-4 border-red-500 ${d ? 'bg-red-500/10' : 'bg-red-50'}`}>
-								<p className='text-xs font-bold text-red-400 mb-1 flex items-center gap-1'>
+								<p className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-red-400' : 'text-red-600'}`}>
 									<span className='w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
 									CRITICAL: Cash-Flow
 									Concentration
@@ -707,7 +707,7 @@ export default function HomePage() {
 							</div>
 							<div
 								className={`rounded-xl p-4 border-l-4 border-yellow-500 ${d ? 'bg-yellow-500/10' : 'bg-yellow-50'}`}>
-								<p className='text-xs font-bold text-yellow-400 mb-1 flex items-center gap-1'>
+								<p className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-yellow-400' : 'text-yellow-700'}`}>
 									<span className='w-1.5 h-1.5 rounded-full bg-yellow-500' />
 									ADVISORY: OpEx
 									Optimization
@@ -798,7 +798,7 @@ export default function HomePage() {
 						<h2
 							className={`text-3xl md:text-4xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 							Built on Structured Logic,{' '}
-							<span className='text-teal-400'>
+							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
 								Not Hype
 							</span>
 						</h2>
@@ -815,28 +815,28 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Database className='w-6 h-6 text-teal-400' />
+									<Database className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Data-First Approach',
 								desc: 'Quantifiable metrics drive every recommendation we make.',
 							},
 							{
 								icon: (
-									<Lock className='w-6 h-6 text-teal-400' />
+									<Lock className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Your Data is Private',
 								desc: 'Enterprise-grade encryption. Your business data is never shared or sold.',
 							},
 							{
 								icon: (
-									<Brain className='w-6 h-6 text-teal-400' />
+									<Brain className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Expert-Backed Models',
 								desc: 'Diagnostic frameworks validated by seasoned business consultants.',
 							},
 							{
 								icon: (
-									<FileText className='w-6 h-6 text-teal-400' />
+									<FileText className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 								),
 								title: 'Actionable Reports',
 								desc: 'Every report comes with a priority-ranked roadmap you can execute immediately.',
@@ -886,7 +886,7 @@ export default function HomePage() {
 							className={`text-3xl md:text-4xl font-black leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
 							The Economy is Changing.
 							<br />
-							<span className='text-teal-400'>
+							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
 								Is Your Business?
 							</span>
 						</h2>

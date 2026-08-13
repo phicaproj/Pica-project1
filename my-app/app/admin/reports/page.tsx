@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTheme } from '@/components/ThemeContext';
 import {
   Download,
   ChevronLeft,
@@ -47,11 +48,11 @@ const STATUS_LABELS: Record<ReportSessionStatus, string> = {
   REPORT_GENERATED: "Report ready",
 };
 
-const STATUS_COLORS: Record<ReportSessionStatus, string> = {
-  IN_PROGRESS: "text-gray-400 bg-white/5",
-  COMPLETED: "text-blue-400 bg-blue-500/10",
-  PAID: "text-emerald-400 bg-emerald-500/10",
-  REPORT_GENERATED: "text-emerald-400 bg-emerald-500/10",
+const STATUS_COLORS: Record<ReportSessionStatus, (d: boolean) => string> = {
+  IN_PROGRESS: (d) => d ? "text-gray-400 bg-white/5" : "text-gray-600 bg-gray-100",
+  COMPLETED: (d) => d ? "text-blue-400 bg-blue-500/10" : "text-blue-600 bg-blue-50",
+  PAID: (d) => d ? "text-emerald-400 bg-emerald-500/10" : "text-emerald-600 bg-emerald-50",
+  REPORT_GENERATED: (d) => d ? "text-emerald-400 bg-emerald-500/10" : "text-emerald-600 bg-emerald-50",
 };
 
 const BAND_LABELS: Record<ReportColorBand, string> = {
@@ -66,10 +67,10 @@ const BAND_DOT: Record<ReportColorBand, string> = {
   GREEN: "bg-emerald-500",
 };
 
-const BAND_TEXT: Record<ReportColorBand, string> = {
-  RED: "text-red-400",
-  AMBER: "text-amber-400",
-  GREEN: "text-emerald-400",
+const BAND_TEXT: Record<ReportColorBand, (d: boolean) => string> = {
+  RED: (d) => d ? "text-red-400" : "text-red-600",
+  AMBER: (d) => d ? "text-amber-400" : "text-amber-600",
+  GREEN: (d) => d ? "text-emerald-400" : "text-emerald-600",
 };
 
 const SIZE_LABELS: Record<string, string> = {
@@ -94,6 +95,7 @@ const formatUsd = (n: number) =>
 type BreakdownTab = "pillars" | "phases" | "regions" | "industries";
 
 export default function ReportsAnalyticsPage() {
+  const { dark: d } = useTheme();
   // ── Filters ───────────────────────────────────────────────────
   const [phase, setPhase] = useState<ReportPhase | "">("");
   const [dateFrom, setDateFrom] = useState("");
@@ -229,9 +231,9 @@ export default function ReportsAnalyticsPage() {
 
   // ── Render helpers ────────────────────────────────────────────
   const selectCls =
-    "bg-[#1C1F2E] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50";
+    `${d ? 'bg-[#1C1F2E] border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50`;
   const inputCls =
-    "bg-[#1C1F2E] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-blue-500/50 w-36";
+    `${d ? 'bg-[#1C1F2E] border-white/10 text-gray-300 placeholder-gray-600' : 'bg-white border-gray-200 text-gray-700 placeholder-gray-400'} border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-36`;
 
   const maxBarValue = (rows: { value: number }[]) =>
     Math.max(1, ...rows.map((r) => r.value));
@@ -278,8 +280,8 @@ export default function ReportsAnalyticsPage() {
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reports &amp; Analytics</h1>
-          <p className="text-gray-400 text-sm">
+          <h1 className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>Reports &amp; Analytics</h1>
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Live assessment data. The Excel download matches whatever filters are active below.
           </p>
         </div>
@@ -306,10 +308,10 @@ export default function ReportsAnalyticsPage() {
       </div>
 
       {/* ── Filter bar ───────────────────────────────────────── */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-4 space-y-4">
+      <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl border p-4 space-y-4`}>
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+            <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>
               Assessment type
             </div>
             <select value={phase} onChange={(e) => setPhase(e.target.value as ReportPhase | "")} className={selectCls}>
@@ -320,24 +322,24 @@ export default function ReportsAnalyticsPage() {
             </select>
           </div>
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">From</div>
+            <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>From</div>
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={selectCls} />
           </div>
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">To</div>
+            <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>To</div>
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectCls} />
           </div>
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Country</div>
+            <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>Country</div>
             <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Nigeria" className={inputCls} />
           </div>
           <div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">State / Region</div>
+            <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>State / Region</div>
             <input value={stateRegion} onChange={(e) => setStateRegion(e.target.value)} placeholder="e.g. Lagos" className={inputCls} />
           </div>
           <button
             onClick={() => setMoreFiltersOpen((v) => !v)}
-            className="flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"
+            className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors ${d ? 'bg-white/5 border-white/10 text-gray-300 hover:text-white' : 'bg-gray-50 border-gray-200 text-gray-600 hover:text-gray-900'}`}
           >
             <SlidersHorizontal className="w-4 h-4" />
             More filters
@@ -346,7 +348,7 @@ export default function ReportsAnalyticsPage() {
           {hasFilters && (
             <button
               onClick={clearFilters}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm transition-colors ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
             >
               <X className="w-4 h-4" /> Clear all
             </button>
@@ -354,9 +356,9 @@ export default function ReportsAnalyticsPage() {
         </div>
 
         {moreFiltersOpen && (
-          <div className="flex flex-wrap items-end gap-3 pt-3 border-t border-white/5">
+          <div className={`flex flex-wrap items-end gap-3 pt-3 border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
             <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Status</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>Status</div>
               <select value={status} onChange={(e) => setStatus(e.target.value as ReportSessionStatus | "")} className={selectCls}>
                 <option value="">All statuses</option>
                 <option value="IN_PROGRESS">In progress</option>
@@ -366,7 +368,7 @@ export default function ReportsAnalyticsPage() {
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Overall result</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>Overall result</div>
               <select value={colorBand} onChange={(e) => setColorBand(e.target.value as ReportColorBand | "")} className={selectCls}>
                 <option value="">All results</option>
                 <option value="GREEN">Healthy (green)</option>
@@ -375,7 +377,7 @@ export default function ReportsAnalyticsPage() {
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Business size</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>Business size</div>
               <select value={businessSize} onChange={(e) => setBusinessSize(e.target.value as "SMALL" | "MEDIUM" | "")} className={selectCls}>
                 <option value="">All sizes</option>
                 <option value="SMALL">Small business</option>
@@ -383,7 +385,7 @@ export default function ReportsAnalyticsPage() {
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Industry</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-1.5`}>Industry</div>
               <input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Retail" className={inputCls} />
             </div>
           </div>
@@ -391,7 +393,7 @@ export default function ReportsAnalyticsPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm text-red-400">
+        <div className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm ${d ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
@@ -403,17 +405,17 @@ export default function ReportsAnalyticsPage() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/images/dashboard img')" }}
         />
-        <div className="absolute inset-0 bg-[#111318]/65" />
-        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/10">
+        <div className={`absolute inset-0 ${d ? 'bg-[#111318]/65' : 'bg-white/90'}`} />
+        <div className={`relative z-10 grid grid-cols-2 lg:grid-cols-4 divide-x ${d ? 'divide-white/10' : 'divide-gray-200'}`}>
           <div className="p-6">
             <div className="flex items-start justify-between mb-3">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Assessments</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-widest leading-tight`}>Assessments</div>
               <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mb-1">
+            <div className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               {loading && !kpis ? "—" : (kpis?.totalAssessments ?? 0).toLocaleString()}
             </div>
-            <div className="text-xs text-gray-400">
+            <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               {kpis?.assessmentsByPhase
                 .map((p) => `${PHASE_LABELS[p.phase]}: ${p.count}`)
                 .join(" · ") || ""}
@@ -421,14 +423,14 @@ export default function ReportsAnalyticsPage() {
           </div>
           <div className="p-6">
             <div className="flex items-start justify-between mb-3">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Average score</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-widest leading-tight`}>Average score</div>
               <Activity className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mb-2">
+            <div className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
               {loading && !kpis ? "—" : kpis?.avgTotalScore ?? "No data"}
             </div>
             {kpis?.avgTotalScore !== null && kpis?.avgTotalScore !== undefined && (
-              <div className="h-1 w-full bg-white/10 rounded-full">
+              <div className={`h-1 w-full rounded-full ${d ? 'bg-white/10' : 'bg-gray-200'}`}>
                 <div
                   className="h-full bg-emerald-500 rounded-full"
                   style={{ width: `${Math.min(100, kpis.avgTotalScore)}%` }}
@@ -438,23 +440,23 @@ export default function ReportsAnalyticsPage() {
           </div>
           <div className="p-6">
             <div className="flex items-start justify-between mb-3">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">High-risk businesses</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-widest leading-tight`}>High-risk businesses</div>
               <Flag className="w-4 h-4 text-red-400 flex-shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mb-1">
+            <div className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               {loading && !kpis ? "—" : kpis?.highRiskPct !== null && kpis?.highRiskPct !== undefined ? `${kpis.highRiskPct}%` : "No data"}
             </div>
-            <div className="text-xs text-gray-400">of completed assessments</div>
+            <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>of completed assessments</div>
           </div>
           <div className="p-6">
             <div className="flex items-start justify-between mb-3">
-              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">Revenue</div>
+              <div className={`text-[10px] font-bold ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-widest leading-tight`}>Revenue</div>
               <DollarSign className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             </div>
-            <div className="text-3xl font-bold text-white mb-1">
+            <div className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               {loading && !kpis ? "—" : formatUsd(kpis?.revenue.total ?? 0)}
             </div>
-            <div className="text-xs text-gray-400">
+            <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               {kpis
                 ? `Full Diagnostic ${formatUsd(kpis.revenue.phase2a)} · Deep Dives ${formatUsd(kpis.revenue.phase2b)}`
                 : ""}
@@ -464,8 +466,8 @@ export default function ReportsAnalyticsPage() {
       </div>
 
       {/* ── Funnel strip ─────────────────────────────────────── */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
-        <h2 className="text-sm font-bold text-white mb-4">Where users drop off</h2>
+      <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl border p-6`}>
+        <h2 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>Where users drop off</h2>
         {loading && funnel.length === 0 ? (
           <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
             <Loader className="w-4 h-4 animate-spin" /> Loading…
@@ -473,11 +475,11 @@ export default function ReportsAnalyticsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {funnel.map((step, i) => (
-              <div key={step.key} className="relative bg-white/[0.03] border border-white/5 rounded-xl p-4">
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 leading-tight min-h-[28px]">
+              <div key={step.key} className={`relative border rounded-xl p-4 ${d ? 'bg-white/[0.03] border-white/5' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mb-2 leading-tight min-h-[28px]`}>
                   {step.label}
                 </div>
-                <div className="text-2xl font-bold text-white">{step.count.toLocaleString()}</div>
+                <div className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{step.count.toLocaleString()}</div>
                 {i > 0 && (
                   <div
                     className={`text-xs font-semibold mt-1 ${
@@ -496,8 +498,8 @@ export default function ReportsAnalyticsPage() {
       {/* ── Problem areas + Breakdowns ───────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Common Problem Areas */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
-          <h2 className="text-sm font-bold text-white mb-4">Common problem areas</h2>
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl border p-6`}>
+          <h2 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>Common problem areas</h2>
           {loading && problemAreas.length === 0 ? (
             <div className="flex items-center gap-2 text-gray-500 text-sm py-4">
               <Loader className="w-4 h-4 animate-spin" /> Loading…
@@ -509,27 +511,27 @@ export default function ReportsAnalyticsPage() {
               {problemAreas.map((area) => (
                 <div
                   key={`${area.questionId}-${area.optionLabel}`}
-                  className="flex items-start justify-between gap-4 bg-white/[0.03] border border-white/5 rounded-xl p-4"
+                  className={`flex items-start justify-between gap-4 border rounded-xl p-4 ${d ? 'bg-white/[0.03] border-white/5' : 'bg-gray-50 border-gray-200'}`}
                 >
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-white truncate">{area.observation}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">
+                    <div className={`text-sm font-semibold truncate ${d ? 'text-white' : 'text-gray-900'}`}>{area.observation}</div>
+                    <div className={`text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest mt-1`}>
                       {area.pillarName}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{area.questionText}</p>
+                    <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-2`}>{area.questionText}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span
                       className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-1.5 ${
                         area.riskType === "KNOCKOUT"
-                          ? "text-red-400 bg-red-500/10"
-                          : "text-amber-400 bg-amber-500/10"
+                          ? (d ? "text-red-400 bg-red-500/10" : "text-red-600 bg-red-50")
+                          : (d ? "text-amber-400 bg-amber-500/10" : "text-amber-600 bg-amber-50")
                       }`}
                     >
                       {area.riskType === "KNOCKOUT" ? "High-risk" : "Risk"}
                     </span>
-                    <div className="text-sm font-bold text-white">{area.affectedBusinesses}</div>
-                    <div className="text-[10px] text-gray-500">businesses</div>
+                    <div className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{area.affectedBusinesses}</div>
+                    <div className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-600'}`}>businesses</div>
                   </div>
                 </div>
               ))}
@@ -538,10 +540,10 @@ export default function ReportsAnalyticsPage() {
         </div>
 
         {/* Breakdowns */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl border p-6`}>
           <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-            <h2 className="text-sm font-bold text-white">Breakdowns</h2>
-            <div className="flex bg-white/5 border border-white/10 rounded-lg p-0.5">
+            <h2 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Breakdowns</h2>
+            <div className={`flex border rounded-lg p-0.5 ${d ? 'bg-white/5 border-white/10' : 'bg-gray-100 border-gray-200'}`}>
               {(
                 [
                   ["pillars", "Pillars"],
@@ -554,7 +556,7 @@ export default function ReportsAnalyticsPage() {
                   key={key}
                   onClick={() => setBreakdownTab(key)}
                   className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                    breakdownTab === key ? "bg-blue-500 text-white" : "text-gray-400 hover:text-white"
+                    breakdownTab === key ? "bg-blue-500 text-white" : (d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900")
                   }`}
                 >
                   {label}
@@ -573,12 +575,12 @@ export default function ReportsAnalyticsPage() {
               {breakdownRows.map((row) => (
                 <div key={row.label}>
                   <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-300 truncate">{row.label}</span>
-                    <span className="text-white font-semibold ml-3">
+                    <span className={`truncate ${d ? 'text-gray-300' : 'text-gray-700'}`}>{row.label}</span>
+                    <span className={`font-semibold ml-3 ${d ? 'text-white' : 'text-gray-900'}`}>
                       {breakdownTab === "pillars" ? (row.value > 0 ? row.value : "No data") : row.value.toLocaleString()}
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-white/5 rounded-full">
+                  <div className={`h-2 w-full rounded-full ${d ? 'bg-white/5' : 'bg-gray-200'}`}>
                     <div
                       className="h-full bg-blue-500 rounded-full transition-all"
                       style={{
@@ -595,17 +597,17 @@ export default function ReportsAnalyticsPage() {
       </div>
 
       {/* ── Assessments table ────────────────────────────────── */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
+      <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl border overflow-hidden`}>
         <div className="flex items-center justify-between px-6 pt-5 pb-1">
-          <h2 className="text-sm font-bold text-white">Assessments</h2>
+          <h2 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Assessments</h2>
           {tableLoading && <Loader className="w-4 h-4 animate-spin text-gray-500" />}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/5">
+              <tr className={`border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
                 {["BUSINESS", "TYPE", "DATE", "PILLAR HEALTH", "SCORE", "STATUS", "REPORT"].map((h) => (
-                  <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                  <th key={h} className={`text-left px-6 py-4 text-[10px] font-bold ${d ? 'text-gray-500' : 'text-gray-600'} uppercase tracking-widest`}>
                     {h}
                   </th>
                 ))}
@@ -620,17 +622,17 @@ export default function ReportsAnalyticsPage() {
                 </tr>
               ) : (
                 sessions.map((session) => (
-                  <tr key={session.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                  <tr key={session.id} className={`border-b ${d ? 'border-white/5 hover:bg-white/[0.02]' : 'border-gray-200 hover:bg-gray-50'} last:border-0 transition-colors`}>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-white">{session.businessName || "—"}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{session.email || "—"}</div>
+                      <div className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{session.businessName || "—"}</div>
+                      <div className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'} mt-0.5`}>{session.email || "—"}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-semibold text-gray-300 bg-white/5 border border-white/10 rounded-full px-2.5 py-1 whitespace-nowrap">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap border ${d ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}>
                         {PHASE_LABELS[session.phase]}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300 whitespace-nowrap">{formatDate(session.completedAt)}</td>
+                    <td className={`px-6 py-4 text-sm ${d ? 'text-gray-300' : 'text-gray-700'} whitespace-nowrap`}>{formatDate(session.completedAt)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
                         {session.pillarBands.map((band, i) => (
@@ -645,14 +647,14 @@ export default function ReportsAnalyticsPage() {
                     <td className="px-6 py-4">
                       {session.totalScore !== null ? (
                         <div className="whitespace-nowrap">
-                          <span className="text-sm font-bold text-white">{session.totalScore}</span>
+                          <span className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{session.totalScore}</span>
                           {session.overallBand && (
-                            <span className={`text-xs font-semibold ml-2 ${BAND_TEXT[session.overallBand]}`}>
+                            <span className={`text-xs font-semibold ml-2 ${BAND_TEXT[session.overallBand](d)}`}>
                               {BAND_LABELS[session.overallBand]}
                             </span>
                           )}
                           {session.hasAnyKnockout && (
-                            <span className="text-[10px] font-bold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded ml-2">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-2 ${d ? 'text-red-400 bg-red-500/10' : 'text-red-600 bg-red-50'}`}>
                               High-risk
                             </span>
                           )}
@@ -662,7 +664,7 @@ export default function ReportsAnalyticsPage() {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${STATUS_COLORS[session.status]}`}>
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${STATUS_COLORS[session.status](d)}`}>
                         {STATUS_LABELS[session.status]}
                       </span>
                     </td>
@@ -672,7 +674,7 @@ export default function ReportsAnalyticsPage() {
                           href={session.reportPdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex w-8 h-8 items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                          className={`inline-flex w-8 h-8 items-center justify-center rounded-lg transition-colors ${d ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
                           title="Download PDF report"
                         >
                           <Download className="w-4 h-4" />
@@ -687,7 +689,7 @@ export default function ReportsAnalyticsPage() {
             </tbody>
           </table>
         </div>
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
+        <div className={`flex items-center justify-between px-6 py-4 border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
           <span className="text-sm text-gray-500">
             {total > 0
               ? `Showing ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total.toLocaleString()} assessments`
@@ -697,17 +699,17 @@ export default function ReportsAnalyticsPage() {
             <button
               onClick={() => fetchSessions(filters, page - 1)}
               disabled={page <= 1 || tableLoading}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm text-gray-400 px-2">
+            <span className={`text-sm px-2 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               Page {page} of {totalPages}
             </span>
             <button
               onClick={() => fetchSessions(filters, page + 1)}
               disabled={page >= totalPages || tableLoading}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`w-8 h-8 flex items-center justify-center rounded-lg disabled:opacity-40 disabled:cursor-not-allowed ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>

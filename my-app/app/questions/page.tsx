@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useTheme } from "@/components/ThemeContext";
 
 // ─── Questions ────────────────────────────────────────────────────────────────
 const QUESTIONS = [
@@ -183,6 +184,8 @@ export default function QuestionPage() {
   const [answers, setAnswers] = useState<(Option | null)[]>(Array(10).fill(null));
   const [selected, setSelected] = useState<Option | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const { dark } = useTheme();
+  const d = dark;
 
   const question = QUESTIONS[current];
 
@@ -219,9 +222,9 @@ export default function QuestionPage() {
   const hrScore = calcScore("Human Resources");
 
   const statusLabel = (score: number) => {
-    if (score >= 70) return { label: "Good", color: "text-green-400" };
-    if (score >= 40) return { label: "Stable", color: "text-yellow-400" };
-    return { label: "At Risk", color: "text-red-400" };
+    if (score >= 70) return { label: "Good", color: d ? "text-green-400" : "text-green-500" };
+    if (score >= 40) return { label: "Stable", color: d ? "text-yellow-400" : "text-yellow-500" };
+    return { label: "At Risk", color: d ? "text-red-400" : "text-red-500" };
   };
 
   // ── Results page ──────────────────────────────────────────────────────────
@@ -265,7 +268,7 @@ export default function QuestionPage() {
                       key={label}
                       className="bg-white/10 border border-white/20 rounded-2xl p-4 flex flex-col items-center gap-1"
                     >
-                      <span className="text-sm text-gray-300 text-center">{label}</span>
+                      <span className={`text-sm text-center ${d ? "text-gray-300" : "text-gray-200"}`}>{label}</span>
                       <span className="text-4xl font-bold">{score}</span>
                       <span className={`text-sm font-medium ${color}`}>{status}</span>
                     </div>

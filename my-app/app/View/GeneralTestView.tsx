@@ -113,19 +113,19 @@ function IntroStep({ dark, onStart }: { dark: boolean; onStart: () => void }) {
 			<div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-12 w-full max-w-2xl'>
 				{[
 					{
-						icon: <Clock className='w-4 h-4 text-[#00ffaa]' />,
+						icon: <Clock className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />,
 						label: 'DURATION',
 						value: 'Takes 5-10 minutes',
 					},
 					{
 						icon: (
-							<CheckSquare className='w-4 h-4 text-[#00ffaa]' />
+							<CheckSquare className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />
 						),
 						label: 'PREREQUISITES',
 						value: 'No prior preparation needed',
 					},
 					{
-						icon: <FileText className='w-4 h-4 text-[#00ffaa]' />,
+						icon: <FileText className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />,
 						label: 'OUTPUT',
 						value: "You'll receive a summary at the end",
 					},
@@ -249,8 +249,8 @@ function ProfileStep({
 			>
 				{/* Smart Classification badge — hidden on mobile because it
 				    overlaps the headline at narrow widths. Reappears at sm+. */}
-				<div className='hidden sm:block absolute top-6 right-6 bg-[#1e2d1e] border border-[#00ffaa]/30 rounded-xl px-3 py-2 text-xs z-10'>
-					<p className='text-[#00ffaa] font-bold uppercase tracking-wider text-[10px] flex items-center gap-1 mb-0'>
+				<div className={`hidden sm:block absolute top-6 right-6 ${d ? 'bg-[#1e2d1e]' : 'bg-teal-50'} border ${d ? 'border-[#00ffaa]/30' : 'border-teal-300'} rounded-xl px-3 py-2 text-xs z-10`}>
+					<p className={`${d ? 'text-[#00ffaa]' : 'text-teal-700'} font-bold uppercase tracking-wider text-[10px] flex items-center gap-1 mb-0`}>
 						✦ Smart Classification
 					</p>
 				</div>
@@ -389,7 +389,7 @@ function ProfileStep({
 								<button
 									key={y}
 									onClick={() => update('operatingYears', y)}
-									className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${profile.operatingYears === y ? 'bg-[#00ffaa]/10 border-[#00ffaa] text-[#00ffaa]' : d ? 'border-white/10 text-gray-400 hover:border-white/20' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+									className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition ${profile.operatingYears === y ? (d ? 'bg-[#00ffaa]/10 border-[#00ffaa] text-[#00ffaa]' : 'bg-teal-50 border-teal-500 text-teal-700') : d ? 'border-white/10 text-gray-400 hover:border-white/20' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
 								>
 									{y}
 								</button>
@@ -463,7 +463,7 @@ function ProfileStep({
 				</div>
 
 				{error && (
-					<div className='mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm'>
+					<div className={`mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 ${d ? 'text-red-400' : 'text-red-600'} text-sm`}>
 						{error}
 					</div>
 				)}
@@ -566,7 +566,7 @@ function QuestionStep({
 				</Link>
 				<div className='flex flex-wrap items-start justify-between gap-2 mb-2'>
 					<div>
-						<p className='text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-1'>
+						<p className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-[#00ffaa]' : 'text-teal-700'} mb-1`}>
 							Current Pillar
 						</p>
 						<p
@@ -596,7 +596,7 @@ function QuestionStep({
 					className={`h-2 rounded-full mb-10 overflow-hidden ${d ? 'bg-white/10' : 'bg-gray-200'}`}
 				>
 					<div
-						className='h-full rounded-full bg-[#00ffaa] transition-all duration-500'
+						className={`h-full rounded-full ${d ? 'bg-[#00ffaa]' : 'bg-teal-500'} transition-all duration-500`}
 						style={{ width: `${progress}%` }}
 					/>
 				</div>
@@ -620,7 +620,7 @@ function QuestionStep({
 											onClick={() => onAnswer(opt.id)}
 											className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition ${
 												selected
-													? 'border-[#00ffaa] bg-[#00ffaa]/10'
+													? (d ? 'border-[#00ffaa] bg-[#00ffaa]/10' : 'border-teal-500 bg-teal-50')
 													: d
 														? 'border-white/10 bg-[#161b22] hover:border-white/20'
 														: 'border-gray-200 bg-white hover:border-gray-300'
@@ -629,7 +629,7 @@ function QuestionStep({
 											<span
 												className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
 													selected
-														? 'bg-[#00ffaa] text-gray-900'
+														? (d ? 'bg-[#00ffaa] text-gray-900' : 'bg-teal-500 text-white')
 														: d
 															? 'bg-[#243044] text-gray-400'
 															: 'bg-gray-100 text-gray-600'
@@ -643,7 +643,7 @@ function QuestionStep({
 												{opt.optionText}
 											</span>
 											{selected && (
-												<CheckCircle className='w-5 h-5 text-[#00ffaa] ml-auto' />
+												<CheckCircle className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-600'} ml-auto`} />
 											)}
 										</button>
 									)
@@ -671,7 +671,7 @@ function QuestionStep({
 				</div>
 
 				{answerError && (
-					<div className='mt-6 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm'>
+					<div className={`mt-6 p-3 rounded-xl bg-red-500/10 border border-red-500/30 ${d ? 'text-red-400' : 'text-red-600'} text-sm`}>
 						{answerError} — please re-select an answer.
 					</div>
 				)}
@@ -773,7 +773,7 @@ function ProcessingStep({ dark }: { dark: boolean }) {
 				<div
 					className={`flex items-center gap-2 px-4 py-2 rounded-full border mb-12 ${d ? 'border-white/10 bg-[#161b22]' : 'border-gray-200 bg-white'}`}
 				>
-					<span className='w-2 h-2 rounded-full bg-[#00ffaa] animate-pulse' />
+					<span className={`w-2 h-2 rounded-full ${d ? 'bg-[#00ffaa]' : 'bg-teal-500'} animate-pulse`} />
 					<span
 						className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-gray-300' : 'text-gray-600'}`}
 					>
@@ -800,7 +800,7 @@ function ProcessingStep({ dark }: { dark: boolean }) {
 							style={{ animationDuration: '1.5s' }}
 						/>
 					</div>
-					<div className='absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#00ffaa]' />
+					<div className={`absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${d ? 'bg-[#00ffaa]' : 'bg-teal-500'}`} />
 					<div className='absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gray-500' />
 				</div>
 
@@ -835,13 +835,13 @@ function ProcessingStep({ dark }: { dark: boolean }) {
 							}`}
 						>
 							{active && (
-								<div className='h-1 rounded-full bg-[#00ffaa] mb-4 w-3/4' />
+								<div className={`h-1 rounded-full ${d ? 'bg-[#00ffaa]' : 'bg-teal-500'} mb-4 w-3/4`} />
 							)}
 							<div className='flex items-center gap-2 mb-3'>
 								<div
 									className={`w-7 h-7 rounded-full flex items-center justify-center ${
 										done
-											? 'bg-[#00ffaa]'
+											? (d ? 'bg-[#00ffaa]' : 'bg-teal-500')
 											: active
 												? 'bg-[#f97316]'
 												: d
@@ -860,7 +860,7 @@ function ProcessingStep({ dark }: { dark: boolean }) {
 									)}
 								</div>
 								<span
-									className={`text-xs font-bold uppercase tracking-widest ${active ? 'text-[#00ffaa]' : done ? (d ? 'text-gray-300' : 'text-gray-600') : 'text-gray-500'}`}
+									className={`text-xs font-bold uppercase tracking-widest ${active ? (d ? 'text-[#00ffaa]' : 'text-teal-700') : done ? (d ? 'text-gray-300' : 'text-gray-600') : 'text-gray-500'}`}
 								>
 									{active ? 'In Progress' : `Step ${num}`}
 								</span>

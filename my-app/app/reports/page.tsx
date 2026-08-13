@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "@/components/ThemeContext";
 import {
   FileText,
   Flag,
@@ -98,6 +99,8 @@ const PILLAR_COLORS: Record<string, string> = {
 };
 
 export default function ReportsPage() {
+  const { dark } = useTheme();
+  const d = dark;
   const [activeTier, setActiveTier] = useState("All Tiers");
 
   const filtered =
@@ -109,8 +112,8 @@ export default function ReportsPage() {
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Report Management</h1>
-        <p className="text-gray-400 text-sm">
+        <h1 className={`text-3xl font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>Report Management</h1>
+        <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
           Monitor and audit business intelligence deliverables.
         </p>
       </div>
@@ -157,7 +160,7 @@ export default function ReportsPage() {
         ].map((stat, i) => (
           <div
             key={i}
-            className="relative bg-[#1C1F2E]/80 backdrop-blur p-5 border border-white/5 first:rounded-l-2xl last:rounded-r-2xl"
+            className={`relative backdrop-blur p-5 border first:rounded-l-2xl last:rounded-r-2xl ${d ? "bg-[#1C1F2E]/80 border-white/5" : "bg-white/80 border-gray-200 shadow-sm"}`}
           >
             <div className="flex items-start justify-between mb-3">
               <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight max-w-[120px]">
@@ -165,11 +168,11 @@ export default function ReportsPage() {
               </div>
               <stat.icon className={`w-4 h-4 flex-shrink-0 ${stat.iconColor}`} />
             </div>
-            <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+            <div className={`text-3xl font-bold mb-1 ${d ? "text-white" : "text-gray-900"}`}>{stat.value}</div>
             {stat.badge !== "—" ? (
               <div className={`text-xs font-semibold ${stat.badgeColor}`}>{stat.badge}</div>
             ) : (
-              <div className="h-1 w-full bg-white/10 rounded-full mt-2">
+              <div className={`h-1 w-full rounded-full mt-2 ${d ? "bg-white/10" : "bg-gray-200"}`}>
                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: stat.barPct }} />
               </div>
             )}
@@ -191,7 +194,7 @@ export default function ReportsPage() {
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                   activeTier === tier
                     ? "bg-blue-500 text-white"
-                    : "bg-white/5 border border-white/10 text-gray-400 hover:text-white"
+                    : d ? "bg-white/5 border border-white/10 text-gray-400 hover:text-white" : "bg-gray-100 border border-gray-200 text-gray-600 hover:text-gray-900"
                 }`}
               >
                 {tier}
@@ -205,7 +208,7 @@ export default function ReportsPage() {
             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">
               Score Range
             </div>
-            <select className="bg-[#1C1F2E] border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500/50 pr-8">
+            <select className={`border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500/50 pr-8 ${d ? "bg-[#1C1F2E] border-white/10 text-gray-300" : "bg-white border-gray-300 text-gray-700"}`}>
               <option>All Ranges</option>
               <option>0 – 40 (High Risk)</option>
               <option>41 – 70 (Moderate)</option>
@@ -217,11 +220,11 @@ export default function ReportsPage() {
               Date Range
             </div>
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-[#1C1F2E] border border-white/10 rounded-lg text-sm text-gray-300 hover:text-white transition-colors">
+              <button className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-colors ${d ? "bg-[#1C1F2E] border-white/10 text-gray-300 hover:text-white" : "bg-white border-gray-300 text-gray-700 hover:text-gray-900"}`}>
                 <Calendar className="w-4 h-4" />
                 Oct 01 – Oct 31, 2023
               </button>
-              <button className="flex items-center gap-2 px-3 py-1.5 bg-[#1C1F2E] border border-white/10 rounded-lg text-sm text-gray-400 hover:text-white transition-colors">
+              <button className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-colors ${d ? "bg-[#1C1F2E] border-white/10 text-gray-400 hover:text-white" : "bg-white border-gray-300 text-gray-600 hover:text-gray-900"}`}>
                 <X className="w-4 h-4" />
                 Clear
               </button>
@@ -231,11 +234,11 @@ export default function ReportsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
+      <div className={`rounded-2xl border overflow-hidden ${d ? "bg-[#1C1F2E] border-white/5" : "bg-white border-gray-200 shadow-sm"}`}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/5">
+              <tr className={`border-b ${d ? "border-white/5" : "border-gray-200"}`}>
                 {["BUSINESS NAME", "TIER", "DATE GENERATED", "PILLAR HEALTH", "STATUS", "ACTIONS"].map(
                   (h) => (
                     <th
@@ -252,18 +255,18 @@ export default function ReportsPage() {
               {filtered.map((report) => (
                 <tr
                   key={report.id}
-                  className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors"
+                  className={`border-b last:border-0 transition-colors ${d ? "border-white/5 hover:bg-white/[0.02]" : "border-gray-200 hover:bg-gray-50"}`}
                 >
                   <td className="px-6 py-4">
-                    <div className="text-sm font-semibold text-white">{report.business}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{report.ref}</div>
+                    <div className={`text-sm font-semibold ${d ? "text-white" : "text-gray-900"}`}>{report.business}</div>
+                    <div className={`text-xs mt-0.5 ${d ? "text-gray-500" : "text-gray-600"}`}>{report.ref}</div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-300">
+                    <span className={`w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold ${d ? "bg-white/5 border-white/10 text-gray-300" : "bg-gray-100 border-gray-200 text-gray-700"}`}>
                       {report.tier}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{report.date}</td>
+                  <td className={`px-6 py-4 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}>{report.date}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5">
                       {report.pillars.map((color, i) => (
@@ -272,7 +275,7 @@ export default function ReportsPage() {
                           className={`w-5 h-5 rounded-sm ${PILLAR_COLORS[color]}`}
                         />
                       ))}
-                      <span className="text-xs text-gray-400 ml-2 font-medium">{report.score}%</span>
+                      <span className={`text-xs ml-2 font-medium ${d ? "text-gray-400" : "text-gray-600"}`}>{report.score}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -285,13 +288,13 @@ export default function ReportsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
-                      <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                      <button className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${d ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-gray-900"}`}>
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                      <button className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${d ? "hover:bg-white/10 text-gray-400 hover:text-white" : "hover:bg-gray-200 text-gray-500 hover:text-gray-900"}`}>
                         <Download className="w-4 h-4" />
                       </button>
-                      <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-500/10 text-gray-400 hover:text-amber-400 transition-colors">
+                      <button className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${d ? "hover:bg-amber-500/10 text-gray-400 hover:text-amber-400" : "hover:bg-amber-100 text-gray-500 hover:text-amber-600"}`}>
                         <Flag className="w-4 h-4" />
                       </button>
                       <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors">
@@ -306,7 +309,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
+        <div className={`flex items-center justify-between px-6 py-4 border-t ${d ? "border-white/5" : "border-gray-200"}`}>
           <span className="text-sm text-gray-500">Showing 1-4 of 1,284 reports</span>
           <div className="flex items-center gap-1">
             <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
@@ -318,13 +321,13 @@ export default function ReportsPage() {
                 className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium transition-colors ${
                   p === 1
                     ? "bg-blue-500 text-white"
-                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                    : d ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
                 {p}
               </button>
             ))}
-            <button className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/5">
+            <button className={`w-8 h-8 flex items-center justify-center rounded-lg ${d ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-500 hover:text-gray-900 hover:bg-gray-100"}`}>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

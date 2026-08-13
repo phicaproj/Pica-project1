@@ -15,7 +15,7 @@ export default function DataPolicyPage() {
       <section className={`relative py-16 px-6 lg:px-8 border-b ${d ? "bg-[#161b22]/50 border-white/5" : "bg-gray-50 border-gray-100"}`}>
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 text-center sm:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${d ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-700"}`}>
               <Shield className="w-4 h-4" />
               <span className="text-xs font-black uppercase tracking-widest">Privacy Assurance</span>
             </div>
@@ -34,7 +34,7 @@ export default function DataPolicyPage() {
       <section className="max-w-4xl mx-auto px-6 lg:px-8 mt-12 space-y-12">
         <div className={`p-6 rounded-2xl border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200 shadow-sm"} text-sm leading-relaxed ${d ? "text-gray-300" : "text-gray-700"} space-y-4`}>
           <p>
-            At <span className="font-extrabold text-teal-400">Beauvision Associates Limited</span> (&quot;Beauvision,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), we respect your privacy and are committed to protecting the personal and operational data processed through our enterprise diagnostic software, <span className="font-extrabold text-teal-400">PICA™ (Pain-Point Identification, Classification, and Assessment)</span>.
+            At <span className={`font-extrabold ${d ? "text-teal-400" : "text-teal-700"}`}>Beauvision Associates Limited</span> (&quot;Beauvision,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), we respect your privacy and are committed to protecting the personal and operational data processed through our enterprise diagnostic software, <span className={`font-extrabold ${d ? "text-teal-400" : "text-teal-700"}`}>PICA™ (Pain-Point Identification, Classification, and Assessment)</span>.
           </p>
           <p>
             This Privacy Policy outlines how we collect, use, disclose, and safeguard your information when you visit our website, use our SaaS platform, or engage with our services.
@@ -100,7 +100,7 @@ export default function DataPolicyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {section.items.map((item) => (
                     <div key={item.label} className={`p-5 rounded-xl border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
-                      <p className="text-sm font-bold text-teal-400 mb-1.5">{item.label}</p>
+                      <p className={`text-sm font-bold mb-1.5 ${d ? "text-teal-400" : "text-teal-700"}`}>{item.label}</p>
                       <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{item.desc}</p>
                     </div>
                   ))}
@@ -108,7 +108,7 @@ export default function DataPolicyPage() {
               )}
 
               {section.bullets && (
-                <ul className="space-y-2.5 pl-4 list-disc text-sm text-gray-400">
+                <ul className={`space-y-2.5 pl-4 list-disc text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
                   {section.bullets.map((bullet, idx) => (
                     <li key={idx} className={d ? "text-gray-300" : "text-gray-600"}>{bullet}</li>
                   ))}

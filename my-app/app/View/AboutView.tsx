@@ -37,14 +37,14 @@ export default function AboutPage() {
           
           {/* Hero Left Content */}
           <div className="flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-8 px-4 sm:px-6 lg:px-0">
-            <div className="inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+            <div className={`inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full border ${d ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-700"}`}>
               <Compass className="w-4 h-4 animate-spin-slow" />
               <span className="text-xs font-black uppercase tracking-widest">PICA Onboarding Guide</span>
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.08] tracking-tight">
               Prepare for <br />
-              Business <span className="text-teal-400">Clarity</span>
+              Business <span className={d ? "text-teal-400" : "text-teal-600"}>Clarity</span>
             </h1>
             
             <p className={`text-base md:text-lg leading-relaxed max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
@@ -57,7 +57,7 @@ export default function AboutPage() {
                 This is not a survey
               </p>
               <p className={`text-xs leading-relaxed ${d ? "text-gray-300" : "text-gray-600"}`}>
-                This is a <span className="font-black text-teal-400">diagnostic and execution tool</span>. In a few minutes, you’ll get clarity across the most important areas of your business.
+                This is a <span className={`font-black ${d ? "text-teal-400" : "text-teal-700"}`}>diagnostic and execution tool</span>. In a few minutes, you’ll get clarity across the most important areas of your business.
               </p>
             </div>
 
@@ -66,7 +66,7 @@ export default function AboutPage() {
                 Start Assessment <ArrowRight className="w-5 h-5" />
               </Link>
               <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                <Clock className="w-4 h-4 text-teal-400" />
+                <Clock className={`w-4 h-4 ${d ? "text-teal-400" : "text-teal-600"}`} />
                 ⏱ Takes 5–10 minutes
               </div>
             </div>
@@ -100,7 +100,7 @@ export default function AboutPage() {
           ].map(({ title, value, desc }) => (
             <div key={title} className="p-4 space-y-1">
               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</p>
-              <h4 className="text-lg font-black text-teal-400">{value}</h4>
+              <h4 className={`text-lg font-black ${d ? "text-teal-400" : "text-teal-700"}`}>{value}</h4>
               <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
             </div>
           ))}
@@ -151,7 +151,7 @@ export default function AboutPage() {
       <section className={`py-20 border-t ${d ? "bg-[#161b22]/40 border-white/5" : "bg-gray-50/50 border-gray-100"}`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 space-y-12">
           <div className="text-center max-w-xl mx-auto space-y-3">
-            <p className="text-xs font-bold tracking-widest text-teal-400 uppercase">Actionable Deliverables</p>
+            <p className={`text-xs font-bold tracking-widest uppercase ${d ? "text-teal-400" : "text-teal-700"}`}>Actionable Deliverables</p>
             <h2 className={`text-3xl sm:text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>What You&apos;ll Get</h2>
             <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
               At the end of this assessment, you will receive a comprehensive view of your operational strength.
@@ -161,12 +161,12 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
-                icon: <Activity className="w-5 h-5 text-teal-400" />,
+                icon: <Activity className={`w-5 h-5 ${d ? "text-teal-400" : "text-teal-600"}`} />,
                 title: "Business Health Score",
                 desc: "A singular metric rating your organizational alignment with structural best practices."
               },
               {
-                icon: <Layers className="w-5 h-5 text-teal-400" />,
+                icon: <Layers className={`w-5 h-5 ${d ? "text-teal-400" : "text-teal-600"}`} />,
                 title: "Strongest & Weakest Areas",
                 desc: "Identify exactly where your organization excels and where resources are currently being drained."
               },
@@ -176,7 +176,7 @@ export default function AboutPage() {
                 desc: "Pinpoint constraints, process drifts, and vulnerabilities blocking structural scaling."
               },
               {
-                icon: <Target className="w-5 h-5 text-teal-400" />,
+                icon: <Target className={`w-5 h-5 ${d ? "text-teal-400" : "text-teal-600"}`} />,
                 title: "Execution Roadmap",
                 desc: "A priority-ordered list of next steps, detailing what to repair, replace, or optimize next."
               }
@@ -214,10 +214,10 @@ export default function AboutPage() {
               What Makes This Different
             </h2>
             <p className={`text-sm sm:text-base leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
-              PICA does not just tell you what is wrong. It displays the structural bottlenecks causing constraints, and at deeper levels, provides <span className="font-extrabold text-teal-400">execution steps</span> &mdash; not just surface-level advice.
+              PICA does not just tell you what is wrong. It displays the structural bottlenecks causing constraints, and at deeper levels, provides <span className={`font-extrabold ${d ? "text-teal-400" : "text-teal-700"}`}>execution steps</span> &mdash; not just surface-level advice.
             </p>
             <div className={`p-6 rounded-2xl border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
-              <p className="text-sm font-bold text-teal-400 mb-2">Empirical Foundation</p>
+              <p className={`text-sm font-bold mb-2 ${d ? "text-teal-400" : "text-teal-700"}`}>Empirical Foundation</p>
               <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
                 By testing across the 7 critical pillars, PICA analyzes operational resilience mathematically, skipping the subjective answers traditional surveys yield.
               </p>
@@ -233,7 +233,7 @@ export default function AboutPage() {
               { title: "Execution Roadmap", desc: "Action-ready guides for your team." }
             ].map(({ title, desc }) => (
               <div key={title} className={`p-5 rounded-xl border ${d ? "bg-[#161b22]/50 border-white/5" : "bg-white border-gray-200 shadow-sm"}`}>
-                <CheckCircle2 className="w-5 h-5 text-teal-400 mb-2" />
+                <CheckCircle2 className={`w-5 h-5 mb-2 ${d ? "text-teal-400" : "text-teal-600"}`} />
                 <h4 className={`text-sm font-bold mb-1.5 ${d ? "text-white" : "text-gray-900"}`}>{title}</h4>
                 <p className={`text-[11px] leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
               </div>
@@ -275,7 +275,7 @@ export default function AboutPage() {
             {/* Assessment Goal card */}
             <div className={`p-6 rounded-2xl border flex flex-col justify-between ${d ? "bg-[#0d1117] border-white/10" : "bg-white border-gray-200"}`}>
               <div className="space-y-4">
-                <p className="text-xs font-black uppercase text-teal-400 tracking-wider flex items-center gap-1.5">
+                <p className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${d ? "text-teal-400" : "text-teal-700"}`}>
                   <Target className="w-4 h-4" />
                   Your Single Goal: Clear Vision
                 </p>

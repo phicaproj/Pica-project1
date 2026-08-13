@@ -6,15 +6,18 @@
 // hero+grid) lives with the page it belongs to.
 
 import * as React from "react";
+import { useTheme } from "@/components/ThemeContext";
 
 type SkeletonProps = React.HTMLAttributes<HTMLDivElement>;
 
 export function Skeleton({ className = "", ...props }: SkeletonProps) {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div
       // bg-white/5 reads as a soft grey on the #0d1117 dashboard surface;
       // animate-pulse handles the shimmer.
-      className={`animate-pulse rounded-md bg-white/5 ${className}`}
+      className={`animate-pulse rounded-md ${d ? 'bg-white/5' : 'bg-gray-200'} ${className}`}
       {...props}
     />
   );
@@ -27,6 +30,8 @@ export function Skeleton({ className = "", ...props }: SkeletonProps) {
  * report card layout (header strip + score block + 2 short lines).
  */
 export function ReportsListSkeleton() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="space-y-6">
       <Skeleton className="h-8 w-48" />
@@ -34,7 +39,7 @@ export function ReportsListSkeleton() {
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-[#111827] border border-white/5 p-5 space-y-4"
+            className={`rounded-2xl ${d ? 'bg-[#111827]' : 'bg-gray-50'} border ${d ? 'border-white/5' : 'border-gray-200'} p-5 space-y-4`}
           >
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-10 w-20" />
@@ -53,6 +58,8 @@ export function ReportsListSkeleton() {
  * the request form with three tier cards on the right.
  */
 export function ConsultationSkeleton() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="space-y-6">
       <Skeleton className="h-28 w-full rounded-2xl" />
@@ -60,7 +67,7 @@ export function ConsultationSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-[#111827] border border-white/5 p-4 flex items-center gap-4"
+            className={`rounded-2xl ${d ? 'bg-[#111827]' : 'bg-gray-50'} border ${d ? 'border-white/5' : 'border-gray-200'} p-4 flex items-center gap-4`}
           >
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-2">
@@ -75,7 +82,7 @@ export function ConsultationSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-[#111827] border border-white/5 p-6 space-y-3"
+            className={`rounded-2xl ${d ? 'bg-[#111827]' : 'bg-gray-50'} border ${d ? 'border-white/5' : 'border-gray-200'} p-6 space-y-3`}
           >
             <Skeleton className="h-6 w-32" />
             <Skeleton className="h-8 w-24" />
@@ -94,6 +101,8 @@ export function ConsultationSkeleton() {
  * SubscriptionCard shape (badge slot, title, price, 4 quota lines, button).
  */
 export function PlansSkeleton() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="space-y-6">
       <Skeleton className="h-8 w-64" />
@@ -102,7 +111,7 @@ export function PlansSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-[#111827] border border-white/5 p-6 space-y-4"
+            className={`rounded-2xl ${d ? 'bg-[#111827]' : 'bg-gray-50'} border ${d ? 'border-white/5' : 'border-gray-200'} p-6 space-y-4`}
           >
             <Skeleton className="h-3 w-16" />
             <Skeleton className="h-8 w-32" />
@@ -125,6 +134,8 @@ export function PlansSkeleton() {
  * the layout of /dashboard/subscription when it first lands.
  */
 export function SubscriptionPickerSkeleton() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="space-y-6">
       <Skeleton className="h-24 w-full rounded-2xl" />
@@ -132,7 +143,7 @@ export function SubscriptionPickerSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-2xl bg-[#111827] border border-white/5 p-6 space-y-3"
+            className={`rounded-2xl ${d ? 'bg-[#111827]' : 'bg-gray-50'} border ${d ? 'border-white/5' : 'border-gray-200'} p-6 space-y-3`}
           >
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-7 w-32" />

@@ -146,11 +146,11 @@ export default function PricingPage() {
           full-viewport centering because its hero is tall enough to fill it.) */}
       <section className={`px-4 sm:px-6 md:px-8 pt-6 pb-8 md:pt-12 md:pb-12 ${d ? "bg-[#111111]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto flex flex-col items-center text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-xs font-semibold uppercase tracking-widest text-gray-300 mb-4 md:mb-6">
+          <div className={`inline-flex items-center px-3 py-1 rounded-md border ${d ? 'border-white/20 text-gray-300' : 'border-gray-300 text-gray-600'} text-xs font-semibold uppercase tracking-widest mb-4 md:mb-6`}>
             Strategic Intelligence
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-2xl mx-auto">
-            Strategic Pricing for <span className="text-[#00ffaa]">Growing Enterprises.</span>
+            Strategic Pricing for <span className={`${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>Growing Enterprises.</span>
           </h1>
           <p className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto ${d ? "text-gray-400" : "text-gray-600"}`}>
             Choose a framework designed to scale with your organizational complexity. Pricing is served from the platform backend.
@@ -196,7 +196,7 @@ export default function PricingPage() {
           {loading && <PricingSkeleton dark={d} />}
 
           {error && (
-            <div className="mb-6 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300">
+            <div className={`mb-6 rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm ${d ? 'text-red-300' : 'text-red-600'}`}>
               {error}
             </div>
           )}
@@ -223,8 +223,8 @@ export default function PricingPage() {
                   shape, not a configurable price tier. */}
               <ul className="space-y-3 mb-10">
                 {["Core business health check", "Business Snapshot assessment", "Basic PDF Performance Summary"].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-sm text-gray-400">
-                    <CheckCircle className="w-4 h-4 text-[#00ffaa] flex-shrink-0" />{item}
+                  <li key={item} className={`flex items-center gap-2 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <CheckCircle className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-600'} flex-shrink-0`} />{item}
                   </li>
                 ))}
               </ul>
@@ -235,13 +235,13 @@ export default function PricingPage() {
 
             {payPerUseActive ? (
               <>
-                <div className="rounded-2xl p-8 bg-[#2a3f2a] border border-[#00ffaa]/30 relative">
+                <div className={`rounded-2xl p-8 ${d ? 'bg-[#2a3f2a]' : 'bg-teal-50'} border ${d ? 'border-[#00ffaa]/30' : 'border-teal-300'} relative`}>
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#00ffaa] text-gray-900 text-xs font-extrabold px-4 py-1 rounded-full uppercase tracking-wider">
                     Most Selected
                   </div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Full Diagnostics</p>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Strategic Scan Full Diagnostic</h3>
-                  <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
+                  <p className={`text-xs font-semibold uppercase tracking-widest ${d ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Full Diagnostics</p>
+                  <h3 className={`text-2xl md:text-3xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>Strategic Scan Full Diagnostic</h3>
+                  <p className={`text-3xl md:text-5xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-6`}>
                     {formatMoney(phase2A?.price, phase2A?.currency ?? "USD")}
                   </p>
                   {/* Section P — bullets are admin-edited on PlanPrice.features
@@ -253,8 +253,8 @@ export default function PricingPage() {
                       ? phase2A.features
                       : ["Deep-dive structural audit", "Pillar-by-pillar findings", "Detailed Insight PDF Package"]
                     ).map((item) => (
-                      <li key={item} className="flex items-center gap-2 text-sm text-gray-300">
-                        <CheckCircle className="w-4 h-4 text-[#00ffaa] flex-shrink-0" />{item}
+                      <li key={item} className={`flex items-center gap-2 text-sm ${d ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <CheckCircle className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-600'} flex-shrink-0`} />{item}
                       </li>
                     ))}
                   </ul>
@@ -263,15 +263,15 @@ export default function PricingPage() {
                   </Link>
                 </div>
 
-                <div className="rounded-2xl p-8 bg-[#2a3520] border border-[#4a6030]/40">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-2">Intelligence</p>
-                  <h3 className="text-2xl md:text-3xl font-extrabold text-white mb-4">Deep Dive</h3>
-                  <p className="text-3xl md:text-5xl font-extrabold text-white mb-6">
+                <div className={`rounded-2xl p-8 ${d ? 'bg-[#2a3520]' : 'bg-emerald-50'} border ${d ? 'border-[#4a6030]/40' : 'border-emerald-200'}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-widest ${d ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Intelligence</p>
+                  <h3 className={`text-2xl md:text-3xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>Deep Dive</h3>
+                  <p className={`text-3xl md:text-5xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-6`}>
                     {phase2BFrom === null ? (
                       "Coming soon"
                     ) : (
                       <>
-                        <span className="text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider mr-2 align-middle">From</span>
+                        <span className={`text-xs sm:text-sm font-medium ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider mr-2 align-middle`}>From</span>
                         <span className="align-middle">{formatMoney(phase2BFrom, pricing?.currency ?? "USD")}</span>
                       </>
                     )}
@@ -285,8 +285,8 @@ export default function PricingPage() {
                       ? phase2BPrices[0].features
                       : ["Targeted pillar modules", "Granular scoring", "Actionable insights per pillar"]
                     ).map((item) => (
-                      <li key={item} className="flex items-center gap-2 text-sm text-gray-300">
-                        <CheckCircle className="w-4 h-4 text-[#00ffaa] flex-shrink-0" />{item}
+                      <li key={item} className={`flex items-center gap-2 text-sm ${d ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <CheckCircle className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-600'} flex-shrink-0`} />{item}
                       </li>
                     ))}
                   </ul>
@@ -501,17 +501,17 @@ export default function PricingPage() {
           <div className={`rounded-2xl p-5 md:p-10 border ${d ? "bg-[#161b22] border-white/10" : "bg-gray-50 border-gray-200"}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[#00ffaa] mb-3">The PICA Advantage</p>
+                <p className={`text-xs font-semibold uppercase tracking-widest ${d ? 'text-[#00ffaa]' : 'text-teal-700'} mb-3`}>The PICA Advantage</p>
                 <h2 className={`text-2xl font-bold mb-6 ${d ? "text-white" : "text-gray-900"}`}>
                   Why organizations transition to PICA Intelligence.
                 </h2>
                 <div className="space-y-5">
                   {[
-                    { icon: <Globe className="w-4 h-4 text-[#00ffaa]" />, title: "Local Market Context", desc: "Our diagnostics account for regional market dynamics and operational realities." },
-                    { icon: <Shield className="w-4 h-4 text-[#00ffaa]" />, title: "Compliance-First Design", desc: "Governance and risk checks are built into the assessment framework." },
+                    { icon: <Globe className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Local Market Context", desc: "Our diagnostics account for regional market dynamics and operational realities." },
+                    { icon: <Shield className={`w-4 h-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Compliance-First Design", desc: "Governance and risk checks are built into the assessment framework." },
                   ].map((item) => (
                     <div key={item.title} className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[#00ffaa]/10 flex items-center justify-center flex-shrink-0">
+                      <div className={`w-8 h-8 rounded-lg ${d ? 'bg-[#00ffaa]/10' : 'bg-teal-50'} flex items-center justify-center flex-shrink-0`}>
                         {item.icon}
                       </div>
                       <div>
@@ -530,7 +530,7 @@ export default function PricingPage() {
                   { value: "Instant", label: "Dashboard Diagnostics" },
                   { value: "Tier 4", label: "Data Security Protocols" },
                 ].map(({ value, label }) => (
-                  <div key={label} className={`rounded-xl p-5 border-l-4 border-[#00ffaa] ${d ? "bg-[#0d1117]" : "bg-white"}`}>
+                  <div key={label} className={`rounded-xl p-5 border-l-4 ${d ? 'border-[#00ffaa]' : 'border-teal-500'} ${d ? "bg-[#0d1117]" : "bg-white"}`}>
                     <p className={`text-2xl font-extrabold mb-1 ${d ? "text-white" : "text-gray-900"}`}>{value}</p>
                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
                   </div>

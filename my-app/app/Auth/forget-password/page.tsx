@@ -4,8 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { forgotPassword } from "@/lib/authClient";
+import { useTheme } from "@/components/ThemeContext";
 
 export default function ForgotPasswordPage() {
+  const { dark } = useTheme();
+  const d = dark;
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,21 +40,21 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
+    <div className={`min-h-screen w-full flex flex-col ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-10">
           <img src="/images/favicon.png" alt="Beauvision" className="h-6 w-6 object-contain" />
-          <span className="text-white text-lg font-bold">Beauvision</span>
+          <span className={`text-lg font-bold ${d ? "text-white" : "text-gray-900"}`}>Beauvision</span>
         </div>
 
         {/* Card */}
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#161b22] p-8 md:p-10">
-          <h2 className="text-2xl font-bold text-white text-center mb-2">
+        <div className={`w-full max-w-md rounded-2xl border p-8 md:p-10 ${d ? "border-white/10 bg-[#161b22]" : "border-gray-200 bg-white"}`}>
+          <h2 className={`text-2xl font-bold text-center mb-2 ${d ? "text-white" : "text-gray-900"}`}>
             Reset Password
           </h2>
-          <p className="text-sm text-gray-400 text-center mb-8">
+          <p className={`text-sm text-center mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
             Enter your email address and we&apos;ll send you a code to reset your password.
           </p>
 
@@ -67,10 +70,12 @@ export default function ForgotPasswordPage() {
                 }}
                 required
                 disabled={isLoading}
-                className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                  d ? "bg-[#0d1117] text-white placeholder-gray-500" : "bg-gray-50 text-gray-900 placeholder-gray-400"
+                } ${
                   error
                     ? "border-red-500 focus:ring-red-400"
-                    : "border-white/10 focus:ring-[#f97316]/50"
+                    : d ? "border-white/10 focus:ring-[#f97316]/50" : "border-gray-200 focus:ring-[#f97316]/50"
                 }`}
               />
               {error && (
@@ -87,11 +92,11 @@ export default function ForgotPasswordPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-400 mt-6">
+          <p className={`text-center text-sm mt-6 ${d ? "text-gray-400" : "text-gray-600"}`}>
             Remembered your password?{" "}
             <Link
               href="/Auth/login"
-              className="font-bold text-white hover:text-[#f97316] transition underline"
+              className={`font-bold transition underline ${d ? "text-white hover:text-[#f97316]" : "text-gray-900 hover:text-[#f97316]"}`}
             >
               Login
             </Link>
@@ -100,7 +105,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* Footer */}
-      <footer className="py-6 text-center border-t border-white/5">
+      <footer className={`py-6 text-center border-t ${d ? "border-white/5" : "border-gray-200"}`}>
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
           {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
             (item) => (

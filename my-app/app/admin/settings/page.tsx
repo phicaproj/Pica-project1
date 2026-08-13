@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from '@/components/ThemeContext';
 import {
   Search,
   AlertTriangle,
@@ -72,6 +73,7 @@ const getInitials = (firstName: string | null, lastName: string | null, email: s
 
 // ─── TAB 2: Pillar Management ─────────────────────────────────────
 function PillarTab() {
+  const { dark: d } = useTheme();
   const [pillars, setPillars] = useState<AdminPillarDetailed[]>([]);
   const [settings, setSettings] = useState<ScoringSettings | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettingsPayload | null>(null);
@@ -191,7 +193,7 @@ function PillarTab() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+      <div className={`flex flex-col items-center justify-center py-20 gap-3 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
         <Loader className="w-8 h-8 animate-spin text-blue-500" />
         <span>Loading pillar configuration...</span>
       </div>
@@ -230,21 +232,21 @@ function PillarTab() {
       {/* Row: Limit Configurations */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Phase 1 Config */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-4">
+        <div className={`rounded-2xl border p-6 space-y-4 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400">
               <Settings2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">Phase 1 Question Limits</h3>
-              <p className="text-xs text-gray-500">Business snapshot assessment</p>
+              <h3 className={`font-bold text-lg ${d ? 'text-white' : 'text-gray-900'}`}>Phase 1 Question Limits</h3>
+              <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'}`}>Business snapshot assessment</p>
             </div>
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Configure the total number of general questions a user gets to answer. Questions will be sampled randomly and divided as evenly as possible among active pillars.
           </p>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+            <label className={`text-[10px] font-bold uppercase tracking-widest block ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               Total Target Questions Count
             </label>
             <div className="flex items-center gap-4">
@@ -255,9 +257,9 @@ function PillarTab() {
                 value={p1Limit}
                 disabled={!isEditingLimits}
                 onChange={(e) => setP1Limit(Math.max(1, Number(e.target.value)))}
-                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
               />
-              <div className="text-xs text-gray-400">
+              <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                 questions total (plus active knockouts)
               </div>
             </div>
@@ -265,21 +267,21 @@ function PillarTab() {
         </div>
 
         {/* Phase 2A Config */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-4">
+        <div className={`rounded-2xl border p-6 space-y-4 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">Phase 2A Question Limits</h3>
-              <p className="text-xs text-gray-500">Structured diagnosis assessment</p>
+              <h3 className={`font-bold text-lg ${d ? 'text-white' : 'text-gray-900'}`}>Phase 2A Question Limits</h3>
+              <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'}`}>Structured diagnosis assessment</p>
             </div>
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Configure the total number of questions a user gets to answer. Questions will be divided equally among all active pillars.
           </p>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+            <label className={`text-[10px] font-bold uppercase tracking-widest block ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               Total Target Questions Count
             </label>
             <div className="flex items-center gap-4">
@@ -290,31 +292,31 @@ function PillarTab() {
                 value={p2aLimit}
                 disabled={!isEditingLimits}
                 onChange={(e) => setP2aLimit(Math.max(1, Number(e.target.value)))}
-                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
               />
-              <div className="text-xs text-gray-400">
-                &asymp; <span className="font-bold text-white">{p2aPerPillarTarget}</span> questions per pillar (across {activePillarsCount} active pillars)
+              <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+                &asymp; <span className={`font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{p2aPerPillarTarget}</span> questions per pillar (across {activePillarsCount} active pillars)
               </div>
             </div>
           </div>
         </div>
 
         {/* Phase 2B Config */}
-        <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-4">
+        <div className={`rounded-2xl border p-6 space-y-4 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
               <Shuffle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">Phase 2B Question Limits</h3>
-              <p className="text-xs text-gray-500">Pillar deep-dive assessment</p>
+              <h3 className={`font-bold text-lg ${d ? 'text-white' : 'text-gray-900'}`}>Phase 2B Question Limits</h3>
+              <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'}`}>Pillar deep-dive assessment</p>
             </div>
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed">
+          <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Configure the limit of questions delivered to users for each specific pillar during a single deep-dive session.
           </p>
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+            <label className={`text-[10px] font-bold uppercase tracking-widest block ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               Max Questions Per Pillar Session
             </label>
             <div className="flex items-center gap-4">
@@ -325,10 +327,10 @@ function PillarTab() {
                 value={p2bLimit}
                 disabled={!isEditingLimits}
                 onChange={(e) => setP2bLimit(Math.max(1, Number(e.target.value)))}
-                className="bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
               />
-              <div className="text-xs text-gray-400">
-                Users will answer at most <span className="font-bold text-white">{p2bLimit}</span> questions per pillar.
+              <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+                Users will answer at most <span className={`font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{p2bLimit}</span> questions per pillar.
               </div>
             </div>
           </div>
@@ -336,8 +338,8 @@ function PillarTab() {
       </div>
 
       {/* Edit / Save Button */}
-      <div className="flex items-center justify-between bg-[#1C1F2E] rounded-2xl border border-white/5 px-6 py-4">
-        <span className="text-xs text-gray-500 flex items-center gap-1.5">
+      <div className={`flex items-center justify-between rounded-2xl border px-6 py-4 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
+        <span className={`text-xs flex items-center gap-1.5 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
           <Info className="w-4 h-4 text-blue-400" /> Limits apply to newly initialized sessions only.
         </span>
         {!isEditingLimits ? (
@@ -356,7 +358,7 @@ function PillarTab() {
             <button
               onClick={handleCancelLimits}
               disabled={saving}
-              className="px-5 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+              className={`px-5 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
             >
               Cancel
             </button>
@@ -373,18 +375,18 @@ function PillarTab() {
       </div>
 
       {/* Pillars Audit Table */}
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
-        <div className="px-6 py-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.01]">
+      <div className={`rounded-2xl border overflow-hidden ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
+        <div className={`px-6 py-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${d ? 'border-white/5 bg-white/[0.01]' : 'border-gray-200 bg-gray-50'}`}>
           <div>
-            <h2 className="text-base font-semibold text-white">Pillar Configuration Audit</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h2 className={`text-base font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Pillar Configuration Audit</h2>
+            <p className={`text-xs mt-0.5 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
               Live checks comparing configured target limits against actual questions available in database for{" "}
-              <span className="text-gray-300 font-semibold">{bizSize === "SMALL" ? "Small" : "Medium"}</span> businesses.
+              <span className={`font-semibold ${d ? 'text-gray-300' : 'text-gray-700'}`}>{bizSize === "SMALL" ? "Small" : "Medium"}</span> businesses.
             </p>
           </div>
           <div className="flex items-center gap-4">
             {/* Business size toggle — counts differ per size */}
-            <div className="inline-flex rounded-lg border border-white/10 bg-[#111318] p-0.5">
+            <div className={`inline-flex rounded-lg border p-0.5 ${d ? 'border-white/10 bg-[#111318]' : 'border-gray-200 bg-gray-100'}`}>
               {(["SMALL", "MEDIUM"] as const).map((size) => (
                 <button
                   key={size}
@@ -392,7 +394,7 @@ function PillarTab() {
                   className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
                     bizSize === size
                       ? "bg-blue-500 text-white"
-                      : "text-gray-400 hover:text-white"
+                      : (d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900")
                   }`}
                 >
                   {size === "SMALL" ? "Small" : "Medium"}
@@ -409,7 +411,7 @@ function PillarTab() {
         </div>
 
         {/* Table Headers */}
-        <div className="grid grid-cols-4 px-6 py-3 border-b border-white/5 bg-white/[0.005] text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+        <div className={`grid grid-cols-4 px-6 py-3 border-b text-[10px] font-bold uppercase tracking-widest ${d ? 'border-white/5 bg-white/[0.005] text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
           <span>PILLAR & WEIGHT</span>
           <span className="text-center">ACTIVE IN DB</span>
           <span className="text-center">PHASE 2A ACTUALS</span>
@@ -417,7 +419,7 @@ function PillarTab() {
         </div>
 
         {/* Rows */}
-        <div className="divide-y divide-white/5">
+        <div className={`divide-y ${d ? 'divide-white/5' : 'divide-gray-200'}`}>
           {pillars.map((pillar) => {
             const p2aAvailable = phase2aCount(pillar);
             const p2bAvailable = phase2bCount(pillar);
@@ -429,21 +431,21 @@ function PillarTab() {
             const p2bDelivered = Math.min(p2bLimit, p2bAvailable);
 
             return (
-              <div key={pillar.id} className="grid grid-cols-4 items-center px-6 py-4 hover:bg-white/[0.01] transition-colors">
+              <div key={pillar.id} className={`grid grid-cols-4 items-center px-6 py-4 transition-colors ${d ? 'hover:bg-white/[0.01]' : 'hover:bg-gray-50'}`}>
                 {/* Pillar info */}
                 <div>
-                  <div className="text-sm font-semibold text-white flex items-center gap-2">
+                  <div className={`text-sm font-semibold flex items-center gap-2 ${d ? 'text-white' : 'text-gray-900'}`}>
                     {pillar.name}
-                    <span className="text-[9px] bg-white/5 text-gray-400 border border-white/10 px-1.5 py-0.5 rounded font-bold">
+                    <span className={`text-[9px] border px-1.5 py-0.5 rounded font-bold ${d ? 'bg-white/5 text-gray-400 border-white/10' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                       {pillar.code}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-0.5">Assigned Share: {pillar.weight}%</div>
+                  <div className={`text-xs mt-0.5 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Assigned Share: {pillar.weight}%</div>
                 </div>
 
                 {/* Database count for the selected business size (2A + 2B) */}
                 <div className="text-center">
-                  <span className="inline-block px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-sm font-semibold text-gray-300">
+                  <span className={`inline-block px-3 py-1 border rounded-lg text-sm font-semibold ${d ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}>
                     {p2aAvailable + p2bAvailable} questions
                   </span>
                 </div>
@@ -452,13 +454,13 @@ function PillarTab() {
                 <div className="flex flex-col items-center">
                   {hasP2aWarning ? (
                     <div className="flex flex-col items-center gap-1">
-                      <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs font-bold text-amber-400 flex items-center gap-1">
+                      <span className={`px-2.5 py-1 border rounded-lg text-xs font-bold flex items-center gap-1 ${d ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'}`}>
                         <AlertTriangle className="w-3.5 h-3.5" /> {p2aDelivered} / {p2aPerPillarTarget}
                       </span>
                       <span className="text-[9px] text-amber-500/80 font-medium">Under-populated DB</span>
                     </div>
                   ) : (
-                    <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 flex items-center gap-1">
+                    <span className={`px-2.5 py-1 border rounded-lg text-xs font-bold flex items-center gap-1 ${d ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}>
                       <CheckCircle2 className="w-3.5 h-3.5" /> {p2aDelivered} questions
                     </span>
                   )}
@@ -468,13 +470,13 @@ function PillarTab() {
                 <div className="flex flex-col items-center">
                   {hasP2bWarning ? (
                     <div className="flex flex-col items-center gap-1">
-                      <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs font-bold text-amber-400 flex items-center gap-1">
+                      <span className={`px-2.5 py-1 border rounded-lg text-xs font-bold flex items-center gap-1 ${d ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'}`}>
                         <AlertTriangle className="w-3.5 h-3.5" /> {p2bDelivered} / {p2bLimit}
                       </span>
                       <span className="text-[9px] text-amber-500/80 font-medium">Under-populated DB</span>
                     </div>
                   ) : (
-                    <span className="px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs font-bold text-emerald-400 flex items-center gap-1">
+                    <span className={`px-2.5 py-1 border rounded-lg text-xs font-bold flex items-center gap-1 ${d ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}>
                       <CheckCircle2 className="w-3.5 h-3.5" /> {p2bDelivered} questions
                     </span>
                   )}
@@ -519,19 +521,20 @@ function AccessFields({
   onCustomDepartmentChange: (value: string) => void;
   onTogglePermission: (key: string) => void;
 }) {
+  const { dark: d } = useTheme();
   const isSuper = department === "SUPER ADMIN";
   const isCustom = department === CUSTOM_DEPARTMENT;
 
   return (
     <>
       <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+        <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
           Department <span className="text-red-500">*</span>
         </label>
         <select
           value={department}
           onChange={(e) => onDepartmentChange(e.target.value)}
-          className="w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+          className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 cursor-pointer ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
         >
           <option value="" disabled>
             Select department
@@ -549,22 +552,22 @@ function AccessFields({
             placeholder="Enter custom department name"
             value={customDepartment}
             onChange={(e) => onCustomDepartmentChange(e.target.value)}
-            className="mt-2 w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+            className={`mt-2 w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
           />
         )}
       </div>
 
       <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+        <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
           Permissions ({isSuper ? "all" : permissions.length})
         </label>
         {isSuper ? (
-          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-300">
+          <div className={`flex items-center gap-2 border rounded-xl px-4 py-3 text-xs ${d ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
             <Shield className="w-4 h-4 flex-shrink-0" />
             Super Admins have full access to every module. Individual permissions don&apos;t apply.
           </div>
         ) : (
-          <div className="bg-[#111318] border border-white/10 rounded-xl max-h-56 overflow-y-auto divide-y divide-white/5">
+          <div className={`border rounded-xl max-h-56 overflow-y-auto divide-y ${d ? 'bg-[#111318] border-white/10 divide-white/5' : 'bg-white border-gray-200 divide-gray-100'}`}>
             {PERMISSIONS_LIST.map((p) => {
               const isSelected = permissions.includes(p.key);
               return (
@@ -572,17 +575,17 @@ function AccessFields({
                   type="button"
                   key={p.key}
                   onClick={() => onTogglePermission(p.key)}
-                  className="w-full flex items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-white/[0.02] transition-colors"
+                  className={`w-full flex items-center justify-between px-4 py-2.5 text-left text-xs transition-colors ${d ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50'}`}
                 >
                   <div>
-                    <div className="font-semibold text-white">{p.label}</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5">{p.description}</div>
+                    <div className={`font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{p.label}</div>
+                    <div className={`text-[10px] mt-0.5 ${d ? 'text-gray-500' : 'text-gray-600'}`}>{p.description}</div>
                   </div>
                   <input
                     type="checkbox"
                     checked={isSelected}
                     readOnly
-                    className="w-4 h-4 accent-blue-500 rounded border-white/10 cursor-pointer pointer-events-none flex-shrink-0 ml-3"
+                    className={`w-4 h-4 accent-blue-500 rounded cursor-pointer pointer-events-none flex-shrink-0 ml-3 ${d ? 'border-white/10' : 'border-gray-200'}`}
                   />
                 </button>
               );
@@ -596,6 +599,7 @@ function AccessFields({
 
 // ─── TAB 1: Roles & Permissions (per-person access) ───────────────
 function RolesTab() {
+  const { dark: d } = useTheme();
   const [admins, setAdmins] = useState<AdminUserRow[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -847,18 +851,18 @@ function RolesTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: administrators list */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="relative bg-[#1C1F2E] rounded-2xl border border-white/5 overflow-hidden">
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
-              <h2 className="text-base font-semibold text-white">System Administrators</h2>
+          <div className={`relative rounded-2xl border overflow-hidden ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
+            <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
+              <h2 className={`text-base font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>System Administrators</h2>
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
                   <input
                     type="text"
                     placeholder="Filter admins..."
                     value={adminSearch}
                     onChange={(e) => setAdminSearch(e.target.value)}
-                    className="bg-[#111318] border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 w-52"
+                    className={`border rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-52 ${d ? 'bg-[#111318] border-white/10 text-white placeholder-gray-600' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
                   />
                 </div>
                 <button
@@ -878,25 +882,25 @@ function RolesTab() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 px-6 py-3 border-b border-white/5 bg-white/[0.01]">
+            <div className={`grid grid-cols-3 px-6 py-3 border-b ${d ? 'border-white/5 bg-white/[0.01]' : 'border-gray-200 bg-gray-50'}`}>
               {["ADMINISTRATOR", "DEPARTMENT", "ACCESS"].map((h) => (
-                <span key={h} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                <span key={h} className={`text-[10px] font-bold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                   {h}
                 </span>
               ))}
             </div>
 
             {loadingAdmins ? (
-              <div className="flex items-center justify-center py-12 text-sm text-gray-400 gap-2">
+              <div className={`flex items-center justify-center py-12 text-sm gap-2 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                 <Loader className="w-4 h-4 animate-spin text-blue-500" />
                 <span>Loading administrators...</span>
               </div>
             ) : filteredAdmins.length === 0 ? (
-              <div className="text-center py-12 text-sm text-gray-500">
+              <div className={`text-center py-12 text-sm ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 No administrators found matching your filter.
               </div>
             ) : (
-              <div className="divide-y divide-white/5">
+              <div className={`divide-y ${d ? 'divide-white/5' : 'divide-gray-200'}`}>
                 {filteredAdmins.map((admin) => {
                   const label = departmentLabel(admin);
                   const isSuper = label === "SUPER ADMIN";
@@ -906,18 +910,18 @@ function RolesTab() {
                     : (admin.permissions ?? admin.adminRole?.permissions ?? []).length;
 
                   return (
-                    <div key={admin.id} className="grid grid-cols-3 items-center px-6 py-4 hover:bg-white/[0.01] transition-colors">
+                    <div key={admin.id} className={`grid grid-cols-3 items-center px-6 py-4 transition-colors ${d ? 'hover:bg-white/[0.01]' : 'hover:bg-gray-50'}`}>
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-blue-600/80 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                           {initialLetters}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-sm font-semibold text-white truncate">
+                          <div className={`text-sm font-semibold truncate ${d ? 'text-white' : 'text-gray-900'}`}>
                             {admin.firstName || admin.lastName
                               ? `${admin.firstName ?? ""} ${admin.lastName ?? ""}`.trim()
                               : "Admin Profile"}
                           </div>
-                          <div className="text-xs text-gray-500 truncate">{admin.email}</div>
+                          <div className={`text-xs truncate ${d ? 'text-gray-500' : 'text-gray-600'}`}>{admin.email}</div>
                         </div>
                       </div>
 
@@ -925,27 +929,27 @@ function RolesTab() {
                         <span
                           className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-lg border ${
                             isSuper
-                              ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
-                              : "bg-white/5 border-white/10 text-gray-300"
+                              ? (d ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "bg-blue-50 border-blue-200 text-blue-600")
+                              : (d ? "bg-white/5 border-white/10 text-gray-300" : "bg-gray-100 border-gray-200 text-gray-700")
                           }`}
                         >
                           {isSuper ? "Super Admin" : label}
                         </span>
                         {admin.pendingInvite && (
-                          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border ${d ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-600'}`}>
                             Pending activation
                           </span>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-gray-400">{permCount} permissions</span>
+                        <span className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>{permCount} permissions</span>
                         <div className="flex items-center gap-2">
                           {admin.pendingInvite && (
                             <button
                               disabled={resendingId === admin.id}
                               onClick={() => void handleResendInvite(admin)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 hover:text-amber-300 text-xs font-semibold rounded-lg transition-colors flex-shrink-0 disabled:opacity-55"
+                              className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-semibold rounded-lg transition-colors flex-shrink-0 disabled:opacity-55 ${d ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-400 hover:text-amber-300' : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-600 hover:text-amber-700'}`}
                               title="Resend 24-hour activation link"
                             >
                               {resendingId === admin.id ? (
@@ -958,7 +962,7 @@ function RolesTab() {
                           )}
                           <button
                             onClick={() => openEditAccess(admin)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-semibold rounded-lg transition-colors flex-shrink-0 ${d ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300 hover:text-white' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 hover:text-gray-900'}`}
                           >
                             <Pencil className="w-3.5 h-3.5" /> Edit access
                           </button>
@@ -974,32 +978,32 @@ function RolesTab() {
 
         {/* Right: summary */}
         <div className="space-y-6">
-          <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6">
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Authority Overview</div>
-            <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
-              <span className="text-sm text-gray-300">Total Administrators</span>
-              <span className="text-xl font-bold text-white">
+          <div className={`rounded-2xl border p-6 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
+            <div className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Authority Overview</div>
+            <div className={`flex items-center justify-between pb-4 border-b mb-4 ${d ? 'border-white/5' : 'border-gray-200'}`}>
+              <span className={`text-sm ${d ? 'text-gray-300' : 'text-gray-700'}`}>Total Administrators</span>
+              <span className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                 {loadingAdmins ? <Loader className="w-5 h-5 animate-spin inline text-blue-500" /> : admins.length}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Super Admins</div>
-                <div className="text-2xl font-bold text-white">{superAdminCount}</div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Super Admins</div>
+                <div className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{superAdminCount}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Departments</div>
-                <div className="text-2xl font-bold text-white">{departmentCount}</div>
+                <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Departments</div>
+                <div className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{departmentCount}</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5">
+          <div className={`border rounded-2xl p-5 ${d ? 'bg-red-500/10 border-red-500/20' : 'bg-red-50 border-red-200'}`}>
             <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <span className="text-sm font-bold text-red-400">Elevated Privileges</span>
+              <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-red-400' : 'text-red-600'}`} />
+              <span className={`text-sm font-bold ${d ? 'text-red-400' : 'text-red-600'}`}>Elevated Privileges</span>
             </div>
-            <p className="text-xs text-red-300/80 leading-relaxed">
+            <p className={`text-xs leading-relaxed ${d ? 'text-red-300/80' : 'text-red-700/80'}`}>
               Assigning the Super Admin department grants full database modification authority. Use extreme caution when expanding this group.
             </p>
           </div>
@@ -1009,36 +1013,36 @@ function RolesTab() {
       {/* Invite Admin modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-          <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <h3 className="text-base font-semibold text-white">Invite a New Administrator</h3>
+          <div className={`border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl ${d ? 'bg-[#1C1F2E] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
+              <h3 className={`text-base font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Invite a New Administrator</h3>
               <button
                 onClick={() => setShowInviteModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className={`transition-colors ${d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleInviteAdmin} className="p-6 space-y-4">
-              <p className="text-xs text-gray-400 leading-relaxed">
+              <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                 We&apos;ll email this person a secure link (valid for 24 hours) to set their own
                 password and activate their admin account.
               </p>
 
               <div>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1.5">
+                <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
                   <input
                     type="email"
                     required
                     placeholder="staff@company.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    className="w-full bg-[#111318] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                    className={`w-full border rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
                   />
                 </div>
               </div>
@@ -1052,11 +1056,11 @@ function RolesTab() {
                 onTogglePermission={(key) => togglePerm(setInvitePerms, key)}
               />
 
-              <div className="flex gap-3 justify-end pt-4 border-t border-white/5">
+              <div className={`flex gap-3 justify-end pt-4 border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
                 <button
                   type="button"
                   onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${d ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'}`}
                 >
                   Cancel
                 </button>
@@ -1077,15 +1081,15 @@ function RolesTab() {
       {/* Edit-access modal */}
       {editTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-          <div className="bg-[#1C1F2E] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+          <div className={`border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl ${d ? 'bg-[#1C1F2E] border-white/10' : 'bg-white border-gray-200'}`}>
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
               <div>
-                <h3 className="text-base font-semibold text-white">Edit Administrator Access</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{editTarget.email}</p>
+                <h3 className={`text-base font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Edit Administrator Access</h3>
+                <p className={`text-xs mt-0.5 ${d ? 'text-gray-500' : 'text-gray-600'}`}>{editTarget.email}</p>
               </div>
               <button
                 onClick={() => setEditTarget(null)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className={`transition-colors ${d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1101,7 +1105,7 @@ function RolesTab() {
                 onTogglePermission={(key) => togglePerm(setEditPerms, key)}
               />
 
-              <div className="flex items-center justify-between pt-4 border-t border-white/5">
+              <div className={`flex items-center justify-between pt-4 border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
                 {editTarget && (
                   <button
                     type="button"
@@ -1110,8 +1114,8 @@ function RolesTab() {
                     title={isSelf ? "You cannot disable your own account" : undefined}
                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed border ${
                       editTarget.status === "ACTIVE"
-                        ? "bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400"
-                        : "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400"
+                        ? (d ? "bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400" : "bg-red-50 hover:bg-red-100 border-red-200 text-red-600")
+                        : (d ? "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-400" : "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-600")
                     }`}
                   >
                     {togglingStatus && <Loader className="w-4 h-4 animate-spin" />}
@@ -1123,7 +1127,7 @@ function RolesTab() {
                   <button
                     type="button"
                     onClick={() => setEditTarget(null)}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5 transition-colors"
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${d ? 'text-gray-400 hover:bg-white/5' : 'text-gray-600 hover:bg-gray-100'}`}
                   >
                     Cancel
                   </button>
@@ -1147,6 +1151,7 @@ function RolesTab() {
 
 // ─── TAB 3: Personal Information ──────────────────────────────────
 function PersonalInfoTab() {
+  const { dark: d } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1227,7 +1232,7 @@ function PersonalInfoTab() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-3">
+      <div className={`flex flex-col items-center justify-center py-20 gap-3 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
         <Loader className="w-8 h-8 animate-spin text-blue-500" />
         <span>Loading your profile...</span>
       </div>
@@ -1235,9 +1240,9 @@ function PersonalInfoTab() {
   }
 
   const inputClass =
-    "w-full bg-[#111318] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed";
+    `w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'}`;
   const labelClass =
-    "text-[10px] font-bold text-gray-400 uppercase tracking-widest block";
+    `text-[10px] font-bold uppercase tracking-widest block ${d ? 'text-gray-400' : 'text-gray-600'}`;
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -1256,15 +1261,15 @@ function PersonalInfoTab() {
         </div>
       )}
 
-      <div className="bg-[#1C1F2E] rounded-2xl border border-white/5 p-6 space-y-5">
+      <div className={`rounded-2xl border p-6 space-y-5 ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-lg">Profile Details</h3>
-              <p className="text-xs text-gray-500">Your administrator account information</p>
+              <h3 className={`font-bold text-lg ${d ? 'text-white' : 'text-gray-900'}`}>Profile Details</h3>
+              <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'}`}>Your administrator account information</p>
             </div>
           </div>
           {!isEditing ? (
@@ -1287,7 +1292,7 @@ function PersonalInfoTab() {
                   setError(null);
                 }}
                 disabled={saving}
-                className="px-4 py-2 text-sm font-semibold text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                className={`px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 Cancel
               </button>
@@ -1366,20 +1371,21 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
+  const { dark: d } = useTheme();
   const [activeTab, setActiveTab] = useState("roles");
 
   return (
     <div className="max-w-[1400px] mx-auto">
       {/* Tab strip */}
-      <div className="flex gap-6 border-b border-white/5 mb-8 -mt-2">
+      <div className={`flex gap-6 border-b mb-8 -mt-2 ${d ? 'border-white/5' : 'border-gray-200'}`}>
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`pb-3 text-sm font-semibold transition-colors relative whitespace-nowrap ${
               activeTab === tab.key
-                ? "text-white"
-                : "text-gray-500 hover:text-gray-300"
+                ? (d ? "text-white" : "text-gray-900")
+                : (d ? "text-gray-500 hover:text-gray-300" : "text-gray-600 hover:text-gray-800")
             }`}
           >
             {tab.label}
@@ -1393,8 +1399,8 @@ export default function SettingsPage() {
       {/* Tab headers */}
       {activeTab === "roles" && (
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Roles & Permissions</h1>
-          <p className="text-gray-400 text-sm max-w-lg">
+          <h1 className={`text-3xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Roles & Permissions</h1>
+          <p className={`text-sm max-w-lg ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Onboard staff and manage each administrator&apos;s department and granular module permissions.
           </p>
         </div>
@@ -1402,8 +1408,8 @@ export default function SettingsPage() {
 
       {activeTab === "pillars" && (
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Pillar & Limits Management</h1>
-          <p className="text-gray-400 text-sm">
+          <h1 className={`text-3xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Pillar & Limits Management</h1>
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Set dynamic question limit scopes for Phase 2A and Phase 2B, and view live database counts.
           </p>
         </div>
@@ -1411,8 +1417,8 @@ export default function SettingsPage() {
 
       {activeTab === "personal" && (
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">Personal Information</h1>
-          <p className="text-gray-400 text-sm">
+          <h1 className={`text-3xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Personal Information</h1>
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
             Your administrator profile. Keep your contact details up to date.
           </p>
         </div>

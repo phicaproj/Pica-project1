@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useTheme } from '@/components/ThemeContext';
 import {
   Users,
   ShieldCheck,
@@ -75,6 +76,8 @@ const CATEGORY_COLORS = [
 ];
 
 export default function AdminDashboardPage() {
+  const { dark } = useTheme();
+  const d = dark;
   const [kpis, setKpis] = useState<ReportKpisResponse["kpis"] | null>(null);
   const [breakdowns, setBreakdowns] =
     useState<ReportBreakdownsResponse["breakdowns"] | null>(null);
@@ -113,7 +116,7 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh] text-gray-400">
+      <div className={`flex items-center justify-center h-[60vh] ${d ? 'text-gray-400' : 'text-gray-600'}`}>
         <Loader className="w-6 h-6 animate-spin mr-3" />
         Loading dashboard…
       </div>
@@ -150,12 +153,12 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
       {error && (
-        <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 text-red-300 rounded-xl px-4 py-3 text-sm">
+        <div className={`flex items-center gap-3 bg-red-500/10 border border-red-500/20 ${d ? 'text-red-300' : 'text-red-600'} rounded-xl px-4 py-3 text-sm`}>
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
           <button
             onClick={load}
-            className="ml-auto text-xs font-semibold uppercase tracking-wider hover:text-white"
+            className={`ml-auto text-xs font-semibold uppercase tracking-wider ${d ? 'hover:text-white' : 'hover:text-gray-900'}`}
           >
             Retry
           </button>
@@ -166,14 +169,14 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           label="Total Users"
-          icon={<Users className="text-white/10 w-10 h-10 absolute right-4 top-4" />}
+          icon={<Users className={`${d ? 'text-white/10' : 'text-gray-200'} w-10 h-10 absolute right-4 top-4`} />}
           value={totalUsers !== null ? formatNumber(totalUsers) : "—"}
           sub="Registered businesses"
         />
 
         <StatCard
           label="Total Revenue"
-          icon={<DollarSign className="text-white/10 w-10 h-10 absolute right-4 top-4" />}
+          icon={<DollarSign className={`${d ? 'text-white/10' : 'text-gray-200'} w-10 h-10 absolute right-4 top-4`} />}
           value={revenue ? formatUsd(revenue.total) : "—"}
           growth={growthPct}
           growthSuffix="vs last month"
@@ -181,24 +184,24 @@ export default function AdminDashboardPage() {
 
         <StatCard
           label="Assessments Taken"
-          icon={<CheckSquare className="text-white/10 w-10 h-10 absolute right-4 top-4" />}
+          icon={<CheckSquare className={`${d ? 'text-white/10' : 'text-gray-200'} w-10 h-10 absolute right-4 top-4`} />}
           value={formatNumber(totalAssessments)}
           sub="All phases"
         />
 
-        <div className="bg-[#1C1F2E] rounded-xl p-5 border border-white/5 relative overflow-hidden">
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-xl p-5 border relative overflow-hidden`}>
           <div className="flex justify-between items-start mb-2">
-            <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider">
+            <h3 className={`${d ? 'text-gray-400' : 'text-gray-600'} text-xs font-semibold uppercase tracking-wider`}>
               Avg Health Score
             </h3>
-            <HeartPulse className="text-white/10 w-10 h-10 absolute right-4 top-4" />
+            <HeartPulse className={`${d ? 'text-white/10' : 'text-gray-200'} w-10 h-10 absolute right-4 top-4`} />
           </div>
-          <div className="text-3xl font-bold text-orange-400 mb-3">
+          <div className={`text-3xl font-bold ${d ? 'text-orange-400' : 'text-orange-600'} mb-3`}>
             {avgScore !== null ? avgScore.toFixed(1) : "—"}
           </div>
-          <div className="w-full bg-white/10 rounded-full h-1.5 flex overflow-hidden">
+          <div className={`w-full ${d ? 'bg-white/10' : 'bg-gray-200'} rounded-full h-1.5 flex overflow-hidden`}>
             <div
-              className="bg-orange-400 h-full rounded-full"
+              className={`h-full rounded-full ${d ? 'bg-orange-400' : 'bg-orange-500'}`}
               style={{ width: `${avgScore !== null ? Math.min(100, avgScore) : 0}%` }}
             ></div>
           </div>
@@ -208,18 +211,18 @@ export default function AdminDashboardPage() {
       {/* Middle Row: Revenue + Phase mix */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Overview Chart */}
-        <div className="bg-[#1C1F2E] rounded-2xl p-6 border border-white/5 lg:col-span-2 flex flex-col">
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl p-6 border lg:col-span-2 flex flex-col`}>
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-lg font-semibold text-white mb-1">Revenue Overview</h2>
-              <p className="text-sm text-gray-400">
+              <h2 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>Revenue Overview</h2>
+              <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                 Settled payments over the last {monthly.length || 0} months.
               </p>
             </div>
             {revenue && (
               <div className="text-right">
                 <div className="text-xs text-gray-500 uppercase tracking-wider">This month</div>
-                <div className="text-lg font-bold text-white">
+                <div className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                   {formatUsd(paymentStats?.revenueThisMonth ?? 0)}
                 </div>
               </div>
@@ -236,13 +239,13 @@ export default function AdminDashboardPage() {
                 return (
                   <div key={i} className="flex flex-col items-center flex-1 group">
                     <div className="w-full relative flex justify-center h-[180px] items-end">
-                      <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-[#2A2E3D] text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                      <div className={`absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity ${d ? 'bg-[#2A2E3D] text-white' : 'bg-gray-100 text-gray-900'} text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap z-10`}>
                         {formatUsd(m.amount)}
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#2A2E3D]"></div>
+                        <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 border-l-4 border-r-4 border-t-4 border-transparent ${d ? 'border-t-[#2A2E3D]' : 'border-t-gray-100'}`}></div>
                       </div>
                       <div
                         className={`w-full max-w-[32px] rounded-t-sm transition-all duration-300 ${
-                          isPeak ? "bg-blue-500" : "bg-[#3A3F58] group-hover:bg-[#4A506E]"
+                          isPeak ? "bg-blue-500" : (d ? "bg-[#3A3F58] group-hover:bg-[#4A506E]" : "bg-gray-200 group-hover:bg-gray-300")
                         }`}
                         style={{ height: h }}
                       ></div>
@@ -258,9 +261,9 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Phase mix donut */}
-        <div className="bg-[#1C1F2E] rounded-2xl p-6 border border-white/5 flex flex-col items-center">
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl p-6 border flex flex-col items-center`}>
           <div className="w-full flex justify-start mb-6">
-            <h2 className="text-lg font-semibold text-white">Assessment Mix</h2>
+            <h2 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Assessment Mix</h2>
           </div>
 
           {phaseTotal === 0 ? (
@@ -274,7 +277,7 @@ export default function AdminDashboardPage() {
                     cy="50"
                     r="40"
                     fill="transparent"
-                    stroke="#2A2E3D"
+                    stroke={d ? "#2A2E3D" : "#e5e7eb"}
                     strokeWidth="12"
                   />
                   {(() => {
@@ -303,7 +306,7 @@ export default function AdminDashboardPage() {
                   })()}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-white">
+                  <span className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                     {formatNumber(phaseTotal)}
                   </span>
                   <span className="text-[9px] font-bold text-gray-500 tracking-wider uppercase mt-1">
@@ -320,11 +323,11 @@ export default function AdminDashboardPage() {
                         className="w-2 h-2 rounded-full"
                         style={{ backgroundColor: DONUT_COLORS[i % DONUT_COLORS.length] }}
                       ></span>
-                      <span className="text-gray-300">
+                      <span className={d ? "text-gray-300" : "text-gray-700"}>
                         {PHASE_LABELS[p.phase] ?? p.phase}
                       </span>
                     </div>
-                    <span className="text-white font-semibold">
+                    <span className={`${d ? 'text-white' : 'text-gray-900'} font-semibold`}>
                       {Math.round((p.count / phaseTotal) * 100)}%
                     </span>
                   </div>
@@ -338,12 +341,12 @@ export default function AdminDashboardPage() {
       {/* Third Row: Pillar demand & Recent sessions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pillar demand */}
-        <div className="bg-[#1C1F2E] rounded-2xl p-6 border border-white/5">
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl p-6 border`}>
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-lg font-semibold text-white">Deep Dive Demand by Pillar</h2>
+            <h2 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Deep Dive Demand by Pillar</h2>
             <Link
               href="/admin/reports"
-              className="text-xs text-blue-400 hover:text-blue-300 font-semibold uppercase tracking-wider"
+              className={`text-xs ${d ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} font-semibold uppercase tracking-wider`}
             >
               View reports
             </Link>
@@ -356,12 +359,12 @@ export default function AdminDashboardPage() {
               {pillarRows.map((cat, i) => (
                 <div key={cat.pillarId}>
                   <div className="flex justify-between items-end mb-2 text-sm">
-                    <span className="text-gray-200">{cat.pillarName}</span>
-                    <span className="text-gray-400 text-xs">
+                    <span className={d ? "text-gray-200" : "text-gray-800"}>{cat.pillarName}</span>
+                    <span className={`${d ? 'text-gray-400' : 'text-gray-600'} text-xs`}>
                       {formatNumber(cat.phase2bPurchases)} purchased
                     </span>
                   </div>
-                  <div className="w-full bg-[#2A2E3D] rounded-full h-1.5">
+                  <div className={`w-full ${d ? 'bg-[#2A2E3D]' : 'bg-gray-100'} rounded-full h-1.5`}>
                     <div
                       className={`${CATEGORY_COLORS[i % CATEGORY_COLORS.length]} h-1.5 rounded-full transition-all`}
                       style={{ width: `${(cat.phase2bPurchases / pillarMax) * 100}%` }}
@@ -374,8 +377,8 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-[#1C1F2E] rounded-2xl p-6 border border-white/5 flex flex-col">
-          <h2 className="text-lg font-semibold text-white mb-6">Recent Assessments</h2>
+        <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-2xl p-6 border flex flex-col`}>
+          <h2 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'} mb-6`}>Recent Assessments</h2>
 
           {recent.length === 0 ? (
             <EmptyState label="No recent assessments." />
@@ -391,24 +394,24 @@ export default function AdminDashboardPage() {
                       }`}
                     >
                       {isHighRisk ? (
-                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        <AlertCircle className={`w-4 h-4 ${d ? 'text-red-400' : 'text-red-600'}`} />
                       ) : (
-                        <FileText className="w-4 h-4 text-blue-400" />
+                        <FileText className={`w-4 h-4 ${d ? 'text-blue-400' : 'text-blue-600'}`} />
                       )}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="text-sm font-medium text-white mb-1 truncate">
+                      <h4 className={`text-sm font-medium ${d ? 'text-white' : 'text-gray-900'} mb-1 truncate`}>
                         {s.businessName || s.email || "Unknown business"}
                       </h4>
-                      <p className="text-xs text-gray-400 leading-relaxed">
+                      <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'} leading-relaxed`}>
                         Completed{" "}
-                        <span className="text-gray-300">
+                        <span className={d ? "text-gray-300" : "text-gray-700"}>
                           {PHASE_LABELS[s.phase] ?? s.phase}
                         </span>
                         {s.totalScore !== null && (
                           <>
                             {" "}with a score of{" "}
-                            <span className="text-gray-300 font-semibold">
+                            <span className={`${d ? 'text-gray-300' : 'text-gray-700'} font-semibold`}>
                               {Math.round(s.totalScore)}/100
                             </span>
                           </>
@@ -432,7 +435,7 @@ export default function AdminDashboardPage() {
 
           <Link
             href="/admin/reports"
-            className="w-full mt-6 py-2.5 border border-white/10 hover:bg-white/5 rounded-lg text-xs font-semibold text-gray-300 uppercase tracking-wider transition-colors text-center"
+            className={`w-full mt-6 py-2.5 border ${d ? 'border-white/10 hover:bg-white/5 text-gray-300' : 'border-gray-200 hover:bg-gray-50 text-gray-700'} rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors text-center`}
           >
             View All Sessions
           </Link>
@@ -442,7 +445,7 @@ export default function AdminDashboardPage() {
       {/* Bottom Mini Cards — real operational metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 pb-12">
         <MiniCard
-          icon={<AlertTriangle className="w-5 h-5 text-red-400" />}
+          icon={<AlertTriangle className={`w-5 h-5 ${d ? 'text-red-400' : 'text-red-600'}`} />}
           tint="bg-red-500/20 border-red-500/20"
           label="High-Risk Rate"
           value={highRiskPct !== null ? `${highRiskPct.toFixed(1)}%` : "—"}
@@ -450,7 +453,7 @@ export default function AdminDashboardPage() {
         />
 
         <MiniCard
-          icon={<Clock className="w-5 h-5 text-orange-400" />}
+          icon={<Clock className={`w-5 h-5 ${d ? 'text-orange-400' : 'text-orange-600'}`} />}
           tint="bg-orange-500/20 border-orange-500/20"
           label="Pending Payments"
           value={
@@ -464,7 +467,7 @@ export default function AdminDashboardPage() {
         />
 
         <MiniCard
-          icon={<ShieldCheck className="w-5 h-5 text-emerald-400" />}
+          icon={<ShieldCheck className={`w-5 h-5 ${d ? 'text-emerald-400' : 'text-emerald-600'}`} />}
           tint="bg-emerald-500/20 border-emerald-500/20"
           label="Payment Success Rate"
           value={
@@ -498,18 +501,19 @@ function StatCard({
 }) {
   const showGrowth = growth !== undefined && growth !== null;
   const positive = (growth ?? 0) >= 0;
+  const { dark: d } = useTheme();
   return (
-    <div className="bg-[#1C1F2E] rounded-xl p-5 border border-white/5 relative overflow-hidden">
+    <div className={`${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'} rounded-xl p-5 border relative overflow-hidden`}>
       <div className="flex justify-between items-start mb-2">
-        <h3 className="text-gray-400 text-xs font-semibold uppercase tracking-wider">{label}</h3>
+        <h3 className={`${d ? 'text-gray-400' : 'text-gray-600'} text-xs font-semibold uppercase tracking-wider`}>{label}</h3>
         {icon}
       </div>
-      <div className="text-3xl font-bold text-white mb-2">{value}</div>
+      <div className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>{value}</div>
       {showGrowth ? (
         <div className="flex items-center text-xs">
           <span
             className={`font-medium flex items-center ${
-              positive ? "text-emerald-400" : "text-red-400"
+              positive ? (d ? "text-emerald-400" : "text-emerald-600") : (d ? "text-red-400" : "text-red-600")
             }`}
           >
             {positive ? (
@@ -547,18 +551,19 @@ function MiniCard({
   value: string;
   sub?: string;
 }) {
+  const { dark: d } = useTheme();
   return (
-    <div className="bg-[#212435] rounded-xl p-4 flex items-center gap-4 border border-white/5">
+    <div className={`${d ? 'bg-[#212435] border-white/5' : 'bg-gray-50 border-gray-200'} rounded-xl p-4 flex items-center gap-4 border`}>
       <div
         className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border ${tint}`}
       >
         {icon}
       </div>
       <div>
-        <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+        <div className={`text-[10px] font-semibold ${d ? 'text-gray-400' : 'text-gray-600'} uppercase tracking-wider mb-1`}>
           {label}
         </div>
-        <div className="text-lg font-bold text-white leading-none">{value}</div>
+        <div className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'} leading-none`}>{value}</div>
         {sub && <div className="text-[10px] text-gray-500 mt-1">{sub}</div>}
       </div>
     </div>

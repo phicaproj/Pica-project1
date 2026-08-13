@@ -10,8 +10,11 @@ import {
   verifyEmail,
   verifyResetOtp,
 } from "@/lib/authClient";
+import { useTheme } from "@/components/ThemeContext";
 
 function VerifyCodeContent() {
+  const { dark } = useTheme();
+  const d = dark;
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
@@ -139,21 +142,21 @@ function VerifyCodeContent() {
       : "We have sent a code to your email";
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-[#0d1117]">
+    <div className={`min-h-screen w-full flex flex-col ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-10">
           <img src="/images/favicon.png" alt="Beauvision" className="h-6 w-6 object-contain" />
-          <span className="text-white text-lg font-bold">Beauvision</span>
+          <span className={`text-lg font-bold ${d ? "text-white" : "text-gray-900"}`}>Beauvision</span>
         </div>
 
         {/* Card */}
-        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#161b22] p-8 md:p-10">
-          <h2 className="text-2xl font-bold text-white text-center mb-2">
+        <div className={`w-full max-w-md rounded-2xl border p-8 md:p-10 ${d ? "border-white/10 bg-[#161b22]" : "border-gray-200 bg-white"}`}>
+          <h2 className={`text-2xl font-bold text-center mb-2 ${d ? "text-white" : "text-gray-900"}`}>
             {heading}
           </h2>
-          <p className="text-sm text-gray-400 text-center mb-8">
+          <p className={`text-sm text-center mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
             {subtext}
           </p>
 
@@ -174,10 +177,12 @@ function VerifyCodeContent() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={index === 0 ? handlePaste : undefined}
-                  className={`w-14 h-14 text-center text-lg font-semibold rounded-xl border-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                  className={`w-14 h-14 text-center text-lg font-semibold rounded-xl border-2 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                    d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"
+                  } ${
                     codeError
                       ? "border-red-500 focus:ring-red-400"
-                      : "border-gray-300 focus:ring-[#f97316]/50"
+                      : d ? "border-white/10 focus:ring-[#f97316]/50" : "border-gray-300 focus:ring-[#f97316]/50"
                   }`}
                 />
               ))}
@@ -191,13 +196,13 @@ function VerifyCodeContent() {
             )}
 
             {/* Resend */}
-            <p className="text-sm text-gray-400 text-center mb-6">
+            <p className={`text-sm text-center mb-6 ${d ? "text-gray-400" : "text-gray-600"}`}>
               {isAdminLogin ? "Need a new admin code?" : "Didn't receive the email yet?"}{" "}
               <button
                 type="button"
                 onClick={handleResend}
                 disabled={isResending || isLoading}
-                className="text-white font-bold hover:text-[#f97316] transition disabled:opacity-50"
+                className={`font-bold transition disabled:opacity-50 ${d ? "text-white hover:text-[#f97316]" : "text-gray-900 hover:text-[#f97316]"}`}
               >
                 {isAdminLogin ? "Log in again" : isResending ? "Resending..." : "Resend"}
               </button>
@@ -221,7 +226,9 @@ function VerifyCodeContent() {
                       : `/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`,
                   )
                 }
-                className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 text-gray-300 font-semibold text-sm transition"
+                className={`w-full py-3 rounded-xl border font-semibold text-sm transition ${
+                  d ? "border-white/10 hover:bg-white/5 text-gray-300" : "border-gray-200 hover:bg-gray-50 text-gray-700"
+                }`}
               >
                 {isEmailVerify || isAdminLogin
                   ? "Back to login"
@@ -233,7 +240,7 @@ function VerifyCodeContent() {
       </div>
 
       {/* Footer */}
-      <footer className="py-6 text-center border-t border-white/5">
+      <footer className={`py-6 text-center border-t ${d ? "border-white/5" : "border-gray-200"}`}>
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
           <Link
             href="/data-policy"
@@ -263,12 +270,14 @@ function VerifyCodeContent() {
 }
 
 export default function VerifyCodePage() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen w-full flex items-center justify-center bg-[#0d1117]">
-          <div className="rounded-2xl border border-white/10 bg-[#161b22] p-10 w-full max-w-md mx-4 text-center">
-            <p className="text-gray-400">Loading...</p>
+        <div className={`min-h-screen w-full flex items-center justify-center ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+          <div className={`rounded-2xl border p-10 w-full max-w-md mx-4 text-center ${d ? "border-white/10 bg-[#161b22]" : "border-gray-200 bg-white"}`}>
+            <p className={d ? "text-gray-400" : "text-gray-600"}>Loading...</p>
           </div>
         </div>
       }

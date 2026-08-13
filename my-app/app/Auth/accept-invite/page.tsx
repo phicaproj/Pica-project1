@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { acceptInvite } from '@/lib/authClient'
+import { useTheme } from '@/components/ThemeContext'
 
 // Hoisted out of AcceptInviteContent so the icon components keep stable
 // identities across re-renders. See Auth/login/page.tsx for the same fix.
@@ -46,6 +47,8 @@ const EyeOffIcon = () => (
 )
 
 function AcceptInviteContent() {
+	const { dark } = useTheme()
+	const d = dark
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const [token, setToken] = useState('')
@@ -126,17 +129,17 @@ function AcceptInviteContent() {
 				<div className='pt-10 flex justify-center'>
 					<div className='flex items-center gap-2'>
 						<img src='/images/favicon.png' alt='logo' className="h-6 w-6 object-contain" />
-						<span className='text-gray-900 text-lg font-bold'>Beauvision</span>
+						<span className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Beauvision</span>
 					</div>
 				</div>
 
 				{/* Card - centered */}
 				<div className='flex-1 flex items-center justify-center pb-10'>
-					<div className='bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4'>
-						<h2 className='text-xl font-bold text-gray-900 text-center mb-2'>
+					<div className={`rounded-md shadow-xl p-10 w-full max-w-md mx-4 ${d ? 'bg-[#161b22] border border-white/10' : 'bg-white'}`}>
+						<h2 className={`text-xl font-bold text-center mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
 							Accept Admin Invitation
 						</h2>
-						<p className='text-sm text-gray-500 text-center mb-8'>
+						<p className={`text-sm text-center mb-8 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
 							Set a password to activate your PICA admin account.
 						</p>
 
@@ -165,7 +168,7 @@ function AcceptInviteContent() {
 											}
 											required
 											disabled={isLoading}
-											className='w-full px-4 py-3.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#017CA3] focus:border-transparent transition pr-12 disabled:opacity-60'
+											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#017CA3] focus:border-transparent transition pr-12 disabled:opacity-60 ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-800 placeholder-gray-400'}`}
 										/>
 										<button
 											type='button'
@@ -191,10 +194,10 @@ function AcceptInviteContent() {
 												}}
 												required
 												disabled={isLoading}
-												className={`w-full px-4 py-3.5 rounded-xl border bg-gray-50 text-gray-800 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 disabled:opacity-60 ${
+												className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 disabled:opacity-60 ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-800 placeholder-gray-400'} ${
 													confirmError
 														? 'border-red-500 focus:ring-red-400'
-														: 'border-gray-200 focus:ring-[#017CA3]'
+														: d ? 'border-white/10 focus:ring-[#017CA3]' : 'border-gray-200 focus:ring-[#017CA3]'
 												}`}
 											/>
 											<button
@@ -234,7 +237,7 @@ function AcceptInviteContent() {
 			</div>
 
 			{/* Footer */}
-			<div className='relative z-10 py-4 text-center text-sm text-gray-600 bg-white/80 backdrop-blur-sm'>
+			<div className={`relative z-10 py-4 text-center text-sm backdrop-blur-sm ${d ? 'text-gray-400 bg-[#0d1117]/80' : 'text-gray-600 bg-white/80'}`}>
 				© Beauvision 2024 . All rights reserved.
 			</div>
 		</div>
@@ -242,6 +245,8 @@ function AcceptInviteContent() {
 }
 
 export default function AcceptInvitePage() {
+	const { dark } = useTheme()
+	const d = dark
 	return (
 		<Suspense
 			fallback={
@@ -252,8 +257,8 @@ export default function AcceptInvitePage() {
 							backgroundImage: "url('/images/loginbg.jpeg')",
 						}}
 					/>
-					<div className='relative bg-white rounded-md shadow-xl p-10 w-full max-w-md mx-4 text-center'>
-						<p className='text-gray-600'>Loading…</p>
+					<div className={`relative rounded-md shadow-xl p-10 w-full max-w-md mx-4 text-center ${d ? 'bg-[#161b22] border border-white/10' : 'bg-white'}`}>
+						<p className={d ? 'text-gray-400' : 'text-gray-600'}>Loading…</p>
 					</div>
 				</div>
 			}

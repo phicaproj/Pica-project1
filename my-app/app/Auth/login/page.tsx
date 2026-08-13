@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Login } from '@/lib/authClient'
+import { useTheme } from '@/components/ThemeContext'
 
 // Hoisted outside the component so they are stable references — defining
 // them inside LoginPage created a new component identity every render, which
@@ -49,6 +50,8 @@ const EyeOffIcon = () => (
 )
 
 export default function LoginPage() {
+	const { dark } = useTheme()
+	const d = dark
 	const router = useRouter()
 	const [showPassword, setShowPassword] = useState(false)
 	const [email, setEmail] = useState('')
@@ -117,10 +120,10 @@ export default function LoginPage() {
 	// EyeIcon / EyeOffIcon are hoisted above this component — see top of file.
 
 	return (
-		<div className='min-h-screen w-full flex flex-col bg-[#0d1117]'>
+		<div className={`min-h-screen w-full flex flex-col ${d ? 'bg-[#0d1117]' : 'bg-gray-50'}`}>
 			{/* Main content */}
 			<div className='flex-1 flex items-center justify-center px-4 py-10'>
-				<div className='w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2'>
+				<div className={`w-full max-w-5xl rounded-2xl border grid grid-cols-1 md:grid-cols-2 ${d ? 'border-white/10 bg-[#161b22]' : 'border-gray-200 bg-white'}`}>
 					{/* Left — Form */}
 					<div className='px-8 md:px-12 py-10 flex flex-col justify-center'>
 						{/* Back to home — small affordance so users on the standalone
@@ -128,7 +131,7 @@ export default function LoginPage() {
                 using the browser back button. */}
 						<Link
 							href='/'
-							className='inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 hover:text-white transition mb-6'>
+							className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest transition mb-6 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
 							<svg
 								xmlns='http://www.w3.org/2000/svg'
 								className='w-3.5 h-3.5'
@@ -151,15 +154,15 @@ export default function LoginPage() {
 								alt='Beauvision'
 								className='h-6 w-6 object-contain'
 							/>
-							<span className='text-white text-lg font-bold'>
+							<span className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
 								Beauvision
 							</span>
 						</div>
 
-						<h2 className='text-2xl font-bold text-white mb-2'>
+						<h2 className={`text-2xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
 							Welcome Back
 						</h2>
-						<p className='text-sm text-gray-400 mb-6'>
+						<p className={`text-sm mb-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Hello, welcome back to your special
 							place
 						</p>
@@ -187,7 +190,7 @@ export default function LoginPage() {
 									}
 									required
 									disabled={isLoading}
-									className='w-full px-4 py-3.5 rounded-xl border border-white/10 bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition disabled:opacity-60'
+									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#f97316]/50 focus:border-transparent transition disabled:opacity-60 ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`}
 								/>
 							</div>
 
@@ -214,10 +217,12 @@ export default function LoginPage() {
 										}}
 										required
 										disabled={isLoading}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 disabled:opacity-60 ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 disabled:opacity-60 ${
+											d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'
+										} ${
 											error
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									<button
@@ -257,15 +262,15 @@ export default function LoginPage() {
 													.checked,
 											)
 										}
-										className='w-4 h-4 rounded border-gray-600 bg-[#0d1117] text-[#f97316] focus:ring-[#f97316] cursor-pointer'
+										className={`w-4 h-4 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
 									/>
-									<span className='text-sm text-gray-400'>
+									<span className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 										Remember me
 									</span>
 								</label>
 								<Link
 									href='/Auth/forget-password'
-									className='text-sm text-gray-400 hover:text-[#f97316] transition'>
+									className={`text-sm transition ${d ? 'text-gray-400 hover:text-[#f97316]' : 'text-gray-600 hover:text-[#f97316]'}`}>
 									Forgot Password?
 								</Link>
 							</div>
@@ -282,11 +287,11 @@ export default function LoginPage() {
 						</form>
 
 						{/* Sign up link */}
-						<p className='text-center text-sm text-gray-400 mt-6'>
+						<p className={`text-center text-sm mt-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Don&apos;t have an account?
 							<Link
 								href='/Auth/signup'
-								className='font-bold text-white hover:text-[#f97316] transition ml-1 underline'>
+								className={`font-bold transition ml-1 underline ${d ? 'text-white hover:text-[#f97316]' : 'text-gray-900 hover:text-[#f97316]'}`}>
 								Signup
 							</Link>
 						</p>
@@ -305,7 +310,7 @@ export default function LoginPage() {
 			</div>
 
 			{/* Footer */}
-			<footer className='py-6 text-center border-t border-white/5'>
+			<footer className={`py-6 text-center border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
 				<div className='flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3'>
 					<Link
 						href='/data-policy'

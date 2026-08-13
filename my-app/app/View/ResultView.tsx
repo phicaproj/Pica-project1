@@ -316,36 +316,36 @@ export default function ResultPage() {
 				</section>
 
 				{/* AI Pulse Insight */}
-				<section className='rounded-3xl border border-teal-500/30 bg-[#101c23] px-6 py-6 shadow-[0_0_30px_rgba(13,148,136,0.08)]'>
+				<section className={`rounded-3xl border px-6 py-6 shadow-[0_0_30px_rgba(13,148,136,0.08)] ${d ? "border-teal-500/30 bg-[#101c23]" : "border-teal-200 bg-teal-50"}`}>
 					<div className='flex items-start justify-between gap-4'>
 						<div className='flex items-start gap-4'>
 							<div className='flex h-11 w-11 items-center justify-center rounded-full bg-teal-500/15'>
 								<Sparkles className='h-5 w-5 text-teal-300' />
 							</div>
 							<div>
-								<h2 className='text-lg font-bold text-white'>
+								<h2 className={`text-lg font-bold ${d ? "text-white" : "text-gray-900"}`}>
 									Key Insight
 								</h2>
-								<p className='mt-2 max-w-3xl text-sm leading-7 text-gray-300'>
+								<p className={`mt-2 max-w-3xl text-sm leading-7 ${d ? "text-gray-300" : "text-gray-700"}`}>
 									{headlineFinding
 										? `"${headlineFinding.observation || headlineFinding.recommendation}"`
 										: 'We detected performance signals across your operating model. Download the full report to review detailed findings and recommended actions.'}
 								</p>
 								{weakestPillar && (
-									<p className='mt-2 text-xs uppercase tracking-[0.2em] text-teal-300'>
+									<p className={`mt-2 text-xs uppercase tracking-[0.2em] ${d ? "text-teal-300" : "text-teal-700"}`}>
 										Focus area: {weakestPillar.pillar.name}
 									</p>
 								)}
 							</div>
 						</div>
-						<Shield className='hidden h-10 w-10 text-white/20 lg:block' />
+						<Shield className={`hidden h-10 w-10 lg:block ${d ? "text-white/20" : "text-teal-200"}`} />
 					</div>
 				</section>
 
 				{/* Pillar Breakdown */}
 				<section>
 					<div className='mb-4 flex flex-wrap items-center justify-between gap-3'>
-						<h2 className='text-xl font-bold text-white'>
+						<h2 className={`text-xl font-bold ${d ? "text-white" : "text-gray-900"}`}>
 							Pillar Breakdown
 						</h2>
 					</div>
@@ -358,10 +358,10 @@ export default function ResultPage() {
 							return (
 								<div
 									key={pillarScore.id}
-									className={`rounded-2xl border bg-[#0f1722] p-5 transition hover:-translate-y-1 hover:shadow-lg ${
+									className={`rounded-2xl border p-5 transition hover:-translate-y-1 hover:shadow-lg ${d ? "bg-[#0f1722]" : "bg-white shadow-sm"} ${
 										band === 'RED'
-											? 'border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.08)]'
-											: 'border-white/5'
+											? d ? 'border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.08)]' : 'border-rose-300'
+											: d ? 'border-white/5' : 'border-gray-200'
 									}`}
 								>
 									<div className='mb-5 flex items-center justify-between gap-3'>
@@ -375,13 +375,13 @@ export default function ResultPage() {
 									<p className='text-[11px] font-bold uppercase tracking-[0.22em] text-gray-500'>
 										{pillarScore.pillar.name}
 									</p>
-									<p className='mt-3 text-4xl font-black text-white'>
+									<p className={`mt-3 text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>
 										{score}
 										<span className='ml-1 text-lg text-gray-500'>
 											%
 										</span>
 									</p>
-									<div className='mt-4 h-1.5 rounded-full bg-white/5 overflow-hidden'>
+									<div className={`mt-4 h-1.5 rounded-full overflow-hidden ${d ? "bg-white/5" : "bg-gray-200"}`}>
 										<div
 											className={`h-full rounded-full ${status.bar}`}
 											style={{ width: `${score}%` }}
@@ -394,22 +394,22 @@ export default function ResultPage() {
 				</section>
 			{downloadMode !== null && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-					<div className="w-full max-w-sm rounded-2xl border border-teal-500/20 bg-[#0d161c]/90 p-6 text-center shadow-2xl shadow-teal-500/10">
+					<div className={`w-full max-w-sm rounded-2xl border p-6 text-center shadow-2xl ${d ? "border-teal-500/20 bg-[#0d161c]/90 shadow-teal-500/10" : "border-teal-200 bg-white/95 shadow-gray-200"}`}>
 						<div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-500/10">
 							<span className="absolute inset-0 rounded-full border-2 border-teal-500/20 border-t-teal-400 animate-spin" />
-							<Download className="h-6 w-6 text-teal-400 animate-pulse" />
+							<Download className={`h-6 w-6 animate-pulse ${d ? "text-teal-400" : "text-teal-600"}`} />
 						</div>
-						<h3 className="text-lg font-bold text-white mb-2">
+						<h3 className={`text-lg font-bold mb-2 ${d ? "text-white" : "text-gray-900"}`}>
 							{downloadMode === 'presentation' ? "Generating Presentation PDF" : "Generating Report PDF"}
 						</h3>
-						<p className="text-sm text-teal-300/70 mb-4">
+						<p className={`text-sm mb-4 ${d ? "text-teal-300/70" : "text-teal-700"}`}>
 							{downloadMode === 'presentation' 
 								? "Please wait while we render your dark-themed presentation report..."
 								: "Please wait while we aggregate the diagnostics and render your A4 report..."}
 						</p>
 						
 						{/* Animated progress track */}
-						<div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+						<div className={`h-1.5 w-full rounded-full overflow-hidden ${d ? "bg-white/5" : "bg-gray-200"}`}>
 							<div className="h-full bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full progress-bar-fill" />
 						</div>
 					</div>

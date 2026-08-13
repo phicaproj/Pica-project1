@@ -51,6 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { dark, setDark } = useTheme();
+  const d = dark;
   const pageTitle = getPageTitle(pathname);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -134,8 +135,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onClick={() => setSidebarOpen(false)}
         className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
           active
-            ? "text-orange-400 bg-orange-400/5"
-            : "text-gray-400 hover:text-white hover:bg-white/5"
+            ? (d ? "text-orange-400 bg-orange-400/5" : "text-orange-600 bg-orange-50")
+            : (d ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100")
         }`}
       >
         {active && (
@@ -149,27 +150,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-[#0d1117] text-white flex items-center justify-center">
-        <div className="text-sm text-gray-400">Checking dashboard session...</div>
+      <div className={`min-h-screen ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} flex items-center justify-center`}>
+        <div className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>Checking dashboard session...</div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-[#0d1117] text-white flex flex-col overflow-hidden">
+    <div className={`h-screen ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} flex flex-col overflow-hidden`}>
       {/* ── Top Nav ── */}
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 bg-[#0d1117] border-b border-white/5 sticky top-0 z-50">
+      <header className={`flex items-center justify-between px-4 md:px-6 py-3 ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'} border-b sticky top-0 z-50`}>
         <div className="flex items-center gap-4">
           {/* Mobile hamburger */}
           <button
-            className="lg:hidden text-gray-300 hover:text-white"
+            className={`lg:hidden ${d ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
 
           {/* Logo */}
-          <Link href="/" className="text-white font-bold text-xl tracking-wide">
+          <Link href="/" className={`${d ? 'text-white' : 'text-gray-900'} font-bold text-xl tracking-wide`}>
             PICA
           </Link>
 
@@ -182,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Right controls */}
         <div className="flex items-center gap-3">
           {/* Notification bell */}
-          <button className="relative p-2 text-gray-400 hover:text-white transition">
+          <button className={`relative p-2 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition`}>
             <Bell className="w-5 h-5" />
           </button>
 
@@ -193,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={() => setMenuOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className="flex items-center gap-2 rounded-full p-0.5 pr-2 transition hover:bg-white/5"
+              className={`flex items-center gap-2 rounded-full p-0.5 pr-2 transition ${d ? 'hover:bg-white/5' : 'hover:bg-gray-100'}`}
             >
               {user?.avatarUrl ? (
                 <img
@@ -206,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {user?.businessName ? user.businessName.charAt(0).toUpperCase() : "U"}
                 </div>
               )}
-              <span className="text-sm text-gray-300 hidden sm:block">
+              <span className={`text-sm ${d ? 'text-gray-300' : 'text-gray-700'} hidden sm:block`}>
                 {user?.businessName || "User"}
               </span>
             </button>
@@ -214,13 +215,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {menuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 mt-2 w-48 rounded-lg border border-white/10 bg-[#161b22] py-1 shadow-lg shadow-black/40 z-50"
+                className={`absolute right-0 mt-2 w-48 rounded-lg border ${d ? 'border-white/10 bg-[#161b22] shadow-black/40' : 'border-gray-200 bg-white shadow-gray-200/60'} py-1 shadow-lg z-50`}
               >
                 <Link
                   href="/dashboard/settings"
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition"
+                  className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${d ? 'text-gray-300 hover:bg-white/5 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
                 >
                   <Settings className="w-4 h-4" />
                   Settings
@@ -232,7 +233,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     setMenuOpen(false);
                     handleLogout();
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition"
+                  className={`flex w-full items-center gap-2 px-4 py-2.5 text-sm transition ${d ? 'text-gray-300 hover:bg-white/5 hover:text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}`}
                 >
                   <LogOut className="w-4 h-4" />
                   Logout
@@ -254,7 +255,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* ── Sidebar (Fixed and non-scrolling) ── */}
         <aside
-          className={`fixed top-[57px] left-0 bottom-0 z-40 w-56 bg-[#0d1117] border-r border-white/5 flex flex-col py-6 px-3 transition-transform duration-300 ${
+          className={`fixed top-[57px] left-0 bottom-0 z-40 w-56 ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'} border-r flex flex-col py-6 px-3 transition-transform duration-300 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
@@ -265,7 +266,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="mt-6">
-            <p className="px-4 text-[10px] font-semibold text-orange-400/70 uppercase tracking-widest mb-2">
+            <p className={`px-4 text-[10px] font-semibold ${d ? 'text-orange-400/70' : 'text-orange-600/70'} uppercase tracking-widest mb-2`}>
               Support
             </p>
             <nav className="space-y-1">
@@ -278,7 +279,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="mt-auto pt-6">
             <button
               onClick={() => handleLogout()}
-              className="flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+              className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
               <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
               Logout
@@ -292,12 +293,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {children}
           </div>
           
+          
           {/* ── Footer ── */}
-          <footer className="text-center py-6 mt-8 text-xs text-gray-500 border-t border-white/5 bg-[#0d1117]">
+          <footer className={`text-center py-6 mt-8 text-xs border-t ${d ? 'text-gray-500 border-white/5 bg-[#0d1117]' : 'text-gray-600 border-gray-200 bg-white'}`}>
             <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
-              <Link href="/data-policy" className="hover:text-gray-300 cursor-pointer">PRIVACY POLICY</Link>
-              <Link href="/terms" className="hover:text-gray-300 cursor-pointer">TERMS OF SERVICE</Link>
-              <span className="hover:text-gray-300 cursor-pointer">SUPPORT</span>
+              <Link href="/data-policy" className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>PRIVACY POLICY</Link>
+              <Link href="/terms" className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>TERMS OF SERVICE</Link>
+              <span className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>SUPPORT</span>
             </div>
             <p>&copy; 2026 PICA</p>
           </footer>
@@ -307,7 +309,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Mobile dark/light mode toggle ── */}
       <button
         onClick={() => setDark(!dark)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#1c2333] border border-white/10 flex items-center justify-center shadow-lg shadow-black/40 text-gray-300 hover:text-white transition lg:hidden"
+        className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full border flex items-center justify-center shadow-lg transition lg:hidden ${d ? 'bg-[#1c2333] border-white/10 shadow-black/40 text-gray-300 hover:text-white' : 'bg-white border-gray-200 shadow-gray-200/60 text-gray-700 hover:text-gray-900'}`}
       >
         {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>

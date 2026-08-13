@@ -193,7 +193,7 @@ function IntelligenceProductPage({
               }`}
             >
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="w-5 h-5 text-[#00ffaa]" />
+                <CheckCircle className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />
                 <p
                   className={`text-xs font-bold uppercase tracking-widest ${
                     d ? "text-gray-300" : "text-gray-700"
@@ -409,7 +409,7 @@ function IntelligenceCheckoutPage({
       <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
         {/* Left — Plan summary */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-4">
+          <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>
             Selected Subscription
           </p>
           <h1
@@ -423,8 +423,8 @@ function IntelligenceCheckoutPage({
           <div className="space-y-5">
             {features.map(({ title, desc }) => (
               <div key={title} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#00ffaa]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-3 h-3 text-[#00ffaa]" />
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${d ? 'bg-[#00ffaa]/20' : 'bg-teal-100'}`}>
+                  <CheckCircle className={`w-3 h-3 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />
                 </div>
                 <div>
                   <p
@@ -616,7 +616,7 @@ function IntelligenceCheckoutPage({
                 }`}
               >
                 You will be redirected to complete payment via{" "}
-                <span className="font-bold text-[#00ffaa]">
+                <span className={`font-bold ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>
                   {method === "bank"
                     ? "Bank Transfer"
                     : method === "opay"
@@ -790,7 +790,7 @@ function IntelligenceSuccessPage({ dark }: { dark: boolean }) {
           >
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-[#00ffaa]" />
-              <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa]">
+              <p className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>
                 Transaction Details
               </p>
             </div>

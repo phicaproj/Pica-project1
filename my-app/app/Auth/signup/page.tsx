@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { ChevronDown, MapPin } from 'lucide-react'
 import { SignUp } from '@/lib/authClient'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/components/ThemeContext'
 
 // Hoisted out of SignUpPage so the icon component identities are stable and
 // the password-eye toggle flips immediately instead of remounting on each
@@ -61,6 +62,8 @@ const INDUSTRIES = [
 ]
 
 export default function SignUpPage() {
+	const { dark } = useTheme()
+	const d = dark
 	const [showPassword, setShowPassword] = useState(false)
 	const [showPasswordHint, setShowPasswordHint] = useState(false)
 	const [agreed, setAgreed] = useState(false)
@@ -184,16 +187,16 @@ export default function SignUpPage() {
 	// EyeIcon / EyeOffIcon are hoisted above this component — see top of file.
 
 	return (
-		<div className='min-h-screen w-full flex flex-col bg-[#0d1117]'>
+		<div className={`min-h-screen w-full flex flex-col ${d ? 'bg-[#0d1117]' : 'bg-gray-50'}`}>
 			{/* Main content */}
 			<div className='flex-1 flex items-center justify-center px-4 py-10'>
-				<div className='w-full max-w-5xl rounded-2xl border border-white/10 bg-[#161b22] grid grid-cols-1 md:grid-cols-2'>
+				<div className={`w-full max-w-5xl rounded-2xl border grid grid-cols-1 md:grid-cols-2 ${d ? 'border-white/10 bg-[#161b22]' : 'border-gray-200 bg-white'}`}>
 					{/* Left — Form */}
 					<div className='px-8 md:px-12 py-10'>
 						{/* Back to home — see login/page.tsx for the same affordance. */}
 						<Link
 							href='/'
-							className='inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 hover:text-white transition mb-6'>
+							className={`inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest transition mb-6 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
 							<svg
 								xmlns='http://www.w3.org/2000/svg'
 								className='w-3.5 h-3.5'
@@ -216,15 +219,15 @@ export default function SignUpPage() {
 								alt='Beauvision'
 								className='h-6 w-6 object-contain'
 							/>
-							<span className='text-white text-lg font-bold'>
+							<span className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
 								Beauvision
 							</span>
 						</div>
 
-						<h2 className='text-2xl font-bold text-white mb-2'>
+						<h2 className={`text-2xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
 							Create Account
 						</h2>
-						<p className='text-sm text-gray-400 mb-8'>
+						<p className={`text-sm mb-8 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Join us today and get complete
 							comprehensive analysis
 						</p>
@@ -278,10 +281,10 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 											errors.firstName
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.firstName && (
@@ -306,10 +309,10 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 											errors.lastName
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.lastName && (
@@ -335,10 +338,10 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 										errors.businessName
 											? 'border-red-500 focus:ring-red-400'
-											: 'border-white/10 focus:ring-[#f97316]/50'
+											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.businessName && (
@@ -363,10 +366,10 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 										errors.email
 											? 'border-red-500 focus:ring-red-400'
-											: 'border-white/10 focus:ring-[#f97316]/50'
+											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.email && (
@@ -389,10 +392,10 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 										errors.phone
 											? 'border-red-500 focus:ring-red-400'
-											: 'border-white/10 focus:ring-[#f97316]/50'
+											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.phone && (
@@ -435,10 +438,10 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 											errors.staffSize
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.staffSize && (
@@ -479,10 +482,10 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 											errors.operatingYears
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.operatingYears && (
@@ -506,15 +509,15 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
 										errors.industry
 											? 'border-red-500 focus:ring-red-400'
-											: 'border-white/10 focus:ring-[#f97316]/50'
+											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}>
 									<option
 										value=''
 										disabled
-										className='text-gray-500 bg-[#0d1117]'>
+										className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
 										Select Sector /
 										Industry*
 									</option>
@@ -522,7 +525,7 @@ export default function SignUpPage() {
 										<option
 											key={ind}
 											value={ind}
-											className='bg-[#0d1117] text-white'>
+											className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
 											{ind}
 										</option>
 									))}
@@ -551,15 +554,15 @@ export default function SignUpPage() {
 												'',
 											)
 										}}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
 											errors.country
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}>
 										<option
 											value=''
 											disabled
-											className='text-gray-500 bg-[#0d1117]'>
+											className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
 											Select
 											Country*
 										</option>
@@ -572,7 +575,7 @@ export default function SignUpPage() {
 													value={
 														c.name
 													}
-													className='bg-[#0d1117] text-white'>
+													className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
 													{
 														c.name
 													}
@@ -609,10 +612,10 @@ export default function SignUpPage() {
 														.value,
 												)
 											}
-											className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${
+											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 												errors.state
 													? 'border-red-500 focus:ring-red-400'
-													: 'border-white/10 focus:ring-[#f97316]/50'
+													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 											}`}
 										/>
 									) : (
@@ -630,15 +633,15 @@ export default function SignUpPage() {
 														.value,
 												)
 											}
-											className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${
+											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
 												errors.state
 													? 'border-red-500 focus:ring-red-400'
-													: 'border-white/10 focus:ring-[#f97316]/50'
+													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 											}`}>
 											<option
 												value=''
 												disabled
-												className='text-gray-500 bg-[#0d1117]'>
+												className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
 												Select
 												State*
 											</option>
@@ -653,7 +656,7 @@ export default function SignUpPage() {
 														value={
 															s.name
 														}
-														className='bg-[#0d1117] text-white'>
+														className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
 														{
 															s.name
 														}
@@ -704,10 +707,10 @@ export default function SignUpPage() {
 												false,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border bg-[#0d1117] text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
 											errors.password
 												? 'border-red-500 focus:ring-red-400'
-												: 'border-white/10 focus:ring-[#f97316]/50'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									<button
@@ -734,8 +737,8 @@ export default function SignUpPage() {
 
 								{/* Password hint tooltip */}
 								{showPasswordHint && (
-									<div className='absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-50 bg-[#1c2333] border border-white/10 rounded-2xl shadow-lg p-4 w-64'>
-										<p className='text-sm font-semibold text-white mb-2'>
+									<div className={`absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-50 border rounded-2xl shadow-lg p-4 w-64 ${d ? 'bg-[#1c2333] border-white/10' : 'bg-white border-gray-200'}`}>
+										<p className={`text-sm font-semibold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
 											Your password
 											should
 											contain:
@@ -755,7 +758,7 @@ export default function SignUpPage() {
 														key={
 															rule
 														}
-														className='flex items-start gap-2 text-sm text-gray-400'>
+														className={`flex items-start gap-2 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 														<span className='mt-0.5 text-gray-500'>
 															•
 														</span>
@@ -793,19 +796,19 @@ export default function SignUpPage() {
 													}),
 												)
 										}}
-										className='mt-0.5 w-4 h-4 rounded border-gray-600 bg-[#0d1117] text-[#f97316] focus:ring-[#f97316] cursor-pointer'
+										className={`mt-0.5 w-4 h-4 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
 									/>
-									<span className='text-sm text-gray-400 leading-snug'>
+									<span className={`text-sm leading-snug ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 										I agree with{' '}
 										<Link
 											href='/terms'
-											className='text-white hover:underline'>
+											className={`hover:underline ${d ? 'text-white' : 'text-gray-900'}`}>
 											Terms of use
 										</Link>{' '}
 										and{' '}
 										<Link
 											href='/data-policy'
-											className='text-white hover:underline'>
+											className={`hover:underline ${d ? 'text-white' : 'text-gray-900'}`}>
 											Data Privacy
 											Policy
 										</Link>
@@ -830,11 +833,11 @@ export default function SignUpPage() {
 						</form>
 
 						{/* Login link */}
-						<p className='text-center text-sm text-gray-400 mt-5'>
+						<p className={`text-center text-sm mt-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Already have an account?
 							<Link
 								href='/Auth/login'
-								className='font-bold text-white hover:text-[#f97316] transition ml-1 underline'>
+								className={`font-bold transition ml-1 underline ${d ? 'text-white hover:text-[#f97316]' : 'text-gray-900 hover:text-[#f97316]'}`}>
 								Login
 							</Link>
 						</p>
@@ -861,7 +864,7 @@ export default function SignUpPage() {
 			</div>
 
 			{/* Footer */}
-			<footer className='py-6 text-center border-t border-white/5'>
+			<footer className={`py-6 text-center border-t ${d ? 'border-white/5' : 'border-gray-200'}`}>
 				<div className='flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3'>
 					<Link
 						href='/data-policy'

@@ -50,7 +50,7 @@ export default function ContactView() {
         </p>
 
         {status === "success" ? (
-          <div className="p-6 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 text-center">
+          <div className={`p-6 rounded-xl border text-center ${d ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-700"}`}>
             <h3 className="font-bold mb-2">Message Sent Successfully!</h3>
             <p className="text-sm">We'll get back to you as soon as possible.</p>
             <button
@@ -76,7 +76,7 @@ export default function ContactView() {
                 className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${
                   d
                     ? "bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50"
-                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-500"
                 }`}
               />
             </div>
@@ -95,7 +95,7 @@ export default function ContactView() {
                 className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${
                   d
                     ? "bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50"
-                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-500"
                 }`}
               />
             </div>
@@ -112,7 +112,7 @@ export default function ContactView() {
                 className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition appearance-none ${
                   d
                     ? "bg-[#0d1117] border-white/10 text-white focus:border-[#00ffaa]/50"
-                    : "bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-500"
                 }`}
               >
                 <option value="" disabled>Select a reason...</option>
@@ -137,7 +137,7 @@ export default function ContactView() {
                 className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition resize-none ${
                   d
                     ? "bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50"
-                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400"
+                    : "bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-500"
                 }`}
               />
             </div>

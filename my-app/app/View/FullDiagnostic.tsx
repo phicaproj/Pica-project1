@@ -17,10 +17,10 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
   const d = dark;
 
   const features = [
-    { icon: <BarChart2 className="w-5 h-5 text-[#00ffaa]" />, title: "Deep-dive structural audit", desc: "Comprehensive vetting of existing codebase, workflows, and resource allocation models." },
-    { icon: <TrendingUp className="w-5 h-5 text-[#00ffaa]" />, title: "Growth roadmap (36 mo)", desc: "A multi-year strategic trajectory tailored to your specific market positioning." },
-    { icon: <Shield className="w-5 h-5 text-[#00ffaa]" />, title: "Compliance & Risk", desc: "Advanced assessment against international standards and internal risk protocols." },
-    { icon: <FileText className="w-5 h-5 text-[#00ffaa]" />, title: "Detailed Insight PDF", desc: "Premium 40-page documentation package with actionable intelligence and charts." },
+    { icon: <BarChart2 className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Deep-dive structural audit", desc: "Comprehensive vetting of existing codebase, workflows, and resource allocation models." },
+    { icon: <TrendingUp className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Growth roadmap (36 mo)", desc: "A multi-year strategic trajectory tailored to your specific market positioning." },
+    { icon: <Shield className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Compliance & Risk", desc: "Advanced assessment against international standards and internal risk protocols." },
+    { icon: <FileText className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Detailed Insight PDF", desc: "Premium 40-page documentation package with actionable intelligence and charts." },
   ];
 
   return (
@@ -52,7 +52,7 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
             {/* Feature cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {features.map(({ icon, title, desc }) => (
-                <div key={title} className={`p-5 rounded-2xl border-l-2 border-[#00ffaa] ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
+                <div key={title} className={`p-5 rounded-2xl border-l-2 ${d ? 'border-[#00ffaa]' : 'border-teal-500'} ${d ? "bg-[#161b22]" : "bg-gray-50"}`}>
                   <div className="mb-3">{icon}</div>
                   <p className={`text-sm font-bold mb-1 ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
                   <p className={`text-xs leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
@@ -93,7 +93,7 @@ function FullDiagnosticPage({ dark, setDark, onCheckout }: { dark: boolean; setD
       <section className={`px-4 sm:px-6 md:px-12 py-12 md:py-16 ${d ? "bg-[#0d1117]" : "bg-white"}`}>
         <div className="max-w-6xl mx-auto flex flex-col items-center">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-3">Methodology</p>
+            <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>Methodology</p>
             <h2 className={`text-2xl md:text-3xl font-bold mb-4 ${d ? "text-white" : "text-gray-900"}`}>Quantitative Intelligence</h2>
             <p className={`text-sm leading-relaxed ${d ? "text-gray-400" : "text-gray-600"}`}>
               Our proprietary diagnostic engine processes over 150 data points per architectural node, delivering a risk-score that is 4x more accurate than traditional manual audits.
@@ -213,7 +213,7 @@ function CheckoutPage({ dark, setDark, onSuccess }: { dark: boolean; setDark: (v
       <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-8 md:py-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12">
         {/* Left — Plan summary */}
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-4">Selected Subscription</p>
+          <p className={`text-xs font-bold uppercase tracking-widest mb-4 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>Selected Subscription</p>
           <h1 className={`text-2xl md:text-4xl font-extrabold leading-tight mb-3 ${d ? "text-white" : "text-gray-900"}`}>
             Full<br />Diagnostic
           </h1>
@@ -222,8 +222,8 @@ function CheckoutPage({ dark, setDark, onSuccess }: { dark: boolean; setDark: (v
           <div className="space-y-5">
             {features.map(({ title, desc }) => (
               <div key={title} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-[#00ffaa]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle className="w-3 h-3 text-[#00ffaa]" />
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${d ? 'bg-[#00ffaa]/20' : 'bg-teal-100'}`}>
+                  <CheckCircle className={`w-3 h-3 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />
                 </div>
                 <div>
                   <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
@@ -293,7 +293,7 @@ function CheckoutPage({ dark, setDark, onSuccess }: { dark: boolean; setDark: (v
             <div className={`rounded-xl p-6 text-center border ${d ? "border-white/10 bg-[#0d1117]" : "border-gray-200 bg-white"}`}>
               <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
                 You will be redirected to complete payment via{" "}
-                <span className="font-bold text-[#00ffaa]">
+                <span className={`font-bold ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>
                   {method === "bank" ? "Bank Transfer" : method === "opay" ? "OPay" : "Paystack"}
                 </span>.
               </p>
@@ -389,10 +389,10 @@ function PaymentSuccessPage({ dark, setDark }: { dark: boolean; setDark: (v: boo
   const d = dark;
 
   const capabilities = [
-    { icon: <Shield className="w-5 h-5 text-[#00ffaa]" />, title: "Deep-dive structural audit", desc: "Comprehensive analysis of core infrastructure." },
-    { icon: <TrendingUp className="w-5 h-5 text-[#00ffaa]" />, title: "Growth roadmap (36 mo)", desc: "Strategic milestones and scaling projections." },
-    { icon: <Shield className="w-5 h-5 text-[#00ffaa]" />, title: "Compliance & Risk", desc: "Real-time monitoring and mitigation paths." },
-    { icon: <FileText className="w-5 h-5 text-[#00ffaa]" />, title: "Detailed Insight PDF", desc: "Weekly analytical exports for stakeholders." },
+    { icon: <Shield className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Deep-dive structural audit", desc: "Comprehensive analysis of core infrastructure." },
+    { icon: <TrendingUp className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Growth roadmap (36 mo)", desc: "Strategic milestones and scaling projections." },
+    { icon: <Shield className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Compliance & Risk", desc: "Real-time monitoring and mitigation paths." },
+    { icon: <FileText className={`w-5 h-5 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`} />, title: "Detailed Insight PDF", desc: "Weekly analytical exports for stakeholders." },
   ];
 
   return (
@@ -441,7 +441,7 @@ function PaymentSuccessPage({ dark, setDark }: { dark: boolean; setDark: (v: boo
 
           {/* Capabilities Unlocked */}
           <div className={`rounded-2xl p-8 border ${d ? "bg-[#1a2010] border-[#00ffaa]/20" : "bg-green-50 border-green-200"}`}>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa] mb-6">Capabilities Unlocked</p>
+            <p className={`text-xs font-bold uppercase tracking-widest mb-6 ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>Capabilities Unlocked</p>
             <div className="space-y-5 mb-8">
               {capabilities.map(({ icon, title, desc }) => (
                 <div key={title} className="flex items-start gap-3">

@@ -20,7 +20,11 @@ import {
 } from "lucide-react";
 
 // ─── Empty / Initialize State ──────────────────────────────────────────────
+import { useTheme } from "@/components/ThemeContext";
+
 function EmptyState({ onLaunch }: { onLaunch: () => void }) {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="relative min-h-screen">
       {/* Blurred background page */}
@@ -29,18 +33,18 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
           {/* Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white">
+              <h1 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                 Market Parity Analysis
               </h1>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className={`text-sm mt-1 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                 High-fidelity benchmarking against Global Top 5% industry leaders.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-white text-sm font-semibold">
+              <button className={`px-4 py-2.5 rounded-xl border ${d ? 'border-white/10 bg-white/5 text-white' : 'border-gray-200 bg-gray-100 text-gray-900'} text-sm font-semibold`}>
                 Export PDF
               </button>
-              <button className="px-4 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-semibold">
+              <button className={`px-4 py-2.5 rounded-xl bg-orange-500 ${d ? 'text-white' : 'text-gray-900'} text-sm font-semibold`}>
                 Initialize Scan
               </button>
             </div>
@@ -51,48 +55,48 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="rounded-xl bg-[#111827] border border-white/5 p-6 h-32"
+                className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 h-32`}
               >
-                <div className="h-2 rounded-full bg-white/5 w-3/4 mb-3" />
-                <div className="h-6 rounded bg-white/5 w-1/2 mb-2" />
-                <div className="h-2 rounded-full bg-white/5 w-full" />
+                <div className={`h-2 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'} w-3/4 mb-3`} />
+                <div className={`h-6 rounded ${d ? 'bg-white/5' : 'bg-gray-100'} w-1/2 mb-2`} />
+                <div className={`h-2 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'} w-full`} />
               </div>
             ))}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-6 h-64" />
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-6 h-64" />
+            <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 h-64`} />
+            <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 h-64`} />
           </div>
         </div>
       </div>
 
       {/* Modal overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-start pt-12 md:pt-20 z-20 overflow-y-auto pb-12">
+      <div className={`absolute inset-0 ${d ? 'bg-black/60' : 'bg-gray-50/60'} backdrop-blur-sm flex flex-col items-center justify-start pt-12 md:pt-20 z-20 overflow-y-auto pb-12`}>
         {/* Modal */}
-        <div className="w-full max-w-2xl mx-auto rounded-2xl bg-gradient-to-b from-[#1c2333] to-[#111827] border border-white/10 p-8 md:p-10 shadow-2xl">
+        <div className={`w-full max-w-2xl mx-auto rounded-2xl ${d ? 'bg-gradient-to-b from-[#1c2333] to-[#111827] border-white/10' : 'bg-white border-gray-200'} border p-8 md:p-10 shadow-2xl`}>
           {/* Icon */}
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center">
-              <BarChart3 className="w-8 h-8 text-teal-400" />
+            <div className={`w-16 h-16 rounded-full ${d ? 'bg-teal-500/20 border-teal-500/30' : 'bg-teal-50 border-teal-200'} border flex items-center justify-center`}>
+              <BarChart3 className={`w-8 h-8 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
             </div>
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-4">
+          <h2 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} text-center mb-4`}>
             Initialize Your Benchmark Profile
           </h2>
 
           {/* Description */}
-          <p className="text-gray-400 text-sm md:text-base text-center leading-relaxed max-w-lg mx-auto mb-8">
+          <p className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm md:text-base text-center leading-relaxed max-w-lg mx-auto mb-8`}>
             Once your strategic scan is complete, PICA will map your operational
             topology against global industry leaders. You will unlock access to
             your{" "}
-            <span className="text-teal-400 font-semibold">
+            <span className={`${d ? 'text-teal-400' : 'text-teal-700'} font-semibold`}>
               96.2 percentile rank
             </span>{" "}
             and a{" "}
-            <span className="text-teal-400 font-semibold">
+            <span className={`${d ? 'text-teal-400' : 'text-teal-700'} font-semibold`}>
               +24.8% competitive delta
             </span>{" "}
             across Finance, HR, Operations, Marketing, and Strategy.
@@ -100,30 +104,30 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
 
           {/* Info cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 text-center">
-              <Clock className="w-5 h-5 text-teal-400 mx-auto mb-2" />
+            <div className={`rounded-xl ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'} border p-4 text-center`}>
+              <Clock className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'} mx-auto mb-2`} />
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">
                 Processing Time
               </p>
-              <p className="text-sm font-semibold text-white">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
                 &lt; 60 Seconds
               </p>
             </div>
-            <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 text-center">
-              <Sparkles className="w-5 h-5 text-teal-400 mx-auto mb-2" />
+            <div className={`rounded-xl ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'} border p-4 text-center`}>
+              <Sparkles className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'} mx-auto mb-2`} />
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">
                 Data Points
               </p>
-              <p className="text-sm font-semibold text-white">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
                 150+ Parity Markers
               </p>
             </div>
-            <div className="rounded-xl bg-[#0d1117] border border-white/5 p-4 text-center">
-              <Shield className="w-5 h-5 text-teal-400 mx-auto mb-2" />
+            <div className={`rounded-xl ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'} border p-4 text-center`}>
+              <Shield className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'} mx-auto mb-2`} />
               <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-1">
                 Privacy Level
               </p>
-              <p className="text-sm font-semibold text-white">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
                 Zero-Knowledge Proofs
               </p>
             </div>
@@ -140,11 +144,11 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
 
         {/* Feature cards below modal */}
         <div className="w-full max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 px-4">
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center mb-3">
-              <Shield className="w-5 h-5 text-teal-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-teal-500/20' : 'bg-teal-50'} flex items-center justify-center mb-3`}>
+              <Shield className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               Privacy Shield Enabled
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -152,11 +156,11 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
               Your operational fingerprint remains invisible to competitors.
             </p>
           </div>
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
-              <ArrowRightLeft className="w-5 h-5 text-purple-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-purple-500/20' : 'bg-purple-50'} flex items-center justify-center mb-3`}>
+              <ArrowRightLeft className={`w-5 h-5 ${d ? 'text-purple-400' : 'text-purple-700'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               Dynamic Calibration
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -164,11 +168,11 @@ function EmptyState({ onLaunch }: { onLaunch: () => void }) {
               ensuring your competitive positioning is always current.
             </p>
           </div>
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center mb-3">
-              <Settings className="w-5 h-5 text-orange-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-orange-500/20' : 'bg-orange-50'} flex items-center justify-center mb-3`}>
+              <Settings className={`w-5 h-5 ${d ? 'text-orange-400' : 'text-orange-600'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-1">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
               High-Fidelity Analysis
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -193,21 +197,23 @@ const peerData = [
 ];
 
 function ActiveState() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div className="space-y-6 max-w-full">
       {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">
+          <h1 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
             Market Parity Analysis
           </h1>
-          <p className="text-gray-400 text-sm mt-1 max-w-xl">
+          <p className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm mt-1 max-w-xl`}>
             High-fidelity benchmarking against Global Top 5% industry leaders.
             Your current trajectory indicates a strong alpha performance.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2.5 rounded-xl border border-white/10 bg-transparent text-white text-sm font-semibold hover:bg-white/5 transition flex items-center gap-2">
+          <button className={`px-4 py-2.5 rounded-xl border ${d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-200 text-gray-900 hover:bg-gray-100'} bg-transparent text-sm font-semibold transition flex items-center gap-2`}>
             <FileText className="w-4 h-4" />
             Export PDF
           </button>
@@ -221,24 +227,24 @@ function ActiveState() {
       {/* Top metrics row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Overall Competitive Delta */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
           <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">
             Overall Competitive Delta
           </p>
-          <p className="text-3xl font-bold text-teal-400 mb-1">+24.8%</p>
+          <p className={`text-3xl font-bold ${d ? 'text-teal-400' : 'text-teal-700'} mb-1`}>+24.8%</p>
           <p className="text-xs text-gray-500 mb-3">
             Aggregated Market Superiority
           </p>
           <div className="flex items-center justify-between text-[10px] text-gray-500 uppercase tracking-wider">
             <div>
               <p>Current Value</p>
-              <p className="text-sm font-semibold text-white mt-0.5">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'} mt-0.5`}>
                 86.4 pts
               </p>
             </div>
             <div className="text-right">
               <p>Target Parity</p>
-              <p className="text-sm font-semibold text-white mt-0.5">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'} mt-0.5`}>
                 69.2 pts
               </p>
             </div>
@@ -246,45 +252,45 @@ function ActiveState() {
         </div>
 
         {/* Percentile Rank */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
           <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">
             Percentile Rank
           </p>
           <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="w-5 h-5 text-teal-400" />
-            <p className="text-3xl font-bold text-white">96.2</p>
+            <BarChart3 className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+            <p className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>96.2</p>
           </div>
-          <div className="mt-3 h-2 rounded-full bg-white/5">
+          <div className={`mt-3 h-2 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'}`}>
             <div className="h-full rounded-full bg-teal-400 w-[96%]" />
           </div>
           <p className="text-xs text-gray-500 mt-2">Top 3.8% globally</p>
         </div>
 
         {/* Efficiency Gap */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
           <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">
             Efficiency Gap
           </p>
           <div className="flex items-center gap-2 mb-1">
-            <Zap className="w-5 h-5 text-yellow-400" />
-            <p className="text-3xl font-bold text-white">0.84</p>
+            <Zap className={`w-5 h-5 ${d ? 'text-yellow-400' : 'text-yellow-700'}`} />
+            <p className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>0.84</p>
           </div>
           <div className="flex items-center gap-1 mt-2">
-            <ArrowDown className="w-3 h-3 text-red-400" />
-            <p className="text-xs text-red-400">~-0.12 from last cycle</p>
+            <ArrowDown className={`w-3 h-3 ${d ? 'text-red-400' : 'text-red-600'}`} />
+            <p className={`text-xs ${d ? 'text-red-400' : 'text-red-600'}`}>~-0.12 from last cycle</p>
           </div>
         </div>
 
         {/* Competitive Index */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
           <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-2">
             Competitive Index
           </p>
           <div className="flex items-center gap-2 mb-1">
-            <Diamond className="w-5 h-5 text-purple-400" />
-            <p className="text-3xl font-bold text-white">4.2</p>
+            <Diamond className={`w-5 h-5 ${d ? 'text-purple-400' : 'text-purple-700'}`} />
+            <p className={`text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>4.2</p>
           </div>
-          <span className="inline-block mt-2 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400 tracking-wider">
+          <span className={`inline-block mt-2 px-2.5 py-1 rounded text-[10px] font-bold uppercase ${d ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-50 text-teal-700'} tracking-wider`}>
             Class: Market Leader
           </span>
         </div>
@@ -293,19 +299,19 @@ function ActiveState() {
       {/* Two column: Peer Comparison + Performance Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Industry Peer Comparison */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-6">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6`}>
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-base font-bold text-white">
+            <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
               Industry Peer Comparison
             </h3>
             <div className="flex items-center gap-4 text-xs">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-                <span className="text-gray-400">Your Score</span>
+                <span className={d ? 'text-gray-400' : 'text-gray-600'}>Your Score</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-gray-600" />
-                <span className="text-gray-400">Industry Avg</span>
+                <span className={d ? 'text-gray-400' : 'text-gray-600'}>Industry Avg</span>
               </span>
             </div>
           </div>
@@ -317,14 +323,14 @@ function ActiveState() {
             {peerData.map((item) => (
               <div key={item.label}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">
+                  <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'} font-semibold uppercase tracking-wider`}>
                     {item.label}
                   </p>
-                  <p className="text-xs text-white font-semibold">
+                  <p className={`text-xs ${d ? 'text-white' : 'text-gray-900'} font-semibold`}>
                     {item.score}%
                   </p>
                 </div>
-                <div className="relative h-3 rounded-full bg-white/5">
+                <div className={`relative h-3 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'}`}>
                   {/* Industry avg bar */}
                   <div
                     className="absolute top-0 left-0 h-full rounded-full bg-gray-600/50"
@@ -342,8 +348,8 @@ function ActiveState() {
         </div>
 
         {/* Performance Distribution */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-6">
-          <h3 className="text-base font-bold text-white mb-1">
+        <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6`}>
+          <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
             Performance Distribution
           </h3>
           <p className="text-xs text-gray-500 mb-6">
@@ -393,7 +399,7 @@ function ActiveState() {
             <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
               Average
             </p>
-            <p className="text-[10px] text-teal-400 uppercase font-bold tracking-wider">
+            <p className={`text-[10px] ${d ? 'text-teal-400' : 'text-teal-700'} uppercase font-bold tracking-wider`}>
               Elite
             </p>
           </div>
@@ -403,10 +409,10 @@ function ActiveState() {
       {/* What They Do Differently */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <h3 className="text-lg font-bold text-white">
+          <h3 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
             What They Do Differently
           </h3>
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-purple-500/20 text-purple-400 tracking-wider flex items-center gap-1">
+          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${d ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700'} tracking-wider flex items-center gap-1`}>
             <Sparkles className="w-3 h-3" />
             AI Insights
           </span>
@@ -414,11 +420,11 @@ function ActiveState() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Card 1 */}
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center mb-3">
-              <Brain className="w-5 h-5 text-orange-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-orange-500/20' : 'bg-orange-50'} flex items-center justify-center mb-3`}>
+              <Brain className={`w-5 h-5 ${d ? 'text-orange-400' : 'text-orange-600'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-2">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
               AI-Driven Forecasting
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed mb-3">
@@ -426,18 +432,18 @@ function ActiveState() {
               anticipate market shifts 6-18 months ahead, reducing reactive
               decision-making by up to 43%.
             </p>
-            <button className="text-teal-400 text-xs font-semibold flex items-center gap-1 hover:text-teal-300 transition">
+            <button className={`text-xs font-semibold flex items-center gap-1 transition ${d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-600'}`}>
               View implementation strategy
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Card 2 */}
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-teal-500/20 flex items-center justify-center mb-3">
-              <LayoutGrid className="w-5 h-5 text-teal-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-teal-500/20' : 'bg-teal-50'} flex items-center justify-center mb-3`}>
+              <LayoutGrid className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-2">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
               Decentralized Governance
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed mb-3">
@@ -445,18 +451,18 @@ function ActiveState() {
               autonomous pods, achieving 2.7x faster execution velocity while
               maintaining strategic coherence.
             </p>
-            <button className="text-teal-400 text-xs font-semibold flex items-center gap-1 hover:text-teal-300 transition">
+            <button className={`text-xs font-semibold flex items-center gap-1 transition ${d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-600'}`}>
               Explore governance models
               <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
           {/* Card 3 */}
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-5">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center mb-3">
-              <Layers className="w-5 h-5 text-purple-400" />
+          <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5`}>
+            <div className={`w-10 h-10 rounded-lg ${d ? 'bg-purple-500/20' : 'bg-purple-50'} flex items-center justify-center mb-3`}>
+              <Layers className={`w-5 h-5 ${d ? 'text-purple-400' : 'text-purple-700'}`} />
             </div>
-            <h4 className="text-sm font-bold text-white mb-2">
+            <h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
               Tech Stack Consolidation
             </h4>
             <p className="text-xs text-gray-500 leading-relaxed mb-3">
@@ -464,7 +470,7 @@ function ActiveState() {
               in deep integrations that yield 3.1x higher per-platform ROI and
               reduce context-switching overhead.
             </p>
-            <button className="text-teal-400 text-xs font-semibold flex items-center gap-1 hover:text-teal-300 transition">
+            <button className={`text-xs font-semibold flex items-center gap-1 transition ${d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-600'}`}>
               Audit stack efficiency
               <ArrowRight className="w-3 h-3" />
             </button>
