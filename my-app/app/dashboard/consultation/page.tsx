@@ -1193,7 +1193,13 @@ export default function ConsultationPage() {
                           className={`relative flex flex-col justify-between rounded-xl border p-6 cursor-pointer transition duration-200 hover:scale-[1.01] ${
                             isSelected
                               ? (d ? "border-orange-500 bg-orange-500/[0.03] ring-1 ring-orange-500/20" : "border-orange-500 bg-orange-50/40 ring-1 ring-orange-500/30")
-                              : (d ? "border-white/5 bg-[#111318] hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300 shadow-sm")
+                              : (d 
+                                  ? "border-white/5 bg-[#111318] hover:border-white/10" 
+                                  : tierItem.tier === 1
+                                    ? "border-gray-200 bg-white hover:border-gray-300 shadow-sm"
+                                    : tierItem.tier === 2
+                                      ? "border-teal-300 bg-teal-50 hover:border-teal-400 shadow-sm"
+                                      : "border-emerald-200 bg-emerald-50 hover:border-emerald-300 shadow-sm")
                           }`}
                         >
                           {/* Checked Indicator */}

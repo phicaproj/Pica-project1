@@ -137,8 +137,8 @@ function buildPlans(
 
   return [
     {
-      tier: "FOUNDATION",
-      name: "Free",
+      tier: "Awareness",
+      name: "Free Scan",
       price: formatMoney(0, display),
       amount: 0,
       currency: display,
@@ -151,7 +151,7 @@ function buildPlans(
       buttonVariant: "outlined",
     },
     {
-      tier: "ACCELERATOR",
+      tier: "Full Diagnostics",
       name: "Strategic Scan",
       price: formatMoney(phase2APriceDisplay, display),
       amount: phase2APriceDisplay,
@@ -176,8 +176,8 @@ function buildPlans(
       priceMissing: phase2APriceUsd === null,
     },
     {
-      tier: "DEEP DIVE",
-      name: "Plan 2B Module",
+      tier: "Intelligence",
+      name: "Deep Dive",
       price: phase2BLabel,
       amount: phase2BStartPriceDisplay,
       currency: display,
@@ -1233,9 +1233,9 @@ function PricingCard({
         className={`w-full py-3 rounded-xl text-sm font-semibold transition ${
           disabled
             ? d ? "bg-gray-700/50 text-gray-500 cursor-not-allowed" : "bg-gray-200 text-gray-400 cursor-not-allowed"
-            : plan.tier === "AWARENESS"
+            : plan.tier === "Awareness"
               ? "bg-[#f97316] hover:bg-[#ea6c0a] text-white shadow-lg shadow-orange-500/20"
-              : plan.tier === "ACCELERATOR"
+              : plan.tier === "Full Diagnostics"
                 ? "bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950 shadow-lg"
                 : d
                   ? "bg-[#1f2937] hover:bg-gray-800 text-white shadow-md border border-white/10"
