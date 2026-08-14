@@ -517,7 +517,7 @@ export default function HomePage() {
 							</div>
 							<Link
 								href='/pages/about'
-								className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition-all shadow-md ${d ? 'bg-[#1f2937] hover:bg-gray-800' : 'bg-[#1f2937] hover:bg-gray-800'}`}>
+								className='mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition shadow-lg shadow-orange-500/20 bg-[#f97316] hover:bg-[#ea6c0a]'>
 								Start Free Scan
 							</Link>
 						</div>
@@ -554,7 +554,7 @@ export default function HomePage() {
 							</div>
 							<Link
 								href='/pages/fulldiagnostic'
-								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#FFAF66] hover:bg-[#ea9c53] text-gray-900 transition-all text-center block shadow-lg active:scale-95'>
+								className='mt-8 w-full py-3 rounded-xl text-xs font-bold bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950 transition text-center block shadow-lg active:scale-95'>
 								Get Diagnostic
 							</Link>
 						</div>
@@ -589,7 +589,7 @@ export default function HomePage() {
 							</div>
 							<Link
 								href='/pages/picafulldiagnostic'
-								className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition-all shadow-md ${d ? 'bg-[#1f2937] hover:bg-gray-800' : 'bg-[#1f2937] hover:bg-gray-800'}`}>
+								className={`mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition-all shadow-md bg-[#1f2937] hover:bg-gray-800`}>
 								Get deep dive
 							</Link>
 						</div>

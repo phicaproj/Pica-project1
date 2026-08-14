@@ -38,6 +38,7 @@ import {
   type MySubscriptionPayload
 } from "@/lib/authClient";
 import { formatMoney, type Currency } from "@/lib/utils";
+import { useTheme } from "@/components/ThemeContext";
 
 type Tab = "Profile" | "Business Info" | "Billing";
 
@@ -62,6 +63,8 @@ export default function DashboardSettingsPage() {
 }
 
 function DashboardSettingsPageInner() {
+  const { dark } = useTheme();
+  const d = dark;
   const router = useRouter();
   const searchParams = useSearchParams();
   // Outer tab persists via ?tab=Billing; defaults to Profile. Reading the
@@ -124,9 +127,9 @@ function DashboardSettingsPageInner() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 text-white bg-[#0d1117] min-h-screen">
+    <div className={`max-w-4xl mx-auto px-4 md:px-6 py-6 min-h-screen transition-colors duration-200 ${d ? 'text-white bg-[#0d1117]' : 'text-gray-900 bg-gray-50'}`}>
       {/* Centralized Tabs */}
-      <div className="flex justify-center border-b border-white/5 pb-4 mb-8 overflow-x-auto scrollbar-hide">
+      <div className={`flex justify-center border-b pb-4 mb-8 overflow-x-auto scrollbar-hide ${d ? 'border-white/5' : 'border-gray-200'}`}>
         <div className="flex gap-3 sm:gap-8 justify-center">
           {TABS.map((tab) => (
             <button
@@ -134,13 +137,13 @@ function DashboardSettingsPageInner() {
               onClick={() => handleTabChange(tab)}
               className={`whitespace-nowrap text-sm font-semibold transition pb-2 relative ${
                 activeTab === tab
-                  ? "text-orange-400 font-bold"
-                  : "text-gray-500 hover:text-gray-300"
+                  ? (d ? "text-orange-400 font-bold" : "text-orange-600 font-bold")
+                  : (d ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-800")
               }`}
             >
               {tab}
               {activeTab === tab && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-400 rounded-full" />
+                <span className={`absolute bottom-0 left-0 right-0 h-[2px] rounded-full ${d ? 'bg-orange-400' : 'bg-orange-500'}`} />
               )}
             </button>
           ))}
@@ -214,6 +217,8 @@ const resizeImage = (file: File, maxWidth = 400, maxHeight = 400, quality = 0.8)
 
 // ─── Profile Settings ────────────────────────────────────────────────────────
 function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate: () => void }) {
+  const { dark } = useTheme();
+  const d = dark;
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -369,8 +374,8 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
   // Role badge colour — orange for Admin, teal for User
   const roleBadgeClass =
     rawRole === "ADMIN"
-      ? "bg-orange-500/20 text-orange-400 border border-orange-500/20"
-      : "bg-teal-500/20 text-teal-400 border border-teal-500/20";
+      ? (d ? "bg-orange-500/20 text-orange-400 border border-orange-500/20" : "bg-orange-50 text-orange-600 border border-orange-200")
+      : (d ? "bg-teal-500/20 text-teal-400 border border-teal-500/20" : "bg-teal-50 text-teal-600 border border-teal-200");
 
   return (
     <div className="space-y-6">
@@ -384,10 +389,10 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          <h1 className={`text-3xl md:text-4xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
             Profile Settings
           </h1>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-500'}`}>
             Update your personal information and how others see you.
           </p>
         </div>
@@ -404,7 +409,9 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               <button
                 onClick={handleCancel}
                 disabled={saving || uploading}
-                className="px-5 py-2.5 rounded-full border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-50"
+                className={`px-5 py-2.5 rounded-full border text-sm font-semibold transition disabled:opacity-50 ${
+                  d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 Cancel
               </button>
@@ -422,7 +429,9 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       </div>
 
       {/* ── TOP CARD: Avatar + Identity (full-width, horizontal) ── */}
-      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 sm:p-8 relative overflow-hidden shadow-lg">
+      <div className={`rounded-xl border p-6 sm:p-8 relative overflow-hidden shadow-lg ${
+        d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'
+      }`}>
         {/* Decorative glows */}
         <div className="absolute top-0 right-0 w-56 h-56 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
@@ -431,11 +440,15 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
           {/* Avatar */}
           <div className="relative flex-shrink-0 group">
             {uploading ? (
-              <div className="w-24 h-24 rounded-full bg-gray-800 flex items-center justify-center ring-4 ring-[#0d1117]">
+              <div className={`w-24 h-24 rounded-full flex items-center justify-center ring-4 ${
+                d ? 'bg-gray-800 ring-[#0d1117]' : 'bg-gray-200 ring-gray-100'
+              }`}>
                 <Loader className="w-6 h-6 animate-spin text-teal-400" />
               </div>
             ) : avatarUrl ? (
-              <div className="relative w-24 h-24 rounded-full ring-4 ring-[#0d1117] overflow-hidden group">
+              <div className={`relative w-24 h-24 rounded-full ring-4 overflow-hidden group ${
+                d ? 'ring-[#0d1117]' : 'ring-gray-100'
+              }`}>
                 <img
                   src={avatarUrl}
                   alt="Profile Avatar"
@@ -455,7 +468,9 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
             ) : (
               <div
                 onClick={triggerFileInput}
-                className={`w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl font-bold text-white ring-4 ring-[#0d1117] relative overflow-hidden group ${isEditing ? 'cursor-pointer' : ''}`}
+                className={`w-24 h-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-3xl font-bold text-white ring-4 relative overflow-hidden group ${
+                  d ? 'ring-[#0d1117]' : 'ring-gray-100'
+                } ${isEditing ? 'cursor-pointer' : ''}`}
               >
                 <span className={`transition duration-300 ${isEditing ? 'group-hover:opacity-0' : ''}`}>
                   {displayName ? displayName.substring(0, 2).toUpperCase() : "AJ"}
@@ -474,7 +489,9 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               <button
                 onClick={triggerFileInput}
                 title="Change profile picture"
-                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg transition border-2 border-[#111827] z-10"
+                className={`absolute bottom-0 right-0 w-8 h-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg transition border-2 z-10 ${
+                  d ? 'border-[#111827]' : 'border-white'
+                }`}
               >
                 <Camera className="w-4 h-4" />
               </button>
@@ -483,20 +500,20 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
 
           {/* Name, role badge, email, verification */}
           <div className="flex flex-col items-center sm:items-start gap-2 flex-1 min-w-0">
-            <h3 className="text-xl font-bold text-white truncate max-w-full">
+            <h3 className={`text-xl font-bold truncate max-w-full ${d ? 'text-white' : 'text-gray-900'}`}>
               {displayName || "Alex James"}
             </h3>
             <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${roleBadgeClass}`}>
               {roleLabel}
             </span>
-            <p className="text-sm text-gray-400 truncate max-w-full mt-1">{email}</p>
+            <p className={`text-sm truncate max-w-full mt-1 ${d ? 'text-gray-400' : 'text-gray-600'}`}>{email}</p>
 
             {isVerified ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-400">
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${d ? 'text-teal-400' : 'text-teal-600'}`}>
                 <CheckCircle2 className="w-3.5 h-3.5" /> Email Verified
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+              <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${d ? 'text-amber-400' : 'text-amber-600'}`}>
                 Email Not Verified
               </span>
             )}
@@ -505,18 +522,20 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       </div>
 
       {/* ── BOTTOM CARD: General Info form ── */}
-      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 relative">
+      <div className={`rounded-xl border p-6 md:p-8 relative ${
+        d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+      }`}>
         <div className="absolute top-0 right-0 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="flex items-center gap-3 mb-6 relative z-10">
           <User className="w-5 h-5 text-orange-400" />
-          <h2 className="text-lg font-bold text-white">
+          <h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
             General Information
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 relative z-10">
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
               FIRST NAME
             </label>
             <input
@@ -525,11 +544,13 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               onChange={(e) => setFirstName(e.target.value)}
               disabled={!isEditing}
               placeholder="First name"
-              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed ${
+                d ? 'bg-[#0d1117] border-white/5 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+              }`}
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
               LAST NAME
             </label>
             <input
@@ -538,11 +559,13 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               onChange={(e) => setLastName(e.target.value)}
               disabled={!isEditing}
               placeholder="Last name"
-              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+              className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed ${
+                d ? 'bg-[#0d1117] border-white/5 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+              }`}
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+            <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
               PHONE NUMBER
             </label>
             <div className="relative">
@@ -551,15 +574,17 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 pr-10 disabled:opacity-60 disabled:cursor-not-allowed ${
+                  d ? 'bg-[#0d1117] border-white/5 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                }`}
               />
-              <PhoneIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <PhoneIcon className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
             </div>
           </div>
         </div>
 
         <div className="relative z-10">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+          <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
             EMAIL ADDRESS
           </label>
           <div className="relative">
@@ -570,10 +595,14 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               onClick={() => {
                 alert("Please contact support at support@pica.com if you want to change your email address.");
               }}
-              className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none transition duration-300 pr-36 opacity-60 cursor-pointer"
+              className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none transition duration-300 pr-36 opacity-60 cursor-pointer ${
+                d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+              }`}
             />
             {isVerified ? (
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-teal-500/20 text-teal-400 border border-teal-500/10">
+              <span className={`absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase ${
+                d ? 'bg-teal-500/20 text-teal-400 border border-teal-500/10' : 'bg-teal-50 text-teal-600 border border-teal-200'
+              }`}>
                 <CheckCircle2 className="w-3 h-3" /> VERIFIED
               </span>
             ) : (
@@ -585,21 +614,23 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className={`text-xs mt-2 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
             Primary email for account access and critical notifications.
           </p>
         </div>
       </div>
 
       {/* Danger Zone */}
-      <div className="mt-12 p-6 rounded-xl border border-red-500/20 bg-red-500/5">
-        <h3 className="text-lg font-bold text-red-400 mb-2">Danger Zone</h3>
-        <p className="text-sm text-gray-400 mb-4">
+      <div className={`mt-12 p-6 rounded-xl border ${d ? 'border-red-500/20 bg-red-500/5' : 'border-red-200 bg-red-50/50'}`}>
+        <h3 className={`text-lg font-bold mb-2 ${d ? 'text-red-400' : 'text-red-600'}`}>Danger Zone</h3>
+        <p className={`text-sm mb-4 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
           Once you delete your account, there is no going back. Please be certain.
         </p>
         <button
           onClick={() => setShowDeleteModal(true)}
-          className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors text-sm font-semibold"
+          className={`px-4 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+            d ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white' : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white'
+          }`}
         >
           Delete Account
         </button>
@@ -608,19 +639,21 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4" onClick={() => !deletingAccount && setShowDeleteModal(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-[#111827] border border-red-500/30 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
-              <Info className="w-6 h-6 text-red-400" />
+          <div className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${d ? 'bg-[#111827] border-red-500/30' : 'bg-white border-red-200'}`} onClick={(e) => e.stopPropagation()}>
+            <div className={`w-12 h-12 rounded-full border flex items-center justify-center mb-4 ${d ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'}`}>
+              <Info className={`w-6 h-6 ${d ? 'text-red-400' : 'text-red-600'}`} />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">Delete Account?</h2>
-            <p className="text-sm text-gray-400 mb-6">
+            <h2 className={`text-xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Delete Account?</h2>
+            <p className={`text-sm mb-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
               Are you sure you want to delete your account? This action cannot be undone. All your personal data will be permanently removed.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={deletingAccount}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-50"
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition disabled:opacity-50 ${
+                  d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 Cancel
               </button>
@@ -661,6 +694,8 @@ function PhoneIcon(props: any) {
 
 // ─── Business Info Settings ──────────────────────────────────────────────────
 function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate: () => void }) {
+  const { dark } = useTheme();
+  const d = dark;
   const [businessName, setBusinessName] = useState(initialUser?.businessName || "");
   const [industry, setIndustry] = useState(initialUser?.industry || "");
   const [country, setCountry] = useState(initialUser?.country || "");
@@ -750,10 +785,10 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          <h1 className={`text-3xl md:text-4xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
             Business Information
           </h1>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-500'}`}>
             Detailed organizational metrics and identity parameters.
           </p>
         </div>
@@ -770,7 +805,9 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
               <button
                 onClick={() => setIsEditing(false)}
                 disabled={saving}
-                className="px-5 py-2.5 rounded-full border border-white/10 text-white text-sm font-semibold hover:bg-white/5 transition disabled:opacity-50"
+                className={`px-5 py-2.5 rounded-full border text-sm font-semibold transition disabled:opacity-50 ${
+                  d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                }`}
               >
                 Cancel
               </button>
@@ -789,23 +826,29 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Core Identity - Span 2 */}
-        <div className="md:col-span-2 rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 space-y-6 relative overflow-hidden">
+        <div className={`md:col-span-2 rounded-xl border p-6 md:p-8 space-y-6 relative overflow-hidden ${
+          d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+        }`}>
           <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4 relative z-10">
+          <div className={`flex items-center justify-between border-b pb-4 mb-4 relative z-10 ${
+            d ? 'border-white/5' : 'border-gray-100'
+          }`}>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
+                d ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-200'
+              }`}>
                 <Building2 className="w-6 h-6 text-orange-400" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">Core Identity</h2>
-                <p className="text-xs text-gray-400">Update your business details</p>
+                <h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Core Identity</h2>
+                <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-500'}`}>Update your business details</p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 BUSINESS NAME
               </label>
               <input
@@ -813,11 +856,13 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
+                className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                  d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                }`}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 INDUSTRY
               </label>
               <div className="relative">
@@ -825,33 +870,37 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 bg-[#111827]"
+                  className={`w-full px-4 py-3 rounded-lg border text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                    d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
                 >
-                  <option value="" className="bg-[#111827] text-white">Select Industry</option>
-                  <option className="bg-[#111827] text-white">Aerospace &amp; Engineering</option>
-                  <option className="bg-[#111827] text-white">Software &amp; Technology</option>
-                  <option className="bg-[#111827] text-white">Financial Services</option>
-                  <option className="bg-[#111827] text-white">Healthcare &amp; Life Sciences</option>
-                  <option className="bg-[#111827] text-white">Retail &amp; E-commerce</option>
-                  <option className="bg-[#111827] text-white">Manufacturing &amp; Logistics</option>
-                  <option className="bg-[#111827] text-white">Professional Services &amp; Consulting</option>
-                  <option className="bg-[#111827] text-white">Education &amp; EdTech</option>
-                  <option className="bg-[#111827] text-white">Agriculture &amp; Food Technology</option>
-                  <option className="bg-[#111827] text-white">Energy, Utilities &amp; CleanTech</option>
-                  <option className="bg-[#111827] text-white">Marketing, Media &amp; Entertainment</option>
-                  <option className="bg-[#111827] text-white">Real Estate &amp; Construction</option>
+                  <option value="" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Select Industry</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Aerospace &amp; Engineering</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Software &amp; Technology</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Financial Services</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Healthcare &amp; Life Sciences</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Retail &amp; E-commerce</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Manufacturing &amp; Logistics</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Professional Services &amp; Consulting</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Education &amp; EdTech</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Agriculture &amp; Food Technology</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Energy, Utilities &amp; CleanTech</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Marketing, Media &amp; Entertainment</option>
+                  <option className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Real Estate &amp; Construction</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 COUNTRY
               </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400 pointer-events-none" />
                 {loadingCountries ? (
-                  <div className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-gray-400 text-sm flex items-center gap-2">
+                  <div className={`w-full pl-10 pr-4 py-3 rounded-lg border text-sm flex items-center gap-2 ${
+                    d ? 'bg-[#0d1117] border-white/5 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'
+                  }`}>
                     <Loader className="w-4 h-4 animate-spin text-orange-500" /> Fetching countries...
                   </div>
                 ) : apiFailed ? (
@@ -861,7 +910,9 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                     onChange={(e) => setCountry(e.target.value)}
                     disabled={!isEditing}
                     placeholder="Enter Country"
-                    className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
+                    className={`w-full pl-10 pr-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                      d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                    }`}
                   />
                 ) : (
                   <select
@@ -871,23 +922,25 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                       setStateVal("");
                     }}
                     disabled={!isEditing}
-                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 bg-[#111827]"
+                    className={`w-full pl-10 pr-10 py-3 rounded-lg border text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                      d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                    }`}
                   >
-                    <option value="" className="bg-[#111827] text-white">Select Country</option>
+                    <option value="" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Select Country</option>
                     {countriesData.map((c: any) => (
-                      <option key={c.name} value={c.name} className="bg-[#111827] text-white">
+                      <option key={c.name} value={c.name} className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>
                         {c.name}
                       </option>
                     ))}
                   </select>
                 )}
                 {!loadingCountries && !apiFailed && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${d ? 'text-gray-500' : 'text-gray-400'}`} />
                 )}
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 STATE / PROVINCE
               </label>
               <div className="relative">
@@ -899,30 +952,34 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                     onChange={(e) => setStateVal(e.target.value)}
                     disabled={!isEditing}
                     placeholder="Enter State/Province"
-                    className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
+                    className={`w-full pl-10 pr-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                      d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                    }`}
                   />
                 ) : (
                   <select
                     value={stateVal}
                     onChange={(e) => setStateVal(e.target.value)}
                     disabled={!isEditing}
-                    className="w-full pl-10 pr-10 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 bg-[#111827]"
+                    className={`w-full pl-10 pr-10 py-3 rounded-lg border text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                      d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                    }`}
                   >
-                    <option value="" className="bg-[#111827] text-white">Select State/Province</option>
+                    <option value="" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Select State/Province</option>
                     {statesList.map((s: any) => (
-                      <option key={s.name} value={s.name} className="bg-[#111827] text-white">
+                      <option key={s.name} value={s.name} className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>
                         {s.name}
                       </option>
                     ))}
                   </select>
                 )}
                 {!(apiFailed || statesList.length === 0) && (
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${d ? 'text-gray-500' : 'text-gray-400'}`} />
                 )}
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 YEARS IN OPERATION
               </label>
               <div className="relative">
@@ -930,16 +987,18 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   value={years}
                   onChange={(e) => setYears(e.target.value)}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 bg-[#111827]"
+                  className={`w-full px-4 py-3 rounded-lg border text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                    d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
                 >
-                  <option value="" className="bg-[#111827] text-white">Select Years</option>
-                  <option value="0-1 Years" className="bg-[#111827] text-white">0-1 Years</option>
-                  <option value="1-3 Years" className="bg-[#111827] text-white">1-3 Years</option>
-                  <option value="3-5 Years" className="bg-[#111827] text-white">3-5 Years</option>
-                  <option value="5-10 Years" className="bg-[#111827] text-white">5-10 Years</option>
-                  <option value="10+ Years" className="bg-[#111827] text-white">10+ Years</option>
+                  <option value="" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Select Years</option>
+                  <option value="0-1 Years" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>0-1 Years</option>
+                  <option value="1-3 Years" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>1-3 Years</option>
+                  <option value="3-5 Years" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>3-5 Years</option>
+                  <option value="5-10 Years" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>5-10 Years</option>
+                  <option value="10+ Years" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>10+ Years</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
             </div>
           </div>
@@ -948,15 +1007,17 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
         {/* Sidebar Metrics - Span 1 */}
         <div className="space-y-6">
           {/* Human Capital */}
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-6 shadow-lg relative overflow-hidden">
+          <div className={`rounded-xl border p-6 shadow-lg relative overflow-hidden ${
+            d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'
+          }`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center gap-2 mb-6 relative z-10">
               <Users className="w-4 h-4 text-orange-400" />
-              <h3 className="text-sm font-bold text-white">Human Capital</h3>
+              <h3 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Human Capital</h3>
             </div>
             <div className="space-y-4 relative z-10">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+                <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                   NUMBER OF STAFF
                 </label>
                 <input
@@ -972,21 +1033,25 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   }}
                   onChange={(e) => setStaffSize(e.target.value.replace(/[^\d]/g, ""))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60"
+                  className={`w-full px-4 py-3 rounded-lg border text-sm focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                    d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
                 />
               </div>
             </div>
           </div>
 
           {/* Revenue Tier */}
-          <div className="rounded-xl bg-[#111827] border border-white/5 p-6 shadow-lg relative overflow-hidden">
+          <div className={`rounded-xl border p-6 shadow-lg relative overflow-hidden ${
+            d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'
+          }`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center gap-2 mb-4 relative z-10">
               <Banknote className="w-4 h-4 text-orange-400" />
-              <h3 className="text-sm font-bold text-white">Revenue Metrics</h3>
+              <h3 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Revenue Metrics</h3>
             </div>
             <div className="relative z-10">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <label className={`block text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 ANNUAL RANGE (USD)
               </label>
               <div className="relative">
@@ -994,21 +1059,25 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
                   value={revenue}
                   onChange={(e) => setRevenue(e.target.value)}
                   disabled={!isEditing}
-                  className="w-full px-4 py-3 rounded-lg bg-[#0d1117] border border-white/5 text-white text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 bg-[#111827]"
+                  className={`w-full px-4 py-3 rounded-lg border text-sm appearance-none focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/20 transition duration-300 disabled:opacity-60 ${
+                    d ? 'bg-[#0d1117] border-white/5 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                  }`}
                 >
-                  <option value="$10M - $50M" className="bg-[#111827] text-white">$10M - $50M</option>
-                  <option value="Under $5M" className="bg-[#111827] text-white">Under $5M</option>
-                  <option value="$5M - $10M" className="bg-[#111827] text-white">$5M - $10M</option>
-                  <option value="Over $50M" className="bg-[#111827] text-white">Over $50M</option>
+                  <option value="$10M - $50M" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>$10M - $50M</option>
+                  <option value="Under $5M" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Under $5M</option>
+                  <option value="$5M - $10M" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>$5M - $10M</option>
+                  <option value="Over $50M" className={d ? "bg-[#111827] text-white" : "bg-white text-gray-900"}>Over $50M</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-white/5 text-gray-500 text-xs">
+      <div className={`flex flex-col md:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t text-xs ${
+        d ? 'border-white/5 text-gray-500' : 'border-gray-200 text-gray-500'
+      }`}>
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-orange-400" />
           Last updated: Mar 24, 2026. Configured values are used for diagnostics tailoring.
@@ -1044,6 +1113,8 @@ const formatSubscriptionDate = (iso: string | null) => {
 type BillingSubTab = "History" | "Subscription";
 
 function BillingSettings() {
+  const { dark } = useTheme();
+  const d = dark;
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialBillingTab: BillingSubTab =
@@ -1069,7 +1140,9 @@ function BillingSettings() {
       {/* Sub-tab strip — mirrors the pattern admin/settings uses for its
           internal nested tabs (Roles / Personal info). Sits inside the
           outer Billing tab so the page reads as one product. */}
-      <div className="flex gap-2 p-1 rounded-xl bg-[#0d1117] border border-white/5 w-fit">
+      <div className={`flex gap-2 p-1 rounded-xl border w-fit ${
+        d ? 'bg-[#0d1117] border-white/5' : 'bg-gray-100 border-gray-200'
+      }`}>
         {(["History", "Subscription"] as const).map((key) => (
           <button
             key={key}
@@ -1077,7 +1150,7 @@ function BillingSettings() {
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition ${
               billingTab === key
                 ? "bg-orange-500 text-white"
-                : "text-gray-400 hover:text-white"
+                : (d ? "text-gray-400 hover:text-white" : "text-gray-600 hover:text-gray-900")
             }`}
           >
             {key === "History" ? "Billing history" : "Subscription"}
@@ -1091,6 +1164,8 @@ function BillingSettings() {
 }
 
 function BillingHistoryView() {
+  const { dark } = useTheme();
+  const d = dark;
   const [latestPlan, setLatestPlan] = useState("2A - Strategic Scan");
   
   // Billing history state
@@ -1150,10 +1225,10 @@ function BillingHistoryView() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+        <h1 className={`text-2xl md:text-3xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
           Billing history
         </h1>
-        <p className="text-sm text-gray-400">
+        <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-500'}`}>
           Review your organizational plan purchases and transaction history
           across the PICA ecosystem.
         </p>
@@ -1161,18 +1236,20 @@ function BillingHistoryView() {
 
       <div className="grid grid-cols-1 gap-6">
         {/* Current Plan */}
-        <div className="rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 relative overflow-hidden">
+        <div className={`rounded-xl border p-6 md:p-8 relative overflow-hidden ${
+          d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+        }`}>
           {/* Subtle gradient background */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl pointer-events-none" />
           
           <div className="flex items-start justify-between relative z-10">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-teal-400 mb-2">
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-teal-400' : 'text-teal-600'}`}>
                 LAST PURCHASED PLAN
               </p>
-              <h2 className="text-2xl font-bold text-white mb-1">{latestPlan}</h2>
-              <p className="text-sm text-gray-400 mt-2">
-                Status: <span className="text-white font-medium">Completed & Unlocked</span>. Lifetime access to report dashboards and PDF downloads.
+              <h2 className={`text-2xl font-bold mb-1 ${d ? 'text-white' : 'text-gray-900'}`}>{latestPlan}</h2>
+              <p className={`text-sm mt-2 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+                Status: <span className={`font-medium ${d ? 'text-white' : 'text-gray-900'}`}>Completed & Unlocked</span>. Lifetime access to report dashboards and PDF downloads.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
@@ -1189,7 +1266,9 @@ function BillingHistoryView() {
             </button>
             <button 
               onClick={() => window.location.href = "/dashboard/subscription"}
-              className="px-6 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm font-semibold hover:bg-white/10 transition"
+              className={`px-6 py-2.5 rounded-lg border text-sm font-semibold transition ${
+                d ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-300 text-gray-800 hover:bg-gray-200'
+              }`}
             >
               Purchase Another Module
             </button>
@@ -1198,15 +1277,19 @@ function BillingHistoryView() {
       </div>
 
       {/* Billing History */}
-      <div className="rounded-xl bg-[#111827] border border-white/5 p-6 md:p-8 space-y-4">
-        <h3 className="text-base font-bold text-white">Billing History</h3>
+      <div className={`rounded-xl border p-6 md:p-8 space-y-4 ${
+        d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+      }`}>
+        <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Billing History</h3>
         
         {loadingHistory ? (
           <div className="py-10 flex items-center justify-center">
             <Loader className="w-5 h-5 animate-spin text-teal-400" />
           </div>
         ) : history.length === 0 ? (
-          <div className="rounded-xl border border-white/5 bg-[#0d1117] p-8 text-center text-gray-500">
+          <div className={`rounded-xl border p-8 text-center ${
+            d ? 'border-white/5 bg-[#0d1117] text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-500'
+          }`}>
             No payments records found for this account.
           </div>
         ) : (
@@ -1214,14 +1297,16 @@ function BillingHistoryView() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
-                  <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-gray-500">
+                  <tr className={`border-b text-[10px] uppercase tracking-wider ${
+                    d ? 'border-white/5 text-gray-500' : 'border-gray-200 text-gray-500'
+                  }`}>
                     <th className="pb-4 font-bold">INVOICE</th>
                     <th className="pb-4 font-bold">STATUS</th>
                     <th className="pb-4 font-bold">DATE</th>
                     <th className="pb-4 font-bold">AMOUNT</th>
                   </tr>
                 </thead>
-                <tbody className="text-gray-300">
+                <tbody className={d ? "text-gray-300" : "text-gray-700"}>
                   {history.map((payment) => {
                     const statusVal = payment.status;
                     let statusLabel = statusVal;
@@ -1238,20 +1323,20 @@ function BillingHistoryView() {
                     }
 
                     return (
-                      <tr key={payment.id} className="border-b border-white/5 last:border-b-0">
-                        <td className="py-4 font-mono text-white text-xs uppercase">
+                      <tr key={payment.id} className={`border-b last:border-b-0 ${d ? 'border-white/5' : 'border-gray-100'}`}>
+                        <td className={`py-4 font-mono text-xs uppercase ${d ? 'text-white' : 'text-gray-900'}`}>
                           {payment.reference.substring(0, 12)}
                         </td>
                         <td className="py-4">
-                          <span className="flex items-center gap-1.5 text-white text-xs">
+                          <span className={`flex items-center gap-1.5 text-xs ${d ? 'text-white' : 'text-gray-900'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} /> 
                             {statusLabel}
                           </span>
                         </td>
-                        <td className="py-4 text-gray-400 text-xs">
+                        <td className={`py-4 text-xs ${d ? 'text-gray-400' : 'text-gray-500'}`}>
                           {formatDateLabel(payment.createdAt)}
                         </td>
-                        <td className="py-4 font-medium text-white text-xs">
+                        <td className={`py-4 font-medium text-xs ${d ? 'text-white' : 'text-gray-900'}`}>
                           {formatPrice(payment.amount, payment.currency)}
                         </td>
                       </tr>
@@ -1263,7 +1348,9 @@ function BillingHistoryView() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t border-white/5 text-gray-400 text-xs">
+              <div className={`flex items-center justify-between pt-4 border-t text-xs ${
+                d ? 'border-white/5 text-gray-400' : 'border-gray-200 text-gray-600'
+              }`}>
                 <span>
                   Showing page <strong>{page}</strong> of <strong>{totalPages}</strong> ({totalItems} total payments)
                 </span>
@@ -1271,14 +1358,18 @@ function BillingHistoryView() {
                   <button
                     onClick={() => fetchBillingHistory(page - 1)}
                     disabled={page === 1}
-                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-30 transition disabled:cursor-not-allowed"
+                    className={`p-2 rounded-lg border transition disabled:opacity-30 disabled:cursor-not-allowed ${
+                      d ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => fetchBillingHistory(page + 1)}
                     disabled={page === totalPages}
-                    className="p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-30 transition disabled:cursor-not-allowed"
+                    className={`p-2 rounded-lg border transition disabled:opacity-30 disabled:cursor-not-allowed ${
+                      d ? 'bg-white/5 border-white/10 text-white hover:bg-white/10' : 'bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -1300,6 +1391,8 @@ function BillingHistoryView() {
 // is local to this sub-tab — no shared cross-page modal state.
 
 function SubscriptionManageView() {
+  const { dark } = useTheme();
+  const d = dark;
   const [sub, setSub] = useState<MySubscriptionPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -1341,8 +1434,10 @@ function SubscriptionManageView() {
 
   if (!sub) {
     return (
-      <div className="rounded-2xl bg-[#111827] border border-white/5 p-10 text-center">
-        <p className="text-sm text-gray-400 mb-5">
+      <div className={`rounded-2xl border p-10 text-center ${
+        d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+      }`}>
+        <p className={`text-sm mb-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
           You don&apos;t have an active subscription yet.
         </p>
         <Link
@@ -1357,7 +1452,7 @@ function SubscriptionManageView() {
 
   const status = SUBSCRIPTION_STATUS_COPY[sub.status] ?? {
     label: sub.status,
-    tone: "bg-gray-500/15 text-gray-300",
+    tone: d ? "bg-gray-500/15 text-gray-300" : "bg-gray-100 text-gray-700",
   };
   // Subscriptions are billed in the wire currency the user signed up with —
   // surface that exact currency on the management view rather than re-running
@@ -1381,7 +1476,7 @@ function SubscriptionManageView() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-orange-400 mb-2">
             Your subscription
           </p>
-          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight">
+          <h1 className={`text-2xl md:text-3xl font-extrabold leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
             {sub.plan.name}
           </h1>
         </div>
@@ -1393,13 +1488,15 @@ function SubscriptionManageView() {
       </div>
 
       {cancelError && (
-        <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-4 text-sm text-red-300">
+        <div className={`rounded-xl border p-4 text-sm ${d ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'bg-red-50 border-red-200 text-red-700'}`}>
           {cancelError}
         </div>
       )}
 
       {sub.cancelAtPeriodEnd && (
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-4 text-sm text-amber-300 flex items-start gap-3">
+        <div className={`rounded-xl border p-4 text-sm flex items-start gap-3 ${
+          d ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
           <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
             Your subscription is set to end on{" "}
@@ -1413,8 +1510,10 @@ function SubscriptionManageView() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-[#111827] border border-white/5 rounded-2xl p-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+        <div className={`lg:col-span-2 border rounded-2xl p-6 ${
+          d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+        }`}>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
             Quota usage this period
           </p>
           <div className="space-y-5">
@@ -1434,32 +1533,34 @@ function SubscriptionManageView() {
               total={sub.plan.consultationsPerMonth}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-6 leading-relaxed">
+          <p className={`text-xs mt-6 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-500'}`}>
             Quotas reset at the start of every billing period. Unused tests
             don&apos;t roll over. When a quota is exhausted, the matching test
             falls back to pay-per-use automatically.
           </p>
         </div>
 
-        <div className="bg-[#111827] border border-white/5 rounded-2xl p-6">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+        <div className={`border rounded-2xl p-6 ${
+          d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+        }`}>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
             Billing
           </p>
-          <p className="text-2xl font-extrabold text-white mb-1">
+          <p className={`text-2xl font-extrabold mb-1 ${d ? 'text-white' : 'text-gray-900'}`}>
             {formatMoney(billedPrice, wireCurrency)}
           </p>
-          <p className="text-xs text-gray-500 mb-5">{cadenceLabel}</p>
+          <p className={`text-xs mb-5 ${d ? 'text-gray-500' : 'text-gray-500'}`}>{cadenceLabel}</p>
 
-          <div className="border-t border-white/5 pt-4 space-y-2 text-sm">
+          <div className={`border-t pt-4 space-y-2 text-sm ${d ? 'border-white/5' : 'border-gray-100'}`}>
             <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Period started</span>
-              <span className="text-white font-medium">
+              <span className={d ? 'text-gray-500' : 'text-gray-500'}>Period started</span>
+              <span className={`font-medium ${d ? 'text-white' : 'text-gray-900'}`}>
                 {formatSubscriptionDate(sub.currentPeriodStart)}
               </span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Next renewal</span>
-              <span className="text-white font-medium">
+              <span className={d ? 'text-gray-500' : 'text-gray-500'}>Next renewal</span>
+              <span className={`font-medium ${d ? 'text-white' : 'text-gray-900'}`}>
                 {sub.cancelAtPeriodEnd
                   ? "—"
                   : formatSubscriptionDate(sub.currentPeriodEnd)}
@@ -1469,23 +1570,27 @@ function SubscriptionManageView() {
         </div>
       </div>
 
-      <div className="bg-[#111827] border border-white/5 rounded-2xl p-6">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4">
+      <div className={`border rounded-2xl p-6 ${
+        d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'
+      }`}>
+        <p className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
           Card on file
         </p>
         {sub.card ? (
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center flex-shrink-0">
+            <div className={`w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+              d ? 'bg-orange-500/10 border-orange-500/30' : 'bg-orange-50 border-orange-200'
+            }`}>
               <CreditCard className="w-5 h-5 text-orange-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
                 {sub.card.brand ? `${sub.card.brand} ` : ""}
                 <span className="font-mono tracking-wider">
                   •••• {sub.card.last4}
                 </span>
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className={`text-xs mt-0.5 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                 {sub.card.bank ? `${sub.card.bank} · ` : ""}
                 {sub.card.expMonth && sub.card.expYear
                   ? `Expires ${sub.card.expMonth}/${sub.card.expYear.slice(-2)}`
@@ -1494,7 +1599,7 @@ function SubscriptionManageView() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className={`text-sm ${d ? 'text-gray-500' : 'text-gray-500'}`}>
             Card details will appear here after your first successful payment.
           </p>
         )}
@@ -1503,14 +1608,18 @@ function SubscriptionManageView() {
       <div className="flex flex-col sm:flex-row gap-3">
         <Link
           href="/dashboard/plans"
-          className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition flex items-center justify-center gap-2"
+          className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2 ${
+            d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-300 text-gray-800 hover:bg-gray-100'
+          }`}
         >
           View plans <ArrowRight className="w-4 h-4" />
         </Link>
         {!sub.cancelAtPeriodEnd && sub.status === "ACTIVE" && (
           <button
             onClick={() => setCancelOpen(true)}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 transition flex items-center justify-center gap-2"
+            className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition flex items-center justify-center gap-2 ${
+              d ? 'border-rose-500/30 text-rose-300 hover:bg-rose-500/10' : 'border-rose-300 text-rose-600 hover:bg-rose-50'
+            }`}
           >
             <XCircle className="w-4 h-4" />
             Cancel subscription
@@ -1539,23 +1648,25 @@ function QuotaMeter({
   used: number;
   total: number;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
   const ratio = total > 0 ? Math.min(used / total, 1) : 0;
   const remaining = Math.max(total - used, 0);
   const exhausted = remaining === 0 && total > 0;
   return (
     <div>
       <div className="flex items-baseline justify-between mb-2 gap-3">
-        <span className="text-sm font-medium text-white">{label}</span>
+        <span className={`text-sm font-medium ${d ? 'text-white' : 'text-gray-900'}`}>{label}</span>
         <span
           className={`text-xs font-mono ${
-            exhausted ? "text-rose-300" : "text-gray-400"
+            exhausted ? (d ? "text-rose-300" : "text-rose-600") : (d ? "text-gray-400" : "text-gray-500")
           }`}
         >
           {used} / {total}
           {exhausted && " · falls back to pay-per-use"}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+      <div className={`h-2 rounded-full overflow-hidden ${d ? 'bg-white/5' : 'bg-gray-200'}`}>
         <div
           className={`h-full rounded-full transition-all ${
             exhausted
@@ -1582,32 +1693,40 @@ function CancelConfirmModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl"
+        className={`w-full max-w-md rounded-2xl border p-6 shadow-2xl ${
+          d ? 'bg-[#111827] border-white/10' : 'bg-white border-gray-200'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-4">
-          <XCircle className="w-5 h-5 text-rose-400" />
+        <div className={`w-12 h-12 rounded-full border flex items-center justify-center mb-4 ${
+          d ? 'bg-rose-500/10 border-rose-500/30' : 'bg-rose-50 border-rose-200'
+        }`}>
+          <XCircle className={`w-5 h-5 ${d ? 'text-rose-400' : 'text-rose-600'}`} />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">
+        <h2 className={`text-xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
           Cancel subscription?
         </h2>
-        <p className="text-sm text-gray-400 mb-5">
+        <p className={`text-sm mb-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
           You&apos;ll keep your remaining quota and continue with full access
           until{" "}
-          <span className="text-white font-semibold">
+          <span className={`font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
             {formatSubscriptionDate(periodEnd)}
           </span>
           . After that, you&apos;ll be on pay-per-use. You can resubscribe any
           time.
         </p>
 
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300 flex items-start gap-2 mb-5">
+        <div className={`rounded-xl border p-3 text-xs flex items-start gap-2 mb-5 ${
+          d ? 'bg-amber-500/10 border-amber-500/30 text-amber-300' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
           <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
             Unused tests do not roll over — they expire when the period ends.
@@ -1618,7 +1737,9 @@ function CancelConfirmModal({
           <button
             onClick={onClose}
             disabled={busy}
-            className="flex-1 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-60"
+            className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition disabled:opacity-60 ${
+              d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-200 text-gray-700 hover:bg-gray-100'
+            }`}
           >
             Keep subscription
           </button>

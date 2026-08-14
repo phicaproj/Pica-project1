@@ -16,6 +16,7 @@ import {
 import { getAccessToken, getMe, setLastSessionId, type MeUser } from '@/lib/authClient'
 import { getMyPhase2ACredits } from '@/lib/api/consultation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTheme } from '@/components/ThemeContext'
 
 const API_BASE =
 	process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -225,6 +226,9 @@ function LandingState({
 	// the next start is free.
 	creditExpiresAt: string | null
 }) {
+	const { dark } = useTheme()
+	const d = dark
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
@@ -233,7 +237,7 @@ function LandingState({
 			transition={{ duration: 0.5 }}
 			className='space-y-8 max-w-full'
 		>
-			<div className='relative rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 overflow-hidden'>
+			<div className={`relative rounded-2xl ${d ? 'bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border-white/5' : 'bg-gradient-to-br from-white via-slate-50 to-gray-100 border-gray-200 shadow-sm'} border overflow-hidden`}>
 				<div className='absolute right-0 top-0 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none' />
 				<div className='absolute left-1/3 bottom-0 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl pointer-events-none' />
 
@@ -243,7 +247,7 @@ function LandingState({
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							transition={{ delay: 0.1 }}
-							className='inline-block px-3 py-1 rounded-full bg-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-wider mb-6'
+							className={`inline-block px-3 py-1 rounded-full ${d ? 'bg-teal-500/20 text-teal-400' : 'bg-teal-50 text-teal-700'} text-[10px] font-bold uppercase tracking-wider mb-6`}
 						>
 							System Ready
 						</motion.span>
@@ -271,7 +275,7 @@ function LandingState({
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							transition={{ delay: 0.3 }}
-							className='text-gray-400 text-sm md:text-base max-w-lg mb-8'
+							className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm md:text-base max-w-lg mb-8`}
 						>
 							Unfold the mathematical architecture of your
 							business through a guided diagnostic. Your progress
@@ -292,7 +296,7 @@ function LandingState({
 							].map((item) => (
 								<div
 									key={item}
-									className='px-4 py-3 rounded-xl border border-white/10 bg-white/5 text-xs font-semibold uppercase tracking-wider text-gray-300'
+									className={`px-4 py-3 rounded-xl border ${d ? 'border-white/10 bg-white/5 text-gray-300' : 'border-gray-200 bg-white text-gray-700 shadow-sm'} text-xs font-semibold uppercase tracking-wider`}
 								>
 									{item}
 								</div>
@@ -300,13 +304,13 @@ function LandingState({
 						</motion.div>
 
 						{error && (
-							<div className='mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300'>
+							<div className={`mb-6 px-4 py-3 rounded-xl border ${d ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-red-200 bg-red-50 text-red-700'} text-sm`}>
 								{error}
 							</div>
 						)}
 
 						{creditExpiresAt && (
-							<div className='mb-6 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200'>
+							<div className={`mb-6 px-4 py-3 rounded-xl border ${d ? 'border-orange-500/30 bg-orange-500/10 text-orange-200' : 'border-orange-200 bg-orange-50 text-orange-800'} text-sm`}>
 								Your consultation credit covers this Strategic
 								Scan — no charge. Valid until{' '}
 								{new Date(creditExpiresAt).toLocaleDateString(
@@ -318,7 +322,7 @@ function LandingState({
 						)}
 
 						{profileIncomplete && (
-							<div className='mb-6 px-4 py-3 rounded-xl border border-orange-500/30 bg-orange-500/10 text-sm text-orange-200 flex flex-col sm:flex-row sm:items-center gap-3'>
+							<div className={`mb-6 px-4 py-3 rounded-xl border ${d ? 'border-orange-500/30 bg-orange-500/10 text-orange-200' : 'border-orange-200 bg-orange-50 text-orange-800'} text-sm flex flex-col sm:flex-row sm:items-center gap-3`}>
 								<span className='flex-1'>
 									Finish your business profile to unlock the
 									Strategic Scan — we need your staff size first.
@@ -366,7 +370,7 @@ function LandingState({
 									</>
 								)}
 							</motion.button>
-							<p className='text-xs text-gray-500 uppercase tracking-widest'>
+							<p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-500'} uppercase tracking-widest`}>
 								Resume is available whenever you return.
 							</p>
 						</motion.div>
@@ -378,21 +382,21 @@ function LandingState({
 						transition={{ delay: 0.3 }}
 						className='hidden lg:flex flex-col items-center gap-4 w-72'
 					>
-						<div className='rounded-xl bg-[#0d1117] border border-teal-500/20 px-4 py-2 flex items-center gap-2 self-end'>
+						<div className={`rounded-xl ${d ? 'bg-[#0d1117] border-teal-500/20 text-gray-300' : 'bg-white border-teal-500/30 text-gray-700 shadow-sm'} border px-4 py-2 flex items-center gap-2 self-end`}>
 							<span className='w-2 h-2 rounded-full bg-green-400' />
-							<span className='text-xs text-gray-300 font-mono'>
+							<span className='text-xs font-mono'>
 								CORE_OS V.4.2
 							</span>
 						</div>
 
-						<div className='flex-1 flex flex-col items-center justify-center rounded-xl bg-gradient-to-b from-[#0f1a2e] to-[#0d1117] border border-teal-500/10 p-6 w-full'>
-							<div className='w-24 h-24 rounded-2xl border-2 border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-4'>
-								<Radar className='w-10 h-10 text-teal-400' />
+						<div className={`flex-1 flex flex-col items-center justify-center rounded-xl ${d ? 'bg-gradient-to-b from-[#0f1a2e] to-[#0d1117] border-teal-500/10' : 'bg-gradient-to-b from-teal-50/50 to-white border-teal-500/20 shadow-sm'} border p-6 w-full`}>
+							<div className={`w-24 h-24 rounded-2xl border-2 ${d ? 'border-teal-500/30 bg-teal-500/10' : 'border-teal-500/20 bg-teal-50'} flex items-center justify-center mb-4`}>
+								<Radar className={`w-10 h-10 ${d ? 'text-teal-400' : 'text-teal-600'}`} />
 							</div>
-							<h4 className='text-sm font-bold text-white mb-1'>
+							<h4 className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>
 								Neural Link Active
 							</h4>
-							<p className='text-xs text-gray-500 text-center'>
+							<p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-600'} text-center`}>
 								Save-and-continue is enabled. Your answers
 								persist across sessions.
 							</p>
@@ -428,6 +432,8 @@ function QuestionsState({
 	onNext: () => void
 	onSaveAndExit: () => void
 }) {
+	const { dark } = useTheme()
+	const d = dark
 	const total = flat.length
 	const current = flat[currentIndex]
 	const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0
@@ -442,22 +448,22 @@ function QuestionsState({
 			exit={{ opacity: 0 }}
 			className='space-y-6 max-w-full'
 		>
-			<div className='rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-6 md:p-10'>
+			<div className={`rounded-2xl ${d ? 'bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-6 md:p-10`}>
 				<div className='flex flex-wrap items-start justify-between gap-4 mb-2'>
 					<div>
-						<p className='text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1'>
+						<p className={`text-[10px] font-bold uppercase tracking-widest ${d ? 'text-teal-400' : 'text-teal-600'} mb-1`}>
 							Strategic Scan
 						</p>
-						<p className='text-xl font-bold text-white'>
+						<p className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
 							Assessment in progress
 						</p>
 					</div>
 					<div className='text-right'>
-						<p className='text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1'>
+						<p className={`text-[10px] font-bold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-500'} mb-1`}>
 							Progress
 						</p>
-						<p className='text-sm text-gray-300'>
-							<span className='font-bold text-orange-400'>
+						<p className={`text-sm ${d ? 'text-gray-300' : 'text-gray-600'}`}>
+							<span className={`font-bold ${d ? 'text-orange-400' : 'text-orange-600'}`}>
 								{Math.round(progress)}%
 							</span>{' '}
 							complete
@@ -465,7 +471,7 @@ function QuestionsState({
 					</div>
 				</div>
 
-				<div className='h-1 rounded-full bg-white/10 mb-8 overflow-hidden'>
+				<div className={`h-1 rounded-full ${d ? 'bg-white/10' : 'bg-gray-200'} mb-8 overflow-hidden`}>
 					<motion.div
 						className='h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300 transition-all duration-500'
 						animate={{ width: `${progress}%` }}
@@ -480,7 +486,7 @@ function QuestionsState({
 						exit={{ opacity: 0, x: -20 }}
 						transition={{ duration: 0.3 }}
 					>
-						<h2 className='text-2xl md:text-3xl font-bold text-white leading-tight mb-8'>
+						<h2 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} leading-tight mb-8`}>
 							{current.question.questionText}
 						</h2>
 
@@ -508,15 +514,23 @@ function QuestionsState({
 											disabled={saving || submitting}
 											className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition disabled:cursor-not-allowed ${
 												isSelected
-													? 'border-teal-400 bg-teal-400/10'
-													: 'border-white/10 bg-[#161b22] hover:border-white/20'
+													? d
+														? 'border-teal-400 bg-teal-400/10'
+														: 'border-teal-500 bg-teal-50 shadow-sm'
+													: d
+													? 'border-white/10 bg-[#161b22] hover:border-white/20'
+													: 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
 											}`}
 										>
 											<span
 												className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
 													isSelected
-														? 'bg-teal-400 text-gray-900'
-														: 'bg-[#243044] text-gray-400'
+														? d
+															? 'bg-teal-400 text-gray-900'
+															: 'bg-teal-600 text-white'
+														: d
+														? 'bg-[#243044] text-gray-400'
+														: 'bg-gray-200 text-gray-600'
 												}`}
 											>
 												{opt.optionLabel}
@@ -524,14 +538,18 @@ function QuestionsState({
 											<span
 												className={`text-sm font-medium ${
 													isSelected
-														? 'text-white font-bold'
-														: 'text-gray-300'
+														? d
+															? 'text-white font-bold'
+															: 'text-teal-950 font-bold'
+														: d
+														? 'text-gray-300'
+														: 'text-gray-700'
 												}`}
 											>
 												{opt.optionText}
 											</span>
 											{isSelected && (
-												<CheckCircle className='w-5 h-5 text-teal-400 ml-auto flex-shrink-0' />
+												<CheckCircle className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-600'} ml-auto flex-shrink-0`} />
 											)}
 										</motion.button>
 									)
@@ -541,7 +559,7 @@ function QuestionsState({
 				</AnimatePresence>
 
 				{error && (
-					<div className='mb-6 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300'>
+					<div className={`mb-6 px-4 py-3 rounded-xl border ${d ? 'border-red-500/30 bg-red-500/10 text-red-300' : 'border-red-200 bg-red-50 text-red-700'} text-sm`}>
 						{error}
 					</div>
 				)}
@@ -550,7 +568,7 @@ function QuestionsState({
 					<button
 						onClick={onPrev}
 						disabled={currentIndex === 0 || saving || submitting}
-						className='flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-40 disabled:cursor-not-allowed'
+						className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border ${d ? 'border-white/10 text-white hover:bg-white/5' : 'border-gray-200 text-gray-700 hover:bg-gray-100'} transition disabled:opacity-40 disabled:cursor-not-allowed`}
 					>
 						<ArrowLeft className='w-4 h-4' /> Previous
 					</button>
@@ -558,7 +576,7 @@ function QuestionsState({
 					<button
 						onClick={onSaveAndExit}
 						disabled={saving || submitting}
-						className='flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 text-gray-300 hover:bg-white/5 transition disabled:opacity-40 disabled:cursor-not-allowed'
+						className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border ${d ? 'border-white/10 text-gray-300 hover:bg-white/5' : 'border-gray-200 text-gray-600 hover:bg-gray-100'} transition disabled:opacity-40 disabled:cursor-not-allowed`}
 					>
 						<Save className='w-4 h-4' /> Save &amp; Exit
 					</button>
@@ -569,7 +587,9 @@ function QuestionsState({
 						className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition ${
 							selectedOptionId && !saving && !submitting
 								? 'bg-orange-500 hover:bg-orange-600 text-white'
-								: 'bg-orange-500/40 text-gray-300 cursor-not-allowed'
+								: d
+								? 'bg-orange-500/40 text-gray-300 cursor-not-allowed'
+								: 'bg-orange-300 text-white cursor-not-allowed'
 						}`}
 					>
 						{submitting ? (
@@ -601,6 +621,8 @@ function QuestionsState({
 
 // ─── Processing State ───────────────────────────────────────────────────────
 function ProcessingState() {
+	const { dark } = useTheme()
+	const d = dark
 	const [progress, setProgress] = useState(0)
 
 	useEffect(() => {
@@ -616,33 +638,33 @@ function ProcessingState() {
 			animate={{ opacity: 1 }}
 			className='space-y-6 max-w-full'
 		>
-			<div className='relative rounded-2xl bg-gradient-to-b from-[#0a1628] via-[#0d1117] to-[#0d1117] border border-white/5 overflow-hidden min-h-[60vh] flex flex-col items-center justify-center p-6 md:p-10'>
+			<div className={`relative rounded-2xl ${d ? 'bg-gradient-to-b from-[#0a1628] via-[#0d1117] to-[#0d1117] border-white/5' : 'bg-gradient-to-b from-slate-50 via-white to-gray-50 border-gray-200 shadow-sm'} border overflow-hidden min-h-[60vh] flex flex-col items-center justify-center p-6 md:p-10`}>
 				<div className='absolute inset-0 flex items-center justify-center pointer-events-none'>
-					<div className='w-64 h-64 rounded-full bg-teal-500/10 blur-3xl animate-pulse' />
+					<div className={`w-64 h-64 rounded-full ${d ? 'bg-teal-500/10' : 'bg-teal-500/5'} blur-3xl animate-pulse`} />
 				</div>
 
 				<div className='relative z-10 flex flex-col items-center mb-8'>
 					<div className='relative w-48 h-48 md:w-56 md:h-56'>
-						<div className='absolute inset-0 rounded-full border-2 border-dashed border-teal-500/20 animate-[spin_20s_linear_infinite]' />
-						<div className='absolute inset-6 rounded-full bg-gradient-to-br from-teal-900/50 via-blue-900/50 to-purple-900/50 border border-teal-500/20 flex items-center justify-center'>
-							<div className='w-16 h-16 rounded-full bg-gradient-to-br from-teal-400/30 to-blue-500/30 flex items-center justify-center'>
-								<Radar className='w-8 h-8 text-white animate-pulse' />
+						<div className={`absolute inset-0 rounded-full border-2 border-dashed ${d ? 'border-teal-500/20' : 'border-teal-500/30'} animate-[spin_20s_linear_infinite]`} />
+						<div className={`absolute inset-6 rounded-full ${d ? 'bg-gradient-to-br from-teal-900/50 via-blue-900/50 to-purple-900/50 border-teal-500/20' : 'bg-gradient-to-br from-teal-100/60 via-blue-100/60 to-purple-100/60 border-teal-500/30'} border flex items-center justify-center`}>
+							<div className={`w-16 h-16 rounded-full ${d ? 'bg-gradient-to-br from-teal-400/30 to-blue-500/30' : 'bg-gradient-to-br from-teal-400/40 to-blue-500/40'} flex items-center justify-center`}>
+								<Radar className={`w-8 h-8 ${d ? 'text-white' : 'text-teal-700'} animate-pulse`} />
 							</div>
 						</div>
 					</div>
-					<p className='text-[10px] text-teal-400 uppercase tracking-widest mt-2 font-mono'>
+					<p className={`text-[10px] ${d ? 'text-teal-400' : 'text-teal-700'} uppercase tracking-widest mt-2 font-mono`}>
 						Synthesizing Diagnostic
 					</p>
 				</div>
 
 				<div className='relative z-10 text-center max-w-lg'>
-					<h2 className='text-2xl md:text-3xl font-bold text-white mb-2'>
+					<h2 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
 						Strategic Scan
 					</h2>
-					<p className='text-gray-400 text-sm mb-6'>
+					<p className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm mb-6`}>
 						Routing you to the next step...
 					</p>
-					<div className='h-2 rounded-full bg-white/5 mb-2 overflow-hidden'>
+					<div className={`h-2 rounded-full ${d ? 'bg-white/5' : 'bg-gray-200'} mb-2 overflow-hidden`}>
 						<motion.div
 							className='h-full rounded-full bg-gradient-to-r from-blue-500 via-teal-400 to-teal-300'
 							animate={{ width: `${progress}%` }}
@@ -650,10 +672,10 @@ function ProcessingState() {
 						/>
 					</div>
 					<div className='flex justify-between text-xs'>
-						<span className='text-gray-500 font-mono'>
+						<span className={`${d ? 'text-gray-500' : 'text-gray-500'} font-mono`}>
 							PROCESSING
 						</span>
-						<span className='text-teal-400 font-mono'>
+						<span className={`${d ? 'text-teal-400' : 'text-teal-700'} font-mono`}>
 							{progress.toFixed(0)}% COMPLETE
 						</span>
 					</div>
@@ -665,6 +687,8 @@ function ProcessingState() {
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 export default function StrategicScanPage() {
+	const { dark } = useTheme()
+	const d = dark
 	const router = useRouter()
 	const [scanState, setScanState] = useState<ScanState>('landing')
 	const [sessionId, setSessionId] = useState<string | null>(null)

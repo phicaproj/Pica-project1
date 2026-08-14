@@ -277,7 +277,7 @@ export default function DeepDivePage() {
       {/* Top area: Main card + Pain points */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Action Card (Left) */}
-        <div className={`lg:col-span-2 rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 flex flex-col justify-between relative overflow-hidden`}>
+        <div className={`lg:col-span-2 rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-6 flex flex-col justify-between relative overflow-hidden`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10">
             {activeSession ? (
@@ -366,7 +366,7 @@ export default function DeepDivePage() {
                 const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
                 
                 return (
-                  <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-4`}>
+                  <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-4`}>
                     <div className="flex items-start gap-3">
                       <div className={`w-9 h-9 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
                         <Icon className={`w-4 h-4 ${severityColor.split(" ")[0]}`} />
@@ -389,7 +389,7 @@ export default function DeepDivePage() {
                 );
               })
             ) : (
-              <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-6 flex flex-col items-center justify-center h-full text-center`}>
+              <div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-6 flex flex-col items-center justify-center h-full text-center`}>
                 <Sparkles className="w-8 h-8 text-gray-600 mb-3" />
                 <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   Complete a Deep Dive to surface findings here
@@ -438,7 +438,7 @@ export default function DeepDivePage() {
               }
 
               return (
-                <div key={session.pillarId} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-5 flex flex-col`}>
+                <div key={session.pillarId} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-5 flex flex-col`}>
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-10 h-10 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center`}>
                       <Icon className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
@@ -469,7 +469,7 @@ export default function DeepDivePage() {
               );
             })
           ) : (
-            <div className={`col-span-full rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-10 flex flex-col items-center justify-center text-center`}>
+            <div className={`col-span-full rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-10 flex flex-col items-center justify-center text-center`}>
               <div className={`w-16 h-16 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center mb-4`}>
                 <Globe className="w-8 h-8 text-gray-600" />
               </div>
@@ -540,7 +540,7 @@ function PainPointsModal({ findings, onClose }: { findings: any[]; onClose: () =
                   const Icon = finding.riskType === "Critical" ? AlertTriangle : Zap;
                   const severityColor = finding.riskType === "Critical" ? "text-red-400 bg-red-400/10" : "text-orange-400 bg-orange-400/10";
                   return (
-                    <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-100'} border p-4 flex items-start gap-3`}>
+                    <div key={i} className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-4 flex items-start gap-3`}>
                       <div className={`w-9 h-9 rounded-lg ${d ? 'bg-white/5' : 'bg-gray-100'} flex items-center justify-center flex-shrink-0`}>
                         <Icon className={`w-4 h-4 ${severityColor.split(" ")[0]}`} />
                       </div>

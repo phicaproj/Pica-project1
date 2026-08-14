@@ -333,15 +333,11 @@ export default function PricingPage() {
 											</div>
 											<p
 												className={`text-xs font-semibold uppercase tracking-widest ${d ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-												Full
-												Diagnostics
+												Full Diagnostics
 											</p>
 											<h3
 												className={`text-2xl md:text-3xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>
-												Strategic
-												Scan
-												Full
-												Diagnostic
+												Strategic Scan
 											</h3>
 											<p
 												className={`text-3xl md:text-5xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-6`}>
@@ -387,8 +383,7 @@ export default function PricingPage() {
 											<Link
 												href='/dashboard/subscription'
 												className='block w-full py-3.5 rounded-xl text-sm font-bold bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950 transition text-center hover:scale-[1.02] active:scale-95'>
-												Get
-												Diagnostic
+												Get Diagnostic
 											</Link>
 										</div>
 
@@ -396,12 +391,11 @@ export default function PricingPage() {
 											className={`rounded-2xl p-8 ${d ? 'bg-[#2a3520]' : 'bg-emerald-50'} border ${d ? 'border-[#4a6030]/40' : 'border-emerald-200'}`}>
 											<p
 												className={`text-xs font-semibold uppercase tracking-widest ${d ? 'text-gray-400' : 'text-gray-600'} mb-2`}>
-												Intelligence
+												Diagnostics
 											</p>
 											<h3
 												className={`text-2xl md:text-3xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>
-												Deep
-												Dive
+												Deep Dive
 											</h3>
 											<p
 												className={`text-3xl md:text-5xl font-extrabold ${d ? 'text-white' : 'text-gray-900'} mb-6`}>
@@ -621,14 +615,16 @@ export default function PricingPage() {
 																key={
 																	plan.id
 																}
-																className={`relative rounded-2xl p-6 md:p-8 border flex flex-col justify-between transition ${
-																	recommended
-																		? d
+																className={`relative rounded-2xl p-6 md:p-8 border flex flex-col justify-between transition hover:-translate-y-1 ${
+																	d
+																		? recommended
 																			? 'bg-[#1a2535] border-[#f97316]/40 shadow-lg shadow-[#f97316]/10'
-																			: 'bg-white border-orange-500/40 shadow-lg shadow-orange-500/10'
-																		: d
-																			? 'bg-[#1a2535] border-white/10'
-																			: 'bg-white border-gray-200 shadow-sm'
+																			: 'bg-[#1a2535] border-white/10'
+																		: idx === 0
+																			? 'bg-white border-gray-200 shadow-sm'
+																			: idx === 1
+																				? 'bg-teal-50 border-teal-300 shadow-lg shadow-teal-500/[0.03]'
+																				: 'bg-emerald-50 border-emerald-200'
 																}`}>
 																{recommended && (
 																	<div className='absolute -top-3 left-1/2 -translate-x-1/2 bg-[#f97316] text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider'>
@@ -763,17 +759,14 @@ export default function PricingPage() {
                             actually fires. */}
 																<Link
 																	href='/Auth/signup'
-																	className={`block w-full py-3.5 rounded-xl text-sm font-bold transition text-center ${
-																		recommended
-																			? 'bg-[#f97316] hover:bg-[#ea6c0a] text-white'
-																			: d
-																				? 'border border-white/20 text-white hover:bg-white/5'
-																				: 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+																	className={`block w-full py-3.5 rounded-xl text-sm font-bold transition text-center shadow-lg active:scale-95 ${
+																		idx === 0
+																			? 'bg-[#f97316] hover:bg-[#ea6c0a] text-white shadow-orange-500/20'
+																			: idx === 1
+																				? 'bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950'
+																				: 'bg-[#1f2937] hover:bg-gray-800 text-white'
 																	}`}>
-																	Sign
-																	up
-																	to
-																	subscribe
+																	Sign up to subscribe
 																</Link>
 															</div>
 														)

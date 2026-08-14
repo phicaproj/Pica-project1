@@ -49,6 +49,7 @@ import {
   type Currency,
 } from "@/lib/utils";
 import Script from "next/script";
+import { useTheme } from "@/components/ThemeContext";
 
 // Paystack inline-widget shape
 type PaystackHandler = { openIframe: () => void };
@@ -218,6 +219,8 @@ const labelForResult = (r: CompletedResultOption) => {
 };
 
 export default function ConsultationPage() {
+  const { dark } = useTheme();
+  const d = dark;
   const [me, setMe] = useState<MeUser | null>(null);
   const [tiers, setTiers] = useState<ConsultationTierPublic[]>([]);
   const [usdToNgn, setUsdToNgn] = useState(1);
@@ -549,9 +552,9 @@ export default function ConsultationPage() {
 
   if (error || !me) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center px-6 bg-[#090b0f]">
+      <div className={`flex min-h-[60vh] items-center justify-center px-6 ${d ? 'bg-[#090b0f]' : 'bg-gray-50'}`}>
         <div className="max-w-md text-center">
-          <p className="mb-4 text-red-400">{error ?? "Account unavailable"}</p>
+          <p className="mb-4 text-red-500">{error ?? "Account unavailable"}</p>
           <Link
             href="/Auth/login"
             className="inline-block rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
@@ -564,14 +567,18 @@ export default function ConsultationPage() {
   }
 
   return (
-    <div className="min-h-screen text-gray-200">
+    <div className={`min-h-screen ${d ? 'text-gray-200' : 'text-gray-800'}`}>
       {toast && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-start gap-3 rounded-2xl border border-emerald-500/30 bg-[#0d1512] p-4 text-sm text-emerald-300 shadow-2xl">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-400" />
+        <div className={`fixed bottom-5 right-5 z-50 flex items-start gap-3 rounded-2xl border p-4 text-sm shadow-2xl ${
+          d 
+            ? 'border-emerald-500/30 bg-[#0d1512] text-emerald-300' 
+            : 'border-emerald-200 bg-emerald-50 text-emerald-800'
+        }`}>
+          <CheckCircle2 className={`mt-0.5 h-4 w-4 flex-shrink-0 ${d ? 'text-emerald-400' : 'text-emerald-600'}`} />
           <span className="flex-1 font-medium">{toast}</span>
           <button
             onClick={() => setToast(null)}
-            className="text-emerald-300 hover:text-emerald-100 transition"
+            className={`${d ? 'text-emerald-300 hover:text-emerald-100' : 'text-emerald-700 hover:text-emerald-900'} transition`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -582,33 +589,41 @@ export default function ConsultationPage() {
         // ─── ACTIVE BOOKINGS DASHBOARD LAYOUT ───
         <div className="space-y-8 animate-fadeIn">
           {/* Header Banner */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16] p-8 md:p-10">
+          <div className={`relative overflow-hidden rounded-3xl border p-8 md:p-10 ${
+            d
+              ? 'border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16]'
+              : 'border-gray-200 bg-gradient-to-br from-orange-50/50 via-white to-gray-50'
+          }`}>
             <div className="absolute right-0 top-0 h-40 w-40 bg-orange-500/10 rounded-full blur-3xl" />
             <div className="absolute left-1/3 bottom-0 h-32 w-32 bg-emerald-500/5 rounded-full blur-3xl" />
 
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative z-10">
               <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+                <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${d ? 'text-white' : 'text-gray-900'}`}>
                   Your Strategic Advisory
                 </h1>
-                <p className="mt-2 text-sm md:text-base text-gray-400 max-w-2xl leading-relaxed">
+                <p className={`mt-2 text-sm md:text-base max-w-2xl leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   Optimize your operational trajectory with high-performance architect
                   insights. Currently tracking at the {percentile} efficiency tier.
                 </p>
               </div>
 
               {/* Performance Index Box */}
-              <div className="flex items-center gap-4 rounded-2xl border border-white/5 bg-[#121620]/60 p-4 md:p-5 backdrop-blur">
+              <div className={`flex items-center gap-4 rounded-2xl border p-4 md:p-5 backdrop-blur ${
+                d ? 'border-white/5 bg-[#121620]/60' : 'border-gray-200 bg-white/80 shadow-sm'
+              }`}>
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                  <p className={`text-[10px] font-bold tracking-widest uppercase ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                     Performance Index
                   </p>
-                  <p className="text-2xl font-black text-emerald-400 mt-1">
+                  <p className={`text-2xl font-black mt-1 ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
                     {percentile}
                   </p>
                 </div>
-                <div className="h-10 w-[1px] bg-white/10" />
-                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
+                <div className={`h-10 w-[1px] ${d ? 'bg-white/10' : 'bg-gray-200'}`} />
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  d ? 'bg-emerald-500/10 text-emerald-300' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
                   {percentileText}
                 </span>
               </div>
@@ -621,7 +636,7 @@ export default function ConsultationPage() {
             <div className="space-y-8 lg:col-span-2">
               {/* Current Engagements */}
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">
+                <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Current Engagement
                 </h3>
                 {activeBookings.length > 0 ? (
@@ -634,26 +649,40 @@ export default function ConsultationPage() {
                         <div
                           key={b.id}
                           onClick={() => setActiveViewingBooking(b)}
-                          className="relative overflow-hidden rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 hover:bg-white/[0.02] transition duration-300 cursor-pointer"
+                          className={`relative overflow-hidden rounded-2xl border p-6 transition duration-300 cursor-pointer ${
+                            d
+                              ? 'border-white/5 bg-[#111318] hover:border-white/10 hover:bg-white/[0.02]'
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                          }`}
                         >
-                          <div className="absolute right-0 top-0 h-24 w-24 bg-white/[0.01] rounded-bl-full" />
+                          <div className={`absolute right-0 top-0 h-24 w-24 rounded-bl-full ${d ? 'bg-white/[0.01]' : 'bg-gray-50'}`} />
                           <div className="flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-2">
                               {b.payment && b.payment.status === "PENDING" ? (
-                                <span className="rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                                  d ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-rose-50 text-rose-600 border border-rose-200'
+                                }`}>
                                   Payment Pending
                                 </span>
                               ) : (
                                 <span
                                   className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-                                    STATUS_COPY[b.status]?.tone || ""
+                                    d ? (STATUS_COPY[b.status]?.tone || "") : (
+                                      b.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                                      b.status === "REQUESTED" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                      b.status === "ATTENDED" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                                      b.status === "NO_SHOW" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                                      "bg-gray-100 text-gray-700 border border-gray-200"
+                                    )
                                   }`}
                                 >
                                   {STATUS_COPY[b.status]?.label || b.status}
                                 </span>
                               )}
                               {b.coveredBySubscription && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 text-[10px] font-bold text-orange-400">
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  d ? 'bg-orange-500/10 border border-orange-500/20 text-orange-400' : 'bg-orange-50 border border-orange-200 text-orange-600'
+                                }`}>
                                   <Crown className="h-3 w-3" />
                                   Subscription Credit
                                 </span>
@@ -682,21 +711,25 @@ export default function ConsultationPage() {
                                 Complete Payment
                               </button>
                             ) : (
-                              <span className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/15">
+                              <span className={`text-xs font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${
+                                d ? 'text-amber-400 bg-amber-500/5 border-amber-500/15' : 'text-amber-700 bg-amber-50 border-amber-200'
+                              }`}>
                                 <Clock className="h-3.5 w-3.5" />
                                 Awaiting Scheduler Confirmation
                               </span>
                             )}
                           </div>
 
-                          <h2 className="text-xl font-bold text-white mt-4 leading-tight">
+                          <h2 className={`text-xl font-bold mt-4 leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
                             {displayTitle}
                           </h2>
 
                           {/* Related Results linked indicator */}
                           {b.relatedResult && (
-                            <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 bg-white/[0.02] p-2.5 rounded-lg border border-white/5 w-fit">
-                              <Sparkles className="h-3.5 w-3.5 text-orange-400" />
+                            <div className={`mt-3 flex items-center gap-2 text-xs p-2.5 rounded-lg border w-fit ${
+                              d ? 'text-gray-400 bg-white/[0.02] border-white/5' : 'text-gray-600 bg-gray-50 border-gray-200'
+                            }`}>
+                              <Sparkles className="h-3.5 w-3.5 text-orange-500" />
                               <span>
                                 Linked Scan:{" "}
                                 <span className={`font-semibold ${bandColor(b.relatedResult.colorBand)}`}>
@@ -706,31 +739,33 @@ export default function ConsultationPage() {
                             </div>
                           )}
 
-                          <div className="mt-6 pt-5 border-t border-white/5 flex flex-wrap items-center justify-between gap-4">
+                          <div className={`mt-6 pt-5 border-t flex flex-wrap items-center justify-between gap-4 ${d ? 'border-white/5' : 'border-gray-100'}`}>
                             {/* Package Info */}
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                                <Sparkles className="h-5 w-5 text-orange-400" />
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
+                                d ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-50 border-orange-200'
+                              }`}>
+                                <Sparkles className="h-5 w-5 text-orange-500" />
                               </div>
                               <div>
-                                <p className="text-sm font-bold text-white">
+                                <p className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                                   {b.tier.name}
                                 </p>
-                                <p className="text-[10px] text-gray-500">
+                                <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                                   Advisory Package
                                 </p>
                               </div>
                             </div>
 
                             {/* Schedule details */}
-                            <div className="flex items-center gap-6 text-xs text-gray-400">
+                            <div className={`flex items-center gap-6 text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-orange-500" />
                                 <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-gray-600 font-bold">
+                                  <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                                     Session Date
                                   </p>
-                                  <p className="font-semibold text-white mt-0.5">
+                                  <p className={`font-semibold mt-0.5 ${d ? 'text-white' : 'text-gray-900'}`}>
                                     {b.scheduledAt ? formatDate(b.scheduledAt) : "Proposing Slots"}
                                   </p>
                                 </div>
@@ -738,10 +773,10 @@ export default function ConsultationPage() {
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-orange-500" />
                                 <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-gray-600 font-bold">
+                                  <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                                     Time/Duration
                                   </p>
-                                  <p className="font-semibold text-white mt-0.5">
+                                  <p className={`font-semibold mt-0.5 ${d ? 'text-white' : 'text-gray-900'}`}>
                                     {b.scheduledAt
                                       ? formatDateTime(b.scheduledAt).split(",")[1]?.trim() || "11:00 AM"
                                       : `${b.tier.durationMinutes} min Call`}
@@ -755,16 +790,18 @@ export default function ConsultationPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/5 bg-[#111318]/40 p-8 text-center">
-                    <Calendar className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No active bookings scheduled.</p>
+                  <div className={`rounded-2xl border border-dashed p-8 text-center ${
+                    d ? 'border-white/5 bg-[#111318]/40' : 'border-gray-200 bg-gray-50/50'
+                  }`}>
+                    <Calendar className={`h-8 w-8 mx-auto mb-2 ${d ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <p className={`text-sm ${d ? 'text-gray-500' : 'text-gray-500'}`}>No active bookings scheduled.</p>
                   </div>
                 )}
               </div>
 
               {/* Historical Archive */}
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">
+                <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Historical Archive
                 </h3>
                 {pastBookings.length > 0 ? (
@@ -778,9 +815,11 @@ export default function ConsultationPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/5 bg-[#111318]/40 p-8 text-center">
-                    <FileText className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No completed advisory history.</p>
+                  <div className={`rounded-2xl border border-dashed p-8 text-center ${
+                    d ? 'border-white/5 bg-[#111318]/40' : 'border-gray-200 bg-gray-50/50'
+                  }`}>
+                    <FileText className={`h-8 w-8 mx-auto mb-2 ${d ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <p className={`text-sm ${d ? 'text-gray-500' : 'text-gray-500'}`}>No completed advisory history.</p>
                   </div>
                 )}
               </div>
@@ -789,27 +828,35 @@ export default function ConsultationPage() {
             {/* Right Column (Sidebar Quick Actions) */}
             <div className="space-y-8">
               {/* Quick Booking */}
-              <div className="rounded-2xl border border-white/5 bg-[#111318] p-6">
-                <h4 className="text-lg font-bold text-white mb-2">Quick Booking</h4>
-                <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              <div className={`rounded-2xl border p-6 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'}`}>
+                <h4 className={`text-lg font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Quick Booking</h4>
+                <p className={`text-xs mb-6 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                   Fast track an operational briefing with Pica&apos;s lead celestial architects.
                 </p>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1.5 block">
+                    <label className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 block ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                       Select Domain
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={openBookingModal}
-                        className="py-2.5 px-3 rounded-lg border border-orange-500/20 hover:border-orange-500 bg-orange-500/5 hover:bg-orange-500/10 text-xs font-semibold text-white transition text-center"
+                        className={`py-2.5 px-3 rounded-lg border text-xs font-semibold transition text-center ${
+                          d 
+                            ? 'border-orange-500/20 hover:border-orange-500 bg-orange-500/5 hover:bg-orange-500/10 text-white' 
+                            : 'border-orange-200 hover:border-orange-500 bg-orange-50/50 hover:bg-orange-100 text-gray-900'
+                        }`}
                       >
                         Cloud Arch
                       </button>
                       <button
                         onClick={openBookingModal}
-                        className="py-2.5 px-3 rounded-lg border border-white/5 hover:border-white/20 bg-white/[0.02] text-xs font-semibold text-white transition text-center"
+                        className={`py-2.5 px-3 rounded-lg border text-xs font-semibold transition text-center ${
+                          d 
+                            ? 'border-white/5 hover:border-white/20 bg-white/[0.02] text-white' 
+                            : 'border-gray-200 hover:border-gray-300 bg-gray-50 text-gray-900'
+                        }`}
                       >
                         Security
                       </button>
@@ -817,14 +864,14 @@ export default function ConsultationPage() {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-1.5 block">
+                    <label className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 block ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                       Urgency Level
                     </label>
                     <div className="relative pt-1">
-                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className={`h-1.5 w-full rounded-full overflow-hidden ${d ? 'bg-white/5' : 'bg-gray-100'}`}>
                         <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 w-1/3 rounded-full" />
                       </div>
-                      <div className="flex justify-between items-center text-[10px] text-gray-500 mt-2 font-medium">
+                      <div className={`flex justify-between items-center text-[10px] mt-2 font-medium ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                         <span>Standard</span>
                         <span>Rush</span>
                         <span>Critical</span>
@@ -842,48 +889,50 @@ export default function ConsultationPage() {
               </div>
 
               {/* Consultant Spotlights */}
-              <div className="rounded-2xl border border-white/5 bg-[#111318] p-6">
-                <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">
+              <div className={`rounded-2xl border p-6 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'}`}>
+                <h4 className={`text-[10px] font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Consultant Spotlights
                 </h4>
                 <div className="space-y-4">
                   {SPOTLIGHTS.map((s, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between p-3 rounded-xl bg-[#0c0d12] border border-white/[0.02]"
+                      className={`flex items-center justify-between p-3 rounded-xl border ${
+                        d ? 'bg-[#0c0d12] border-white/[0.02]' : 'bg-gray-50 border-gray-100'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <img
                           src={s.avatar}
                           alt={s.name}
-                          className="h-9 w-9 rounded-full object-cover border border-white/10"
+                          className={`h-9 w-9 rounded-full object-cover border ${d ? 'border-white/10' : 'border-gray-200'}`}
                         />
                         <div>
-                          <p className="text-xs font-bold text-white">{s.name}</p>
-                          <p className="text-[9px] text-gray-500">{s.role}</p>
+                          <p className={`text-xs font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{s.name}</p>
+                          <p className={`text-[9px] ${d ? 'text-gray-500' : 'text-gray-400'}`}>{s.role}</p>
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-gray-600" />
+                      <ChevronRight className={`h-4 w-4 ${d ? 'text-gray-600' : 'text-gray-400'}`} />
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Data Synchronization Widget */}
-              <div className="rounded-2xl border border-white/5 bg-[#111318] p-6">
+              <div className={`rounded-2xl border p-6 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-xs font-bold text-white">Data Synchronization</h4>
+                  <h4 className={`text-xs font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Data Synchronization</h4>
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
                 {/* Visual Representation of Sync Bars */}
                 <div className="flex items-end gap-1.5 h-16 mb-4">
-                  <div className="bg-white/5 h-1/3 flex-1 rounded-sm" />
-                  <div className="bg-white/5 h-1/2 flex-1 rounded-sm" />
-                  <div className="bg-white/5 h-3/4 flex-1 rounded-sm" />
+                  <div className={`h-1/3 flex-1 rounded-sm ${d ? 'bg-white/5' : 'bg-gray-100'}`} />
+                  <div className={`h-1/2 flex-1 rounded-sm ${d ? 'bg-white/5' : 'bg-gray-100'}`} />
+                  <div className={`h-3/4 flex-1 rounded-sm ${d ? 'bg-white/5' : 'bg-gray-100'}`} />
                   <div className="bg-emerald-400 h-full flex-1 rounded-sm" />
-                  <div className="bg-white/5 h-2/3 flex-1 rounded-sm" />
+                  <div className={`h-2/3 flex-1 rounded-sm ${d ? 'bg-white/5' : 'bg-gray-100'}`} />
                 </div>
-                <p className="text-[10px] text-gray-600 leading-relaxed">
+                <p className={`text-[10px] leading-relaxed ${d ? 'text-gray-600' : 'text-gray-500'}`}>
                   Real-time sync active. Consultation metrics are currently 12% above quarterly baseline.
                 </p>
               </div>
@@ -894,20 +943,26 @@ export default function ConsultationPage() {
         // ─── EMPTY STATE DESIGN LAYOUT ───
         <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto">
           {/* Hero Banner Grid */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16] p-8 md:p-12">
-            <div className="absolute right-0 top-0 h-64 w-64 bg-orange-500/10 rounded-full blur-3xl" />
-            <div className="absolute left-1/4 bottom-0 h-40 w-40 bg-emerald-500/5 rounded-full blur-3xl" />
+          <div className={`relative overflow-hidden rounded-3xl border p-8 md:p-12 ${
+            d
+              ? 'border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16]'
+              : 'border-gray-200 bg-gradient-to-br from-orange-50/60 via-white to-gray-50'
+          }`}>
+            <div className="absolute right-0 top-0 h-64 w-64 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute left-1/4 bottom-0 h-40 w-40 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
               <div className="max-w-2xl">
-                <div className="mb-4 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                <div className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                  d ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                }`}>
                   <Sparkles className="h-3.5 w-3.5" />
                   Performance Index: Top 4%
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                <h1 className={`text-4xl md:text-5xl font-black tracking-tight leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
                   Unlock <span className="text-orange-500">Strategic</span> Guidance
                 </h1>
-                <p className="mt-4 text-sm md:text-base text-gray-400 leading-relaxed">
+                <p className={`mt-4 text-sm md:text-base leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   Connect with world-class consultants to accelerate your performance
                   improvements based on your {percentile} rank and +24.8%
                   competitive delta findings.
@@ -923,7 +978,11 @@ export default function ConsultationPage() {
                   </button>
                   <button
                     onClick={openBookingModal}
-                    className="rounded-xl border border-white/5 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.05] px-6 py-3.5 text-sm font-semibold text-white transition"
+                    className={`rounded-xl border px-6 py-3.5 text-sm font-semibold transition ${
+                      d 
+                        ? 'border-white/5 hover:border-white/20 bg-white/[0.02] hover:bg-white/[0.05] text-white' 
+                        : 'border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100 text-gray-900'
+                    }`}
                   >
                     View Methodology
                   </button>
@@ -931,14 +990,16 @@ export default function ConsultationPage() {
               </div>
 
               {/* Decorative performance index circle gauge widget */}
-              <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-white/5 bg-[#121620]/60 backdrop-blur min-w-[200px]">
+              <div className={`flex flex-col items-center justify-center p-6 rounded-2xl border backdrop-blur min-w-[200px] ${
+                d ? 'border-white/5 bg-[#121620]/60' : 'border-gray-200 bg-white/90 shadow-sm'
+              }`}>
                 <div className="relative flex items-center justify-center h-28 w-28">
                   <svg className="absolute h-full w-full" viewBox="0 0 100 100">
                     <circle
                       cx="50"
                       cy="50"
                       r="40"
-                      stroke="#1a202c"
+                      stroke={d ? "#1a202c" : "#e5e7eb"}
                       strokeWidth="6"
                       fill="transparent"
                     />
@@ -954,9 +1015,9 @@ export default function ConsultationPage() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span className="text-2xl font-black text-white">96.2%</span>
+                  <span className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>96.2%</span>
                 </div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-4 text-center">
+                <p className={`text-[10px] font-bold uppercase tracking-widest mt-4 text-center ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Percentile Delta
                 </p>
               </div>
@@ -965,34 +1026,46 @@ export default function ConsultationPage() {
 
           {/* Three Feature Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 transition group">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 group-hover:scale-105 transition">
+            <div className={`rounded-2xl border p-6 transition group ${
+              d ? 'border-white/5 bg-[#111318] hover:border-white/10' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
+            }`}>
+              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl group-hover:scale-105 transition ${
+                d ? 'bg-orange-500/10 text-orange-400' : 'bg-orange-50 text-orange-600'
+              }`}>
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white">AI-Assisted Pre-briefing</h3>
-              <p className="mt-2.5 text-xs text-gray-500 leading-relaxed">
+              <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>AI-Assisted Pre-briefing</h3>
+              <p className={`mt-2.5 text-xs leading-relaxed ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 Our neural engine analyzes your data delta before you meet, providing
                 consultants with an instant 360° context map of your operational architecture.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 transition group">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-105 transition">
+            <div className={`rounded-2xl border p-6 transition group ${
+              d ? 'border-white/5 bg-[#111318] hover:border-white/10' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
+            }`}>
+              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl group-hover:scale-105 transition ${
+                d ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
+              }`}>
                 <Activity className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white">Expert Strategy Mapping</h3>
-              <p className="mt-2.5 text-xs text-gray-500 leading-relaxed">
+              <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Expert Strategy Mapping</h3>
+              <p className={`mt-2.5 text-xs leading-relaxed ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 Translate high-level percentile rankings into concrete structural shifts through
                 visual roadmap sessions with lead celestial architects.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/5 bg-[#111318] p-6 hover:border-white/10 transition group">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-105 transition">
+            <div className={`rounded-2xl border p-6 transition group ${
+              d ? 'border-white/5 bg-[#111318] hover:border-white/10' : 'border-gray-200 bg-white hover:border-gray-300 shadow-sm'
+            }`}>
+              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl group-hover:scale-105 transition ${
+                d ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-600'
+              }`}>
                 <FileText className="h-5 w-5" />
               </div>
-              <h3 className="text-base font-bold text-white">Actionable Execution Plans</h3>
-              <p className="mt-2.5 text-xs text-gray-500 leading-relaxed">
+              <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Actionable Execution Plans</h3>
+              <p className={`mt-2.5 text-xs leading-relaxed ${d ? 'text-gray-500' : 'text-gray-600'}`}>
                 Walk away from every session with a prioritized sprint backlog designed to close
                 your competitive delta by an additional 12% in Q3.
               </p>
@@ -1000,33 +1073,37 @@ export default function ConsultationPage() {
           </div>
 
           {/* Upcoming Sessions Box (Empty State Version) */}
-          <div className="rounded-2xl border border-white/5 bg-[#111318] overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">
+          <div className={`rounded-2xl border overflow-hidden ${
+            d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'
+          }`}>
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${d ? 'border-white/5' : 'border-gray-100'}`}>
+              <h3 className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                 Upcoming Sessions
               </h3>
-              <span className="text-[10px] text-gray-600 uppercase font-semibold">
+              <span className={`text-[10px] uppercase font-semibold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                 No Active Bookings
               </span>
             </div>
             <div className="p-12 text-center flex flex-col items-center justify-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-                <Calendar className="h-5 w-5 text-gray-600" />
+              <div className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'}`}>
+                <Calendar className={`h-5 w-5 ${d ? 'text-gray-600' : 'text-gray-400'}`} />
               </div>
-              <h4 className="text-lg font-bold text-white">No consultations scheduled</h4>
-              <p className="mt-2 text-xs text-gray-500 max-w-md leading-relaxed mx-auto">
+              <h4 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>No consultations scheduled</h4>
+              <p className={`mt-2 text-xs max-w-md leading-relaxed mx-auto ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                 Your performance data suggests high-impact gains are available in the current
                 cycle. Start your first session to capture this alpha.
               </p>
             </div>
-            <div className="px-6 py-4 bg-[#0a0d13] border-t border-white/5 flex items-center justify-between text-xs text-gray-500">
+            <div className={`px-6 py-4 border-t flex items-center justify-between text-xs ${
+              d ? 'bg-[#0a0d13] border-white/5 text-gray-500' : 'bg-gray-50 border-gray-100 text-gray-500'
+            }`}>
               <div className="flex items-center gap-2">
                 <img
                   src={EXPERTS[0].avatar}
                   alt="Dr. Thorne"
-                  className="h-6 w-6 rounded-full object-cover border border-white/10"
+                  className={`h-6 w-6 rounded-full object-cover border ${d ? 'border-white/10' : 'border-gray-200'}`}
                 />
-                <span className="font-semibold text-gray-400">Lead Architect Available</span>
+                <span className={`font-semibold ${d ? 'text-gray-400' : 'text-gray-700'}`}>Lead Architect Available</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -1049,10 +1126,12 @@ export default function ConsultationPage() {
       {/* ─── MULTI-STEP BOOKING MODAL (SCHEDULER WIZARD) ─── */}
       {bookingModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 bg-[#0c0e14] shadow-2xl flex flex-col max-h-[90vh]">
+          <div className={`relative w-full max-w-4xl rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] ${
+            d ? 'border-white/10 bg-[#0c0e14]' : 'border-gray-200 bg-white'
+          }`}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest">
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${d ? 'border-white/5' : 'border-gray-100'}`}>
+              <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                 <span>Step {bookingStep} of 3</span>
                 <span>•</span>
                 <span>
@@ -1065,7 +1144,9 @@ export default function ConsultationPage() {
               </div>
               <button
                 onClick={() => setBookingModalOpen(false)}
-                className="rounded-lg p-1 text-gray-500 hover:text-white hover:bg-white/5 transition"
+                className={`rounded-lg p-1 transition ${
+                  d ? 'text-gray-500 hover:text-white hover:bg-white/5' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
+                }`}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1077,10 +1158,10 @@ export default function ConsultationPage() {
               {bookingStep === 1 && (
                 <div className="space-y-6 animate-fadeIn">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-white">
+                    <h2 className={`text-2xl md:text-3xl font-extrabold ${d ? 'text-white' : 'text-gray-900'}`}>
                       Architect your next breakthrough.
                     </h2>
-                    <p className="mt-2 text-xs md:text-sm text-gray-400 max-w-3xl leading-relaxed">
+                    <p className={`mt-2 text-xs md:text-sm max-w-3xl leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                       Select an advisory package tier to schedule your operational strategy session.
                       Our consultations are tailored to map your path to long-term scaling capacity.
                     </p>
@@ -1099,11 +1180,11 @@ export default function ConsultationPage() {
                       );
 
                       const tierIcons: Record<number, React.ReactNode> = {
-                        1: <Sparkles className="h-6 w-6 text-blue-400" />,
-                        2: <Sparkles className="h-6 w-6 text-orange-400" />,
-                        3: <Crown className="h-6 w-6 text-purple-400" />,
+                        1: <Sparkles className="h-6 w-6 text-blue-500" />,
+                        2: <Sparkles className="h-6 w-6 text-orange-500" />,
+                        3: <Crown className="h-6 w-6 text-purple-500" />,
                       };
-                      const icon = tierIcons[tierItem.tier] || <Sparkles className="h-6 w-6 text-emerald-400" />;
+                      const icon = tierIcons[tierItem.tier] || <Sparkles className="h-6 w-6 text-emerald-500" />;
 
                       return (
                         <div
@@ -1111,8 +1192,8 @@ export default function ConsultationPage() {
                           onClick={() => setSelectedTier(tierItem)}
                           className={`relative flex flex-col justify-between rounded-xl border p-6 cursor-pointer transition duration-200 hover:scale-[1.01] ${
                             isSelected
-                              ? "border-orange-500 bg-orange-500/[0.03] ring-1 ring-orange-500/20"
-                              : "border-white/5 bg-[#111318] hover:border-white/10"
+                              ? (d ? "border-orange-500 bg-orange-500/[0.03] ring-1 ring-orange-500/20" : "border-orange-500 bg-orange-50/40 ring-1 ring-orange-500/30")
+                              : (d ? "border-white/5 bg-[#111318] hover:border-white/10" : "border-gray-200 bg-white hover:border-gray-300 shadow-sm")
                           }`}
                         >
                           {/* Checked Indicator */}
@@ -1125,24 +1206,30 @@ export default function ConsultationPage() {
                           <div>
                             {/* Icon & Duration */}
                             <div className="flex items-center justify-between mb-4">
-                              <div className="p-3 rounded-lg bg-white/[0.02] border border-white/5">
+                              <div className={`p-3 rounded-lg border ${
+                                d ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50 border-gray-100'
+                              }`}>
                                 {icon}
                               </div>
-                              <span className="text-[10px] uppercase font-bold text-gray-500 bg-white/[0.03] px-2 py-1 rounded-md">
+                              <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${
+                                d ? 'text-gray-500 bg-white/[0.03]' : 'text-gray-600 bg-gray-100'
+                              }`}>
                                 {tierItem.durationMinutes} Min Session
                               </span>
                             </div>
 
                             {/* Name & Description */}
-                            <h4 className="text-base font-bold text-white mt-2">
+                            <h4 className={`text-base font-bold mt-2 ${d ? 'text-white' : 'text-gray-900'}`}>
                               {tierItem.name}
                             </h4>
-                            <p className="mt-2 text-xs text-gray-400 leading-relaxed">
+                            <p className={`mt-2 text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                               {tierItem.description}
                             </p>
 
                             {tierItem.freeP2ARuns > 0 && (
-                              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-[9px] font-bold text-blue-400">
+                              <div className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[9px] font-bold ${
+                                d ? 'bg-blue-500/10 border border-blue-500/20 text-blue-400' : 'bg-blue-50 border border-blue-200 text-blue-700'
+                              }`}>
                                 <Sparkles className="h-3 w-3" />
                                 Includes {tierItem.freeP2ARuns} Free Strategic Scan credit{tierItem.freeP2ARuns > 1 ? 's' : ''}
                               </div>
@@ -1150,17 +1237,19 @@ export default function ConsultationPage() {
                           </div>
 
                           {/* Price Tag Info */}
-                          <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
-                            <span className="text-[10px] uppercase font-bold text-gray-600">
+                          <div className={`mt-6 pt-4 border-t flex items-center justify-between ${d ? 'border-white/5' : 'border-gray-100'}`}>
+                            <span className={`text-[10px] uppercase font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                               Level {tierItem.tier} Package
                             </span>
                             {hasQuotaLeft ? (
-                              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full">
+                              <span className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                                d ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                              }`}>
                                 <Crown className="h-3 w-3" />
                                 Included with Sub
                               </span>
                             ) : (
-                              <span className="text-sm font-extrabold text-white">
+                              <span className={`text-sm font-extrabold ${d ? 'text-white' : 'text-gray-900'}`}>
                                 {formatMoney(priceConverted ?? 0, displayCurrency)}
                               </span>
                             )}
@@ -1187,25 +1276,29 @@ export default function ConsultationPage() {
               {bookingStep === 2 && selectedTier && (
                 <form onSubmit={handleBookSubmit} className="space-y-8 animate-fadeIn">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
+                    <h2 className={`text-2xl md:text-3xl font-extrabold mt-1 ${d ? 'text-white' : 'text-gray-900'}`}>
                       Architectural <span className="text-orange-500">Consultation</span>
                     </h2>
-                    <p className="mt-2 text-xs md:text-sm text-gray-400 max-w-3xl leading-relaxed">
+                    <p className={`mt-2 text-xs md:text-sm max-w-3xl leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                       Map your operational trajectory with our leads. Dates highlighted in emerald
                       represent peak availability for your sector.
                     </p>
                   </div>
 
                   {/* Booking fee details box moved to the top */}
-                  <div className="p-4 rounded-xl border border-white/5 bg-[#111318] flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Consultation Service Charge</span>
+                  <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                    d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    <span className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>Consultation Service Charge</span>
                     {mySub && mySub.plan.tier >= selectedTier.tier && consultationsRemaining > 0 ? (
-                      <span className="text-xs font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/10">
+                      <span className={`text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full border ${
+                        d ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/10' : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      }`}>
                         <Crown className="h-3.5 w-3.5" />
                         Included with subscription ({consultationsRemaining} left)
                       </span>
                     ) : (
-                      <span className="text-sm font-extrabold text-white">
+                      <span className={`text-sm font-extrabold ${d ? 'text-white' : 'text-gray-900'}`}>
                         {formatMoney(
                           convertFromUsd(
                             selectedTier.priceUsd,
@@ -1221,28 +1314,30 @@ export default function ConsultationPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                     {/* Left Column: Dynamic Calendar Slots */}
                     <div className="lg:col-span-3 space-y-6">
-                      <div className="p-5 rounded-xl border border-white/5 bg-[#111318]">
+                      <div className={`p-5 rounded-xl border ${
+                        d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'
+                      }`}>
                         <div className="flex items-center justify-between mb-4">
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); handlePrevMonth(); }}
-                            className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white transition"
+                            className={`p-1 rounded transition ${d ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
                           >
                             <ChevronLeft className="h-4 w-4" />
                           </button>
-                          <span className="text-sm font-bold text-white">
+                          <span className={`text-sm font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                             {monthLabel}
                           </span>
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); handleNextMonth(); }}
-                            className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-white transition"
+                            className={`p-1 rounded transition ${d ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'}`}
                           >
                             <ChevronRight className="h-4 w-4" />
                           </button>
                         </div>
                         {/* Grid representing days of the week */}
-                        <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-gray-600 mb-2 uppercase">
+                        <div className={`grid grid-cols-7 gap-2 text-center text-[10px] font-bold mb-2 uppercase ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                           <span>Mon</span>
                           <span>Tue</span>
                           <span>Wed</span>
@@ -1270,15 +1365,17 @@ export default function ConsultationPage() {
                                 onClick={() => setSelectedDate(day)}
                                 className={`h-9 rounded-lg flex items-center justify-center text-xs font-bold transition relative ${
                                   isSelected
-                                    ? "bg-emerald-400 text-black shadow-lg shadow-emerald-400/20"
+                                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
                                     : !isPast
-                                      ? "border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:border-emerald-500/60"
-                                      : "text-gray-700 cursor-not-allowed line-through"
+                                      ? (d 
+                                          ? "border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 hover:border-emerald-500/60" 
+                                          : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-100")
+                                      : (d ? "text-gray-700 cursor-not-allowed line-through" : "text-gray-300 cursor-not-allowed line-through")
                                 }`}
                               >
                                 {day.getDate()}
                                 {!isPast && !isSelected && (
-                                  <span className="absolute bottom-1 h-1 w-1 rounded-full bg-emerald-400" />
+                                  <span className={`absolute bottom-1 h-1 w-1 rounded-full ${d ? 'bg-emerald-400' : 'bg-emerald-600'}`} />
                                 )}
                               </button>
                             );
@@ -1287,18 +1384,22 @@ export default function ConsultationPage() {
                       </div>
 
                       {/* Selected Tier Card */}
-                      <div className="flex items-center gap-4 p-4 rounded-xl border border-white/5 bg-[#111318]">
-                        <div className="h-12 w-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                          <Sparkles className="h-6 w-6 text-orange-400" />
+                      <div className={`flex items-center gap-4 p-4 rounded-xl border ${
+                        d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'
+                      }`}>
+                        <div className={`h-12 w-12 rounded-xl flex items-center justify-center border ${
+                          d ? 'bg-orange-500/10 border-orange-500/20' : 'bg-orange-100 border-orange-200'
+                        }`}>
+                          <Sparkles className="h-6 w-6 text-orange-500" />
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+                          <p className={`text-xs font-bold uppercase tracking-wider ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                             Selected Advisory Package
                           </p>
-                          <h4 className="text-sm font-bold text-white mt-0.5">
+                          <h4 className={`text-sm font-bold mt-0.5 ${d ? 'text-white' : 'text-gray-900'}`}>
                             {selectedTier.name}
                           </h4>
-                          <p className="text-[10px] text-orange-400 mt-0.5">
+                          <p className="text-[10px] text-orange-500 mt-0.5 font-medium">
                             Level {selectedTier.tier} · {selectedTier.durationMinutes} Minute Strategic Session
                           </p>
                         </div>
@@ -1309,7 +1410,7 @@ export default function ConsultationPage() {
                     <div className="lg:col-span-2 space-y-6">
                       {/* Slots Selector */}
                       <div>
-                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-2">
+                        <label className={`text-[10px] font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                           Select Time (CET)
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -1322,8 +1423,8 @@ export default function ConsultationPage() {
                                 onClick={() => setSelectedTimeSlot(slot)}
                                 className={`py-3 text-xs font-semibold rounded-lg text-center border transition ${
                                   isSelected
-                                    ? "border-emerald-400 bg-emerald-500/5 text-emerald-400"
-                                    : "border-white/5 bg-[#111318] hover:border-white/15 text-gray-400 hover:text-white"
+                                    ? (d ? "border-emerald-400 bg-emerald-500/5 text-emerald-400" : "border-emerald-500 bg-emerald-50 text-emerald-700")
+                                    : (d ? "border-white/5 bg-[#111318] hover:border-white/15 text-gray-400 hover:text-white" : "border-gray-200 bg-white hover:border-gray-300 text-gray-600 hover:text-gray-900 shadow-sm")
                                 }`}
                               >
                                 {slot}
@@ -1336,7 +1437,7 @@ export default function ConsultationPage() {
                       {/* Briefing inputs */}
                       <div className="space-y-4 pt-2">
                         <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1.5">
+                          <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                             Critical Focus Area *
                           </label>
                           <input
@@ -1344,19 +1445,23 @@ export default function ConsultationPage() {
                             value={topic}
                             onChange={(e) => setTopic(e.target.value)}
                             placeholder="e.g. Scaling bottlenecks, security compliance"
-                            className="w-full bg-[#111318] border border-white/5 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-orange-500 transition"
+                            className={`w-full border rounded-lg px-3 py-2.5 text-xs outline-none focus:border-orange-500 transition ${
+                              d ? 'bg-[#111318] border-white/5 text-white placeholder-gray-600' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`}
                           />
                         </div>
 
                         {results.length > 0 && (
                           <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1.5">
+                            <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                               Link Diagnostic Scan (Optional)
                             </label>
                             <select
                               value={relatedSessionResultId}
                               onChange={(e) => setRelatedSessionResultId(e.target.value)}
-                              className="w-full bg-[#111318] border border-white/5 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-orange-500 transition"
+                              className={`w-full border rounded-lg px-3 py-2.5 text-xs outline-none focus:border-orange-500 transition ${
+                                d ? 'bg-[#111318] border-white/5 text-white' : 'bg-white border-gray-200 text-gray-900'
+                              }`}
                             >
                               <option value="">— Choose scan result —</option>
                               {results.map((r) => (
@@ -1369,7 +1474,7 @@ export default function ConsultationPage() {
                         )}
 
                         <div>
-                          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1.5">
+                          <label className={`text-[10px] font-bold uppercase tracking-widest block mb-1.5 ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                             Special Requirements
                           </label>
                           <textarea
@@ -1377,7 +1482,9 @@ export default function ConsultationPage() {
                             onChange={(e) => setNotes(e.target.value)}
                             placeholder="Provide any specific context, operational bottlenecks, or briefing notes you want the advisor to review prior to the call."
                             rows={4}
-                            className="w-full bg-[#111318] border border-white/5 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-orange-500 transition resize-none"
+                            className={`w-full border rounded-lg px-3 py-2.5 text-xs outline-none focus:border-orange-500 transition resize-none ${
+                              d ? 'bg-[#111318] border-white/5 text-white placeholder-gray-600' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                            }`}
                           />
                         </div>
                       </div>
@@ -1385,11 +1492,13 @@ export default function ConsultationPage() {
                   </div>
 
                   {/* Footer checkout bar with Back to Packages aligned */}
-                  <div className="border-t border-white/5 pt-6 flex items-center justify-between gap-4">
+                  <div className={`border-t pt-6 flex items-center justify-between gap-4 ${d ? 'border-white/5' : 'border-gray-100'}`}>
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); setBookingStep(1); }}
-                      className="py-3 px-5 text-xs font-semibold text-gray-400 hover:text-white transition flex items-center gap-1"
+                      className={`py-3 px-5 text-xs font-semibold transition flex items-center gap-1 ${
+                        d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                      }`}
                     >
                       ← Back to packages
                     </button>
@@ -1401,7 +1510,9 @@ export default function ConsultationPage() {
                           setBookingStep(1);
                           setSelectedTier(null);
                         }}
-                        className="py-3 px-5 text-xs font-semibold text-gray-400 hover:text-white transition"
+                        className={`py-3 px-5 text-xs font-semibold transition ${
+                          d ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                        }`}
                       >
                         Cancel
                       </button>
@@ -1421,14 +1532,16 @@ export default function ConsultationPage() {
               {/* STEP 3: SUCCESS CONFIRMATION / PAY CHEKOUT */}
               {bookingStep === 3 && selectedTier && (
                 <div className="text-center py-8 max-w-md mx-auto space-y-6 animate-fadeIn">
-                  <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                  <div className={`mx-auto h-16 w-16 rounded-full border flex items-center justify-center ${
+                    d ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  }`}>
                     <Check className="h-8 w-8 stroke-[3]" />
                   </div>
 
                   {checkoutUrl ? (
                     <>
-                      <h2 className="text-2xl font-black text-white">Payment Secure Checkout</h2>
-                      <p className="text-xs text-gray-400 leading-relaxed">
+                      <h2 className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>Payment Secure Checkout</h2>
+                      <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                         To lock in your strategic advisory call, please
                         complete the secure card checkout using the link below.
                       </p>
@@ -1443,7 +1556,7 @@ export default function ConsultationPage() {
                         <button
                           type="button"
                           onClick={() => setBookingModalOpen(false)}
-                          className="text-xs text-gray-500 hover:text-white transition py-2"
+                          className={`text-xs transition py-2 ${d ? 'text-gray-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
                         >
                           Close Window
                         </button>
@@ -1451,56 +1564,62 @@ export default function ConsultationPage() {
                     </>
                   ) : (
                     <>
-                      <h2 className="text-2xl font-black text-white leading-tight">
+                      <h2 className={`text-2xl font-black leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
                         Your Strategy Session is Locked In
                       </h2>
-                      <p className="text-xs text-gray-400 leading-relaxed">
+                      <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                         The Celestial Architect is preparing your deep-dive workspace. We have
                         notified the advisory team of your request.
                       </p>
 
                       {/* Briefing Details Card */}
-                      <div className="text-left rounded-xl border border-white/5 bg-[#111318] p-5 space-y-4">
+                      <div className={`text-left rounded-xl border p-5 space-y-4 ${
+                        d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'
+                      }`}>
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                            <Sparkles className="h-5 w-5 text-emerald-400" />
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
+                            d ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-emerald-100 border-emerald-200 text-emerald-600'
+                          }`}>
+                            <Sparkles className="h-5 w-5" />
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold text-white">
+                            <h4 className={`text-xs font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
                               {selectedTier.name}
                             </h4>
-                            <p className="text-[10px] text-gray-500">
+                            <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                               Level {selectedTier.tier} Session
                             </p>
                           </div>
                         </div>
 
-                        <div className="h-[1px] bg-white/5" />
+                        <div className={`h-[1px] ${d ? 'bg-white/5' : 'bg-gray-200'}`} />
 
-                        <div className="grid grid-cols-2 gap-4 text-xs text-gray-400">
+                        <div className={`grid grid-cols-2 gap-4 text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                           <div>
-                            <p className="text-[9px] uppercase tracking-wider text-gray-600 font-bold">
+                            <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                               Consultation Date
                             </p>
-                            <p className="font-semibold text-white mt-0.5">
+                            <p className={`font-semibold mt-0.5 ${d ? 'text-white' : 'text-gray-900'}`}>
                               {selectedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                             </p>
                           </div>
                           <div>
-                            <p className="text-[9px] uppercase tracking-wider text-gray-600 font-bold">
+                            <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                               Scheduled Time
                             </p>
-                            <p className="font-semibold text-white mt-0.5">
+                            <p className={`font-semibold mt-0.5 ${d ? 'text-white' : 'text-gray-900'}`}>
                               {selectedTimeSlot} (CET)
                             </p>
                           </div>
                         </div>
 
                         <div className="pt-2">
-                          <p className="text-[9px] uppercase tracking-wider text-gray-600 font-bold">
+                          <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-600' : 'text-gray-400'}`}>
                             Location
                           </p>
-                          <p className="text-xs font-semibold text-emerald-400 mt-0.5 flex items-center gap-1.5">
+                          <p className={`text-xs font-semibold mt-0.5 flex items-center gap-1.5 ${
+                            d ? 'text-emerald-400' : 'text-emerald-600'
+                          }`}>
                             <Lock className="h-3.5 w-3.5" />
                             Strategic Advisory Call (Secure Link)
                           </p>
@@ -1520,7 +1639,11 @@ export default function ConsultationPage() {
                         <button
                           type="button"
                           onClick={() => setBookingModalOpen(false)}
-                          className="w-full py-3.5 px-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-xs font-bold text-white uppercase tracking-wider transition"
+                          className={`w-full py-3.5 px-4 rounded-xl border text-xs font-bold uppercase tracking-wider transition ${
+                            d 
+                              ? 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-white' 
+                              : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-900'
+                          }`}
                         >
                           Go to Dashboard
                         </button>
@@ -1556,6 +1679,7 @@ function HistoryRow({
   booking: ConsultationBookingPayload;
   onOpenDetails: () => void;
 }) {
+  const { dark: d } = useTheme();
   const [open, setOpen] = useState(false);
   const consultantName = booking.adminNotesUpdatedBy
     ? [booking.adminNotesUpdatedBy.firstName, booking.adminNotesUpdatedBy.lastName]
@@ -1585,18 +1709,24 @@ function HistoryRow({
   return (
     <div
       onClick={onOpenDetails}
-      className="rounded-xl border border-white/5 bg-[#111318] p-4 hover:border-white/10 hover:bg-white/[0.02] transition duration-200 cursor-pointer"
+      className={`rounded-xl border p-4 transition duration-200 cursor-pointer ${
+        d 
+          ? 'border-white/5 bg-[#111318] hover:border-white/10 hover:bg-white/[0.02]' 
+          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+      }`}
     >
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-[#0c0d12] flex items-center justify-center border border-white/[0.05]">
-            <FileText className="h-4 w-4 text-gray-500" />
+          <div className={`h-8 w-8 rounded-lg flex items-center justify-center border ${
+            d ? 'bg-[#0c0d12] border-white/[0.05]' : 'bg-gray-100 border-gray-200'
+          }`}>
+            <FileText className={`h-4 w-4 ${d ? 'text-gray-500' : 'text-gray-600'}`} />
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white leading-tight">
+            <h4 className={`text-sm font-semibold leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
               {booking.topic}
             </h4>
-            <p className="text-[10px] text-gray-500 mt-1 flex items-center gap-2">
+            <p className={`text-[10px] mt-1 flex items-center gap-2 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
               <span>{formatDate(booking.requestedAt)}</span>
               <span>•</span>
               <span>{booking.tier.name}</span>
@@ -1612,7 +1742,11 @@ function HistoryRow({
                 e.stopPropagation();
                 setOpen(!open);
               }}
-              className="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-xs font-semibold text-gray-400 hover:text-white transition"
+              className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg border text-xs font-semibold transition ${
+                d 
+                  ? 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-gray-400 hover:text-white' 
+                  : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+              }`}
             >
               <MessageSquare className="h-3.5 w-3.5" />
               Notes
@@ -1623,7 +1757,11 @@ function HistoryRow({
               e.stopPropagation();
               alert("Downloading notes pack...");
             }}
-            className="p-2 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-gray-400 hover:text-white transition"
+            className={`p-2 rounded-lg border transition ${
+              d 
+                ? 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-gray-400 hover:text-white' 
+                : 'border-gray-200 bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+            }`}
             aria-label="Download Summary"
           >
             <Download className="h-3.5 w-3.5" />
@@ -1633,14 +1771,19 @@ function HistoryRow({
 
       {/* Expanded Feedback Panel */}
       {open && feedbacks.length > 0 && (
-        <div className="mt-4 p-4 rounded-lg bg-[#0c0d12] border border-indigo-500/10 text-xs space-y-4 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className={`mt-4 p-4 rounded-lg border text-xs space-y-4 animate-fadeIn ${
+            d ? 'bg-[#0c0d12] border-indigo-500/10' : 'bg-indigo-50/50 border-indigo-200'
+          }`} 
+          onClick={(e) => e.stopPropagation()}
+        >
           {feedbacks.map((f, idx) => (
-            <div key={idx} className="space-y-1 border-b border-white/5 pb-2 last:border-b-0 last:pb-0">
-              <div className="flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase">
+            <div key={idx} className={`space-y-1 border-b pb-2 last:border-b-0 last:pb-0 ${d ? 'border-white/5' : 'border-gray-200'}`}>
+              <div className={`flex items-center justify-between text-[9px] font-bold uppercase ${d ? 'text-indigo-400' : 'text-indigo-600'}`}>
                 <span>{f.title || `Feedback Block #${idx + 1}`}</span>
                 <span>{f.updatedAt ? formatDate(f.updatedAt) : ""}</span>
               </div>
-              <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+              <p className={`leading-relaxed whitespace-pre-wrap ${d ? 'text-gray-300' : 'text-gray-700'}`}>
                 {f.content}
               </p>
             </div>
@@ -1662,6 +1805,7 @@ function ViewBookingModal({
   booking: ConsultationBookingPayload;
   onClose: () => void;
 }) {
+  const { dark: d } = useTheme();
   const status = STATUS_COPY[booking.status] ?? {
     label: booking.status,
     tone: "bg-gray-500/15 text-gray-300 border border-gray-500/20",
@@ -1693,22 +1837,34 @@ function ViewBookingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto animate-fadeIn">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0c0e14] shadow-2xl flex flex-col max-h-[90vh]">
+      <div className={`relative w-full max-w-2xl rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] ${
+        d ? 'border-white/10 bg-[#0c0e14]' : 'border-gray-200 bg-white'
+      }`}>
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+        <div className={`flex items-center justify-between px-6 py-4 border-b ${d ? 'border-white/5' : 'border-gray-100'}`}>
           <div className="flex items-center gap-2">
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${status.tone}`}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${
+                d ? status.tone : (
+                  booking.status === "CONFIRMED" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                  booking.status === "REQUESTED" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                  booking.status === "ATTENDED" ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                  booking.status === "NO_SHOW" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                  "bg-gray-100 text-gray-700 border border-gray-200"
+                )
+              }`}
             >
               {status.label}
             </span>
-            <span className="text-xs text-gray-500 font-semibold">
+            <span className={`text-xs font-semibold ${d ? 'text-gray-500' : 'text-gray-500'}`}>
               Advisory Booking Details
             </span>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1 text-gray-500 hover:text-white hover:bg-white/5 transition"
+            className={`rounded-lg p-1 transition ${
+              d ? 'text-gray-500 hover:text-white hover:bg-white/5' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
+            }`}
           >
             <X className="h-5 w-5" />
           </button>
@@ -1718,10 +1874,10 @@ function ViewBookingModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Main Title / Topic */}
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-white leading-tight">
+            <h2 className={`text-xl md:text-2xl font-black leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
               {booking.topic}
             </h2>
-            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+            <p className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs ${d ? 'text-gray-500' : 'text-gray-500'}`}>
               <span>{booking.tier.name}</span>
               <span>·</span>
               <span className="inline-flex items-center gap-1">
@@ -1736,19 +1892,21 @@ function ViewBookingModal({
           {/* Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Advisor Assigned */}
-            <div className="p-4 rounded-xl border border-white/5 bg-[#111318]">
-              <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+            <div className={`p-4 rounded-xl border ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'}`}>
+              <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                 Assigned Advisor
               </p>
               <div className="flex items-center gap-3 mt-2">
-                <div className="h-10 w-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                  <User className="h-5 w-5 text-orange-400" />
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${
+                  d ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-100 border-orange-200 text-orange-500'
+                }`}>
+                  <User className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-white leading-tight">
+                  <h4 className={`text-sm font-bold leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
                     {consultantName === "PICA Consultant" ? "PICA Advisory Team" : consultantName}
                   </h4>
-                  <p className="text-[10px] text-gray-500">
+                  <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                     {consultantName === "PICA Consultant" ? "Strategic Advisory Division" : "PICA Advisor"}
                   </p>
                 </div>
@@ -1756,12 +1914,12 @@ function ViewBookingModal({
             </div>
 
             {/* Schedule Slot */}
-            <div className="p-4 rounded-xl border border-white/5 bg-[#111318] flex flex-col justify-between">
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'}`}>
               <div>
-                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+                <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Scheduled Time
                 </p>
-                <p className="text-sm font-bold text-white mt-2">
+                <p className={`text-sm font-bold mt-2 ${d ? 'text-white' : 'text-gray-900'}`}>
                   {booking.scheduledAt ? formatDateTime(booking.scheduledAt) : "Awaiting slots assignment"}
                 </p>
               </div>
@@ -1771,7 +1929,9 @@ function ViewBookingModal({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                  className={`mt-2 text-xs font-semibold flex items-center gap-1 ${
+                    d ? 'text-emerald-400 hover:text-emerald-300' : 'text-emerald-600 hover:text-emerald-700'
+                  }`}
                 >
                   Join Meeting URL <ExternalLink className="h-3 w-3" />
                 </a>
@@ -1780,11 +1940,11 @@ function ViewBookingModal({
 
             {/* Briefing notes context */}
             {booking.notes && (
-              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
-                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+              <div className={`p-4 rounded-xl border md:col-span-2 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'}`}>
+                <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Briefing Notes & Context
                 </p>
-                <p className="text-xs text-gray-300 mt-2 leading-relaxed whitespace-pre-wrap">
+                <p className={`text-xs mt-2 leading-relaxed whitespace-pre-wrap ${d ? 'text-gray-300' : 'text-gray-700'}`}>
                   {booking.notes}
                 </p>
               </div>
@@ -1792,11 +1952,11 @@ function ViewBookingModal({
 
             {/* Preferred times options */}
             {booking.preferredTimes && (
-              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
-                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+              <div className={`p-4 rounded-xl border md:col-span-2 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'}`}>
+                <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Preferred Availability Slots
                 </p>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className={`text-xs mt-1 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
                   {booking.preferredTimes}
                 </p>
               </div>
@@ -1804,14 +1964,16 @@ function ViewBookingModal({
 
             {/* Linked result */}
             {booking.relatedResult && (
-              <div className="p-4 rounded-xl border border-white/5 bg-[#111318] md:col-span-2">
-                <p className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">
+              <div className={`p-4 rounded-xl border md:col-span-2 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-gray-50'}`}>
+                <p className={`text-[9px] uppercase tracking-wider font-bold ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Linked Diagnostic Scan
                 </p>
-                <div className="mt-2 flex items-center gap-3 bg-[#0a0d13] p-3 rounded-lg border border-white/5">
-                  <Sparkles className="h-4 w-4 text-orange-400" />
-                  <div className="text-xs text-gray-300">
-                    <span className="font-semibold text-white">
+                <div className={`mt-2 flex items-center gap-3 p-3 rounded-lg border ${
+                  d ? 'bg-[#0a0d13] border-white/5' : 'bg-white border-gray-200'
+                }`}>
+                  <Sparkles className="h-4 w-4 text-orange-500" />
+                  <div className={`text-xs ${d ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className={`font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>
                       {booking.relatedResult.pillarCode || "System-wide"} Scan
                     </span>{" "}
                     • Phase {booking.relatedResult.phase === "PHASE2B" ? "2B" : "2A"} •{" "}
@@ -1826,7 +1988,7 @@ function ViewBookingModal({
 
           {/* Feedback Section (feedbacks as blocks list) */}
           <div className="pt-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
+            <h3 className={`text-xs font-bold uppercase tracking-widest mb-3 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
               Advisor Feedbacks
             </h3>
             {feedbacks.length > 0 ? (
@@ -1834,24 +1996,30 @@ function ViewBookingModal({
                 {feedbacks.map((block, idx) => (
                   <div
                     key={block.id || idx}
-                    className="p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/[0.02] space-y-2 relative"
+                    className={`p-4 rounded-xl border space-y-2 relative ${
+                      d ? 'border-indigo-500/10 bg-indigo-500/[0.02]' : 'border-indigo-200 bg-indigo-50/50'
+                    }`}
                   >
-                    <div className="flex items-center justify-between text-[9px] text-indigo-400 font-bold uppercase tracking-wider">
+                    <div className={`flex items-center justify-between text-[9px] font-bold uppercase tracking-wider ${
+                      d ? 'text-indigo-400' : 'text-indigo-600'
+                    }`}>
                       <span>{block.title || `Feedback Block #${idx + 1}`}</span>
                       <span>
                         {block.updatedAt ? formatDate(block.updatedAt) : ""}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    <p className={`text-xs leading-relaxed whitespace-pre-wrap ${d ? 'text-gray-200' : 'text-gray-700'}`}>
                       {block.content}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-white/5 bg-white/[0.01] p-6 text-center">
-                <MessageSquare className="h-6 w-6 text-gray-600 mx-auto mb-2" />
-                <p className="text-xs text-gray-500">
+              <div className={`rounded-xl border border-dashed p-6 text-center ${
+                d ? 'border-white/5 bg-white/[0.01]' : 'border-gray-200 bg-gray-50/50'
+              }`}>
+                <MessageSquare className={`h-6 w-6 mx-auto mb-2 ${d ? 'text-gray-600' : 'text-gray-400'}`} />
+                <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                   No briefing notes or feedbacks have been recorded yet. They will appear here once
                   provided by the advisor.
                 </p>
@@ -1861,7 +2029,9 @@ function ViewBookingModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-4 border-t border-white/5 bg-[#0a0d13] flex justify-end">
+        <div className={`px-6 py-4 border-t flex justify-end ${
+          d ? 'border-white/5 bg-[#0a0d13]' : 'border-gray-100 bg-gray-50'
+        }`}>
           <button
             onClick={onClose}
             className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-xs font-bold text-white uppercase tracking-wider transition"

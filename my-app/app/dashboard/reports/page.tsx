@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
 import { ReportsListSkeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/components/ThemeContext";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -137,20 +138,23 @@ function NetworkIllustration() {
 
 // ─── Skeleton Placeholder Cards ─────────────────────────────────────────────
 function SkeletonCards() {
+  const { dark: d } = useTheme();
   return (
     <div className="flex gap-3 justify-center my-6">
       {[0, 1, 2].map((i) => (
         <div
           key={i}
-          className="w-40 h-24 rounded-lg bg-[#0d1117] border border-white/5 p-3 flex flex-col justify-between"
+          className={`w-40 h-24 rounded-lg border p-3 flex flex-col justify-between ${
+            d ? "bg-[#0d1117] border-white/5" : "bg-gray-100/80 border-gray-200"
+          }`}
         >
           <div className="space-y-1.5">
-            <div className="h-2 rounded-full bg-white/10 w-3/4" />
-            <div className="h-2 rounded-full bg-white/5 w-1/2" />
+            <div className={`h-2 rounded-full w-3/4 ${d ? "bg-white/10" : "bg-gray-300"}`} />
+            <div className={`h-2 rounded-full w-1/2 ${d ? "bg-white/5" : "bg-gray-200"}`} />
           </div>
           <div className="space-y-1.5">
-            <div className="h-1.5 rounded-full bg-white/5 w-full" />
-            <div className="h-1.5 rounded-full bg-white/5 w-2/3" />
+            <div className={`h-1.5 rounded-full w-full ${d ? "bg-white/5" : "bg-gray-200"}`} />
+            <div className={`h-1.5 rounded-full w-2/3 ${d ? "bg-white/5" : "bg-gray-200"}`} />
           </div>
         </div>
       ))}
@@ -160,6 +164,8 @@ function SkeletonCards() {
 
 // ─── PAGE EXPORT ─────────────────────────────────────────────────────────────
 export default function ReportsPage() {
+  const { dark } = useTheme();
+  const d = dark;
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<any[]>([]);
 
@@ -222,24 +228,32 @@ export default function ReportsPage() {
     : 0;
 
   let healthStatusLabel = "N/A";
-  let healthStatusColor = "text-gray-500 bg-gray-500/10 border-gray-500/20";
+  let healthStatusColor = d
+    ? "text-gray-500 bg-gray-500/10 border-gray-500/20"
+    : "text-gray-600 bg-gray-100 border-gray-200";
   if (totalAssessments > 0) {
     if (healthScore >= 70) {
       healthStatusLabel = "HEALTHY";
-      healthStatusColor = "text-teal-400 bg-teal-500/10 border-teal-500/20";
+      healthStatusColor = d
+        ? "text-teal-400 bg-teal-500/10 border-teal-500/20"
+        : "text-teal-700 bg-teal-50 border-teal-200";
     } else if (healthScore >= 40) {
       healthStatusLabel = "NEEDS ATTENTION";
-      healthStatusColor = "text-orange-400 bg-orange-500/10 border-orange-500/20";
+      healthStatusColor = d
+        ? "text-orange-400 bg-orange-500/10 border-orange-500/20"
+        : "text-orange-700 bg-orange-50 border-orange-200";
     } else {
       healthStatusLabel = "CRITICAL RISK";
-      healthStatusColor = "text-rose-400 bg-rose-500/10 border-rose-500/20";
+      healthStatusColor = d
+        ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+        : "text-rose-700 bg-rose-50 border-rose-200";
     }
   }
 
   // Score Trend Delta
   let trendLabel = "Stable";
   let trendDelta = "0%";
-  let trendColor = "text-gray-400";
+  let trendColor = d ? "text-gray-400" : "text-gray-500";
   if (totalAssessments >= 2) {
     const newestScore = results[0]?.result?.totalScore || 0;
     const prevScore = results[1]?.result?.totalScore || 0;
@@ -247,16 +261,16 @@ export default function ReportsPage() {
     if (diff > 0) {
       trendLabel = "Improving";
       trendDelta = `+${diff}%`;
-      trendColor = "text-teal-400";
+      trendColor = d ? "text-teal-400" : "text-teal-600";
     } else if (diff < 0) {
       trendLabel = "Declining";
       trendDelta = `${diff}%`;
-      trendColor = "text-rose-400";
+      trendColor = d ? "text-rose-400" : "text-rose-600";
     }
   } else if (totalAssessments === 1) {
     trendLabel = "Baseline Set";
     trendDelta = "0%";
-    trendColor = "text-gray-400";
+    trendColor = d ? "text-gray-400" : "text-gray-500";
   }
 
   // Small bar chart data (up to last 6 assessments)
@@ -311,14 +325,14 @@ export default function ReportsPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 text-white bg-[#0d1117] min-h-screen space-y-8">
+    <div className={`max-w-7xl mx-auto px-4 md:px-6 py-6 min-h-screen space-y-8 ${d ? 'text-white bg-[#0d1117]' : 'text-gray-900 bg-gray-50'}`}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          <h1 className={`text-3xl md:text-4xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
             Reports & Assessments
           </h1>
-          <p className="text-sm text-gray-400 max-w-2xl">
+          <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'} max-w-2xl`}>
             Track your business health and progress over time with data-driven architectural insights.
           </p>
         </div>
@@ -336,19 +350,23 @@ export default function ReportsPage() {
       {totalAssessments === 0 ? (
         /* Empty State */
         <div className="space-y-8 max-w-full">
-          <div className="rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-8 md:p-12 text-center relative overflow-hidden">
+          <div className={`rounded-2xl border p-8 md:p-12 text-center relative overflow-hidden ${
+            d 
+              ? 'bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border-white/5' 
+              : 'bg-gradient-to-br from-white via-gray-50 to-gray-100 border-gray-200 shadow-sm'
+          }`}>
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10">
               <NetworkIllustration />
 
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              <h2 className={`text-2xl md:text-3xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-4`}>
                 Your Intelligence Archive is Ready
               </h2>
 
-              <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto mb-2 leading-relaxed">
+              <p className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm md:text-base max-w-2xl mx-auto mb-2 leading-relaxed`}>
                 Initialize your data streams to activate advanced analytics. After completing the{" "}
-                <span className="text-teal-400">Strategic Scan</span>, you will unlock high-fidelity reports, including competitive delta analysis and personalized insights.
+                <span className={d ? 'text-teal-400' : 'text-teal-600 font-medium'}>Strategic Scan</span>, you will unlock high-fidelity reports, including competitive delta analysis and personalized insights.
               </p>
 
               <SkeletonCards />
@@ -360,7 +378,7 @@ export default function ReportsPage() {
                 Start Strategic Scan 🚀
               </button>
 
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-4">
+              <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-400'} uppercase tracking-widest font-bold mt-4`}>
                 Estimated Processing Time: 120 Seconds
               </p>
             </div>
@@ -368,33 +386,33 @@ export default function ReportsPage() {
 
           {/* Decorative Bottom Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 text-center">
+            <div className={`rounded-xl border p-5 text-center ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Database className="w-4 h-4 text-gray-500" />
+                <Database className={`w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
-              <p className="text-2xl font-bold text-white">2.4TB</p>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-1">Processed</p>
+              <p className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>2.4TB</p>
+              <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'} uppercase font-bold tracking-wider mt-1`}>Processed</p>
             </div>
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 text-center">
+            <div className={`rounded-xl border p-5 text-center ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Globe className="w-4 h-4 text-gray-500" />
+                <Globe className={`w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
-              <p className="text-2xl font-bold text-white">140+</p>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-1">Global Sources</p>
+              <p className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>140+</p>
+              <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'} uppercase font-bold tracking-wider mt-1`}>Global Sources</p>
             </div>
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 text-center">
+            <div className={`rounded-xl border p-5 text-center ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-teal-400" />
+                <Clock className={`w-4 h-4 ${d ? 'text-teal-400' : 'text-teal-600'}`} />
               </div>
-              <p className="text-2xl font-bold text-teal-400">Real-time</p>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-1">Latency</p>
+              <p className={`text-2xl font-bold ${d ? 'text-teal-400' : 'text-teal-600'}`}>Real-time</p>
+              <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'} uppercase font-bold tracking-wider mt-1`}>Latency</p>
             </div>
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 text-center">
+            <div className={`rounded-xl border p-5 text-center ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
               <div className="flex items-center justify-center gap-2 mb-1">
-                <Lock className="w-4 h-4 text-gray-500" />
+                <Lock className={`w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               </div>
-              <p className="text-2xl font-bold text-white">Encrypted</p>
-              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mt-1">Security</p>
+              <p className={`text-2xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Encrypted</p>
+              <p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'} uppercase font-bold tracking-wider mt-1`}>Security</p>
             </div>
           </div>
         </div>
@@ -403,26 +421,26 @@ export default function ReportsPage() {
         <>
           {/* Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col justify-between">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-4">
+            <div className={`rounded-xl border p-5 flex flex-col justify-between ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
                 TOTAL ASSESSMENTS
               </h3>
               <div className="flex items-end gap-3">
-                <span className="text-4xl font-bold text-white">{totalAssessments}</span>
-                <span className="text-xs font-semibold text-teal-400 mb-1 flex items-center">
+                <span className={`text-4xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{totalAssessments}</span>
+                <span className={`text-xs font-semibold ${d ? 'text-teal-400' : 'text-teal-600'} mb-1 flex items-center`}>
                   <Activity className="w-3.5 h-3.5 mr-1" />
                   active
                 </span>
               </div>
             </div>
 
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col justify-between">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-4">
+            <div className={`rounded-xl border p-5 flex flex-col justify-between ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
                 HEALTH SCORE
               </h3>
               <div className="flex flex-col gap-1">
                 <div className="flex items-end gap-3">
-                  <span className="text-4xl font-bold text-teal-400">{healthScore}%</span>
+                  <span className={`text-4xl font-bold ${d ? 'text-teal-400' : 'text-teal-600'}`}>{healthScore}%</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${healthStatusColor}`}>
                     {healthStatusLabel}
                   </span>
@@ -430,14 +448,14 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-[#111827] border border-white/5 p-5 flex flex-col justify-between">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-4">
+            <div className={`rounded-xl border p-5 flex flex-col justify-between ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'}`}>
+              <h3 className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
                 LAST ASSESSMENT
               </h3>
               <div>
-                <p className="text-xl font-bold text-white mb-1">{lastAssessmentDate}</p>
-                <p className="text-xs text-gray-500 mb-3">{daysAgoLabel}</p>
-                <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <p className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>{lastAssessmentDate}</p>
+                <p className={`text-xs ${d ? 'text-gray-500' : 'text-gray-500'} mb-3`}>{daysAgoLabel}</p>
+                <div className={`h-1.5 rounded-full ${d ? 'bg-white/5' : 'bg-gray-100'} overflow-hidden`}>
                   <div className="h-full bg-indigo-500 w-[100%]" />
                 </div>
               </div>
@@ -448,13 +466,17 @@ export default function ReportsPage() {
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
               <input
                 type="text"
                 placeholder="Search by keyword or session ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-full bg-[#111827] border border-white/5 text-white text-sm focus:outline-none focus:border-white/20 transition"
+                className={`w-full pl-11 pr-4 py-3 rounded-full border text-sm focus:outline-none transition ${
+                  d 
+                    ? 'bg-[#111827] border-white/5 text-white placeholder:text-gray-500 focus:border-white/20' 
+                    : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-gray-300'
+                }`}
               />
             </div>
 
@@ -465,13 +487,17 @@ export default function ReportsPage() {
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
-                  className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
+                  className={`appearance-none border text-sm px-4 py-3 pr-10 rounded-full transition focus:outline-none ${
+                    d 
+                      ? 'bg-[#111827] border-white/5 text-gray-300 hover:bg-white/5' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                  }`}
                 >
-                  <option value="ALL" className="bg-[#111827] text-white">All Types</option>
-                  <option value="STRATEGIC" className="bg-[#111827] text-white">Strategic Scan</option>
-                  <option value="DEEP_DIVE" className="bg-[#111827] text-white">Deep Dive</option>
+                  <option value="ALL" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>All Types</option>
+                  <option value="STRATEGIC" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Strategic Scan</option>
+                  <option value="DEEP_DIVE" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Deep Dive</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'} pointer-events-none`} />
               </div>
 
               {/* Score Range Select */}
@@ -479,14 +505,18 @@ export default function ReportsPage() {
                 <select
                   value={selectedScore}
                   onChange={(e) => setSelectedScore(e.target.value)}
-                  className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
+                  className={`appearance-none border text-sm px-4 py-3 pr-10 rounded-full transition focus:outline-none ${
+                    d 
+                      ? 'bg-[#111827] border-white/5 text-gray-300 hover:bg-white/5' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                  }`}
                 >
-                  <option value="ALL" className="bg-[#111827] text-white">All Scores</option>
-                  <option value="HIGH" className="bg-[#111827] text-white">High (&gt;=70%)</option>
-                  <option value="MEDIUM" className="bg-[#111827] text-white">Medium (40% - 69%)</option>
-                  <option value="LOW" className="bg-[#111827] text-white">Critical (&lt;40%)</option>
+                  <option value="ALL" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>All Scores</option>
+                  <option value="HIGH" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>High (&gt;=70%)</option>
+                  <option value="MEDIUM" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Medium (40% - 69%)</option>
+                  <option value="LOW" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Critical (&lt;40%)</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'} pointer-events-none`} />
               </div>
 
               {/* Status Select */}
@@ -494,26 +524,32 @@ export default function ReportsPage() {
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="appearance-none bg-[#111827] border border-white/5 text-sm text-gray-300 px-4 py-3 pr-10 rounded-full hover:bg-white/5 transition focus:outline-none"
+                  className={`appearance-none border text-sm px-4 py-3 pr-10 rounded-full transition focus:outline-none ${
+                    d 
+                      ? 'bg-[#111827] border-white/5 text-gray-300 hover:bg-white/5' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm'
+                  }`}
                 >
-                  <option value="ALL" className="bg-[#111827] text-white">All Statuses</option>
-                  <option value="UNLOCKED" className="bg-[#111827] text-white">Unlocked</option>
-                  <option value="LOCKED" className="bg-[#111827] text-white">Locked</option>
+                  <option value="ALL" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>All Statuses</option>
+                  <option value="UNLOCKED" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Unlocked</option>
+                  <option value="LOCKED" className={d ? 'bg-[#111827] text-white' : 'bg-white text-gray-900'}>Locked</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 ${d ? 'text-gray-500' : 'text-gray-400'} pointer-events-none`} />
               </div>
             </div>
           </div>
 
           {/* Dynamic Recent History List */}
           <div className="space-y-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+            <h3 className={`text-[10px] font-bold uppercase tracking-wider ${d ? 'text-gray-500' : 'text-gray-500'}`}>
               RECENT HISTORY ({filteredResults.length})
             </h3>
             
             {filteredResults.length === 0 ? (
-              <div className="rounded-xl border border-white/5 bg-[#111827]/50 p-10 text-center">
-                <p className="text-gray-400 text-sm">No assessments match your current filter options.</p>
+              <div className={`rounded-xl border p-10 text-center ${
+                d ? 'border-white/5 bg-[#111827]/50' : 'border-gray-200 bg-white shadow-sm'
+              }`}>
+                <p className={`${d ? 'text-gray-400' : 'text-gray-600'} text-sm`}>No assessments match your current filter options.</p>
               </div>
             ) : (
               filteredResults.map((item) => {
@@ -522,26 +558,36 @@ export default function ReportsPage() {
                 
                 // Get display properties
                 let title = "Strategic Scan Summary";
-                let iconColor = "text-indigo-400 bg-indigo-500/10 border-indigo-500/20";
+                let iconColor = d 
+                  ? "text-indigo-400 bg-indigo-500/10 border-indigo-500/20" 
+                  : "text-indigo-600 bg-indigo-50 border-indigo-200";
                 let iconElement = <Activity className="w-5 h-5" />;
 
                 if (!isStrategic && res.pillarScores?.[0]) {
                   const pillar = res.pillarScores[0].pillar;
                   title = `${pillar.name} Deep Dive`;
-                  iconColor = "text-orange-400 bg-orange-500/10 border-orange-500/20";
+                  iconColor = d 
+                    ? "text-orange-400 bg-orange-500/10 border-orange-500/20" 
+                    : "text-orange-600 bg-orange-50 border-orange-200";
                   iconElement = <Building2 className="w-5 h-5" />;
                 }
 
                 // Normalise scoring band
                 const band = normalizeColorBand(res.colorBand);
                 let badgeLabel: string = band;
-                let badgeStyle = "bg-amber-500/10 border-amber-500/20 text-amber-400";
+                let badgeStyle = d 
+                  ? "bg-amber-500/10 border-amber-500/20 text-amber-400" 
+                  : "bg-amber-50 border-amber-200 text-amber-700";
                 if (band === "GREEN") {
                   badgeLabel = "Healthy";
-                  badgeStyle = "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+                  badgeStyle = d 
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
+                    : "bg-emerald-50 border-emerald-200 text-emerald-700";
                 } else if (band === "RED") {
                   badgeLabel = "Critical Risk";
-                  badgeStyle = "bg-rose-500/10 border-rose-500/20 text-rose-400";
+                  badgeStyle = d 
+                    ? "bg-rose-500/10 border-rose-500/20 text-rose-400" 
+                    : "bg-rose-50 border-rose-200 text-rose-700";
                 }
 
                 const scoreVal = Math.round(res.totalScore || 0);
@@ -549,14 +595,18 @@ export default function ReportsPage() {
                 return (
                   <div 
                     key={res.sessionId} 
-                    className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl bg-[#111827] border border-white/5 gap-4 hover:border-white/10 hover:bg-[#161f33] transition"
+                    className={`flex flex-col md:flex-row md:items-center justify-between p-5 rounded-xl border gap-4 transition ${
+                      d 
+                        ? 'bg-[#111827] border-white/5 hover:border-white/10 hover:bg-[#161f33]' 
+                        : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50/80 shadow-sm'
+                    }`}
                   >
                     <div className="flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-xl border flex items-center justify-center flex-shrink-0 ${iconColor}`}>
                         {iconElement}
                       </div>
                       <div>
-                        <h4 className="text-base font-bold text-white mb-1">{title}</h4>
+                        <h4 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'} mb-1`}>{title}</h4>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
@@ -574,7 +624,11 @@ export default function ReportsPage() {
                       <div className="text-left md:text-center">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">STATUS</p>
                         {item.paywalled ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
+                            d 
+                              ? 'bg-rose-500/10 border-rose-500/20 text-rose-400' 
+                              : 'bg-rose-50 border-rose-200 text-rose-700'
+                          }`}>
                             <Lock className="w-3 h-3" />
                             Locked
                           </span>
@@ -588,7 +642,7 @@ export default function ReportsPage() {
                       {/* Score */}
                       <div className="text-center">
                         <p className="text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">SCORE</p>
-                        <p className="text-xl font-bold text-white">{scoreVal}%</p>
+                        <p className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>{scoreVal}%</p>
                       </div>
 
                       {/* Navigation Actions */}
@@ -606,13 +660,19 @@ export default function ReportsPage() {
                             href={res.reportPdfUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition block"
+                            className={`p-2 rounded-lg transition block ${
+                              d 
+                                ? 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10' 
+                                : 'bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                            }`}
                             title="Download PDF Report"
                           >
                             <Download className="w-4 h-4" />
                           </a>
                         ) : (
-                          <div className="p-2 rounded-lg bg-white/[0.02] text-gray-700 pointer-events-none cursor-not-allowed">
+                          <div className={`p-2 rounded-lg pointer-events-none cursor-not-allowed ${
+                            d ? 'bg-white/[0.02] text-gray-700' : 'bg-gray-50 text-gray-300'
+                          }`}>
                             <Download className="w-4 h-4" />
                           </div>
                         )}
@@ -625,17 +685,23 @@ export default function ReportsPage() {
           </div>
 
           {/* Footer Call to Action Box */}
-          <div className="rounded-2xl border border-white/5 border-dashed bg-[#111827]/50 p-10 flex flex-col items-center justify-center text-center mt-6">
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-              <Clock className="w-6 h-6 text-gray-500" />
+          <div className={`rounded-2xl border border-dashed p-10 flex flex-col items-center justify-center text-center mt-6 ${
+            d ? 'border-white/5 bg-[#111827]/50' : 'border-gray-200 bg-white shadow-sm'
+          }`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
+              d ? 'bg-white/5' : 'bg-gray-100'
+            }`}>
+              <Clock className={`w-6 h-6 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Build Your Data Timeline</h3>
-            <p className="text-sm text-gray-400 max-w-md mx-auto mb-6">
+            <h3 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>Build Your Data Timeline</h3>
+            <p className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'} max-w-md mx-auto mb-6`}>
               Take regular assessments to see how your business health evolves. Consistent reporting unlocks predictive trends and deep-benchmarking.
             </p>
             <button 
               onClick={() => window.location.href = "/dashboard/strategic-scan"}
-              className="text-sm font-semibold text-teal-400 hover:text-teal-300 transition flex items-center gap-2"
+              className={`text-sm font-semibold transition flex items-center gap-2 ${
+                d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+              }`}
             >
               Start new assessment <ArrowRight className="w-4 h-4" />
             </button>

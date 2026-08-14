@@ -182,8 +182,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Right controls */}
         <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <button
+            onClick={() => setDark(!dark)}
+            className={`p-2 rounded-full transition ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            title="Toggle theme"
+          >
+            {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+
           {/* Notification bell */}
-          <button className={`relative p-2 ${d ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition`}>
+          <button className={`relative p-2 rounded-full transition ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
             <Bell className="w-5 h-5" />
           </button>
 

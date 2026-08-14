@@ -48,6 +48,7 @@ import {
 } from "@/lib/authClient";
 import { convertFromUsd, formatMoney, resolveDisplayCurrency, type Currency } from "@/lib/utils";
 import { SubscriptionPickerSkeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/components/ThemeContext";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
@@ -233,10 +234,12 @@ function resolveBundleAmount(
 }
 
 export default function SubscriptionPage() {
+  const { dark } = useTheme();
+  const d = dark;
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
+        <div className={`min-h-screen flex items-center justify-center ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
           <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
         </div>
       }
@@ -247,6 +250,8 @@ export default function SubscriptionPage() {
 }
 
 function SubscriptionPageInner() {
+  const { dark } = useTheme();
+  const d = dark;
   const searchParams = useSearchParams();
   const urlSessionId = searchParams?.get("sessionId") ?? null;
   const urlPillarId = searchParams?.get("pillarId") ?? null;
@@ -761,10 +766,10 @@ function SubscriptionPageInner() {
 
   if (verifyingReturn || quotaInFlight) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117]">
+      <div className={`min-h-screen flex items-center justify-center ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         <div className="flex flex-col items-center gap-3 text-center px-6">
           <Loader className="w-8 h-8 text-[#f97316] animate-spin" />
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
             {quotaInFlight
               ? "Checking your subscription credits..."
               : verifyingReturn
@@ -778,7 +783,7 @@ function SubscriptionPageInner() {
 
   if (meError || !me) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0d1117] px-6">
+      <div className={`min-h-screen flex items-center justify-center ${d ? "bg-[#0d1117]" : "bg-gray-50"} px-6`}>
         <div className="max-w-md text-center">
           <p className="text-red-400 mb-4">{meError ?? "Account unavailable"}</p>
           <Link
@@ -885,11 +890,14 @@ function LockedScanPickerModal({
   onPick: (sessionId: string) => void;
   onClose: () => void;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
+
   const formatDate = (iso: string | null) => {
     if (!iso) return "—";
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "—";
-    return d.toLocaleDateString(undefined, {
+    const dObj = new Date(iso);
+    if (Number.isNaN(dObj.getTime())) return "—";
+    return dObj.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -905,26 +913,26 @@ function LockedScanPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl bg-[#111827] border border-white/10 p-6 shadow-2xl"
+        className={`w-full max-w-2xl rounded-2xl ${d ? "bg-[#111827] border-white/10" : "bg-white border-gray-200"} border p-6 shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-white">
+            <h2 className={`text-lg font-bold ${d ? "text-white" : "text-gray-900"}`}>
               Choose a scan to unlock
             </h2>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"} mt-1`}>
               Strategic Scan is unlocked per scan. Pick which locked scan this payment should
               unlock.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white text-sm"
+            className={`${d ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-gray-700"} text-sm transition`}
             aria-label="Close"
           >
             ✕
@@ -936,8 +944,8 @@ function LockedScanPickerModal({
             <Loader className="w-6 h-6 text-orange-400 animate-spin" />
           </div>
         ) : scans.length === 0 ? (
-          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5">
-            <p className="text-sm text-yellow-300 mb-3">
+          <div className={`rounded-xl ${d ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-300" : "bg-amber-50 border-amber-200 text-amber-800"} border p-5`}>
+            <p className="text-sm mb-3">
               You don&apos;t have any locked Strategic Scans yet. Take a Strategic Scan
               first, then come back to unlock the full diagnostic.
             </p>
@@ -955,21 +963,21 @@ function LockedScanPickerModal({
               <button
                 key={scan.sessionId}
                 onClick={() => onPick(scan.sessionId)}
-                className="w-full text-left rounded-xl bg-[#0d1117] border border-white/5 hover:border-orange-500/40 hover:bg-[#161f33] p-4 transition"
+                className={`w-full text-left rounded-xl ${d ? "bg-[#0d1117] border-white/5 hover:bg-[#161f33]" : "bg-gray-50 border-gray-200 hover:bg-gray-100"} border hover:border-orange-500/40 p-4 transition`}
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">
+                    <p className={`text-sm font-semibold ${d ? "text-white" : "text-gray-900"} truncate`}>
                       Strategic Scan · {scan.sessionId.substring(0, 8)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className={`text-xs ${d ? "text-gray-500" : "text-gray-500"} mt-1`}>
                       {formatDate(scan.completedAt)}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 flex-shrink-0">
                     <div className="text-right">
                       <p className="text-[10px] uppercase text-gray-500">Score</p>
-                      <p className="text-sm font-bold text-white">
+                      <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>
                         {Math.round(scan.totalScore)}
                       </p>
                     </div>
@@ -997,13 +1005,16 @@ function LockedScanPickerModal({
 // pay-per-use section. The BE invariant guarantees at least one section is
 // live so we always have something to direct the user toward.
 function PayPerUsePausedView({ subscriptionLive }: { subscriptionLive: boolean }) {
+  const { dark } = useTheme();
+  const d = dark;
+
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white pb-20">
+    <div className={`min-h-screen ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"} pb-20`}>
       <div className="max-w-2xl mx-auto px-4 pt-24 text-center">
-        <h1 className="text-3xl md:text-4xl font-extrabold mb-4">
+        <h1 className={`text-3xl md:text-4xl font-extrabold mb-4 ${d ? "text-white" : "text-gray-900"}`}>
           One-off purchases are paused
         </h1>
-        <p className="text-sm md:text-base text-gray-400 mb-8">
+        <p className={`text-sm md:text-base ${d ? "text-gray-400" : "text-gray-600"} mb-8`}>
           Pay-per-use checkout isn&apos;t available right now.
           {subscriptionLive
             ? " You can still subscribe to a monthly plan for full access."
@@ -1033,18 +1044,20 @@ function ChoosePlanView({
   onSelectPlan: (plan: PlanCard) => void;
   paymentError: string | null;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
   const businessSize: BusinessSize | null = me.businessSize;
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white pb-20">
+    <div className={`min-h-screen ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"} pb-20`}>
       <section className="text-center px-4 pt-16 pb-12 max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4">
+        <h1 className={`text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 ${d ? "text-white" : "text-gray-900"}`}>
           Celestial Intelligence{" "}
           <span className="bg-gradient-to-r from-orange-400 to-teal-400 bg-clip-text text-transparent">
             Architected for Growth.
           </span>
         </h1>
-        <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto">
+        <p className={`${d ? "text-gray-400" : "text-gray-600"} text-sm md:text-base max-w-2xl mx-auto`}>
           Plans tailored to your business profile. The PICA engine has classified
           your operation as{" "}
           <span className="text-orange-400 font-semibold">
@@ -1060,14 +1073,14 @@ function ChoosePlanView({
 
       {!businessSize && (
         <div className="max-w-2xl mx-auto px-4 mb-12">
-          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-5 text-sm text-yellow-300 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className={`rounded-xl ${d ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-300" : "bg-amber-50 border-amber-200 text-amber-800"} border p-5 text-sm flex flex-col sm:flex-row sm:items-center gap-3`}>
             <span className="flex-1">
               We couldn&apos;t determine your business size yet. Add your staff
               size in settings so we can show plans that fit your operation.
             </span>
             <Link
               href="/dashboard/settings"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-500/30 hover:bg-yellow-500/40 text-white text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+              className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg ${d ? "bg-yellow-500/30 hover:bg-yellow-500/40 text-white" : "bg-amber-600 hover:bg-amber-700 text-white"} text-xs font-bold uppercase tracking-wider whitespace-nowrap`}
             >
               Complete profile
             </Link>
@@ -1077,7 +1090,7 @@ function ChoosePlanView({
 
       {paymentError && (
         <div className="max-w-2xl mx-auto px-4 mb-12">
-          <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-5 text-sm text-red-300">
+          <div className={`rounded-xl ${d ? "bg-red-500/10 border-red-500/30 text-red-300" : "bg-red-50 border-red-200 text-red-700"} border p-5 text-sm`}>
             {paymentError}
           </div>
         </div>
@@ -1085,7 +1098,7 @@ function ChoosePlanView({
 
       {me.hasPaidPhase2A && (
         <div className="max-w-2xl mx-auto px-4 mb-12">
-          <div className="rounded-xl bg-teal-500/10 border border-teal-500/30 p-5 text-sm text-teal-300 flex items-start gap-3">
+          <div className={`rounded-xl ${d ? "bg-teal-500/10 border-teal-500/30 text-teal-300" : "bg-teal-50 border-teal-200 text-teal-800"} border p-5 text-sm flex items-start gap-3`}>
             <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               You&apos;ve already unlocked Plan 2A. Head to your{" "}
@@ -1103,7 +1116,7 @@ function ChoosePlanView({
           <h2 className="text-xl md:text-2xl font-bold text-orange-400 mb-1">
             {businessSize === "MEDIUM" ? "Medium Business" : "Small Business"}
           </h2>
-          <p className="text-gray-500 text-sm">
+          <p className={`${d ? "text-gray-500" : "text-gray-600"} text-sm`}>
             {businessSize === "MEDIUM"
               ? "Expansive power for scaling infrastructures."
               : "Precision tools for emerging enterprises."}
@@ -1130,7 +1143,7 @@ function ChoosePlanView({
       </section>
 
       <section className="max-w-6xl mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-8">
+        <h2 className={`text-2xl md:text-3xl font-bold ${d ? "text-white" : "text-gray-900"} text-center mb-8`}>
           What you get with PICA Diagnostics
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -1153,13 +1166,13 @@ function ChoosePlanView({
           ].map((feature) => (
             <div
               key={feature.title}
-              className="bg-[#111827] border border-white/5 rounded-xl p-6"
+              className={`${d ? "bg-[#111827] border-white/5" : "bg-white border-gray-200 shadow-sm"} border rounded-xl p-6`}
             >
               <div className="flex items-center gap-3 mb-3">
                 {feature.icon}
-                <p className="text-sm font-bold text-white">{feature.title}</p>
+                <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{feature.title}</p>
               </div>
-              <p className="text-sm text-gray-400">{feature.desc}</p>
+              <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>{feature.desc}</p>
             </div>
           ))}
         </div>
@@ -1177,33 +1190,38 @@ function PricingCard({
   disabled: boolean;
   onSelect: () => void;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
+
   return (
     <div
-      className={`relative bg-[#111827] border rounded-xl p-6 flex flex-col justify-between ${
-        plan.recommended ? "border-orange-500/40" : "border-white/5"
+      className={`relative ${d ? "bg-[#111827]" : "bg-white shadow-sm"} border rounded-xl p-6 flex flex-col justify-between ${
+        plan.recommended
+          ? d ? "border-orange-500/40" : "border-orange-500"
+          : d ? "border-white/5" : "border-gray-200"
       }`}
     >
       {plan.recommended && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-wider px-4 py-1 rounded-full shadow-sm">
           Recommended
         </div>
       )}
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
+        <p className={`text-[10px] font-bold uppercase tracking-widest ${d ? "text-gray-500" : "text-gray-500"} mb-3`}>
           {plan.tier}
         </p>
-        <h3 className="text-3xl font-extrabold text-white mb-1">{plan.name}</h3>
-        <p className="text-gray-400 text-sm mb-6">
+        <h3 className={`text-3xl font-extrabold ${d ? "text-white" : "text-gray-900"} mb-1`}>{plan.name}</h3>
+        <p className={`${d ? "text-gray-400" : "text-gray-600"} text-sm mb-6`}>
           {plan.price}{" "}
-          {!plan.priceMissing && <span className="text-gray-600">/one-time</span>}
+          {!plan.priceMissing && <span className={d ? "text-gray-600" : "text-gray-400"}>/one-time</span>}
         </p>
         <ul className="space-y-3 mb-8">
           {plan.features.map((feature) => (
             <li
               key={feature}
-              className="flex items-center gap-2 text-sm text-gray-300"
+              className={`flex items-center gap-2 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}
             >
-              <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+              <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
               {feature}
             </li>
           ))}
@@ -1214,10 +1232,14 @@ function PricingCard({
         disabled={disabled}
         className={`w-full py-3 rounded-xl text-sm font-semibold transition ${
           disabled
-            ? "bg-gray-700/50 text-gray-500 cursor-not-allowed"
-            : plan.buttonVariant === "filled"
-              ? "bg-orange-500 hover:bg-orange-600 text-white"
-              : "border border-white/20 text-white hover:bg-white/5"
+            ? d ? "bg-gray-700/50 text-gray-500 cursor-not-allowed" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            : plan.tier === "AWARENESS"
+              ? "bg-[#f97316] hover:bg-[#ea6c0a] text-white shadow-lg shadow-orange-500/20"
+              : plan.tier === "ACCELERATOR"
+                ? "bg-[#00ffaa] hover:bg-[#00dd99] text-gray-950 shadow-lg"
+                : d
+                  ? "bg-[#1f2937] hover:bg-gray-800 text-white shadow-md border border-white/10"
+                  : "bg-gray-900 hover:bg-gray-800 text-white shadow-md border border-gray-900"
         }`}
       >
         {plan.buttonLabel}
@@ -1251,6 +1273,8 @@ function CheckoutView({
   onChangePlan: () => void;
   onPaymentSuccess: (result: VerifyPaymentResponse, amount: number | null) => void;
 }) {
+  const { dark } = useTheme();
+  const d = dark;
   const [activeTab, setActiveTab] = useState<string>("Card");
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -1481,70 +1505,70 @@ function CheckoutView({
   };
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white">
+    <div className={`min-h-screen ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"}`}>
       <div className="max-w-6xl mx-auto px-4 py-10 md:py-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-10 lg:gap-16">
         <div>
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
+          <h1 className={`text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight mb-4 ${d ? "text-white" : "text-gray-900"}`}>
             Complete your{" "}
             <span className="bg-gradient-to-r from-orange-400 to-teal-400 bg-clip-text text-transparent">
               ascension.
             </span>
           </h1>
-          <p className="text-gray-400 text-sm md:text-base mb-10 max-w-md">
+          <p className={`${d ? "text-gray-400" : "text-gray-600"} text-sm md:text-base mb-10 max-w-md`}>
             Secure your access to the full Strategic Scan diagnostic. Payment is processed
             by Paystack in a secure popup — you stay on this page the whole time.
           </p>
 
-          <div className="rounded-xl bg-gradient-to-br from-teal-900/60 to-[#111827] border border-teal-500/20 p-6">
+          <div className={`rounded-xl ${d ? "bg-gradient-to-br from-teal-900/60 to-[#111827] border-teal-500/20" : "bg-gradient-to-br from-teal-50 to-white border-teal-200 shadow-sm"} border p-6`}>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${d ? "text-teal-400" : "text-teal-700"}`}>
                 Selected Plan
               </p>
-              <span className="px-3 py-0.5 rounded-full bg-teal-500/20 text-teal-400 text-[10px] font-bold uppercase">
+              <span className={`px-3 py-0.5 rounded-full ${d ? "bg-teal-500/20 text-teal-400" : "bg-teal-100 text-teal-700"} text-[10px] font-bold uppercase`}>
                 One-time
               </span>
             </div>
-            <h3 className="text-2xl font-extrabold text-white mb-4">
+            <h3 className={`text-2xl font-extrabold ${d ? "text-white" : "text-gray-900"} mb-4`}>
               {plan.name}
             </h3>
             <ul className="space-y-2.5 mb-6">
               {plan.features.map((feature) => (
                 <li
                   key={feature}
-                  className="flex items-center gap-2 text-sm text-gray-300"
+                  className={`flex items-center gap-2 text-sm ${d ? "text-gray-300" : "text-gray-700"}`}
                 >
-                  <Check className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                  <Check className={`w-4 h-4 ${d ? "text-teal-400" : "text-teal-600"} flex-shrink-0`} />
                   {feature}
                 </li>
               ))}
             </ul>
             <div className="mb-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">
+              <p className={`text-xs font-bold uppercase tracking-widest ${d ? "text-gray-400" : "text-gray-500"} mb-1`}>
                 Total due now
               </p>
               <div className="flex items-baseline gap-3">
-                <p className="text-4xl font-black text-white">{displayTotal}</p>
+                <p className={`text-4xl font-black ${d ? "text-white" : "text-gray-900"}`}>{displayTotal}</p>
                 {couponPricing ? (
-                  <span className="text-lg font-bold text-gray-500 line-through">
+                  <span className={`text-lg font-bold ${d ? "text-gray-500" : "text-gray-400"} line-through`}>
                     {formatPrice(couponPricing.basePrice, plan.currency)}
                   </span>
                 ) : bundle ? (
-                  <span className="text-lg font-bold text-gray-500 line-through">
+                  <span className={`text-lg font-bold ${d ? "text-gray-500" : "text-gray-400"} line-through`}>
                     {formatPrice(bundle.base, plan.currency)}
                   </span>
                 ) : null}
               </div>
               {!couponPricing && bundle && (
-                <div className="mt-4 space-y-2.5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 text-sm">
-                  <div className="flex justify-between gap-4 text-gray-200">
+                <div className={`mt-4 space-y-2.5 rounded-xl border ${d ? "border-teal-500/30 bg-teal-500/10 text-gray-200" : "border-teal-200 bg-teal-50 text-gray-800"} p-4 text-sm`}>
+                  <div className="flex justify-between gap-4">
                     <span className="font-semibold">
                       {explicitPillarIds.length} modules · subtotal
                     </span>
-                    <span className="font-bold text-white">
+                    <span className={`font-bold ${d ? "text-white" : "text-gray-900"}`}>
                       {formatPrice(bundle.base, plan.currency)}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4 text-teal-300">
+                  <div className={`flex justify-between gap-4 ${d ? "text-teal-300" : "text-teal-700"}`}>
                     <span className="font-semibold">
                       Bundle discount ({bundle.discountPct}% off)
                     </span>
@@ -1552,23 +1576,23 @@ function CheckoutView({
                       −{formatPrice(bundle.savings, plan.currency)}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4 border-t border-teal-500/20 pt-2.5 text-white">
+                  <div className={`flex justify-between gap-4 border-t ${d ? "border-teal-500/20 text-white" : "border-teal-200 text-gray-900"} pt-2.5`}>
                     <span className="font-bold">Total</span>
-                    <span className="text-lg font-black text-[#00ffaa]">
+                    <span className={`text-lg font-black ${d ? "text-[#00ffaa]" : "text-teal-700"}`}>
                       {formatPrice(bundle.total, plan.currency)}
                     </span>
                   </div>
                 </div>
               )}
               {couponPricing && (
-                <div className="mt-4 space-y-2.5 rounded-xl border border-teal-500/30 bg-teal-500/10 p-4 text-sm">
-                  <div className="flex justify-between gap-4 text-gray-200">
+                <div className={`mt-4 space-y-2.5 rounded-xl border ${d ? "border-teal-500/30 bg-teal-500/10" : "border-teal-200 bg-teal-50"} p-4 text-sm`}>
+                  <div className={`flex justify-between gap-4 ${d ? "text-gray-200" : "text-gray-700"}`}>
                     <span className="font-semibold">Base price</span>
-                    <span className="font-bold text-white">
+                    <span className={`font-bold ${d ? "text-white" : "text-gray-900"}`}>
                       {formatPrice(couponPricing.basePrice, plan.currency)}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4 text-teal-300">
+                  <div className={`flex justify-between gap-4 ${d ? "text-teal-300" : "text-teal-700"}`}>
                     <span className="font-semibold">
                       Coupon {couponPricing.code}
                     </span>
@@ -1576,9 +1600,9 @@ function CheckoutView({
                       -{formatPrice(couponPricing.discountAmount, plan.currency)}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-4 border-t border-teal-500/20 pt-2.5 text-white">
+                  <div className={`flex justify-between gap-4 border-t ${d ? "border-teal-500/20 text-white" : "border-teal-200 text-gray-900"} pt-2.5`}>
                     <span className="font-bold">You pay</span>
-                    <span className="text-lg font-black text-[#00ffaa]">
+                    <span className={`text-lg font-black ${d ? "text-[#00ffaa]" : "text-teal-700"}`}>
                       {formatPrice(couponPricing.finalAmount, plan.currency)}
                     </span>
                   </div>
@@ -1587,7 +1611,7 @@ function CheckoutView({
             </div>
             <button
               onClick={onChangePlan}
-              className="text-teal-400 text-sm font-semibold hover:underline"
+              className={`${d ? "text-teal-400" : "text-teal-600"} text-sm font-semibold hover:underline`}
             >
               Change plan
             </button>
@@ -1595,7 +1619,7 @@ function CheckoutView({
         </div>
 
         <div>
-          <div className="flex flex-wrap gap-2 border-b border-white/10 mb-8">
+          <div className={`flex flex-wrap gap-2 border-b ${d ? "border-white/10" : "border-gray-200"} mb-8`}>
             {tabs.map((tab) => (
               <button
                 key={tab.label}
@@ -1603,7 +1627,7 @@ function CheckoutView({
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition relative ${
                   activeTab === tab.label
                     ? "text-orange-400"
-                    : "text-gray-500 hover:text-gray-300"
+                    : d ? "text-gray-500 hover:text-gray-300" : "text-gray-500 hover:text-gray-800"
                 }`}
               >
                 {tab.icon}
@@ -1615,35 +1639,35 @@ function CheckoutView({
             ))}
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
+          <div className={`rounded-xl border ${d ? "border-white/10 bg-[#111827]" : "border-gray-200 bg-white shadow-sm"} p-6 mb-6`}>
             <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-teal-400" />
-              <p className="text-xs font-bold uppercase tracking-widest text-teal-400">
+              <Shield className={`w-4 h-4 ${d ? "text-teal-400" : "text-teal-600"}`} />
+              <p className={`text-xs font-bold uppercase tracking-widest ${d ? "text-teal-400" : "text-teal-700"}`}>
                 Secure Hosted Payment
               </p>
             </div>
-            <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+            <p className={`text-sm ${d ? "text-gray-300" : "text-gray-700"} mb-4 leading-relaxed`}>
               Clicking <span className="font-semibold">Complete Payment</span>{" "}
               opens a Paystack checkout popup on this page. We confirm the
               transaction with our servers before unlocking your success page.
             </p>
-            <div className="grid grid-cols-2 gap-3 text-xs text-gray-400">
+            <div className={`grid grid-cols-2 gap-3 text-xs ${d ? "text-gray-400" : "text-gray-500"}`}>
               <div className="flex items-center gap-2">
-                <Lock className="w-3 h-3 text-green-400" /> 256-bit encryption
+                <Lock className="w-3 h-3 text-green-500" /> 256-bit encryption
               </div>
               <div className="flex items-center gap-2">
-                <Shield className="w-3 h-3 text-blue-400" /> PCI-DSS Level 1
+                <Shield className="w-3 h-3 text-blue-500" /> PCI-DSS Level 1
               </div>
               <div className="flex items-center gap-2">
-                <Building2 className="w-3 h-3 text-orange-400" /> Cards & transfers
+                <Building2 className="w-3 h-3 text-orange-500" /> Cards & transfers
               </div>
               <div className="flex items-center gap-2">
-                <CreditCard className="w-3 h-3 text-teal-400" /> Verified Visa & MC
+                <CreditCard className="w-3 h-3 text-teal-500" /> Verified Visa & MC
               </div>
             </div>
           </div>
 
-          <div className="relative overflow-visible rounded-xl border border-white/10 bg-[#111827] p-6 mb-6">
+          <div className={`relative overflow-visible rounded-xl border ${d ? "border-white/10 bg-[#111827]" : "border-gray-200 bg-white shadow-sm"} p-6 mb-6`}>
             <AnimatePresence>{showConfetti && <CouponConfetti />}</AnimatePresence>
             <div className="flex items-center justify-between gap-4 mb-3">
               <p className="text-xs font-bold uppercase tracking-widest text-orange-400">
@@ -1654,7 +1678,7 @@ function CheckoutView({
                   initial={{ scale: 0.6, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 400, damping: 15 }}
-                  className="rounded-full bg-teal-500/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-teal-300"
+                  className={`rounded-full ${d ? "bg-teal-500/20 text-teal-300" : "bg-teal-100 text-teal-700"} px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest`}
                 >
                   Applied
                 </motion.span>
@@ -1666,14 +1690,14 @@ function CheckoutView({
                 onChange={(event) => handleCouponChange(event.target.value)}
                 disabled={busy || verifying || couponBusy || hasAppliedCoupon}
                 placeholder="Enter coupon code"
-                className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0d1117] px-4 py-3 text-sm font-semibold uppercase tracking-wide text-white outline-none transition placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder:text-gray-600 focus:border-orange-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+                className={`min-w-0 flex-1 rounded-xl border ${d ? "border-white/10 bg-[#0d1117] text-white placeholder:text-gray-600 focus:border-orange-500/50" : "border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:border-orange-500"} px-4 py-3 text-sm font-semibold uppercase tracking-wide outline-none transition placeholder:normal-case placeholder:font-normal placeholder:tracking-normal disabled:cursor-not-allowed disabled:opacity-60`}
               />
               {hasAppliedCoupon ? (
                 <button
                   type="button"
                   onClick={removeCoupon}
                   disabled={busy || verifying}
-                  className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold text-gray-300 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`rounded-xl border ${d ? "border-white/10 text-gray-300 hover:bg-white/5 hover:text-white" : "border-gray-200 text-gray-700 hover:bg-gray-100 hover:text-gray-900"} px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   Remove
                 </button>
@@ -1696,12 +1720,12 @@ function CheckoutView({
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 flex items-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3"
+                className={`mt-4 flex items-center gap-2 rounded-xl border ${d ? "border-teal-500/30 bg-teal-500/10" : "border-teal-200 bg-teal-50"} px-4 py-3`}
               >
-                <CheckCircle className="h-5 w-5 flex-shrink-0 text-[#00ffaa]" />
-                <p className="text-base font-bold text-white">
+                <CheckCircle className={`h-5 w-5 flex-shrink-0 ${d ? "text-[#00ffaa]" : "text-teal-600"}`} />
+                <p className={`text-base font-bold ${d ? "text-white" : "text-gray-900"}`}>
                   Coupon applied! You save{" "}
-                  <span className="text-[#00ffaa]">
+                  <span className={d ? "text-[#00ffaa]" : "text-teal-600"}>
                     {formatPrice(couponPricing.discountAmount, plan.currency)}
                   </span>
                 </p>
@@ -1710,7 +1734,7 @@ function CheckoutView({
           </div>
 
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+            <div className={`mb-4 p-3 rounded-xl ${d ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-red-50 border-red-200 text-red-700"} border text-sm`}>
               {error}
             </div>
           )}
@@ -1736,7 +1760,7 @@ function CheckoutView({
             )}
           </button>
 
-          <p className="mt-3 text-[11px] text-gray-600 leading-relaxed flex items-start gap-2">
+          <p className={`mt-3 text-[11px] ${d ? "text-gray-600" : "text-gray-500"} leading-relaxed flex items-start gap-2`}>
             <HelpCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
             By clicking Complete Payment, you authorize PICA, via Paystack, to
             charge {displayTotal} for one-time access to this plan.
@@ -1744,16 +1768,16 @@ function CheckoutView({
         </div>
       </div>
 
-      <footer className="max-w-6xl mx-auto px-4 py-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-600">
-        <span className="font-bold text-gray-400 tracking-wider">PICA</span>
+      <footer className={`max-w-6xl mx-auto px-4 py-8 border-t ${d ? "border-white/5 text-gray-600" : "border-gray-200 text-gray-500"} flex flex-col md:flex-row items-center justify-between gap-4 text-xs`}>
+        <span className={`font-bold ${d ? "text-gray-400" : "text-gray-700"} tracking-wider`}>PICA</span>
         <div className="flex items-center gap-6">
-          <span className="hover:text-gray-400 cursor-pointer transition">
+          <span className={`${d ? "hover:text-gray-400" : "hover:text-gray-800"} cursor-pointer transition`}>
             PRIVACY
           </span>
-          <span className="hover:text-gray-400 cursor-pointer transition">
+          <span className={`${d ? "hover:text-gray-400" : "hover:text-gray-800"} cursor-pointer transition`}>
             TERMS
           </span>
-          <span className="hover:text-gray-400 cursor-pointer transition">
+          <span className={`${d ? "hover:text-gray-400" : "hover:text-gray-800"} cursor-pointer transition`}>
             SUPPORT
           </span>
         </div>
@@ -1835,6 +1859,9 @@ function SuccessView({
   // BE-1 — names of every pillar unlocked in this (possibly multi-pillar) purchase.
   pillarNames: string[];
 }) {
+  const { dark } = useTheme();
+  const d = dark;
+
   const displayAmount = chargedAmount !== null ? formatPrice(chargedAmount) : (plan?.price ?? "Paid");
   const isBundle = plan?.backendPlan === "PHASE2B_PILLAR";
   const capabilities = isBundle
@@ -1875,16 +1902,16 @@ function SuccessView({
       ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0d1117] text-white">
+    <div className={`min-h-screen flex flex-col ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"}`}>
       <div className="flex-1 flex flex-col items-center px-4 sm:px-6 md:px-8 py-16">
-        <div className="w-16 h-16 rounded-full bg-[#00ffaa] flex items-center justify-center mb-6">
+        <div className="w-16 h-16 rounded-full bg-[#00ffaa] flex items-center justify-center mb-6 shadow-md">
           <CheckCircle className="w-8 h-8 text-gray-900" />
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-center">
+        <h1 className={`text-3xl md:text-5xl font-extrabold mb-4 text-center ${d ? "text-white" : "text-gray-900"}`}>
           Payment Successful.
         </h1>
-        <p className="text-base text-center mb-12 max-w-lg text-gray-400">
+        <p className={`text-base text-center mb-12 max-w-lg ${d ? "text-gray-400" : "text-gray-600"}`}>
           {plan?.backendPlan === "PHASE2B_PILLAR"
             ? pillarNames.length > 1
               ? `${pillarNames.length} deep-dive modules are now active. Start whenever you're ready.`
@@ -1893,39 +1920,39 @@ function SuccessView({
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-          <div className="rounded-2xl p-8 border bg-[#161b22] border-white/10">
+          <div className={`rounded-2xl p-8 border ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200 shadow-sm"}`}>
             <div className="flex items-center gap-2 mb-6">
               <div className="w-2 h-2 rounded-full bg-[#00ffaa]" />
-              <p className="text-xs font-bold uppercase tracking-widest text-[#00ffaa]">
+              <p className={`text-xs font-bold uppercase tracking-widest ${d ? "text-[#00ffaa]" : "text-teal-600"}`}>
                 Transaction Details
               </p>
             </div>
             <div className="flex items-start justify-between mb-6">
               <div>
-                <p className="text-[10px] uppercase tracking-widest mb-1 text-gray-500">
+                <p className={`text-[10px] uppercase tracking-widest mb-1 ${d ? "text-gray-500" : "text-gray-500"}`}>
                   Plan
                 </p>
-                <p className="text-xl font-bold text-white">
+                <p className={`text-xl font-bold ${d ? "text-white" : "text-gray-900"}`}>
                   {plan?.name ?? "Plan 2A"}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest mb-1 text-gray-500">
+                <p className={`text-[10px] uppercase tracking-widest mb-1 ${d ? "text-gray-500" : "text-gray-500"}`}>
                   Status
                 </p>
-                <p className="text-xl font-bold text-[#00ffaa]">
+                <p className={`text-xl font-bold ${d ? "text-[#00ffaa]" : "text-teal-600"}`}>
                   {verifyResult.status}
                 </p>
               </div>
             </div>
 
-            <div className="border-t pt-6 mb-8 border-white/10">
-              <p className="text-xs mb-1 text-gray-400">Reference</p>
-              <p className="text-sm font-mono text-gray-300 break-all mb-4">
+            <div className={`border-t pt-6 mb-8 ${d ? "border-white/10" : "border-gray-200"}`}>
+              <p className={`text-xs mb-1 ${d ? "text-gray-400" : "text-gray-500"}`}>Reference</p>
+              <p className={`text-sm font-mono ${d ? "text-gray-300" : "text-gray-700"} break-all mb-4`}>
                 {verifyResult.reference}
               </p>
-              <p className="text-xs mb-1 text-gray-400">Total amount</p>
-              <p className="text-3xl font-extrabold text-[#00ffaa]">
+              <p className={`text-xs mb-1 ${d ? "text-gray-400" : "text-gray-500"}`}>Total amount</p>
+              <p className={`text-3xl font-extrabold ${d ? "text-[#00ffaa]" : "text-teal-600"}`}>
                 {displayAmount}
               </p>
             </div>
@@ -1948,14 +1975,14 @@ function SuccessView({
               )}
               <Link
                 href="/dashboard"
-                className="flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition"
+                className={`flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-semibold border ${d ? "border-white/10 text-white hover:bg-white/5" : "border-gray-200 text-gray-900 hover:bg-gray-100"} transition`}
               >
                 Dashboard
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl p-8 border bg-[#1a2010] border-[#00ffaa]/20">
+          <div className={`rounded-2xl p-8 border ${d ? "bg-[#1a2010] border-[#00ffaa]/20" : "bg-emerald-50/50 border-emerald-200 shadow-sm"}`   }>
             <div className="flex items-center gap-2 mb-6">
               <Star className="w-4 h-4 text-[#f97316]" />
               <p className="text-xs font-bold uppercase tracking-widest text-[#f97316]">
@@ -1967,13 +1994,13 @@ function SuccessView({
                 <div key={title} className="flex items-start gap-3">
                   <div className="flex-shrink-0 mt-0.5">{icon}</div>
                   <div>
-                    <p className="text-sm font-bold text-white">{title}</p>
-                    <p className="text-xs text-gray-400">{desc}</p>
+                    <p className={`text-sm font-bold ${d ? "text-white" : "text-gray-900"}`}>{title}</p>
+                    <p className={`text-xs ${d ? "text-gray-400" : "text-gray-600"}`}>{desc}</p>
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs leading-relaxed rounded-xl p-4 bg-[#0d1117]/50 text-gray-500 flex items-start gap-2">
+            <p className={`text-xs leading-relaxed rounded-xl p-4 ${d ? "bg-[#0d1117]/50 text-gray-500" : "bg-white/80 text-gray-600 border border-emerald-100"} flex items-start gap-2`}>
               <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-yellow-500" />
               A receipt has been sent to {me.email}.
             </p>
