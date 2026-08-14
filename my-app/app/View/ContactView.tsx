@@ -42,7 +42,7 @@ export default function ContactView() {
   };
 
   return (
-    <div className={`min-h-screen py-20 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"}`}>
+    <div className={`min-h-screen pt-28 pb-20 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center ${d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"}`}>
       <div className={`max-w-xl w-full p-8 sm:p-10 rounded-3xl border shadow-xl ${d ? "bg-[#161b22] border-white/10" : "bg-white border-gray-200"}`}>
         <h1 className="text-3xl font-extrabold mb-2 text-center">Contact Support</h1>
         <p className={`text-sm text-center mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>

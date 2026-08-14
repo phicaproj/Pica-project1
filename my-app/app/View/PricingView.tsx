@@ -176,8 +176,9 @@ export default function PricingPage() {
           flow with breathing-room padding solves both. (HomeView keeps the
           full-viewport centering because its hero is tall enough to fill it.) */}
 			<section
-				className={`px-4 sm:px-6 md:px-8 pt-6 pb-8 md:pt-12 md:pb-12 ${d ? 'bg-[#111111]' : 'bg-gray-50'}`}>
-				<div className='max-w-6xl mx-auto flex flex-col items-center text-center'>
+				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center px-4 sm:px-6 md:px-8 pt-24 pb-8 md:pt-32 md:pb-12 bg-cover bg-center ${d ? 'bg-[#111111]/90 bg-blend-overlay' : 'bg-gray-50/10 bg-blend-overlay'}`}
+				style={{ backgroundImage: "url('/images/hero-background.png')" }}>
+				<div className='max-w-6xl mx-auto flex flex-col items-center text-center relative z-10'>
 					<div
 						className={`inline-flex items-center px-3 py-1 rounded-md border ${d ? 'border-white/20 text-gray-300' : 'border-gray-300 text-gray-600'} text-xs font-semibold uppercase tracking-widest mb-4 md:mb-6`}>
 						Strategic Intelligence

@@ -153,7 +153,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       <main
         key={pathname}
         ref={mainRef}
-        className="animate-page-in pt-16"
+        className="animate-page-in"
       >
         {children}
       </main>

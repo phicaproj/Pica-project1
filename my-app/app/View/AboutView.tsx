@@ -25,7 +25,7 @@ export default function AboutPage() {
     <div className={`antialiased min-h-screen transition-colors duration-300 pb-24 ${d ? "bg-[#0d1117] text-white" : "bg-white text-gray-900"}`}>
       
       {/* ── Hero Section ── */}
-      <section className={`relative min-h-[85vh] flex items-center py-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
+      <section className={`relative min-h-[85vh] flex items-center pt-32 pb-16 px-6 lg:px-8 overflow-hidden ${d ? "bg-[#0d1117]" : "bg-gray-50"}`}>
         {/* Decorative background glows */}
         {d && (
           <>
