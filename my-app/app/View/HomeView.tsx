@@ -166,7 +166,7 @@ export default function HomePage() {
 
 			{/* ── Quote Block ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-5xl mx-auto text-center space-y-8'>
 					<div className='space-y-6'>
 						<h2
@@ -229,7 +229,7 @@ export default function HomePage() {
 
 			{/* ── The PICA Ecosystem ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='text-center space-y-3'>
 						<h2
@@ -329,10 +329,10 @@ export default function HomePage() {
 
 			{/* ── Capabilities ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='space-y-3'>
-						<p className='text-xs font-bold tracking-widest text-teal-400 uppercase'>
+						<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 							Core Capabilities
 						</p>
 						<h2
@@ -387,11 +387,11 @@ export default function HomePage() {
 
 			{/* ── 7 Pillars ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
-					<div className={`grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b pb-8 ${d ? 'border-white/5' : 'border-gray-100'}`}>
+					<div className={`grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b pb-8 ${d ? 'border-white/5' : 'border-gray-200'}`}>
 						<div className='space-y-3'>
-							<p className='text-xs font-bold tracking-widest text-teal-400 uppercase'>
+							<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 								Structural Foundation
 							</p>
 							<h2
@@ -470,7 +470,7 @@ export default function HomePage() {
 
 			{/* ── Three Layers of Business Health Check ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='text-center max-w-2xl mx-auto space-y-3'>
 						<h2
@@ -495,7 +495,7 @@ export default function HomePage() {
 									className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Awareness
 								</h3>
-								<p className='text-[10px] text-teal-400 font-bold uppercase tracking-wider leading-relaxed'>
+								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									FULL VISIBILITY ACROSS ALL
 									OPERATIONAL CHANNELS. NO
 									MORE DARK SPOTS.
@@ -528,10 +528,10 @@ export default function HomePage() {
 								MOST SELECTED
 							</div>
 							<div className='space-y-4 pt-2'>
-								<h3 className='text-2xl font-black text-white'>
+								<h3 className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Full Diagnostics
 								</h3>
-								<p className='text-[10px] text-teal-400 font-bold uppercase tracking-wider leading-relaxed'>
+								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									AUTOMATED IDENTIFICATION
 									OF STRUCTURAL
 									INEFFICIENCIES AND RISK
@@ -545,7 +545,7 @@ export default function HomePage() {
 									].map((item) => (
 										<li
 											key={item}
-											className='flex items-center gap-2.5 text-sm text-gray-200'>
+											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-200' : 'text-gray-700'}`}>
 											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
 											{item}
 										</li>
@@ -567,7 +567,7 @@ export default function HomePage() {
 									className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Intelligence
 								</h3>
-								<p className='text-[10px] text-teal-400 font-bold uppercase tracking-wider leading-relaxed'>
+								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									DEEP-DIVE MODELING FOR
 									FUTURE GROWTH AND RISK
 									MITIGATION.
@@ -599,11 +599,11 @@ export default function HomePage() {
 
 			{/* ── Data You Can Actually Use ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center'>
 					<div className='space-y-6'>
 						<div className='space-y-3'>
-							<p className='text-xs font-bold tracking-widest text-teal-400 uppercase'>
+							<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 								Output Quality
 							</p>
 							<h2
@@ -727,7 +727,7 @@ export default function HomePage() {
 
 			{/* ── The Path to Clarity ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-16'>
 					<div className='text-center space-y-3'>
 						<h2
@@ -789,10 +789,10 @@ export default function HomePage() {
 
 			{/* ── Built on Structured Logic, Not Hype ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='text-center max-w-2xl mx-auto space-y-3'>
-						<p className='text-xs font-bold tracking-widest text-teal-400 uppercase'>
+						<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 							Trust & Methodology
 						</p>
 						<h2
@@ -864,7 +864,7 @@ export default function HomePage() {
 
 			{/* ── Economy Section (Scan Call to Action) ── */}
 			<section
-				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center'>
 					{/* Image */}
 					<div
