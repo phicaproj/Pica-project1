@@ -54,7 +54,7 @@ export default function HomePage() {
 			className={`antialiased min-h-screen transition-colors duration-300 ${d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}`}>
 			{/* ── Hero ── */}
 			<section
-				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center pt-28 pb-12 lg:pt-32 lg:pb-16 px-6 lg:px-8 overflow-hidden bg-cover bg-center ${d ? 'bg-[#0d1117]/90 bg-blend-overlay' : 'bg-gray-50/10 bg-blend-overlay'}`}
+				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center pt-28 pb-12 lg:pt-32 lg:pb-16 px-6 lg:px-8 overflow-hidden bg-cover bg-center ${d ? 'bg-[#0d1117]/90 bg-blend-overlay' : 'bg-[#0d1117]/60 bg-blend-overlay'}`}
 				style={{ backgroundImage: "url('/images/hero-background.png')" }}>
 				{/* Background glows */}
 				{d && (
@@ -65,10 +65,10 @@ export default function HomePage() {
 				)}
 				<div className='max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 w-full items-center relative z-10'>
 					{/* Left */}
-					<div className='flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6'>
+					<div className='flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6 text-white'>
 						<div className='inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20'>
 							<span className='w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse' />
-							<span className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+							<span className={`text-xs font-bold uppercase tracking-widest text-teal-400`}>
 								Precision Business Intelligence
 							</span>
 						</div>
@@ -76,7 +76,7 @@ export default function HomePage() {
 							Most Businesses Are{' '}
 							<br className='hidden lg:inline' />
 							Not{' '}
-							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
+							<span className='text-teal-400'>
 								Broken
 							</span>{' '}
 							<br />
@@ -85,7 +85,7 @@ export default function HomePage() {
 							Misdiagnosed
 						</h1>
 						<p
-							className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+							className={`text-base md:text-lg leading-relaxed max-w-lg text-center lg:text-left mx-auto lg:mx-0 text-gray-200`}>
 							Growth failure is rarely a lack of
 							effort; it's a lack of clarity in the
 							initial assessment.

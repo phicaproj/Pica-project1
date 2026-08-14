@@ -176,32 +176,34 @@ export default function PricingPage() {
           flow with breathing-room padding solves both. (HomeView keeps the
           full-viewport centering because its hero is tall enough to fill it.) */}
 			<section
-				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center px-4 sm:px-6 md:px-8 pt-24 pb-8 md:pt-32 md:pb-12 bg-cover bg-center ${d ? 'bg-[#111111]/90 bg-blend-overlay' : 'bg-gray-50/10 bg-blend-overlay'}`}
+				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center px-4 sm:px-6 md:px-8 pt-24 pb-8 md:pt-32 md:pb-12 bg-cover bg-center ${d ? 'bg-[#111111]/90 bg-blend-overlay' : 'bg-[#0d1117]/60 bg-blend-overlay'}`}
 				style={{ backgroundImage: "url('/images/hero-background.png')" }}>
-				<div className='max-w-6xl mx-auto flex flex-col items-center text-center relative z-10'>
+				<div className='max-w-6xl mx-auto flex flex-col items-center text-center relative z-10 text-white'>
 					<div
-						className={`inline-flex items-center px-3 py-1 rounded-md border ${d ? 'border-white/20 text-gray-300' : 'border-gray-300 text-gray-600'} text-xs font-semibold uppercase tracking-widest mb-4 md:mb-6`}>
+						className={`inline-flex items-center px-3 py-1 rounded-md border border-white/20 text-gray-300 text-xs font-semibold uppercase tracking-widest mb-4 md:mb-6`}>
 						Strategic Intelligence
 					</div>
 					<h1 className='text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-3 md:mb-4 max-w-2xl mx-auto'>
 						Strategic Pricing for{' '}
 						<span
-							className={`${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}>
+							className={`text-[#00ffaa]`}>
 							Growing Enterprises.
 						</span>
 					</h1>
 					<p
-						className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+						className={`text-sm leading-relaxed mb-6 md:mb-8 max-w-lg mx-auto text-gray-200`}>
 						Choose a framework designed to scale with
 						your organizational complexity. Pricing is
 						served from the platform backend.
 					</p>
+				</div>
+			</section>
 
-					{/* Section I — Pay Per Use / Subscription Plan toggle. A button is
-              disabled (and visually muted) when its corresponding section
-              has been paused by the admin so the user can't land on an
-              empty grid. */}
-					<div className='flex flex-col items-center'>
+			<section
+				className={`px-4 sm:px-6 md:px-8 pt-12 pb-20 ${d ? 'bg-[#111111]' : 'bg-gray-50'}`}>
+				<div className='max-w-6xl mx-auto'>
+					{/* Section I — Pay Per Use / Subscription Plan toggle. Moved here to keep hero clean. */}
+					<div className='flex flex-col items-center mb-12'>
 						<div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-2'>
 							{[
 								{
@@ -254,16 +256,6 @@ export default function PricingPage() {
 							)}
 						</div>
 					</div>
-				</div>
-			</section>
-
-			<section
-				className={`px-4 sm:px-6 md:px-8 pb-20 ${d ? 'bg-[#111111]' : 'bg-gray-50'}`}>
-				<div className='max-w-6xl mx-auto'>
-					{/* While the backend fetch is in flight we show a skeleton instead of
-              the real cards. Rendering the cards early would surface their
-              empty-state copy (e.g. Deep Dive's "Not configured") before we
-              actually know whether prices exist. */}
 					{loading && <PricingSkeleton dark={d} />}
 
 					{error && (
