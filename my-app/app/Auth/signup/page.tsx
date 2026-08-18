@@ -849,14 +849,14 @@ export default function SignUpPage() {
               panel was wider than the source's aspect, which softened the
               rendered pixels. sizes hints Next.js to serve a width-appropriate
               variant; quality:90 keeps detail at the auth-page size. */}
-					<div className='hidden md:flex relative rounded-r-2xl overflow-hidden bg-[#0d1117] items-center justify-center p-6'>
+					<div className='hidden md:flex relative rounded-r-2xl overflow-hidden bg-[#0d1117]'>
 						<Image
 							src='/images/assessques.png'
 							alt='Create Account'
 							fill
 							sizes='(min-width: 768px) 50vw, 0px'
 							quality={90}
-							className='object-contain'
+							className='object-cover object-center'
 							priority
 						/>
 					</div>
