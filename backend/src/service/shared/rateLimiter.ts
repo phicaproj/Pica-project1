@@ -14,7 +14,7 @@ export const authLimiter = rateLimit({
 
 export const webhookLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 60, // H-1
+  max: 200, // H-1
   message: { message: 'Too many webhook delivery requests, please try again later.' },
 });
 
