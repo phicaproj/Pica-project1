@@ -15,13 +15,7 @@ declare module 'express-serve-static-core' {
   }
 }
 
-/**
- * Loads the account's current status from the DB. JWTs are stateless — a
- * token stays cryptographically valid until it expires — so suspension is
- * enforced here, on every authenticated request: the moment an admin flips a
- * user to DISABLED, their next request is rejected even if their token is
- * still live. Returns null when the account no longer exists.
- */
+// Loads the account's current status from the DB. JWTs are stateless — a
 async function getAccountStatus(userId: string): Promise<UserStatus | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -48,13 +42,7 @@ async function getAccountStatusAndPermissions(userId: string) {
   return user;
 }
 
-/**
- * Resolves an admin's effective access. Per-person fields on the User are the
- * source of truth; the legacy adminRole relation is only a fallback for admins
- * onboarded before per-person permissions existed. An admin is "super" when
- * their department is SUPER ADMIN (new model) or their legacy role is named
- * SUPER ADMIN.
- */
+// Resolves an admin's effective access. Per-person fields on the User are the
 export function resolveAdminAccess(dbUser: {
   permissions?: string[] | null;
   department?: string | null;
@@ -131,9 +119,6 @@ export const hasPermission = (requiredPermission: string) => {
 };
 
 // Soft auth — populates req.user if a valid Bearer token is present, but does not
-// reject anonymous requests. Used on routes shared between guest (Phase 1) and
-// authenticated (Phase 2A) flows; the service layer enforces ownership where required.
-// A DISABLED account is treated as anonymous: the token is ignored.
 export const softAuthenticate = async (req: Request, _res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {

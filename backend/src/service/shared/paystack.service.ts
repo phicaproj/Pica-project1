@@ -3,30 +3,18 @@ import { PAYSTACK_BASE_URL, PAYSTACK_SECRET_KEY } from '../../Config/env';
 import AppError from './appError';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from './http';
 
-/**
- * Thin Paystack HTTP wrapper. Two responsibilities:
- *   1. Initialize a transaction (server-side, returns auth URL + reference).
- *   2. Verify a transaction by reference (called from the FE callback AND the webhook).
- *
- * Paystack works in MINOR units (kobo) on the wire. We accept and return MAJOR
- * units (NGN) on this boundary so the rest of the codebase stays clean.
- */
-
-// Paystack wire currency. NGN charges in kobo (×100); USD charges in cents
-// (×100 — same multiplier, different ISO code). Account-level support for USD
-// is a per-merchant Paystack setting (BE-0 in todo.md); if the account is
-// NGN-only, USD inits will be rejected at the provider boundary.
+// Thin Paystack HTTP wrapper. Two responsibilities:
 export type PaystackCurrency = 'NGN' | 'USD';
 
 export type PaystackInitInput = {
   email: string;
-  /** Major units of `currency` (e.g. 25000 NGN, 30 USD). Converted internally. */
+
   amount: number;
-  /** Defaults to NGN for backward compatibility with existing call sites. */
+
   currency?: PaystackCurrency;
-  /** Idempotency key — if reused, Paystack will reject. */
+
   reference: string;
-  /** Free-form key/value snapshot Paystack echoes back on verify. */
+
   metadata?: Record<string, unknown>;
 };
 
@@ -61,7 +49,6 @@ export async function initializeTransaction(input: PaystackInitInput): Promise<P
     body: JSON.stringify({
       email: input.email,
       // Both NGN→kobo and USD→cents are ×100. Paystack rejects fractional
-      // amounts, so round at the boundary.
       amount: Math.round(input.amount * 100),
       currency,
       reference: input.reference,
@@ -122,39 +109,16 @@ export function verifyWebhookSignature(rawBody: Buffer | string, signature: stri
 
 export function newPaymentReference(prefix = 'PICA') {
   // 16 random hex chars (8 bytes) is plenty of entropy and short enough
-  // to be human-friendly in the admin transaction page.
   return `${prefix}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 }
 
-/* ───────────────────────────── Plans + Subscriptions ─────────────────────────
- * Recurring billing pieces. The flow is:
- *
- *   1. Admin creates/updates a SubscriptionPlan row — we mirror it as a
- *      Paystack Plan via createPaystackPlan() (one per currency, USD+NGN),
- *      and persist the returned plan_code on our row.
- *   2. User subscribes — we initialize a transaction with the plan code; the
- *      first charge is the first period, and Paystack auto-creates the
- *      subscription record (subscription.create webhook → we persist code).
- *   3. Subsequent renewals fire charge.success webhooks tied to the same
- *      subscription code; the webhook handler bumps current_period_end.
- *   4. Cancel — disablePaystackSubscription() flips Paystack-side; webhook
- *      subscription.disable → status='CANCELLED' locally.
- *
- * Paystack's price is in MINOR units. Interval is 'monthly' for our case.
- */
-
+// Recurring billing pieces. The flow is:
 export type PaystackPlanInterval =
-  | 'hourly'
-  | 'daily'
-  | 'weekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'biannually'
-  | 'annually';
+  'hourly' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'annually';
 
 export type PaystackPlanInput = {
   name: string;
-  /** Major units (e.g. 40 USD, 60000 NGN). Converted to minor units internally. */
+
   amount: number;
   currency: PaystackCurrency;
   interval: PaystackPlanInterval;
@@ -200,12 +164,7 @@ export async function createPaystackPlan(input: PaystackPlanInput): Promise<Pays
   return body.data;
 }
 
-/**
- * Paystack's plan update endpoint takes plan_code or numeric id as path param.
- * Only fields you pass get changed — pass undefined to leave a field alone.
- * Currency is immutable on Paystack's side; if it has to change, create a
- * fresh plan and swap the code on our row.
- */
+// Paystack's plan update endpoint takes plan_code or numeric id as path param.
 export async function updatePaystackPlan(
   planCode: string,
   input: Partial<Omit<PaystackPlanInput, 'currency'>>
@@ -216,14 +175,11 @@ export async function updatePaystackPlan(
   if (input.interval !== undefined) payload.interval = input.interval;
   if (input.description !== undefined) payload.description = input.description;
 
-  const response = await fetch(
-    `${PAYSTACK_BASE_URL}/plan/${encodeURIComponent(planCode)}`,
-    {
-      method: 'PUT',
-      headers: paystackHeaders(),
-      body: JSON.stringify(payload),
-    }
-  );
+  const response = await fetch(`${PAYSTACK_BASE_URL}/plan/${encodeURIComponent(planCode)}`, {
+    method: 'PUT',
+    headers: paystackHeaders(),
+    body: JSON.stringify(payload),
+  });
 
   const body = (await response.json().catch(() => null)) as {
     status?: boolean;
@@ -241,19 +197,14 @@ export async function updatePaystackPlan(
 export type PaystackSubscriptionInitInput = {
   email: string;
   planCode: string;
-  /** Paystack debits this amount on the first charge; it must match the plan. */
+
   amount: number;
   currency: PaystackCurrency;
   reference: string;
   metadata?: Record<string, unknown>;
 };
 
-/**
- * "Create subscription" via Paystack is really "initialize a transaction with
- * a plan attached" — the first charge becomes the first period and Paystack
- * spawns the subscription record server-side. We rely on the
- * subscription.create webhook to learn the subscription_code afterwards.
- */
+// "Create subscription" via Paystack is really "initialize a transaction with
 export async function initializeSubscriptionTransaction(
   input: PaystackSubscriptionInitInput
 ): Promise<PaystackInitData> {
@@ -286,12 +237,7 @@ export async function initializeSubscriptionTransaction(
   return body.data;
 }
 
-/**
- * A subscription as Paystack returns it inside the customer fetch payload.
- * `email_token` is the customer-specific token disable requires — it only
- * appears here and on the subscription.create webhook, so this fetch is our
- * fallback source of the handles when the webhook never landed.
- */
+// A subscription as Paystack returns it inside the customer fetch payload.
 export type PaystackCustomerSubscription = {
   subscription_code: string;
   email_token: string;
@@ -299,26 +245,14 @@ export type PaystackCustomerSubscription = {
   plan?: { plan_code?: string } | null;
 };
 
-/**
- * Fetch a customer by email (or customer code) and return the subscriptions
- * Paystack has on file for them. Used by the cancel path as a fallback when we
- * never captured `subscription_code` / `email_token` locally — e.g. the
- * subscription.create webhook never reached us (localhost with no tunnel), so
- * the row's handles are null but Paystack is still billing.
- *
- * Returns an empty list if the customer exists but has no subscriptions.
- * Throws if the customer can't be found at all.
- */
+// Fetch a customer by email (or customer code) and return the subscriptions
 export async function fetchPaystackCustomerSubscriptions(
   emailOrCode: string
 ): Promise<PaystackCustomerSubscription[]> {
-  const response = await fetch(
-    `${PAYSTACK_BASE_URL}/customer/${encodeURIComponent(emailOrCode)}`,
-    {
-      method: 'GET',
-      headers: paystackHeaders(),
-    }
-  );
+  const response = await fetch(`${PAYSTACK_BASE_URL}/customer/${encodeURIComponent(emailOrCode)}`, {
+    method: 'GET',
+    headers: paystackHeaders(),
+  });
 
   const body = (await response.json().catch(() => null)) as {
     status?: boolean;
@@ -336,15 +270,7 @@ export async function fetchPaystackCustomerSubscriptions(
   return body.data.subscriptions ?? [];
 }
 
-/**
- * Cancel a subscription. Paystack requires BOTH the subscription code AND the
- * customer-specific email_token (returned alongside the subscription on
- * subscription.create). We persist both on UserSubscription.
- *
- * After this call Paystack stops billing; the subscription.disable webhook
- * arrives shortly after — the recurring webhook handler is what flips our
- * local status to CANCELLED.
- */
+// Cancel a subscription. Paystack requires BOTH the subscription code AND the
 export async function disablePaystackSubscription(input: {
   subscriptionCode: string;
   emailToken: string;

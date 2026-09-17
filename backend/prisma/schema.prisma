@@ -47,25 +47,12 @@ enum Plan {
   PHASE2A
   PHASE2B_PILLAR
   /// Recurring subscription charge — used for both the first charge and every
-  /// renewal. The Payment row is the audit trail; the UserSubscription row
-  /// (via `userSubscriptionId`) is the entitlement. grantSuccessEntitlements
-  /// short-circuits for SUBSCRIPTION rows because there's nothing to unlock.
   SUBSCRIPTION
   /// One-off consultation paywall. Paid when the user has no consultation
-  /// quota left on their subscription. The Payment row is linked to a
-  /// ConsultationBooking via Payment.consultationBookingId; grant logic flips
-  /// the booking from REQUESTED-pending-payment to REQUESTED-confirmable.
   CONSULTATION
 }
 
-/// Lifecycle of a consultation booking.
-///   REQUESTED — user submitted; either covered by subscription quota or
-///               waiting for paywall completion. Visible to admin in either
-///               case (Payment.status acts as the "ready to confirm" gate).
-///   CONFIRMED — admin set scheduledAt + meetingLink, user notified.
-///   ATTENDED  — admin marked complete after the session.
-///   NO_SHOW   — admin recorded the user didn't show.
-///   CANCELLED — user-cancelled OR admin-cancelled (preserves the audit row).
+  /// Lifecycle of a consultation booking.
 enum ConsultationBookingStatus {
   REQUESTED
   CONFIRMED
@@ -98,18 +85,13 @@ enum UserRole {
   ADMIN
 }
 
-// Account standing. DISABLED users cannot log in, and any live access token
-// is rejected by the auth middleware on the next request (the middleware
-// re-checks status in the DB), so suspension takes effect immediately.
+  // Account standing. DISABLED users cannot log in, and any live access token
 enum UserStatus {
   ACTIVE
   DISABLED
 }
 
-// Subscription lifecycle. Mirrors Paystack's `subscription` statuses but only
-// names the ones our flows actually act on. The remaining Paystack states
-// (e.g. "non-renewing", "attention") collapse to PAST_DUE or CANCELLED based
-// on whether the user can still consume quota.
+  // Subscription lifecycle. Mirrors Paystack's `subscription` statuses but only
 enum SubscriptionStatus {
   ACTIVE // current period valid, quota consumable
   PAST_DUE // renewal charge failed; access until period end then EXPIRED
@@ -117,17 +99,13 @@ enum SubscriptionStatus {
   EXPIRED // no current period; user must resubscribe
 }
 
-// Subscribe cadence. Snapshot on UserSubscription at subscribe time so the
-// renewal period roll (30 vs 365 days) and FE "billed monthly/annually"
-// labels are stable across mid-stream plan edits.
+  // Subscribe cadence. Snapshot on UserSubscription at subscribe time so the
 enum BillingInterval {
   MONTHLY
   ANNUAL
 }
 
-// The seven fixed pillar codes. Used as the canonical identifier for a Pillar
-// and as the prefix of every questionCode (e.g. "FL-001"). Keeping it an enum
-// guarantees consistent naming across pillars and admin-created questions.
+  // The seven fixed pillar codes. Used as the canonical identifier for a Pillar
 enum PillarCode {
   FL
   FR
@@ -138,9 +116,7 @@ enum PillarCode {
   SS
 }
 
-// ============================================================
-// LAYER A — CONTENT (Static / Admin-Managed)
-// ============================================================
+  // ============================================================
 
 model Pillar {
   id           String     @id @default(uuid())
@@ -167,14 +143,7 @@ model Pillar {
   @@map("pillars")
 }
 
-/// Singleton (one row) — admin-editable RED/AMBER/GREEN color-band thresholds
-/// plus display label/description per band. Read by the scoring engine at
-/// submit time, so edits only affect future submissions: every saved result
-/// keeps the band that was computed when it was scored.
-///   score >= greenMin           → GREEN
-///   score >= amberMin           → AMBER
-///   score <  amberMin           → RED
-/// Invariant (enforced in the service): 0 < amberMin < greenMin <= 100.
+  /// Singleton (one row) — admin-editable RED/AMBER/GREEN color-band thresholds
 model ScoringSettings {
   id String @id @default(uuid())
 
@@ -266,9 +235,7 @@ model QuestionOption {
   @@map("question_options")
 }
 
-// ============================================================
-// LAYER B — USERS
-// ============================================================
+  // ============================================================
 
 model User {
   id           String     @id @default(uuid())
@@ -284,8 +251,6 @@ model User {
   status       UserStatus @default(ACTIVE)
 
   // Per-admin access control. `permissions` is this admin's own granular
-  // permission set (chosen at invite time); `department` is an org label
-  // ("Finance", "Audit", "SUPER ADMIN", or custom). 
   permissions    String[]      @default([])
   department     String?
   businessSize   BusinessSize? @map("business_size")
@@ -309,8 +274,6 @@ model User {
   adminAuditLogs         AdminAuditLog[]
   consultationAdminNotes ConsultationBooking[] @relation("ConsultationAdminNotes")
   // PICA 2A credits granted by paid consultation bookings (see ConsultationTier
-  // .freeP2ARuns / .freeP2ACreditWindowDays). Consumed before the subscription
-  // quota path in initPaymentService.
   phase2aCredits         Phase2ACredit[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -319,9 +282,7 @@ model User {
   @@map("users")
 }
 
-// ============================================================
-// LAYER C — SESSION (Per User Assessment Run)
-// ============================================================
+  // ============================================================
 
 model AssessmentSession {
   id                  String        @id @default(uuid())
@@ -374,8 +335,7 @@ model SessionResponse {
   @@map("session_responses")
 }
 
-/// Pillar-level score and insight for a session.
-/// One row per pillar per session — 7 rows total for a full Phase 1 run.
+  /// Pillar-level score and insight for a session.
 model SessionPillarScore {
   id        String @id @default(uuid())
   sessionId String @map("session_id")
@@ -391,17 +351,6 @@ model SessionPillarScore {
   insightRuleApplied InsightRule @map("insight_rule_applied")
 
   // ─── Findings stored as JSON ──────────────────────────────
-  // Array of 1–2 findings selected by the rule above.
-  // Shape per item:
-  // {
-  //   optionId:       string,
-  //   questionText:   string,
-  //   selectedLabel:  string,   // "A" | "B" | "C" | "D"
-  //   observation:    string,
-  //   recommendation: string,
-  //   riskType:       RiskType,
-  //   score:          number
-  // }
   findings Json // Json[] shape described above
 
   // Relations
@@ -443,15 +392,9 @@ model SessionResult {
   @@map("session_results")
 }
 
-// ============================================================
-// LAYER D — PAYMENTS
-// ============================================================
+  // ============================================================
 
-/// One Payment row per Paystack initialization.
-/// Created when the FE hits /api/payment/init (status PENDING) and updated by
-/// either the verify endpoint or the webhook (status SUCCESS/FAILED/etc).
-/// `providerReference` is unique so retries on the same Paystack reference
-/// idempotently update the same row instead of duplicating.
+  /// One Payment row per Paystack initialization.
 model Payment {
   id                    String   @id @default(uuid())
   userId                String   @map("user_id")
@@ -528,19 +471,9 @@ model WebhookEvent {
   @@map("webhook_events")
 }
 
-// ============================================================
-// LAYER E — PHASE 2B ENTITLEMENTS
-// ============================================================
+  // ============================================================
 
-/// One row per successful Phase 2B pillar purchase.
-///
-/// "One open unlock per (user, pillar)" is enforced in application code
-/// (see initPaymentService) rather than via a DB partial-unique index —
-/// users can have many historical CONSUMED unlocks for the same pillar
-/// (retakes), so the constraint only applies to rows where consumedAt IS NULL.
-///
-/// Refund policy: PaymentStatus.REVERSED is recorded but does NOT delete or
-/// re-open the unlock. Per anti-fraud policy.
+  /// One row per successful Phase 2B pillar purchase.
 model Phase2BPillarUnlock {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
@@ -594,8 +527,6 @@ model Discount {
   plan               Plan? // optional target plan; null = usable on any paid plan
   pillarId           String?           @map("pillar_id") // PHASE2B_PILLAR target; null for global/PHASE2A coupons
   // SUBSCRIPTION-plan tier target. Only meaningful when plan = SUBSCRIPTION.
-  // null = coupon applies to any subscription tier; set = coupon only valid
-  // for that specific tier
   subscriptionPlanId String?           @map("subscription_plan_id")
   user               User?             @relation(fields: [userId], references: [id])
   pillar             Pillar?           @relation(fields: [pillarId], references: [id])
@@ -632,7 +563,6 @@ model SubscriptionPlan {
   priceUsd    Decimal @map("price_usd") @db.Decimal(12, 2)
 
   // Monthly quotas — what one period of this subscription buys. 0 means the
-  // tier doesn't include that benefit
   phase2aPerMonth       Int      @map("phase2a_per_month")
   phase2bPerMonth       Int      @map("phase2b_per_month")
   consultationsPerMonth Int      @map("consultations_per_month")
@@ -679,7 +609,6 @@ model UserSubscription {
   cardAuthorizationCode String? @map("card_authorization_code")
 
   // Current billing period. Rolled forward by the charge.success webhook on
-  // each successful renewal.
   currentPeriodStart DateTime @map("current_period_start")
   currentPeriodEnd   DateTime @map("current_period_end")
 

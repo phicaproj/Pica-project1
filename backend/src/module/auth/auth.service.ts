@@ -56,9 +56,6 @@ import type {
 const SALT_ROUNDS = 10;
 
 // Mirrors the staff-only classifier in assessment.service.ts so registerService
-// can derive businessSize from the headcount the user types at signup. Kept
-// local on purpose — it's two lines, and routing the call through assessment
-// would couple auth to it for no other reason.
 const SMALL_STAFF_THRESHOLD = 50;
 function classifyStaffSizeForRegistration(staffSize: string): BusinessSize {
   const match = staffSize.match(/\d+/);
@@ -80,11 +77,6 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
   }
 
   // Registration no longer requires a prior Phase 1 session. We still look
-  // one up by email so we can pre-fill profile fields the user already gave
-  // us during the free scan (and so businessSize is resolved automatically);
-  // anything missing falls back to what the user typed at signup. The
-  // dashboard prompts the user to finish their profile when businessSize is
-  // still null — see meService.profileComplete.
   const phase1Session = await prisma.assessmentSession.findFirst({
     where: {
       leadEmail: normalizedEmail,
@@ -107,13 +99,11 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
   const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
   // Resolve country/state from either the user's signup input (preferred when
-  // present) or the Phase 1 session's free-text location.
   const fallbackLocation = phase1Session
     ? parseLocation(phase1Session.location)
     : { country: null as string | null, state: null as string | null };
 
   // Staff size dictates businessSize. If we have it from either source,
-  // classify; otherwise leave businessSize null and let the dashboard nag.
   const resolvedStaffSize = data.staffSize ?? phase1Session?.staffSize ?? null;
   const resolvedBusinessSize = resolvedStaffSize
     ? classifyStaffSizeForRegistration(resolvedStaffSize)
@@ -147,9 +137,6 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
   });
 
   // Hard email-verification gate: the account is created unverified and must
-  // confirm a one-time code before it can log in. We send the code now and
-  // hand the client an OTP token that carries the (hashed) code. The welcome
-  // email is deferred to the moment verification succeeds.
   const otpToken = await issueEmailVerification(user.email);
 
   return {
@@ -161,8 +148,6 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
 }
 
 // Generates a verification code, emails it, and returns a signed OTP token that
-// carries the hashed code + purpose. Shared by registration, the not-yet-
-// verified login branch, and the explicit resend endpoint.
 async function issueEmailVerification(email: string): Promise<string> {
   const normalizedEmail = email.trim().toLowerCase();
   const code = generateOtpCode();
@@ -204,6 +189,11 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
   });
 
   if (!user || !user.passwordHash) {
+    // Perform a dummy compare to avoid timing differences that reveal user existence
+    await bcrypt.compare(
+      data.password,
+      '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    );
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
@@ -214,19 +204,18 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
   }
 
   // Checked AFTER the password so account standing is only revealed to
-  // someone who actually holds the credentials.
   if (user.status === UserStatus.DISABLED) {
     throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
   if (user.role === 'ADMIN') {
-    throw new AppError('Admin login is not permitted on this portal. Please use the admin login page.', FORBIDDEN);
+    throw new AppError(
+      'Admin login is not permitted on this portal. Please use the admin login page.',
+      FORBIDDEN
+    );
   }
 
   // Hard email-verification gate for regular users: an unverified account can
-  // authenticate (correct password) but is not issued tokens. Instead we send a
-  // fresh verification code and bounce the client to the verification screen.
-  // Once verified, subsequent logins skip this branch entirely.
   if (!user.isVerified) {
     const otpToken = await issueEmailVerification(user.email);
     return {
@@ -261,8 +250,6 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
 }
 
 // Cryptographically strong 5-digit OTP. Math.random() is predictable enough
-// to be guessable from a few observed codes, which matters for admin login
-// and password reset — randomInt uses the OS CSPRNG.
 function generateOtpCode(): string {
   return randomInt(100000, 1000000).toString();
 }
@@ -305,16 +292,42 @@ export async function forgotPasswordService(
 }
 
 // Map to track failed attempts per OTP hash (H-11)
-const otpFailureMap = new Map<string, number>();
+const otpFailureMap = new Map<string, { attempts: number; expiresAt: number }>();
+
+// Sweep expired entries periodically to prevent memory leaks
+setInterval(
+  () => {
+    const now = Date.now();
+    for (const [key, value] of otpFailureMap.entries()) {
+      if (now > value.expiresAt) {
+        otpFailureMap.delete(key);
+      }
+    }
+  },
+  60 * 60 * 1000
+).unref();
 
 function enforceOtpAttempts(codeHash: string, code: string, payload: any) {
-  const attempts = otpFailureMap.get(codeHash) ?? 0;
+  const record = otpFailureMap.get(codeHash);
+
+  // Cleanup if we happen to hit an expired record
+  if (record && Date.now() > record.expiresAt) {
+    otpFailureMap.delete(codeHash);
+  }
+
+  const attempts = otpFailureMap.get(codeHash)?.attempts ?? 0;
   if (attempts >= 5) {
-    throw new AppError('This verification code has been locked due to too many failed attempts. Please request a new one.', UNAUTHORIZED);
+    throw new AppError(
+      'This verification code has been locked due to too many failed attempts. Please request a new one.',
+      UNAUTHORIZED
+    );
   }
 
   if (!otpCodeMatches(payload, code)) {
-    otpFailureMap.set(codeHash, attempts + 1);
+    otpFailureMap.set(codeHash, {
+      attempts: attempts + 1,
+      expiresAt: Date.now() + 15 * 60 * 1000, // Keep for 15 minutes
+    });
     throw new AppError('Invalid or expired code', BAD_REQUEST);
   }
 
@@ -375,7 +388,10 @@ export async function resetPasswordService(
 
   const currentPrefix = user.passwordHash ? user.passwordHash.substring(0, 15) : 'no_hash';
   if (payload.hashPrefix !== currentPrefix) {
-    throw new AppError('This password reset token has already been used or is invalid', BAD_REQUEST);
+    throw new AppError(
+      'This password reset token has already been used or is invalid',
+      BAD_REQUEST
+    );
   }
 
   const passwordHash = await bcrypt.hash(data.newPassword, SALT_ROUNDS);
@@ -391,8 +407,6 @@ export async function resetPasswordService(
 }
 
 // Confirms an account's email via the one-time code, flips isVerified, and logs
-// the user straight in (returns access + refresh tokens). This is the only path
-// that sets isVerified=true for self-registered users.
 export async function verifyEmailService(data: VerifyEmailInput): Promise<VerifyEmailResponse> {
   const payload = verifyOtpToken(data.otpToken);
 
@@ -470,8 +484,6 @@ export async function verifyEmailService(data: VerifyEmailInput): Promise<Verify
 }
 
 // Re-sends the verification code. Always returns a fresh OTP token and a
-// generic message so the endpoint can't be used to enumerate which emails are
-// registered (mirrors forgotPasswordService's privacy stance).
 export async function resendVerificationService(
   data: ResendVerificationInput
 ): Promise<ResendVerificationResponse> {
@@ -483,13 +495,16 @@ export async function resendVerificationService(
   });
 
   // Only actually email a real, still-unverified account. Either way we hand
-  // back a token so the client flow is identical (no account enumeration).
   const otpToken =
     user && !user.isVerified
       ? await issueEmailVerification(normalizedEmail)
       : generateOtpToken({
           email: normalizedEmail,
-          codeHash: hashOtpCode({ email: normalizedEmail, code: generateOtpCode(), purpose: 'email-verify' }),
+          codeHash: hashOtpCode({
+            email: normalizedEmail,
+            code: generateOtpCode(),
+            purpose: 'email-verify',
+          }),
           purpose: 'email-verify',
         });
 
@@ -501,9 +516,6 @@ export async function resendVerificationService(
 }
 
 // Activates an invited admin account. The account was created with
-// passwordHash: null (see inviteAdminService), so login is impossible until
-// this sets the invitee's own password. Re-using a spent invite link is
-// rejected so a leaked link can't reset an already-active account.
 export async function acceptInviteService(data: AcceptInviteInput): Promise<AcceptInviteResponse> {
   const payload = verifyInviteToken(data.token);
 
@@ -552,12 +564,18 @@ export async function adminLoginService(data: LoginInput): Promise<AdminLoginRes
 
   if (!user || !user.passwordHash) {
     // Perform a dummy compare to avoid timing differences that reveal user existence
-    await bcrypt.compare(data.password, '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX');
+    await bcrypt.compare(
+      data.password,
+      '$2b$10$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    );
     throw new AppError('Invalid email or password', UNAUTHORIZED);
   }
 
   if (user.role !== 'ADMIN') {
-    throw new AppError('Access denied. This login page is reserved for administrators only.', FORBIDDEN);
+    throw new AppError(
+      'Access denied. This login page is reserved for administrators only.',
+      FORBIDDEN
+    );
   }
 
   const passwordMatches = await bcrypt.compare(data.password, user.passwordHash);
@@ -643,14 +661,11 @@ export async function verifyAdminOTPService(
   }
 
   // Re-checked here because the account may have been suspended between
-  // requesting the OTP and verifying it.
   if (user.status === UserStatus.DISABLED) {
     throw new AppError('Your account has been suspended. Contact support.', FORBIDDEN);
   }
 
   // Per-person permissions are the source of truth; the legacy adminRole is a
-  // fallback. resolveAdminAccess centralizes the super-admin + fallback rules
-  // shared with the auth middleware.
   const access = resolveAdminAccess(user);
 
   const tokenPayload = {
@@ -710,7 +725,6 @@ export async function meService(userId: string): Promise<MeResponse> {
   }
 
   // Per-result paywall: "has the user paid for anything?" is now derived
-  // from SessionResult.isPaid rather than a user-level flag.
   const paidResultCount = await prisma.sessionResult.count({
     where: {
       isPaid: true,
@@ -719,8 +733,6 @@ export async function meService(userId: string): Promise<MeResponse> {
   });
 
   // Minimum required to unlock paid tests: businessSize must be resolved
-  // (which means we have a staffSize from either lead capture or signup).
-  // The FE uses this flag to show / hide the "Complete your profile" banner.
   const profileComplete = user.businessSize !== null;
 
   return {

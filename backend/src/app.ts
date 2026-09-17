@@ -23,7 +23,24 @@ const app = express();
 
 app.use(
   cors({
-    origin: APP_URL,
+    origin: (origin, callback) => {
+      
+      if (!origin) return callback(null, true);
+
+     
+      const allowedOrigin = APP_URL.replace(/\/$/, '');
+      
+      // 3. Always allow the main production URL
+      if (origin === allowedOrigin) return callback(null, true);
+
+      // 4. If in development mode, automatically allow localhost (React/Vue/Angular testing)
+      if (NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      // 5. Silently reject everything else
+      return callback(null, false);
+    },
     credentials: true,
   })
 );
