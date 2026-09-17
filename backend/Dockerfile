@@ -9,8 +9,8 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (Node 22 on Debian is >= 22.13)
-RUN npm ci
+# Install dependencies (including devDependencies needed for tsc)
+RUN npm ci --include=dev
 
 COPY . .
 
