@@ -134,12 +134,12 @@ export async function authedFetch<T>(
 	path: string,
 	init: RequestInit = {},
 ): Promise<ApiResult<T>> {
-	const token = getAccessToken()
+	let token = getAccessToken()
 	if (!token) {
 		return { data: null, error: { message: 'Not authenticated' } }
 	}
 	try {
-		const res = await fetch(`${API_BASE_URL}${path}`, {
+		let res = await fetch(`${API_BASE_URL}${path}`, {
 			...init,
 			headers: {
 				'Content-Type': 'application/json',
@@ -147,6 +147,35 @@ export async function authedFetch<T>(
 				Authorization: `Bearer ${token}`,
 			},
 		})
+
+		if (res.status === 401) {
+			const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+			if (refreshToken) {
+				const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ refreshToken })
+				});
+				if (refreshRes.ok) {
+					const data = await refreshRes.json();
+					if (data.accessToken && data.refreshToken) {
+						localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+						localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+						token = data.accessToken;
+						// Retry request
+						res = await fetch(`${API_BASE_URL}${path}`, {
+							...init,
+							headers: {
+								'Content-Type': 'application/json',
+								...(init.headers || {}),
+								Authorization: `Bearer ${token}`,
+							},
+						});
+					}
+				}
+			}
+		}
+
 		const json = (await res.json().catch(() => ({}))) as Record<
 			string,
 			unknown

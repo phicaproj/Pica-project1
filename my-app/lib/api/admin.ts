@@ -267,11 +267,11 @@ export const getAdminQuestions = async (params: {
 	if (params.phase) qs.set('phase', params.phase)
 	if (params.businessSize) qs.set('businessSize', params.businessSize)
 	if (params.search) qs.set('search', params.search)
-	if (params.includeInactive !== undefined) {
-		qs.set('includeInactive', String(params.includeInactive))
+	if (params.includeInactive) {
+		qs.set('includeInactive', 'true')
 	}
-	if (params.isKnockout !== undefined) {
-		qs.set('isKnockout', String(params.isKnockout))
+	if (params.isKnockout) {
+		qs.set('isKnockout', 'true')
 	}
 	const query = qs.toString()
 

@@ -481,7 +481,6 @@ export default function QuestionBankPage() {
     if (activeQuestion.phase === "PHASE2B") {
       payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : null;
       payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
-      payload.recommendation = "";
     } else {
       payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
       payload.actionPlanDays = null;
@@ -516,7 +515,6 @@ export default function QuestionBankPage() {
     if (activeQuestion.phase === "PHASE2B") {
       payload.actionPlanDays = newOption.actionPlanDays ? Number(newOption.actionPlanDays) : null;
       payload.actionPlanItems = newOption.actionPlanItems ? newOption.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
-      payload.recommendation = "";
     } else {
       payload.recommendation = newOption.recommendation ? newOption.recommendation.trim() : "";
       payload.actionPlanDays = null;
@@ -582,7 +580,6 @@ export default function QuestionBankPage() {
       if (createDraft.phase === "PHASE2B") {
         o.actionPlanDays = option.actionPlanDays ? Number(option.actionPlanDays) : null;
         o.actionPlanItems = option.actionPlanItems ? option.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
-        o.recommendation = "";
       } else {
         o.recommendation = option.recommendation ? option.recommendation.trim() : "";
         o.actionPlanDays = null;
@@ -1129,66 +1126,96 @@ export default function QuestionBankPage() {
                       </button>
                     </div>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-                      <input
-                        value={option.optionText}
-                        onChange={(event) =>
-                          updateCreateOption(index, "optionText", event.target.value)
-                        }
-                        placeholder="Option text"
-                        className={`${fieldClass} md:col-span-5`}
-                      />
-                      <input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={option.score}
-                        onChange={(event) =>
-                          updateCreateOption(index, "score", event.target.value)
-                        }
-                        className={fieldClass}
-                      />
-                      <textarea
-                        value={option.observation}
-                        onChange={(event) =>
-                          updateCreateOption(index, "observation", event.target.value)
-                        }
-                        rows={2}
-                        placeholder="Observation"
-                        className={`${textareaClass} md:col-span-3`}
-                      />
-                      {createDraft.phase === "PHASE2B" ? (
-                        <>
-                          <input
-                            type="number"
-                            min="1"
-                            max="365"
-                            value={option.actionPlanDays ?? 30}
-                            onChange={(event) =>
-                              updateCreateOption(index, "actionPlanDays", event.target.value)
-                            }
-                            placeholder="Action plan days"
-                            className={`${fieldClass} md:col-span-1`}
-                          />
-                          <textarea
-                            value={option.actionPlanItems?.join("\n") ?? ""}
-                            onChange={(event) =>
-                              updateCreateOption(index, "actionPlanItems", event.target.value)
-                            }
-                            rows={2}
-                            placeholder="Action plan items (one per line)"
-                            className={`${textareaClass} md:col-span-2`}
-                          />
-                        </>
-                      ) : (
-                        <textarea
-                          value={option.recommendation}
+                      <div className="md:col-span-5">
+                        <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                          Option Text
+                        </label>
+                        <input
+                          value={option.optionText}
                           onChange={(event) =>
-                            updateCreateOption(index, "recommendation", event.target.value)
+                            updateCreateOption(index, "optionText", event.target.value)
+                          }
+                          placeholder="Option text"
+                          className={fieldClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                          Score
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          value={option.score}
+                          onChange={(event) =>
+                            updateCreateOption(index, "score", event.target.value)
+                          }
+                          className={fieldClass}
+                        />
+                      </div>
+                      <div className="md:col-span-3">
+                        <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                          Observation
+                        </label>
+                        <textarea
+                          value={option.observation}
+                          onChange={(event) =>
+                            updateCreateOption(index, "observation", event.target.value)
                           }
                           rows={2}
-                          placeholder="Recommendation"
-                          className={`${textareaClass} md:col-span-3`}
+                          placeholder="Observation"
+                          className={textareaClass}
                         />
+                      </div>
+                      {createDraft.phase === "PHASE2B" ? (
+                        <>
+                          <div className="md:col-span-1">
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Action Days
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={option.actionPlanDays ?? 30}
+                              onChange={(event) =>
+                                updateCreateOption(index, "actionPlanDays", event.target.value)
+                              }
+                              placeholder="Action plan days"
+                              className={fieldClass}
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                              Action Plan
+                            </label>
+                            <textarea
+                              value={option.actionPlanItems?.join("\n") ?? ""}
+                              onChange={(event) =>
+                                updateCreateOption(index, "actionPlanItems", event.target.value)
+                              }
+                              rows={2}
+                              placeholder="Action plan items (one per line)"
+                              className={textareaClass}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="md:col-span-3">
+                          <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                            Recommendation
+                          </label>
+                          <textarea
+                            value={option.recommendation}
+                            onChange={(event) =>
+                              updateCreateOption(index, "recommendation", event.target.value)
+                            }
+                            rows={2}
+                            placeholder="Recommendation"
+                            className={textareaClass}
+                          />
+                        </div>
                       )}
                     </div>
                   </div>

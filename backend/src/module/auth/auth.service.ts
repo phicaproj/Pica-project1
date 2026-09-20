@@ -23,6 +23,7 @@ import {
   verifyInviteToken,
   verifyOtpToken,
   verifyPasswordResetToken,
+  verifyRefreshToken,
 } from '../../service/shared/generateToken';
 import {
   adminCodeEmail,
@@ -30,7 +31,7 @@ import {
   sendVerificationEmail,
   sendWelcomeEmail,
 } from '../../service/shared/email.service';
-import type {
+import type { RefreshTokenInput,
   AcceptInviteInput,
   AcceptInviteResponse,
   AdminLoginResponse,
@@ -759,3 +760,42 @@ export async function meService(userId: string): Promise<MeResponse> {
     },
   };
 }
+
+
+export const refreshTokenService = async ({ refreshToken }: RefreshTokenInput) => {
+  const payload = verifyRefreshToken(refreshToken);
+
+  const user = await prisma.user.findUnique({ 
+    where: { id: payload.id }, 
+    include: { adminRole: true } 
+  });
+  
+  if (!user || user.status === 'DISABLED') {
+    throw new AppError('User inactive or deleted', UNAUTHORIZED);
+  }
+
+  let newPayload: any;
+
+  if (payload.role === 'ADMIN') {
+    newPayload = {
+      id: user.id,
+      role: 'ADMIN',
+      adminRoleName: user.adminRole?.name,
+      permissions: user.adminRole?.permissions ?? [],
+    };
+  } else {
+    newPayload = {
+      id: user.id,
+      role: 'USER',
+    };
+  }
+
+  const accessToken = generateAccessToken(newPayload);
+  const newRefreshToken = generateRefreshToken(newPayload);
+
+  return {
+    message: 'Token refreshed successfully',
+    accessToken,
+    refreshToken: newRefreshToken,
+  };
+};

@@ -104,3 +104,11 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
   const result = await meService(req.user.id);
   return res.status(OK).json(result);
 });
+
+export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
+  const request = require('./auth.types').refreshTokenSchema.parse(req.body);
+  const result = await require('./auth.service').refreshTokenService(request);
+
+  return res.status(OK).json(result);
+});
+

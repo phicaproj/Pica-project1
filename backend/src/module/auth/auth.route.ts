@@ -29,4 +29,5 @@ authRouter.post('/reset-password', authLimiter, resetPassword);
 authRouter.post('/accept-invite', authLimiter, acceptInvite);
 authRouter.get('/me', authenticate, me);
 
+authRouter.post('/refresh', authLimiter, require('./auth.controller').refreshToken);
 export default authRouter;
