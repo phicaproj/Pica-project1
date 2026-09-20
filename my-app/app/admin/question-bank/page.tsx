@@ -479,12 +479,10 @@ export default function QuestionBankPage() {
       observation: draft.observation.trim(),
     };
     if (activeQuestion.phase === "PHASE2B") {
-      payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : null;
-      payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+      payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : undefined;
+      payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : undefined;
     } else {
       payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
-      payload.actionPlanDays = null;
-      payload.actionPlanItems = [];
     }
 
     const res = await updateAdminQuestionOption(optionId, payload);
@@ -513,12 +511,10 @@ export default function QuestionBankPage() {
       observation: newOption.observation.trim(),
     };
     if (activeQuestion.phase === "PHASE2B") {
-      payload.actionPlanDays = newOption.actionPlanDays ? Number(newOption.actionPlanDays) : null;
-      payload.actionPlanItems = newOption.actionPlanItems ? newOption.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+      payload.actionPlanDays = newOption.actionPlanDays ? Number(newOption.actionPlanDays) : undefined;
+      payload.actionPlanItems = newOption.actionPlanItems ? newOption.actionPlanItems.map(i => i.trim()).filter(Boolean) : undefined;
     } else {
       payload.recommendation = newOption.recommendation ? newOption.recommendation.trim() : "";
-      payload.actionPlanDays = null;
-      payload.actionPlanItems = [];
     }
 
     const res = await addAdminQuestionOption(activeQuestion.id, payload);
@@ -578,12 +574,10 @@ export default function QuestionBankPage() {
         observation: option.observation.trim(),
       };
       if (createDraft.phase === "PHASE2B") {
-        o.actionPlanDays = option.actionPlanDays ? Number(option.actionPlanDays) : null;
-        o.actionPlanItems = option.actionPlanItems ? option.actionPlanItems.map(i => i.trim()).filter(Boolean) : [];
+        o.actionPlanDays = option.actionPlanDays ? Number(option.actionPlanDays) : undefined;
+        o.actionPlanItems = option.actionPlanItems ? option.actionPlanItems.map(i => i.trim()).filter(Boolean) : undefined;
       } else {
         o.recommendation = option.recommendation ? option.recommendation.trim() : "";
-        o.actionPlanDays = null;
-        o.actionPlanItems = [];
       }
       return o;
     });
