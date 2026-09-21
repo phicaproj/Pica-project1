@@ -161,8 +161,8 @@ export default function QuestionBankPage() {
 
   // Bulk Upload state
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadPillarId, setUploadPillarId] = useState("");
   const [uploadPhase, setUploadPhase] = useState<AdminQuestionPhase>("PHASE2A");
-  const [uploadPillarId, setUploadPillarId] = useState<string>("");
   const [uploadBusinessSize, setUploadBusinessSize] = useState<BusinessSize>("SMALL");
 
 
@@ -687,20 +687,18 @@ export default function QuestionBankPage() {
     const isPhase2B = uploadPhase === "PHASE2B";
     const header = [
       "Question Text",
-      "Is Knockout",
-      "Is Phase 1 Featured",
-      "Show On Phase 1"
+      "Is Knockout"
     ];
     
     const optionColumns = isPhase2B 
       ? ["Option Text", "Score", "Observation", "Action Plan Days", "Action Plan Items"]
       : ["Option Text", "Score", "Observation", "Recommendation"];
       
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       optionColumns.forEach(col => header.push(`Option ${String.fromCharCode(65 + i)} ${col}`));
     }
     
-    const csvContent = header.join(",") + "\\n";
+    const csvContent = header.join(",") + "\n";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -721,18 +719,18 @@ export default function QuestionBankPage() {
       complete: async (results: any) => {
         try {
           const parsedQuestions = results.data.map((row: any, index: number) => {
-            const questionText = row["Question Text"] || "";
-            if (!questionText) throw new Error(`Row ${index + 1}: Question Text is required`);
-            
-            const isKnockout = String(row["Is Knockout"]).toLowerCase() === "true";
-            const isPhase1Featured = String(row["Is Phase 1 Featured"]).toLowerCase() === "true";
-            const showOnPhase1 = String(row["Show On Phase 1"]).toLowerCase() === "true";
-            
-            const options = [];
-            const isPhase2B = uploadPhase === "PHASE2B";
-            
-            for (let i = 0; i < 6; i++) {
-              const letter = String.fromCharCode(65 + i);
+              const questionText = row["Question Text"] || "";
+              if (!questionText) throw new Error(`Row ${index + 1}: Question Text is required`);
+              
+              const isKnockout = String(row["Is Knockout"]).toLowerCase() === "true";
+              const isPhase1Featured = false;
+              const showOnPhase1 = false;
+              
+              const options = [];
+              const isPhase2B = uploadPhase === "PHASE2B";
+              
+              for (let i = 0; i < 4; i++) {
+                const letter = String.fromCharCode(65 + i);
               const optText = row[`Option ${letter} Option Text`];
               
               if (optText) {
@@ -1167,7 +1165,6 @@ export default function QuestionBankPage() {
                   onChange={(e) => setUploadPhase(e.target.value as AdminQuestionPhase)}
                   className={fieldClass}
                 >
-                  <option value="PHASE1">Phase 1</option>
                   <option value="PHASE2A">Phase 2A - Strategic Scan</option>
                   <option value="PHASE2B">Phase 2B - Deep Dive</option>
                 </select>

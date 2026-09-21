@@ -116,8 +116,7 @@ const actionPlanDays = z
   .min(1, 'actionPlanDays must be at least 1')
   .max(365, 'actionPlanDays cannot exceed 365');
 
-// The ordered ~4–5 to-do list under the window. Capped at 6 to match the option
-// cap; each item must be non-empty.
+// The to-do list under the window; each item must be non-empty.
 const actionPlanItems = z
   .array(z.string().trim().min(1, 'action plan items cannot be empty'));
 

@@ -130,6 +130,18 @@ export function clearAdminLoginOtpToken() {
 	sessionStorage.removeItem(ADMIN_LOGIN_OTP_TOKEN_KEY)
 }
 
+let isRefreshing = false
+let refreshSubscribers: ((token: string) => void)[] = []
+
+function onRefreshed(token: string) {
+	refreshSubscribers.forEach((cb) => cb(token))
+	refreshSubscribers = []
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+	refreshSubscribers.push(cb)
+}
+
 export async function authedFetch<T>(
 	path: string,
 	init: RequestInit = {},
@@ -151,27 +163,50 @@ export async function authedFetch<T>(
 		if (res.status === 401) {
 			const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
 			if (refreshToken) {
-				const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ refreshToken })
-				});
-				if (refreshRes.ok) {
-					const data = await refreshRes.json();
-					if (data.accessToken && data.refreshToken) {
-						localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-						localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-						token = data.accessToken;
-						// Retry request
-						res = await fetch(`${API_BASE_URL}${path}`, {
-							...init,
-							headers: {
-								'Content-Type': 'application/json',
-								...(init.headers || {}),
-								Authorization: `Bearer ${token}`,
-							},
+				if (!isRefreshing) {
+					isRefreshing = true;
+					try {
+						const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ refreshToken })
 						});
+						if (refreshRes.ok) {
+							const data = await refreshRes.json();
+							if (data.accessToken && data.refreshToken) {
+								localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+								localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+								token = data.accessToken;
+								onRefreshed(data.accessToken);
+							} else {
+								onRefreshed('');
+							}
+						} else {
+							onRefreshed('');
+						}
+					} catch (e) {
+						onRefreshed('');
+					} finally {
+						isRefreshing = false;
 					}
+				} else {
+					token = await new Promise<string>((resolve) => {
+						addRefreshSubscriber((newToken: string) => {
+							resolve(newToken);
+						});
+					});
+				}
+
+				if (token) {
+					// Retry request
+					res = await fetch(`${API_BASE_URL}${path}`, {
+						...init,
+						headers: {
+							'Content-Type': 'application/json',
+							...(init.headers || {}),
+							Authorization: `Bearer ${token}`,
+						},
+					});
 				}
 			}
 		}
