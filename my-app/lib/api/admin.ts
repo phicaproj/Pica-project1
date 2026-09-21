@@ -923,6 +923,7 @@ export type AdminAuditLog = {
 	oldValue: string | null
 	newValue: string | null
 	ipAddress: string | null
+	details: string | null
 	createdAt: string
 	admin?: {
 		id: string
