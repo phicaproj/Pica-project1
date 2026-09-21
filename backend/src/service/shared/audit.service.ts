@@ -9,6 +9,7 @@ export async function logAudit(params: {
   oldValue?: string;
   newValue?: string;
   ipAddress?: string;
+  details?: string;
 }) {
   try {
     await prisma.adminAuditLog.create({
@@ -21,6 +22,7 @@ export async function logAudit(params: {
         oldValue: params.oldValue,
         newValue: params.newValue,
         ipAddress: params.ipAddress,
+        details: params.details,
       },
     });
   } catch (error) {

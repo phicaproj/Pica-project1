@@ -21,6 +21,7 @@ import {
 } from './admin.controller';
 import {
   addOption,
+  bulkCreateQuestions,
   createQuestion,
   deleteOption,
   deleteQuestion,
@@ -142,6 +143,7 @@ adminRouter.patch('/scoring-settings', hasPermission('scoring:write'), updateSco
 adminRouter.get('/app-settings', hasPermission('ledger:read'), getAppSettings);
 adminRouter.patch('/app-settings', hasPermission('ledger:write'), updateAppSettings);
 adminRouter.get('/questions', hasPermission('questions:read'), listAdminQuestions);
+adminRouter.post('/questions/bulk', hasPermission('questions:write'), bulkCreateQuestions);
 adminRouter.post('/questions', hasPermission('questions:write'), createQuestion);
 adminRouter.get('/questions/:id', hasPermission('questions:read'), getAdminQuestion);
 adminRouter.patch('/questions/:id', hasPermission('questions:write'), updateQuestion);

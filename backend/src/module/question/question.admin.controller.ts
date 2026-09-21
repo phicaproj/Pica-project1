@@ -13,6 +13,7 @@ import {
   updateQuestionSchema,
   createScoreLabelSchema,
   updateScoreLabelSchema,
+  bulkCreateQuestionSchema,
 } from './question.types';
 import {
   addOptionService,
@@ -30,6 +31,7 @@ import {
   createScoreLabelService,
   updateScoreLabelService,
   deleteScoreLabelService,
+  bulkCreateQuestionService,
 } from './question.admin.service';
 
 export const listAdminPillars = asyncHandler(async (_req: Request, res: Response) => {
@@ -47,6 +49,7 @@ export const savePillarWeights = asyncHandler(async (req: Request, res: Response
       entityType: 'PillarWeights',
       field: 'weights',
       ipAddress: req.ip,
+      details: 'Updated Pillar Weights',
     });
   }
   return res.status(OK).json(result);
@@ -64,6 +67,7 @@ export const updatePillarCopy = asyncHandler(async (req: Request, res: Response)
       entityId: id,
       field: 'copy',
       ipAddress: req.ip,
+      details: 'Updated Pillar Copy for Pillar ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -92,6 +96,7 @@ export const createQuestion = asyncHandler(async (req: Request, res: Response) =
       entityId: result.question.id,
       field: 'question',
       ipAddress: req.ip,
+      details: 'Created Question ' + result.question.questionCode,
     });
   }
   return res.status(CREATED).json(result);
@@ -109,6 +114,7 @@ export const updateQuestion = asyncHandler(async (req: Request, res: Response) =
       entityId: id,
       field: 'question',
       ipAddress: req.ip,
+      details: 'Updated Question ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -125,6 +131,7 @@ export const deleteQuestion = asyncHandler(async (req: Request, res: Response) =
       entityId: id,
       field: 'question',
       ipAddress: req.ip,
+      details: 'Deleted Question ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -142,6 +149,7 @@ export const addOption = asyncHandler(async (req: Request, res: Response) => {
       entityId: id,
       field: 'option',
       ipAddress: req.ip,
+      details: 'Added Option to Question ID ' + id,
     });
   }
   return res.status(CREATED).json(result);
@@ -159,6 +167,7 @@ export const updateOption = asyncHandler(async (req: Request, res: Response) => 
       entityId: id,
       field: 'option',
       ipAddress: req.ip,
+      details: 'Updated Option ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -175,6 +184,7 @@ export const deleteOption = asyncHandler(async (req: Request, res: Response) => 
       entityId: id,
       field: 'option',
       ipAddress: req.ip,
+      details: 'Deleted Option ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -196,6 +206,7 @@ export const createScoreLabel = asyncHandler(async (req: Request, res: Response)
       entityId: result.scoreLabel.id,
       field: 'scoreLabel',
       ipAddress: req.ip,
+      details: 'Created Score Label ' + result.scoreLabel.label,
     });
   }
   return res.status(CREATED).json(result);
@@ -213,6 +224,7 @@ export const updateScoreLabel = asyncHandler(async (req: Request, res: Response)
       entityId: id,
       field: 'scoreLabel',
       ipAddress: req.ip,
+      details: 'Updated Score Label ID ' + id,
     });
   }
   return res.status(OK).json(result);
@@ -229,7 +241,25 @@ export const deleteScoreLabel = asyncHandler(async (req: Request, res: Response)
       entityId: id,
       field: 'scoreLabel',
       ipAddress: req.ip,
+      details: 'Deleted Score Label ID ' + id,
     });
   }
   return res.status(OK).json(result);
+});
+
+export const bulkCreateQuestions = asyncHandler(async (req: Request, res: Response) => {
+  const input = bulkCreateQuestionSchema.parse(req.body);
+  const result = await bulkCreateQuestionService(input);
+  if (req.user?.id) {
+    await logAudit({
+      adminId: req.user.id,
+      action: 'CREATE',
+      entityType: 'Question',
+      entityId: input.pillarId,
+      field: 'bulkQuestions',
+      ipAddress: req.ip,
+      details: '',
+    });
+  }
+  return res.status(CREATED).json(result);
 });

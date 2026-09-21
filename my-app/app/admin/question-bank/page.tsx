@@ -14,6 +14,7 @@ import {
   Search,
   Trash2,
   X,
+  Upload,
 } from "lucide-react";
 import {
   addAdminQuestionOption,
@@ -38,6 +39,8 @@ import {
   type AdminScoreLabel,
   getStoredUser,
 } from "@/lib/authClient";
+import Papa from "papaparse";
+import { authedFetch } from "@/lib/api/config";
 
 type QuestionDraft = {
   questionText: string;
@@ -156,6 +159,13 @@ export default function QuestionBankPage() {
   const [optionDrafts, setOptionDrafts] = useState<Record<string, AdminQuestionOptionPayload>>({});
   const [newOption, setNewOption] = useState<AdminQuestionOptionPayload>(emptyOption(0));
 
+  // Bulk Upload state
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState<AdminQuestionPhase>("PHASE2A");
+  const [uploadPillarId, setUploadPillarId] = useState<string>("");
+  const [uploadBusinessSize, setUploadBusinessSize] = useState<BusinessSize>("SMALL");
+
+
   // Score Labels state
   const [mode, setMode] = useState<"questions" | "labels">("questions");
   const [scoreLabels, setScoreLabels] = useState<AdminScoreLabel[]>([]);
@@ -210,6 +220,7 @@ export default function QuestionBankPage() {
         ...current,
         pillarId: current.pillarId || pillarsData[0]?.id || "",
       }));
+      setUploadPillarId((current) => current || pillarsData[0]?.id || "");
     }
   }, []);
 
@@ -652,6 +663,156 @@ export default function QuestionBankPage() {
     setEditOpen(false);
     setActiveId(null);
   };
+  const renderErrorBanner = () => {
+    if (!error && !notice) return null;
+    return (
+      <div
+        className={`mb-6 flex items-start gap-3 rounded-xl border p-4 text-sm ${
+          error
+            ? "border-red-500/30 bg-red-500/10 text-red-200"
+            : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+        }`}
+      >
+        {error ? (
+          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+        ) : (
+          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+        )}
+        <span>{error || notice}</span>
+      </div>
+    );
+  };
+
+  const downloadTemplate = () => {
+    const isPhase2B = uploadPhase === "PHASE2B";
+    const header = [
+      "Question Text",
+      "Is Knockout",
+      "Is Phase 1 Featured",
+      "Show On Phase 1"
+    ];
+    
+    const optionColumns = isPhase2B 
+      ? ["Option Text", "Score", "Observation", "Action Plan Days", "Action Plan Items"]
+      : ["Option Text", "Score", "Observation", "Recommendation"];
+      
+    for (let i = 0; i < 6; i++) {
+      optionColumns.forEach(col => header.push(`Option ${String.fromCharCode(65 + i)} ${col}`));
+    }
+    
+    const csvContent = header.join(",") + "\\n";
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `bulk_upload_template_${uploadPhase.toLowerCase()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results: any) => {
+        try {
+          const parsedQuestions = results.data.map((row: any, index: number) => {
+            const questionText = row["Question Text"] || "";
+            if (!questionText) throw new Error(`Row ${index + 1}: Question Text is required`);
+            
+            const isKnockout = String(row["Is Knockout"]).toLowerCase() === "true";
+            const isPhase1Featured = String(row["Is Phase 1 Featured"]).toLowerCase() === "true";
+            const showOnPhase1 = String(row["Show On Phase 1"]).toLowerCase() === "true";
+            
+            const options = [];
+            const isPhase2B = uploadPhase === "PHASE2B";
+            
+            for (let i = 0; i < 6; i++) {
+              const letter = String.fromCharCode(65 + i);
+              const optText = row[`Option ${letter} Option Text`];
+              
+              if (optText) {
+                const score = Number(row[`Option ${letter} Score`] || 0);
+                const observation = row[`Option ${letter} Observation`] || "";
+                
+                if (isPhase2B) {
+                  const actionPlanDays = Number(row[`Option ${letter} Action Plan Days`] || 30);
+                  const itemsStr = row[`Option ${letter} Action Plan Items`] || "";
+                  const actionPlanItems = itemsStr.split(";").map((s: string) => s.trim()).filter(Boolean);
+                  
+                  options.push({
+                    optionText: optText,
+                    score,
+                    observation,
+                    actionPlanDays,
+                    actionPlanItems: actionPlanItems.length > 0 ? actionPlanItems : [""]
+                  });
+                } else {
+                  const recommendation = row[`Option ${letter} Recommendation`] || "";
+                  options.push({
+                    optionText: optText,
+                    score,
+                    observation,
+                    recommendation
+                  });
+                }
+              }
+            }
+            
+            if (options.length < 2) {
+              throw new Error(`Row ${index + 1}: At least two options are required`);
+            }
+            
+            return {
+              questionText,
+              isKnockout,
+              isPhase1Featured,
+              showOnPhase1,
+              options
+            };
+          });
+          
+          setSaving(true);
+          setError(null);
+          
+          const payload = {
+            pillarId: uploadPillarId,
+            phase: uploadPhase,
+            businessSize: uploadBusinessSize,
+            questions: parsedQuestions
+          };
+          
+          const res = await authedFetch("/admin/questions/bulk", {
+            method: "POST",
+            body: JSON.stringify(payload)
+          });
+          
+          if (res.error) {
+            setError(res.error.message);
+          } else {
+            setUploadOpen(false);
+            showNotice("Bulk upload successful.");
+            void loadQuestions();
+          }
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setSaving(false);
+          e.target.value = '';
+        }
+      },
+      error: (err: any) => {
+        setError("Failed to parse CSV: " + err.message);
+        setSaving(false);
+        e.target.value = '';
+      }
+    });
+  };
+
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6">
@@ -687,7 +848,16 @@ export default function QuestionBankPage() {
             Refresh
           </button>
           {mode === "questions" ? (
-            <button
+            <>
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#2A2D3D] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#32364A] border border-white/10"
+              >
+                <Upload className="h-4 w-4" />
+                Upload Questions
+              </button>
+              <button
               type="button"
               onClick={() => setCreateOpen(true)}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
@@ -695,6 +865,7 @@ export default function QuestionBankPage() {
               <Plus className="h-4 w-4" />
               New Question
             </button>
+          </>
           ) : (
             hasWriteAccess && (
               <button
@@ -944,6 +1115,111 @@ export default function QuestionBankPage() {
           )
         ) : null}
       </div>
+
+      {/* Upload Questions Modal */}
+      {uploadOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col w-full max-w-lg overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">Bulk Upload Questions</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Upload multiple questions for a specific phase and pillar using a CSV template.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUploadOpen(false)}
+                className="rounded-lg p-2 text-gray-500 transition hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {renderErrorBanner()}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Target Pillar
+                </label>
+                <div className="relative">
+                  <select
+                    value={uploadPillarId}
+                    onChange={(e) => setUploadPillarId(e.target.value)}
+                    className={`${fieldClass} appearance-none pr-9`}
+                  >
+                    <option value="" disabled>Select pillar</option>
+                    {pillars.map((pillar) => (
+                      <option key={pillar.id} value={pillar.id}>
+                        {pillar.name} ({pillar.code})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Target Phase
+                </label>
+                <select
+                  value={uploadPhase}
+                  onChange={(e) => setUploadPhase(e.target.value as AdminQuestionPhase)}
+                  className={fieldClass}
+                >
+                  <option value="PHASE1">Phase 1</option>
+                  <option value="PHASE2A">Phase 2A - Strategic Scan</option>
+                  <option value="PHASE2B">Phase 2B - Deep Dive</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Target Business Size
+                </label>
+                <select
+                  value={uploadBusinessSize}
+                  onChange={(e) => setUploadBusinessSize(e.target.value as BusinessSize)}
+                  className={fieldClass}
+                >
+                  {BUSINESS_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-2 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={downloadTemplate}
+                  className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white/10"
+                >
+                  <Database className="h-4 w-4" />
+                  Download CSV Template
+                </button>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Upload Filled CSV
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileUpload}
+                    disabled={saving}
+                    className="block w-full text-sm text-gray-400 file:mr-4 file:rounded-full file:border-0 file:bg-blue-500/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-300 hover:file:bg-blue-500/20"
+                  />
+                </div>
+              </div>
+            </div>
+            {saving && (
+              <div className="flex items-center justify-center p-4 bg-[#171923] border-t border-white/5 text-sm text-gray-400">
+                <Loader className="mr-2 h-4 w-4 animate-spin" /> Processing upload...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* New Question Modal */}
       {createOpen && (

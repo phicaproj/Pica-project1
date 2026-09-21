@@ -126,25 +126,33 @@ export default function AuditLogsPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-xs">
-                        <span className={`font-semibold ${d ? 'text-gray-300' : 'text-gray-700'}`}>Field:</span> {log.field}
-                      </div>
-                      {(log.oldValue || log.newValue) && (
-                        <div className="mt-2 space-y-1 text-xs">
-                          {log.oldValue && (
-                            <div className={`line-clamp-1 ${d ? 'text-red-400' : 'text-red-600'}`}>
-                              - {log.oldValue}
+                      <td className="px-6 py-4">
+                        {log.details ? (
+                          <div className={`text-sm ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                            {log.details}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-xs">
+                              <span className={`font-semibold ${d ? 'text-gray-300' : 'text-gray-700'}`}>Field:</span> {log.field}
                             </div>
-                          )}
-                          {log.newValue && (
-                            <div className={`line-clamp-1 ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                              + {log.newValue}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </td>
+                            {(log.oldValue || log.newValue) && (
+                              <div className="mt-2 space-y-1 text-xs">
+                                {log.oldValue && (
+                                  <div className={`line-clamp-1 ${d ? 'text-red-400' : 'text-red-600'}`}>
+                                    - {log.oldValue}
+                                  </div>
+                                )}
+                                {log.newValue && (
+                                  <div className={`line-clamp-1 ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                    + {log.newValue}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-mono">
                       {log.ipAddress || "N/A"}
                     </td>
@@ -212,17 +220,28 @@ export default function AuditLogsPage() {
               </div>
 
               <div>
-                <div className={`text-xs mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Field Changes (Field: {selectedLog.field || 'N/A'})</div>
-                <div className={`p-4 rounded-lg font-mono text-xs overflow-x-auto ${d ? 'bg-[#111318]' : 'bg-gray-50'}`}>
-                  <div className={`mb-2 whitespace-pre-wrap break-all ${d ? 'text-red-400' : 'text-red-600'}`}>
-                    <span className="select-none font-bold mr-2">-</span>
-                    {selectedLog.oldValue || 'None'}
-                  </div>
-                  <div className={`whitespace-pre-wrap break-all ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                    <span className="select-none font-bold mr-2">+</span>
-                    {selectedLog.newValue || 'None'}
-                  </div>
-                </div>
+                {selectedLog.details ? (
+                  <>
+                    <div className={`text-xs mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Details</div>
+                    <div className={`p-4 rounded-lg text-sm ${d ? 'bg-[#111318] text-emerald-400' : 'bg-gray-50 text-emerald-600'}`}>
+                      {selectedLog.details}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`text-xs mb-2 ${d ? 'text-gray-500' : 'text-gray-600'}`}>Field Changes (Field: {selectedLog.field || 'N/A'})</div>
+                    <div className={`p-4 rounded-lg font-mono text-xs overflow-x-auto ${d ? 'bg-[#111318]' : 'bg-gray-50'}`}>
+                      <div className={`mb-2 whitespace-pre-wrap break-all ${d ? 'text-red-400' : 'text-red-600'}`}>
+                        <span className="select-none font-bold mr-2">-</span>
+                        {selectedLog.oldValue || 'None'}
+                      </div>
+                      <div className={`whitespace-pre-wrap break-all ${d ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                        <span className="select-none font-bold mr-2">+</span>
+                        {selectedLog.newValue || 'None'}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             

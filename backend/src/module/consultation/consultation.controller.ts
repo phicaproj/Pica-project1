@@ -173,6 +173,7 @@ export const adminUpdateBookingStatus = asyncHandler(
         field: 'status',
         newValue: input.status,
         ipAddress: req.ip,
+        details: 'Updated Consultation Status to ' + input.status + ' for ID ' + req.params.id,
       });
     }
     return res.status(OK).json(result);

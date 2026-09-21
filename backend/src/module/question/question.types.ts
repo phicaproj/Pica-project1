@@ -119,8 +119,7 @@ const actionPlanDays = z
 // The ordered ~4–5 to-do list under the window. Capped at 6 to match the option
 // cap; each item must be non-empty.
 const actionPlanItems = z
-  .array(z.string().trim().min(1, 'action plan items cannot be empty'))
-  .max(6, 'an action plan can have at most 6 items');
+  .array(z.string().trim().min(1, 'action plan items cannot be empty'));
 
 // `recommendation` and the action plan are phase-conditional (enforced by the
 // superRefine on createQuestionSchema): Phase 1 / 2A require `recommendation`;
@@ -315,6 +314,69 @@ export const listAdminQuestionsQuerySchema = z.object({
   includeInactive: z.coerce.boolean().optional(),
   isKnockout: z.coerce.boolean().optional(),
 });
+
+export const bulkCreateQuestionSchema = z
+  .object({
+    pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
+    phase: z.nativeEnum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
+    businessSize: z.nativeEnum(BusinessSize, {
+      message: 'businessSize must be one of: SMALL, MEDIUM',
+    }),
+    questions: z
+      .array(
+        z.object({
+          questionText: z.string({ error: 'questionText is required' }).trim().min(1, 'questionText is required'),
+          isKnockout: z.boolean().default(false),
+          isPhase1Featured: z.boolean().default(false),
+          showOnPhase1: z.boolean().default(false),
+          options: z.array(adminOptionInput).min(2, 'a question needs at least 2 options').max(6),
+        })
+      )
+      .min(1, 'At least one question is required').max(200, 'Cannot upload more than 200 questions at once'),
+  })
+  .superRefine((data, ctx) => {
+    data.questions.forEach((q, qIndex) => {
+      // Validate a knockout question has exactly one 0-score trigger option
+      if (q.isKnockout) {
+        const zeroScoreCount = q.options.filter((o) => o.score === 0).length;
+        if (zeroScoreCount !== 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['questions', qIndex, 'options'],
+            message: 'A knockout question must have exactly one option with a score of 0',
+          });
+        }
+      }
+
+      // Phase conditional checks
+      q.options.forEach((option, index) => {
+        if (data.phase === Phase.PHASE2B) {
+          if (!option.actionPlanItems || option.actionPlanItems.length === 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['questions', qIndex, 'options', index, 'actionPlanItems'],
+              message: 'Phase 2B options require at least one action plan item',
+            });
+          }
+          if (option.actionPlanDays === undefined) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['questions', qIndex, 'options', index, 'actionPlanDays'],
+              message: 'Phase 2B options require an action plan window (actionPlanDays)',
+            });
+          }
+        } else if (!option.recommendation) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['questions', qIndex, 'options', index, 'recommendation'],
+            message: 'recommendation is required',
+          });
+        }
+      });
+    });
+  });
+
+export type BulkCreateQuestionInput = z.infer<typeof bulkCreateQuestionSchema>;
 
 export type CreateQuestionInput = z.infer<typeof createQuestionSchema>;
 export type UpdateQuestionInput = z.infer<typeof updateQuestionSchema>;

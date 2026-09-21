@@ -61,7 +61,8 @@ export const updateUserStatus = asyncHandler(async (req: Request, res: Response)
       entityId: id,
       field: 'status',
       newValue: input.status,
-      ipAddress: req.ip,
+        ipAddress: req.ip,
+        details: 'Changed user status to ' + input.status + ' for User ID ' + id,
     });
   }
 
@@ -103,11 +104,12 @@ export const createRole = asyncHandler(async (req: Request, res: Response) => {
     await logAudit({
       adminId: req.user.id,
       action: 'CREATE',
-      entityType: 'AdminRole',
+        entityType: 'AdminRole',
       entityId: result.id,
       field: 'name',
       newValue: result.name,
       ipAddress: req.ip,
+        details: 'Created Admin Role ' + result.name,
     });
   }
 
@@ -123,10 +125,11 @@ export const updateRole = asyncHandler(async (req: Request, res: Response) => {
     await logAudit({
       adminId: req.user.id,
       action: 'UPDATE',
-      entityType: 'AdminRole',
+        entityType: 'AdminRole',
       entityId: id,
       field: 'role',
       ipAddress: req.ip,
+        details: 'Updated Admin Role ' + id,
     });
   }
 
@@ -141,10 +144,11 @@ export const deleteRole = asyncHandler(async (req: Request, res: Response) => {
     await logAudit({
       adminId: req.user.id,
       action: 'DELETE',
-      entityType: 'AdminRole',
+        entityType: 'AdminRole',
       entityId: id,
       field: 'role',
       ipAddress: req.ip,
+        details: 'Deleted Admin Role ID ' + id,
     });
   }
 
@@ -160,11 +164,12 @@ export const assignRoleToAdmin = asyncHandler(async (req: Request, res: Response
     await logAudit({
       adminId: req.user.id,
       action: 'ASSIGN_ROLE',
-      entityType: 'User',
+        entityType: 'User',
       entityId: adminId,
       field: 'adminRoleId',
       newValue: adminRoleId ?? 'null',
       ipAddress: req.ip,
+        details: 'Assigned role ID ' + adminRoleId + ' to Admin ID ' + adminId,
     });
   }
 
@@ -181,10 +186,11 @@ export const inviteAdmin = asyncHandler(async (req: Request, res: Response) => {
     await logAudit({
       adminId: req.user.id,
       action: 'INVITE',
-      entityType: 'User',
+        entityType: 'User',
       entityId: result.admin.id,
       field: 'admin',
       ipAddress: req.ip,
+        details: 'Invited new Admin ' + input.email,
     });
   }
 
@@ -207,10 +213,11 @@ export const updateAdminAccess = asyncHandler(async (req: Request, res: Response
     await logAudit({
       adminId: req.user.id,
       action: 'UPDATE_ACCESS',
-      entityType: 'User',
+        entityType: 'User',
       entityId: id,
       field: 'access',
       ipAddress: req.ip,
+        details: 'Updated access levels for Admin ID ' + id,
     });
   }
 

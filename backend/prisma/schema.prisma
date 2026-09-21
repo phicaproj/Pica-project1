@@ -741,6 +741,7 @@ model AdminAuditLog {
   entityType String   @default("Admin") @map("entity_type")
   entityId   String?  @map("entity_id")
   field      String
+    details    String?  @db.Text
   oldValue   String?  @map("old_value") @db.Text
   newValue   String?  @map("new_value") @db.Text
   ipAddress  String?  @map("ip_address")

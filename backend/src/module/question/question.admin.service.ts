@@ -9,6 +9,7 @@ import type {
   AdminQuestionDetailResponse,
   AdminQuestionListResponse,
   AdminQuestionResponse,
+  BulkCreateQuestionInput,
   CreateQuestionInput,
   ListAdminQuestionsQuery,
   SavePillarWeightsInput,
@@ -299,6 +300,82 @@ export async function getAdminQuestionService(
   return {
     message: 'Question fetched successfully',
     question: toAdminQuestion(question),
+  };
+}
+
+export async function bulkCreateQuestionService(
+  input: BulkCreateQuestionInput
+): Promise<{ message: string; count: number }> {
+  await prisma.$transaction(async (tx) => {
+    const pillar = await tx.pillar.findUnique({
+      where: { id: input.pillarId },
+      select: { id: true, code: true, isActive: true },
+    });
+    if (!pillar) throw new AppError('Pillar not found', NOT_FOUND);
+
+    // Get base display order
+    const last = await tx.question.findFirst({
+      where: { pillarId: pillar.id },
+      orderBy: { displayOrder: 'desc' },
+      select: { displayOrder: true },
+    });
+    const displayOrderBase = last?.displayOrder ?? 0;
+
+    // Get base sequence number
+    const existing = await tx.question.findMany({
+      where: { pillarId: pillar.id },
+      select: { questionCode: true },
+    });
+    let maxSeq = 0;
+    const prefix = `${pillar.code}-`;
+    for (const { questionCode } of existing) {
+      if (!questionCode.startsWith(prefix)) continue;
+      const seq = Number.parseInt(questionCode.slice(prefix.length), 10);
+      if (Number.isFinite(seq) && seq > maxSeq) maxSeq = seq;
+    }
+
+    for (let i = 0; i < input.questions.length; i++) {
+      const qInput = input.questions[i];
+      const maxScore = qInput.options.reduce((max, option) => Math.max(max, option.score), 0);
+      const isKnockout = qInput.isKnockout ?? false;
+      const hasKnockoutOption = isKnockout && qInput.options.some((option) => option.score === 0);
+
+      const questionCode = `${prefix}` + String(maxSeq + i + 1).padStart(3, '0');
+      const displayOrder = displayOrderBase + i + 1;
+
+      await tx.question.create({
+        data: {
+          pillarId: pillar.id,
+          questionCode,
+          questionText: qInput.questionText,
+          businessSize: input.businessSize,
+          phase: input.phase,
+          isPhase1Featured: qInput.isPhase1Featured,
+          isKnockout,
+          showOnPhase1: qInput.showOnPhase1 ?? false,
+          hasKnockoutOption,
+          displayOrder,
+          options: {
+            create: qInput.options.map((option, index) => ({
+              optionLabel: OPTION_LABELS[index],
+              optionText: option.optionText,
+              score: option.score,
+              riskType: deriveRiskType(option.score, maxScore, isKnockout),
+              observation: option.observation,
+              recommendation: option.recommendation ?? '',
+              actionPlanDays: option.actionPlanDays ?? null,
+              actionPlanItems: option.actionPlanItems ?? [],
+              displayOrder: index + 1,
+            })),
+          },
+        },
+      });
+    }
+  });
+
+  return {
+    message: `Successfully imported ${input.questions.length} questions`,
+    count: input.questions.length,
   };
 }
 
