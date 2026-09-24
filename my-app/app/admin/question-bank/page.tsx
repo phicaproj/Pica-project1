@@ -453,8 +453,19 @@ export default function QuestionBankPage() {
       return;
     }
 
+    // Validate options first
+    for (const option of activeQuestion.options) {
+      const draft = optionDrafts[option.id];
+      if (!draft || !validateOption(draft, activeQuestion.phase)) {
+        setError(`Complete the option details correctly for Option ${option.optionLabel}.`);
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
+
+    // Save question
     const res = await updateAdminQuestion(activeQuestion.id, {
       questionText: questionDraft.questionText.trim(),
       phase: questionDraft.phase,
@@ -467,43 +478,40 @@ export default function QuestionBankPage() {
 
     if (res.error) {
       setError(res.error.message);
-    } else if (res.data) {
-      replaceQuestion(res.data.question);
-      showNotice("Question saved.");
-    }
-    setSaving(false);
-  };
-
-  const saveOption = async (optionId: string) => {
-    const draft = optionDrafts[optionId];
-    if (!activeQuestion || !draft || !validateOption(draft, activeQuestion.phase)) {
-      setError("Complete the option details correctly.");
+      setSaving(false);
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    // Save options
+    let updatedQuestion = res.data?.question;
+    for (const option of activeQuestion.options) {
+      const draft = optionDrafts[option.id];
+      const payload: UpdateAdminQuestionOptionPayload = {
+        optionText: draft.optionText.trim(),
+        score: Number(draft.score),
+        observation: draft.observation.trim(),
+      };
+      if (activeQuestion.phase === "PHASE2B") {
+        payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : undefined;
+        payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : undefined;
+      } else {
+        payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
+      }
 
-    const payload: UpdateAdminQuestionOptionPayload = {
-      optionText: draft.optionText.trim(),
-      score: Number(draft.score),
-      observation: draft.observation.trim(),
-    };
-    if (activeQuestion.phase === "PHASE2B") {
-      payload.actionPlanDays = draft.actionPlanDays ? Number(draft.actionPlanDays) : undefined;
-      payload.actionPlanItems = draft.actionPlanItems ? draft.actionPlanItems.map(i => i.trim()).filter(Boolean) : undefined;
-    } else {
-      payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
+      const optionRes = await updateAdminQuestionOption(option.id, payload);
+      if (optionRes.error) {
+        setError(optionRes.error.message);
+        setSaving(false);
+        return;
+      } else if (optionRes.data) {
+        updatedQuestion = optionRes.data.question;
+      }
     }
 
-    const res = await updateAdminQuestionOption(optionId, payload);
-
-    if (res.error) {
-      setError(res.error.message);
-    } else if (res.data) {
-      replaceQuestion(res.data.question);
-      showNotice("Option saved.");
+    if (updatedQuestion) {
+      replaceQuestion(updatedQuestion);
     }
+    showNotice("Question and options saved.");
     setSaving(false);
   };
 
@@ -1658,15 +1666,6 @@ export default function QuestionBankPage() {
                             </span>
                           </div>
                           <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void saveOption(option.id)}
-                              disabled={saving}
-                              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-gray-950 transition hover:bg-gray-100 disabled:opacity-60"
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                              Save Option
-                            </button>
                             <button
                               type="button"
                               onClick={() => void removeOption(option.id)}
