@@ -71,7 +71,7 @@ export type AdminUserRow = {
 
 // Suspend / reactivate payload for PATCH /api/admin/users/:id/status.
 export const updateUserStatusSchema = z.object({
-  status: z.nativeEnum(UserStatus, {
+  status: z.enum(UserStatus, {
     message: 'status must be one of: ACTIVE, DISABLED',
   }),
 });

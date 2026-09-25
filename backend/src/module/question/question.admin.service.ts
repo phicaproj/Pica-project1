@@ -446,7 +446,7 @@ export async function updateQuestionService(
 ): Promise<AdminQuestionDetailResponse> {
   const existing = await prisma.question.findUnique({
     where: { id: questionId },
-    select: { id: true, isKnockout: true, showOnPhase1: true, options: { select: { score: true } } },
+    select: { id: true, isKnockout: true, showOnPhase1: true, options: { select: { id: true, score: true } } },
   });
   if (!existing) throw new AppError('Question not found', NOT_FOUND);
 
@@ -460,44 +460,56 @@ export async function updateQuestionService(
   }
 
   if (nextIsKnockout) {
-    const zeroScoreCount = existing.options.filter((o) => o.score === 0).length;
+    const optionsToValidate = input.options || existing.options;
+    const zeroScoreCount = optionsToValidate.filter((o: any) => o.score === 0).length;
     if (zeroScoreCount !== 1) {
       throw new AppError('A knockout question must have exactly one option with a score of 0', CONFLICT);
     }
   }
 
-  const question = await prisma.question.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.question.update({
+      where: { id: questionId },
+      data: {
+        ...(input.questionText !== undefined ? { questionText: input.questionText } : {}),
+        ...(input.phase !== undefined ? { phase: input.phase } : {}),
+        ...(input.businessSize !== undefined ? { businessSize: input.businessSize } : {}),
+        ...(input.isPhase1Featured !== undefined ? { isPhase1Featured: input.isPhase1Featured } : {}),
+        ...(input.isKnockout !== undefined ? { isKnockout: input.isKnockout } : {}),
+        ...(input.showOnPhase1 !== undefined ? { showOnPhase1: input.showOnPhase1 } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      },
+    });
+
+    if (input.options) {
+      for (const option of input.options) {
+        await tx.questionOption.update({
+          where: { id: option.id },
+          data: {
+            ...(option.optionText !== undefined ? { optionText: option.optionText } : {}),
+            ...(option.score !== undefined ? { score: option.score } : {}),
+            ...(option.observation !== undefined ? { observation: option.observation } : {}),
+            ...(option.recommendation !== undefined ? { recommendation: option.recommendation } : {}),
+            ...(option.actionPlanDays !== undefined ? { actionPlanDays: option.actionPlanDays } : {}),
+            ...(option.actionPlanItems !== undefined ? { actionPlanItems: option.actionPlanItems } : {}),
+          },
+        });
+      }
+    }
+
+    if (input.isKnockout !== undefined || input.options) {
+      await resyncOptionRiskTypes(tx, questionId);
+    }
+  });
+
+  const updatedQuestion = await prisma.question.findUniqueOrThrow({
     where: { id: questionId },
-    data: {
-      ...(input.questionText !== undefined ? { questionText: input.questionText } : {}),
-      ...(input.phase !== undefined ? { phase: input.phase } : {}),
-      ...(input.businessSize !== undefined ? { businessSize: input.businessSize } : {}),
-      ...(input.isPhase1Featured !== undefined ? { isPhase1Featured: input.isPhase1Featured } : {}),
-      ...(input.isKnockout !== undefined ? { isKnockout: input.isKnockout } : {}),
-      ...(input.showOnPhase1 !== undefined ? { showOnPhase1: input.showOnPhase1 } : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-    },
     select: adminQuestionSelect,
   });
 
-  if (input.isKnockout !== undefined) {
-    await prisma.$transaction(async (tx) => {
-      await resyncOptionRiskTypes(tx, questionId);
-    });
-    // Re-fetch to get updated riskTypes
-    const updatedQuestion = await prisma.question.findUniqueOrThrow({
-      where: { id: questionId },
-      select: adminQuestionSelect,
-    });
-    return {
-      message: 'Question updated successfully',
-      question: toAdminQuestion(updatedQuestion),
-    };
-  }
-
   return {
     message: 'Question updated successfully',
-    question: toAdminQuestion(question),
+    question: toAdminQuestion(updatedQuestion),
   };
 }
 

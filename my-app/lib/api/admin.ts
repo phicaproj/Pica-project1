@@ -250,6 +250,7 @@ export type UpdateAdminQuestionPayload = {
 	isKnockout?: boolean
 	showOnPhase1?: boolean
 	isActive?: boolean
+	options?: (UpdateAdminQuestionOptionPayload & { id: string })[]
 }
 
 export type UpdateAdminQuestionOptionPayload = Partial<AdminQuestionOptionPayload>

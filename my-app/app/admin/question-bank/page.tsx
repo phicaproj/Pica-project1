@@ -465,28 +465,11 @@ export default function QuestionBankPage() {
     setSaving(true);
     setError(null);
 
-    // Save question
-    const res = await updateAdminQuestion(activeQuestion.id, {
-      questionText: questionDraft.questionText.trim(),
-      phase: questionDraft.phase,
-      businessSize: questionDraft.businessSize,
-      isPhase1Featured: questionDraft.isPhase1Featured,
-      isKnockout: questionDraft.isKnockout,
-      showOnPhase1: questionDraft.showOnPhase1,
-      isActive: questionDraft.isActive,
-    });
-
-    if (res.error) {
-      setError(res.error.message);
-      setSaving(false);
-      return;
-    }
-
-    // Save options
-    let updatedQuestion = res.data?.question;
-    for (const option of activeQuestion.options) {
+    // Save question and options
+    const optionsPayload = activeQuestion.options.map(option => {
       const draft = optionDrafts[option.id];
-      const payload: UpdateAdminQuestionOptionPayload = {
+      const payload: UpdateAdminQuestionOptionPayload & { id: string } = {
+        id: option.id,
         optionText: draft.optionText.trim(),
         score: Number(draft.score),
         observation: draft.observation.trim(),
@@ -497,21 +480,26 @@ export default function QuestionBankPage() {
       } else {
         payload.recommendation = draft.recommendation ? draft.recommendation.trim() : "";
       }
+      return payload;
+    });
 
-      const optionRes = await updateAdminQuestionOption(option.id, payload);
-      if (optionRes.error) {
-        setError(optionRes.error.message);
-        setSaving(false);
-        return;
-      } else if (optionRes.data) {
-        updatedQuestion = optionRes.data.question;
-      }
-    }
+    const res = await updateAdminQuestion(activeQuestion.id, {
+      questionText: questionDraft.questionText.trim(),
+      phase: questionDraft.phase,
+      businessSize: questionDraft.businessSize,
+      isPhase1Featured: questionDraft.isPhase1Featured,
+      isKnockout: questionDraft.isKnockout,
+      showOnPhase1: questionDraft.showOnPhase1,
+      isActive: questionDraft.isActive,
+      options: optionsPayload,
+    });
 
-    if (updatedQuestion) {
-      replaceQuestion(updatedQuestion);
+    if (res.error) {
+      setError(res.error.message);
+    } else if (res.data) {
+      replaceQuestion(res.data.question);
+      showNotice("Question and options saved.");
     }
-    showNotice("Question and options saved.");
     setSaving(false);
   };
 
@@ -1683,7 +1671,7 @@ export default function QuestionBankPage() {
                             <label className="mb-1 block text-xs font-semibold uppercase text-gray-500">
                               Option Text
                             </label>
-                            <input
+                            <textarea
                               value={draft.optionText}
                               onChange={(event) =>
                                 setOptionDrafts((current) => ({
@@ -1691,7 +1679,8 @@ export default function QuestionBankPage() {
                                   [option.id]: { ...draft, optionText: event.target.value },
                                 }))
                               }
-                              className={fieldClass}
+                              rows={2}
+                              className={textareaClass}
                             />
                           </div>
                           <div>

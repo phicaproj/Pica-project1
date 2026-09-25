@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { BusinessSize, Phase, RiskType } from '@prisma/client';
 
 export const businessSizeQuerySchema = z.object({
-  businessSize: z.nativeEnum(BusinessSize, {
+  businessSize: z.enum(BusinessSize, {
     message: 'businessSize must be one of: SMALL, MEDIUM',
   }),
 });
@@ -139,8 +139,8 @@ const adminOptionInput = z.object({
 export const createQuestionSchema = z
   .object({
     pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
-    phase: z.nativeEnum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
-    businessSize: z.nativeEnum(BusinessSize, {
+    phase: z.enum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
+    businessSize: z.enum(BusinessSize, {
       message: 'businessSize must be one of: SMALL, MEDIUM',
     }),
     isPhase1Featured: z.boolean().default(false),
@@ -158,7 +158,7 @@ export const createQuestionSchema = z
     // 1. Guard: showOnPhase1 only settable when isKnockout = true
     if (data.showOnPhase1 && !data.isKnockout) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         path: ['showOnPhase1'],
         message: 'showOnPhase1 can only be true if isKnockout is true',
       });
@@ -169,7 +169,7 @@ export const createQuestionSchema = z
       const zeroScoreCount = data.options.filter((o) => o.score === 0).length;
       if (zeroScoreCount !== 1) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ['options'],
           message: 'A knockout question must have exactly one option with a score of 0',
         });
@@ -182,21 +182,21 @@ export const createQuestionSchema = z
       if (data.phase === Phase.PHASE2B) {
         if (!option.actionPlanItems || option.actionPlanItems.length === 0) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ['options', index, 'actionPlanItems'],
             message: 'Phase 2B options require at least one action plan item',
           });
         }
         if (option.actionPlanDays === undefined) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ['options', index, 'actionPlanDays'],
             message: 'Phase 2B options require an action plan window (actionPlanDays)',
           });
         }
       } else if (!option.recommendation) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ['options', index, 'recommendation'],
           message: 'recommendation is required',
         });
@@ -204,19 +204,7 @@ export const createQuestionSchema = z
     });
   });
 
-export const updateQuestionSchema = z
-  .object({
-    questionText: z.string().trim().min(1).optional(),
-    phase: z.nativeEnum(Phase).optional(),
-    businessSize: z.nativeEnum(BusinessSize).optional(),
-    isPhase1Featured: z.boolean().optional(),
-    isKnockout: z.boolean().optional(),
-    showOnPhase1: z.boolean().optional(),
-    isActive: z.boolean().optional(),
-  })
-  .refine((data) => Object.keys(data).length > 0, {
-    message: 'at least one field must be provided',
-  });
+
 
 export const updateOptionSchema = z
   .object({
@@ -226,6 +214,21 @@ export const updateOptionSchema = z
     recommendation: z.string().trim().min(1).optional(),
     actionPlanDays: actionPlanDays.optional(),
     actionPlanItems: actionPlanItems.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'at least one field must be provided',
+  });
+
+export const updateQuestionSchema = z
+  .object({
+    questionText: z.string().trim().min(1).optional(),
+    phase: z.enum(Phase).optional(),
+    businessSize: z.enum(BusinessSize).optional(),
+    isPhase1Featured: z.boolean().optional(),
+    isKnockout: z.boolean().optional(),
+    showOnPhase1: z.boolean().optional(),
+    isActive: z.boolean().optional(),
+    options: z.array(updateOptionSchema.extend({ id: z.string().uuid() })).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'at least one field must be provided',
@@ -307,8 +310,8 @@ export type AdminPillarListResponse = {
 
 export const listAdminQuestionsQuerySchema = z.object({
   pillarId: z.string().uuid().optional(),
-  phase: z.nativeEnum(Phase).optional(),
-  businessSize: z.nativeEnum(BusinessSize).optional(),
+  phase: z.enum(Phase).optional(),
+  businessSize: z.enum(BusinessSize).optional(),
   search: z.string().trim().min(1).max(120).optional(),
   includeInactive: z.coerce.boolean().optional(),
   isKnockout: z.coerce.boolean().optional(),
@@ -317,8 +320,8 @@ export const listAdminQuestionsQuerySchema = z.object({
 export const bulkCreateQuestionSchema = z
   .object({
     pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
-    phase: z.nativeEnum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
-    businessSize: z.nativeEnum(BusinessSize, {
+    phase: z.enum(Phase, { message: 'phase must be one of: PHASE1, PHASE2A, PHASE2B' }),
+    businessSize: z.enum(BusinessSize, {
       message: 'businessSize must be one of: SMALL, MEDIUM',
     }),
     questions: z
@@ -340,7 +343,7 @@ export const bulkCreateQuestionSchema = z
         const zeroScoreCount = q.options.filter((o) => o.score === 0).length;
         if (zeroScoreCount !== 1) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ['questions', qIndex, 'options'],
             message: 'A knockout question must have exactly one option with a score of 0',
           });
@@ -352,21 +355,21 @@ export const bulkCreateQuestionSchema = z
         if (data.phase === Phase.PHASE2B) {
           if (!option.actionPlanItems || option.actionPlanItems.length === 0) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               path: ['questions', qIndex, 'options', index, 'actionPlanItems'],
               message: 'Phase 2B options require at least one action plan item',
             });
           }
           if (option.actionPlanDays === undefined) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               path: ['questions', qIndex, 'options', index, 'actionPlanDays'],
               message: 'Phase 2B options require an action plan window (actionPlanDays)',
             });
           }
         } else if (!option.recommendation) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ['questions', qIndex, 'options', index, 'recommendation'],
             message: 'recommendation is required',
           });
