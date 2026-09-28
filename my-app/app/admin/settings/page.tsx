@@ -411,6 +411,8 @@ function PillarTab() {
         </div>
 
         {/* Table Headers */}
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="min-w-[800px]">
         <div className={`grid grid-cols-4 px-6 py-3 border-b text-[10px] font-bold uppercase tracking-widest ${d ? 'border-white/5 bg-white/[0.005] text-gray-500' : 'border-gray-200 bg-gray-50 text-gray-600'}`}>
           <span>PILLAR & WEIGHT</span>
           <span className="text-center">ACTIVE IN DB</span>
@@ -485,6 +487,7 @@ function PillarTab() {
             );
           })}
         </div>
+          </div></div>
       </div>
     </div>
   );
@@ -852,17 +855,17 @@ function RolesTab() {
         {/* Left: administrators list */}
         <div className="lg:col-span-2 space-y-6">
           <div className={`relative rounded-2xl border overflow-hidden ${d ? 'bg-[#1C1F2E] border-white/5' : 'bg-white border-gray-200'}`}>
-            <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center items-start justify-between gap-4 px-6 pt-6 pb-4 border-b ${d ? 'border-white/5' : 'border-gray-200'}`}>
               <h2 className={`text-base font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>System Administrators</h2>
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
                   <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${d ? 'text-gray-500' : 'text-gray-400'}`} />
                   <input
                     type="text"
                     placeholder="Filter admins..."
                     value={adminSearch}
                     onChange={(e) => setAdminSearch(e.target.value)}
-                    className={`border rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-52 ${d ? 'bg-[#111318] border-white/10 text-white placeholder-gray-600' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
+                    className={`border rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:border-blue-500/50 w-full sm:w-52 ${d ? 'bg-[#111318] border-white/10 text-white placeholder-gray-600' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'}`}
                   />
                 </div>
                 <button
@@ -875,13 +878,15 @@ function RolesTab() {
                     setInvitePerms([]);
                     setShowInviteModal(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0 w-full sm:w-auto"
                 >
                   <UserPlus className="w-4 h-4" /> Invite Admin
                 </button>
               </div>
             </div>
 
+            <div className="overflow-x-auto no-scrollbar">
+              <div className="min-w-[800px]">
             <div className={`grid grid-cols-3 px-6 py-3 border-b ${d ? 'border-white/5 bg-white/[0.01]' : 'border-gray-200 bg-gray-50'}`}>
               {["ADMINISTRATOR", "DEPARTMENT", "ACCESS"].map((h) => (
                 <span key={h} className={`text-[10px] font-bold uppercase tracking-widest ${d ? 'text-gray-500' : 'text-gray-600'}`}>
@@ -973,6 +978,7 @@ function RolesTab() {
                 })}
               </div>
             )}
+              </div></div>
           </div>
         </div>
 
@@ -1377,7 +1383,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-[1400px] mx-auto">
       {/* Tab strip */}
-      <div className={`flex gap-6 border-b mb-8 -mt-2 ${d ? 'border-white/5' : 'border-gray-200'}`}>
+      <div className={`flex gap-6 border-b mb-8 -mt-2 overflow-x-auto no-scrollbar ${d ? 'border-white/5' : 'border-gray-200'}`}>
         {TABS.map((tab) => (
           <button
             key={tab.key}

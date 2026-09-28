@@ -167,7 +167,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div 
-      className={`h-screen ${d ? 'text-white' : 'text-gray-900'} flex flex-col font-sans overflow-hidden bg-cover bg-center bg-fixed`}
+      className={`fixed inset-0 ${d ? 'text-white' : 'text-gray-900'} flex flex-col font-sans overflow-hidden bg-cover bg-center bg-fixed`}
       style={{ backgroundImage: "url('/images/hero-background.png')" }}
     >
       {/* Top Nav */}

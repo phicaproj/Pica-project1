@@ -175,6 +175,14 @@ export default function AdminLoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <div className="flex justify-end mt-1.5">
+                <Link
+                  href="/Auth/forget-password?role=admin"
+                  className={`text-[10px] font-semibold transition hover:underline ${d ? 'text-blue-400' : 'text-blue-600'}`}
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
 
             <button

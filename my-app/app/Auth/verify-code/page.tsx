@@ -162,7 +162,7 @@ function VerifyCodeContent() {
 
           <form onSubmit={handleVerify}>
             {/* OTP inputs */}
-            <div className="flex justify-center gap-3 mb-4">
+            <div className="flex justify-center gap-1.5 sm:gap-3 mb-4">
               {otp.map((digit, index) => (
                 <input
                   key={index}
@@ -177,7 +177,7 @@ function VerifyCodeContent() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={index === 0 ? handlePaste : undefined}
-                  className={`w-14 h-14 text-center text-lg font-semibold rounded-xl border-2 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                  className={`w-10 h-12 sm:w-14 sm:h-14 text-center text-lg font-semibold rounded-xl border-2 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
                     d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"
                   } ${
                     codeError
