@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useTheme } from '@/components/ThemeContext';
@@ -87,6 +88,8 @@ export default function AdminDashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
 
   const load = useCallback(async () => {
     setLoading(true);

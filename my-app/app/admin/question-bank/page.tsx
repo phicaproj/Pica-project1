@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -150,8 +151,8 @@ export default function QuestionBankPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  
+  const { success: showSuccess, error: showError } = useToast();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<CreateDraft>(initialCreateDraft);
@@ -210,7 +211,7 @@ export default function QuestionBankPage() {
   const loadPillars = useCallback(async () => {
     const res = await getAdminPillars();
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
       return;
     }
     if (res.data) {
@@ -226,8 +227,6 @@ export default function QuestionBankPage() {
 
   const loadQuestions = useCallback(async () => {
     setLoading(true);
-    setError(null);
-
     const res = await getAdminQuestions({
       search: search.trim() || undefined,
       pillarId: pillarFilter || undefined,
@@ -238,7 +237,7 @@ export default function QuestionBankPage() {
     });
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
       setQuestions([]);
       setActiveId(null);
     } else if (res.data) {
@@ -257,10 +256,9 @@ export default function QuestionBankPage() {
 
   const loadScoreLabels = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const res = await getAdminScoreLabels();
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       setScoreLabels(res.data.scoreLabels);
     }
@@ -270,20 +268,19 @@ export default function QuestionBankPage() {
   const saveScoreLabel = async () => {
     if (!activeLabelId || !labelDraft) return;
     if (labelDraft.minScore < 0 || labelDraft.minScore > 100 || labelDraft.maxScore < 0 || labelDraft.maxScore > 100) {
-      setError("Scores must be between 0 and 100.");
+      showError("Scores must be between 0 and 100.");
       return;
     }
     if (labelDraft.minScore > labelDraft.maxScore) {
-      setError("Min score cannot be greater than Max score.");
+      showError("Min score cannot be greater than Max score.");
       return;
     }
     if (!labelDraft.label.trim() || !labelDraft.description.trim()) {
-      setError("Label name and description are required.");
+      showError("Label name and description are required.");
       return;
     }
 
     setSaving(true);
-    setError(null);
     const res = await updateAdminScoreLabel(activeLabelId, {
       minScore: Number(labelDraft.minScore),
       maxScore: Number(labelDraft.maxScore),
@@ -292,33 +289,32 @@ export default function QuestionBankPage() {
     });
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       setScoreLabels((current) =>
         current.map((row) => (row.id === activeLabelId ? res.data!.scoreLabel : row))
       );
       setEditLabelOpen(false);
-      showNotice("Score label updated.");
+      showSuccess("Score label updated.");
     }
     setSaving(false);
   };
 
   const createScoreLabelAction = async () => {
     if (createLabelDraft.minScore < 0 || createLabelDraft.minScore > 100 || createLabelDraft.maxScore < 0 || createLabelDraft.maxScore > 100) {
-      setError("Scores must be between 0 and 100.");
+      showError("Scores must be between 0 and 100.");
       return;
     }
     if (createLabelDraft.minScore > createLabelDraft.maxScore) {
-      setError("Min score cannot be greater than Max score.");
+      showError("Min score cannot be greater than Max score.");
       return;
     }
     if (!createLabelDraft.label.trim() || !createLabelDraft.description.trim()) {
-      setError("Label name and description are required.");
+      showError("Label name and description are required.");
       return;
     }
 
     setSaving(true);
-    setError(null);
     const res = await createAdminScoreLabel({
       minScore: Number(createLabelDraft.minScore),
       maxScore: Number(createLabelDraft.maxScore),
@@ -327,12 +323,12 @@ export default function QuestionBankPage() {
     });
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       setScoreLabels((current) => [...current, res.data!.scoreLabel].sort((a, b) => a.minScore - b.minScore));
       setCreateLabelOpen(false);
       setCreateLabelDraft({ minScore: 0, maxScore: 30, label: "", description: "" });
-      showNotice("Score label created.");
+      showSuccess("Score label created.");
     }
     setSaving(false);
   };
@@ -341,15 +337,14 @@ export default function QuestionBankPage() {
     if (!window.confirm("Are you sure you want to delete this score label?")) return;
 
     setSaving(true);
-    setError(null);
     const res = await deleteAdminScoreLabel(id);
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else {
       setScoreLabels((current) => current.filter((row) => row.id !== id));
       setEditLabelOpen(false);
-      showNotice("Score label deleted.");
+      showSuccess("Score label deleted.");
     }
     setSaving(false);
   };
@@ -442,14 +437,14 @@ export default function QuestionBankPage() {
   };
 
   const showNotice = (message: string) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(null), 2500);
+    showSuccess(message);
+    
   };
 
   const saveQuestion = async () => {
     if (!activeQuestion || !questionDraft) return;
     if (!questionDraft.questionText.trim()) {
-      setError("Question text is required.");
+      showError("Question text is required.");
       return;
     }
 
@@ -457,14 +452,12 @@ export default function QuestionBankPage() {
     for (const option of activeQuestion.options) {
       const draft = optionDrafts[option.id];
       if (!draft || !validateOption(draft, activeQuestion.phase)) {
-        setError(`Complete the option details correctly for Option ${option.optionLabel}.`);
+        showError(`Complete the option details correctly for Option ${option.optionLabel}.`);
         return;
       }
     }
 
     setSaving(true);
-    setError(null);
-
     // Save question and options
     const optionsPayload = activeQuestion.options.map(option => {
       const draft = optionDrafts[option.id];
@@ -495,23 +488,21 @@ export default function QuestionBankPage() {
     });
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       replaceQuestion(res.data.question);
-      showNotice("Question and options saved.");
+      showSuccess("Question and options saved.");
     }
     setSaving(false);
   };
 
   const addOption = async () => {
     if (!activeQuestion || !validateOption(newOption, activeQuestion.phase)) {
-      setError("Complete the new option details correctly before adding it.");
+      showError("Complete the new option details correctly before adding it.");
       return;
     }
 
     setSaving(true);
-    setError(null);
-
     const payload: AdminQuestionOptionPayload = {
       optionText: newOption.optionText.trim(),
       score: Number(newOption.score),
@@ -527,11 +518,11 @@ export default function QuestionBankPage() {
     const res = await addAdminQuestionOption(activeQuestion.id, payload);
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       replaceQuestion(res.data.question);
       setNewOption(emptyOption(0));
-      showNotice("Option added.");
+      showSuccess("Option added.");
     }
     setSaving(false);
   };
@@ -540,14 +531,13 @@ export default function QuestionBankPage() {
     if (!window.confirm("Delete this option?")) return;
 
     setSaving(true);
-    setError(null);
     const res = await deleteAdminQuestionOption(optionId);
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       replaceQuestion(res.data.question);
-      showNotice("Option deleted.");
+      showSuccess("Option deleted.");
     }
     setSaving(false);
   };
@@ -556,21 +546,20 @@ export default function QuestionBankPage() {
     if (!activeQuestion || !window.confirm("Archive this question?")) return;
 
     setSaving(true);
-    setError(null);
     const res = await deleteAdminQuestion(activeQuestion.id);
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       replaceQuestion(res.data.question);
-      showNotice("Question archived.");
+      showSuccess("Question archived.");
     }
     setSaving(false);
   };
 
   const createQuestion = async () => {
     if (!createDraft.pillarId || !createDraft.questionText.trim()) {
-      setError("Select a pillar and enter the question text.");
+      showError("Select a pillar and enter the question text.");
       return;
     }
 
@@ -592,13 +581,12 @@ export default function QuestionBankPage() {
     if (createDraft.isKnockout) {
       const zeroScoreCount = options.filter(o => o.score === 0).length;
       if (zeroScoreCount !== 1) {
-        setError("Knockout questions must designate exactly one choice with a 0 score.");
+        showError("Knockout questions must designate exactly one choice with a 0 score.");
         return;
       }
     }
 
     setSaving(true);
-    setError(null);
     const res = await createAdminQuestion({
       pillarId: createDraft.pillarId,
       questionText: createDraft.questionText.trim(),
@@ -611,7 +599,7 @@ export default function QuestionBankPage() {
     });
 
     if (res.error) {
-      setError(res.error.message);
+      showError(res.error.message);
     } else if (res.data) {
       replaceQuestion(res.data.question);
       setCreateOpen(false);
@@ -619,7 +607,7 @@ export default function QuestionBankPage() {
         ...initialCreateDraft(),
         pillarId: createDraft.pillarId,
       });
-      showNotice("Question created.");
+      showSuccess("Question created.");
     }
     setSaving(false);
   };
@@ -659,25 +647,7 @@ export default function QuestionBankPage() {
     setEditOpen(false);
     setActiveId(null);
   };
-  const renderErrorBanner = () => {
-    if (!error && !notice) return null;
-    return (
-      <div
-        className={`mb-6 flex items-start gap-3 rounded-xl border p-4 text-sm ${
-          error
-            ? "border-red-500/30 bg-red-500/10 text-red-200"
-            : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-        }`}
-      >
-        {error ? (
-          <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-        ) : (
-          <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-        )}
-        <span>{error || notice}</span>
-      </div>
-    );
-  };
+  
 
   const downloadTemplate = () => {
     const isPhase2B = uploadPhase === "PHASE2B";
@@ -771,8 +741,6 @@ export default function QuestionBankPage() {
           });
           
           setSaving(true);
-          setError(null);
-          
           const payload = {
             pillarId: uploadPillarId,
             phase: uploadPhase,
@@ -786,21 +754,21 @@ export default function QuestionBankPage() {
           });
           
           if (res.error) {
-            setError(res.error.message);
+            showError(res.error.message);
           } else {
             setUploadOpen(false);
-            showNotice("Bulk upload successful.");
+            showSuccess("Bulk upload successful.");
             void loadQuestions();
           }
         } catch (err: any) {
-          setError(err.message);
+          showError(err.message);
         } finally {
           setSaving(false);
           e.target.value = '';
         }
       },
       error: (err: any) => {
-        setError("Failed to parse CSV: " + err.message);
+        showError("Failed to parse CSV: " + err.message);
         setSaving(false);
         e.target.value = '';
       }
@@ -875,22 +843,7 @@ export default function QuestionBankPage() {
         </div>
       </div>
 
-      {(error || notice) && (
-        <div
-          className={`flex items-start gap-3 rounded-xl border p-4 text-sm ${
-            error
-              ? "border-red-500/30 bg-red-500/10 text-red-200"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
-          }`}
-        >
-          {error ? (
-            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          ) : (
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          )}
-          <span>{error || notice}</span>
-        </div>
-      )}
+      
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
@@ -1131,7 +1084,7 @@ export default function QuestionBankPage() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              {renderErrorBanner()}
+              
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
                   Target Pillar

@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -87,6 +88,8 @@ export default function CouponsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [notice, setNotice] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");

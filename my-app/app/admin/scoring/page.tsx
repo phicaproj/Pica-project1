@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -49,7 +50,10 @@ export default function ScoringPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [success, setSuccess] = useState<string | null>(null);
+  useEffect(() => { if (success && typeof success === 'string') showSuccess(success); }, [success, showSuccess]);
   // Read-only until the admin explicitly clicks Edit — guards against
   // accidental changes to scoring config.
   const [isEditing, setIsEditing] = useState(false);

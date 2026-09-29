@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -120,6 +121,8 @@ export default function UserDetailPage() {
   const [details, setDetails] = useState<AdminUserDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
 
   const [sessions, setSessions] = useState<AdminUserSessionsResponse | null>(null);
   const [sessionsLoading, setSessionsLoading] = useState(true);
@@ -495,6 +498,8 @@ function SessionDetailModal({
   const [session, setSession] = useState<AdminSessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
 
   useEffect(() => {
     let cancelled = false;

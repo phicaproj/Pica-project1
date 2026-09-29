@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   TrendingUp,
@@ -136,6 +137,8 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState<AdminPaymentRow[]>([]);
   const [tableLoading, setTableLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);

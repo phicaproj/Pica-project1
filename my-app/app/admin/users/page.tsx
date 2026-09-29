@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from '@/components/ThemeContext';
@@ -81,6 +82,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

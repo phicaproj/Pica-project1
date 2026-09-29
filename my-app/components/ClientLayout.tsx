@@ -6,6 +6,7 @@ import { Sun, Moon, ScanSearch } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { ThemeProvider, useTheme } from "@/components/ThemeContext";
+import { ToastProvider } from "@/components/ToastContext";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -192,7 +193,10 @@ export default function ClientLayout({
 }) {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <LayoutInner>{children}</LayoutInner>
+          </ToastProvider>
     </ThemeProvider>
   );
 }
+

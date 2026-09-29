@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTheme } from '@/components/ThemeContext';
 import {
@@ -164,6 +165,8 @@ export default function ReportsAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
 
   const [breakdownTab, setBreakdownTab] = useState<BreakdownTab>("pillars");
 

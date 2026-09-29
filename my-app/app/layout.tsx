@@ -11,8 +11,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "PICA",
-  description: "Business Intelligence for Growing Enterprises",
+  title: "PICA - Business Intelligence",
+  description: "PICA provides powerful strategic scanning, deep dives, and business intelligence for growing enterprises.",
+  keywords: ["business intelligence", "diagnostic", "PICA", "analytics"],
 };
 
 export default function RootLayout({

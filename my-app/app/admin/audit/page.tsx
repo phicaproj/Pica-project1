@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useEffect, useState, useCallback } from "react";
 import { useTheme } from '@/components/ThemeContext';
 import { Activity, Search, AlertCircle, Loader } from "lucide-react";
@@ -10,6 +11,8 @@ export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AdminAuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [search, setSearch] = useState("");
   const [selectedLog, setSelectedLog] = useState<AdminAuditLog | null>(null);
 

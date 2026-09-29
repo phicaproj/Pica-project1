@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { Suspense, useCallback, useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -119,6 +120,8 @@ function PayPerUseTab() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [modalOpen, setModalOpen] = useState(false);
   const [activePlan, setActivePlan] = useState<PricingPlan>("PHASE2A");
   const [priceDraft, setPriceDraft] = useState("");

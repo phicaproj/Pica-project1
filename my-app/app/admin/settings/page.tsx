@@ -1,5 +1,6 @@
 "use client";
 
+import { useToast } from "@/components/ToastContext";
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from '@/components/ThemeContext';
 import {
@@ -80,6 +81,8 @@ function PillarTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [success, setSuccess] = useState(false);
 
   // Form states for Limits
@@ -606,6 +609,8 @@ function RolesTab() {
   const [admins, setAdmins] = useState<AdminUserRow[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [adminSearch, setAdminSearch] = useState("");
@@ -1161,6 +1166,8 @@ function PersonalInfoTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { success: showSuccess, error: showError } = useToast();
+  useEffect(() => { if (error && typeof error === 'string') showError(error); }, [error, showError]);
   const [success, setSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
