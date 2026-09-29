@@ -557,6 +557,21 @@ export default function QuestionBankPage() {
     setSaving(false);
   };
 
+    const unarchiveQuestion = async () => {
+    if (!activeQuestion || !window.confirm("Unarchive this question?")) return;
+
+    setSaving(true);
+    const res = await updateAdminQuestion(activeQuestion.id, { isActive: true });
+
+    if (res.error) {
+      showError(res.error.message);
+    } else if (res.data) {
+      replaceQuestion(res.data.question);
+      showSuccess("Question unarchived.");
+    }
+    setSaving(false);
+  };
+
   const createQuestion = async () => {
     if (!createDraft.pillarId || !createDraft.questionText.trim()) {
       showError("Select a pillar and enter the question text.");
@@ -1814,18 +1829,33 @@ export default function QuestionBankPage() {
             </div>
 
             <div className="flex justify-between items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
-              <button
-                type="button"
-                onClick={async () => {
-                  await archiveQuestion();
-                  closeEditModal();
-                }}
-                disabled={saving || !activeQuestion.isActive}
-                className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Archive className="h-4 w-4" />
-                Archive Question
-              </button>
+              {activeQuestion.isActive ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await archiveQuestion();
+                    closeEditModal();
+                  }}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Archive className="h-4 w-4" />
+                  Archive Question
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await unarchiveQuestion();
+                    closeEditModal();
+                  }}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-300 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Archive className="h-4 w-4" />
+                  Unarchive Question
+                </button>
+              )}
               <div className="flex gap-3">
                 <button
                   type="button"
