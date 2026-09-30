@@ -126,10 +126,8 @@ function validateOption(option: AdminQuestionOptionPayload, phase: AdminQuestion
       Number.isInteger(option.actionPlanDays) &&
       option.actionPlanDays >= 1 &&
       option.actionPlanDays <= 365;
-    const hasItems =
-      option.actionPlanItems &&
-      option.actionPlanItems.length > 0 &&
-      option.actionPlanItems.every((item) => item.trim());
+    const validItems = option.actionPlanItems ? option.actionPlanItems.filter(item => item.trim() !== "") : [];
+      const hasItems = validItems.length > 0;
     return base && hasDays && hasItems;
   } else {
     return base && option.recommendation && option.recommendation.trim();
