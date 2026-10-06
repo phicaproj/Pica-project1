@@ -1,5 +1,5 @@
-import { connectMongo } from './Config/mongoDb';
 import 'dotenv/config';
+import { connectMongo } from './Config/mongoDb';
 import app from './app';
 import { PORT } from './Config/env';
 import { cleanupExpiredReports } from './scripts/cleanup-reports';
