@@ -10,7 +10,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install dependencies (including devDependencies needed for tsc)
-RUN npm ci --include=dev
+RUN npm install --include=dev
 
 COPY . .
 
@@ -31,7 +31,7 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy compiled app and generated prisma client from builder
 COPY --from=builder /app/dist ./dist

@@ -30,13 +30,11 @@ const app = express();
 app.use(
   cors({
     origin: (origin, callback) => {
-      
       if (!origin) return callback(null, true);
 
-     
       const allowedOrigin = APP_URL.replace(/\/$/, '');
       const beauvisionOrigin = BEAUVISION_APP_URL.replace(/\/$/, '');
-      
+
       // 3. Always allow the main production URLs
       if (origin === allowedOrigin || origin === beauvisionOrigin) return callback(null, true);
 
@@ -45,7 +43,7 @@ app.use(
         return callback(null, true);
       }
 
-      // 5. Silently reject everything else
+      // 5. Silently reject everythings else
       return callback(null, false);
     },
     credentials: true,
@@ -103,7 +101,6 @@ app.use('/api/beauvision/inquiry', beauInquiryRouter);
 app.use('/api/beauvision/payment', beauPaymentRouter);
 app.use('/api/beauvision/resource', beauResourceRouter);
 app.use('/api/beauvision/blog', beauBlogRouter);
-
 
 // OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
 const openApiDocument = buildOpenApiDocument();

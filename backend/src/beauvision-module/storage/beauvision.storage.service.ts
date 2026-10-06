@@ -36,6 +36,15 @@ export const buildPublicUrl = (key: string): string => {
   return `${base}/${cleanKey}`;
 };
 
+export const extractKeyFromUrl = (url: string): string | null => {
+  if (!url) return null;
+  const base = BEAUVISION_R2_PUBLIC_BASE_URL.replace(/\/+$/, '');
+  if (url.startsWith(base)) {
+    return url.substring(base.length).replace(/^\/+/, '');
+  }
+  return null;
+};
+
 export const uploadObject = async ({
   key,
   body,

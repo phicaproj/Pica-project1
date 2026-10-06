@@ -6,6 +6,7 @@ const adminRouter = Router();
 
 // Public routes
 adminRouter.post('/login', AdminController.loginAdmin);
+adminRouter.post('/refresh-token', AdminController.refreshAdminToken);
 adminRouter.post('/forgot-password', AdminController.forgotPassword);
 adminRouter.post('/reset-password', AdminController.resetPassword);
 

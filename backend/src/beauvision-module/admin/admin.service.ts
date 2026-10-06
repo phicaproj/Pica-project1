@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import AppError from '../../service/shared/appError';
 import { BAD_REQUEST, NOT_FOUND, UNAUTHORIZED } from '../../service/shared/http';
 import {
@@ -6,6 +6,7 @@ import {
   generateRefreshToken,
   generatePasswordResetToken,
   verifyPasswordResetToken,
+  verifyRefreshToken,
 } from '../../service/shared/generateToken';
 import { BeauvisionAdmin } from './admin.model';
 import { IBeauvisionAdminCreate, IBeauvisionAdminLogin } from './admin.types';
@@ -173,5 +174,19 @@ export class AdminService {
     await admin.save();
 
     return { message: 'Password has been successfully reset' };
+  }
+
+  static async refreshAdminToken(token: string) {
+    const decoded = verifyRefreshToken(token);
+    
+    const admin = await BeauvisionAdmin.findById(decoded.id);
+    if (!admin) {
+      throw new AppError('Admin not found or deleted', UNAUTHORIZED);
+    }
+    
+    const accessToken = generateAccessToken({ id: admin._id.toString(), role: admin.role });
+    const refreshToken = generateRefreshToken({ id: admin._id.toString(), role: admin.role });
+    
+    return { accessToken, refreshToken };
   }
 }

@@ -3,6 +3,7 @@ import { NOT_FOUND, BAD_REQUEST } from '../../service/shared/http';
 import { Blog } from './blog.model';
 import { IBlogCreate } from './blog.types';
 import mongoose from 'mongoose';
+import { deleteObject, extractKeyFromUrl } from '../storage/beauvision.storage.service';
 
 export class BlogService {
   static async createBlog(data: IBlogCreate) {
@@ -17,8 +18,12 @@ export class BlogService {
     return Blog.find(filter).populate('authorId', 'name email').sort({ createdAt: -1 });
   }
 
-  static async getBlogBySlug(slug: string) {
-    const blog = await Blog.findOne({ slug }).populate('authorId', 'name email');
+  static async getBlogBySlug(slugOrId: string) {
+    let query: any = { slug: slugOrId };
+    if (mongoose.Types.ObjectId.isValid(slugOrId)) {
+      query = { $or: [{ slug: slugOrId }, { _id: slugOrId }] };
+    }
+    const blog = await Blog.findOne(query).populate('authorId', 'name email');
     if (!blog) throw new AppError('Blog not found', NOT_FOUND);
     return blog;
   }
@@ -41,8 +46,16 @@ export class BlogService {
     if (!mongoose.Types.ObjectId.isValid(blogId)) {
         throw new AppError('Invalid blog ID format', BAD_REQUEST);
     }
-    const blog = await Blog.findByIdAndDelete(blogId);
+    const blog = await Blog.findById(blogId);
     if (!blog) throw new AppError('Blog not found', NOT_FOUND);
+
+    // Delete cover image from R2
+    if (blog.coverImageUrl) {
+      const coverKey = extractKeyFromUrl(blog.coverImageUrl);
+      if (coverKey) await deleteObject(coverKey).catch(e => console.error('Failed to delete blog cover from R2:', e));
+    }
+
+    await Blog.findByIdAndDelete(blogId);
     return { message: 'Blog deleted successfully' };
   }
 }

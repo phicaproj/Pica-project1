@@ -689,3 +689,42 @@ export async function sendAdminPasswordResetLinkEmail(
   });
 }
 
+export async function sendDigitalResourceEmail({
+  toEmail,
+  buyerName,
+  resourceTitle,
+  fileName,
+  fileContentBase64,
+}: {
+  toEmail: string;
+  buyerName: string | null;
+  resourceTitle: string;
+  fileName: string;
+  fileContentBase64: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = buyerName ?? 'there';
+
+  const html = renderEmail({
+    heading: `Here is your resource`,
+    preheader: `Thank you for purchasing ${resourceTitle}.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">Thank you for your purchase of <strong>${resourceTitle}</strong>!</p>
+      <p style="margin:0 0 16px 0;">You will find your document attached to this email. You can download and keep it safely.</p>
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">If you have any issues opening the file, please reply to this email.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your purchase: ${resourceTitle}`,
+    htmlContent: html,
+    attachment: [
+      {
+        name: fileName,
+        content: fileContentBase64,
+      },
+    ],
+  });
+}
+

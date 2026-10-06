@@ -32,3 +32,7 @@ export const ResetPasswordSchema = z.object({
 
 export interface IBeauvisionAdminCreate extends z.infer<typeof CreateAdmin> {}
 export interface IBeauvisionAdminLogin extends z.infer<typeof LoginAdmin> {}
+
+export const RefreshTokenSchema = z.object({
+  refreshToken: z.string('Refresh token is required'),
+});

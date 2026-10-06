@@ -1,4 +1,4 @@
-﻿import AppError from '../../service/shared/appError';
+import AppError from '../../service/shared/appError';
 import { NOT_FOUND } from '../../service/shared/http';
 import { ServiceInquiry } from './inquiry.model';
 import { IServiceInquiryCreate } from './inquiry.types';
@@ -10,7 +10,7 @@ export class InquiryService {
     
     // Call the sendInquiryEmail function to send an email notification to the admin
     // assuming an admin email from env or a default one
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@beauvision.com';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@beauvisiongroup.com';
     await sendInquiryEmail(adminEmail, data).catch((err) => {
       console.error('Failed to send inquiry email:', err);
     });

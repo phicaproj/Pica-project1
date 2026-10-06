@@ -1,4 +1,4 @@
-﻿import { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { AdminService } from './admin.service';
 import { CREATED, OK, UNAUTHORIZED } from '../../service/shared/http';
 import catchErrors from '../../service/shared/catchErrors';
@@ -10,6 +10,7 @@ import {
   ChangePasswordSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
+  RefreshTokenSchema,
 } from './admin.types';
 
 export const createAdmin = catchErrors(async (req: Request, res: Response) => {
@@ -111,5 +112,15 @@ export const resetPassword = catchErrors(async (req: Request, res: Response) => 
   res.status(OK).json({
     status: true,
     message: result.message,
+  });
+});
+
+export const refreshAdminToken = catchErrors(async (req: Request, res: Response) => {
+  const { refreshToken } = RefreshTokenSchema.parse(req.body);
+  const result = await AdminService.refreshAdminToken(refreshToken);
+  res.status(OK).json({
+    status: true,
+    message: 'Token refreshed successfully',
+    data: result,
   });
 });

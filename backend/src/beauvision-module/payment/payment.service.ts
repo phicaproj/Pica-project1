@@ -1,9 +1,10 @@
-﻿import AppError from '../../service/shared/appError';
+import AppError from '../../service/shared/appError';
 import { BAD_REQUEST, NOT_FOUND } from '../../service/shared/http';
 import { Payment } from './payment.model';
 import { IPaymentCreate } from './payment.types';
 import { DigitalResource } from '../resource/resource.model';
 import { initializeTransaction, newPaymentReference, verifyTransaction } from '../../service/shared/paystack.service';
+import { sendDigitalResourceEmail } from '../../service/shared/email.service';
 
 export class PaymentService {
   static async initializePayment(data: { resourceId: string; email: string; name: string }) {
@@ -118,8 +119,46 @@ export async function handleBeauvisionWebhookService(params: {
     // Mark successful
     await Payment.findOneAndUpdate({ reference }, { status: 'SUCCESS' });
     
-    // Here you would typically also trigger an email sending the digital resource to the user's email
-    // Example: await sendDigitalResourceEmail(payment.email, resource);
+    // Send email with file
+    try {
+      if (resource.fileUrl) {
+        const response = await fetch(resource.fileUrl);
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          
+          let filename = 'resource';
+          if (resource.fileFormat) {
+             // ensure no leading dot
+             filename += `.${resource.fileFormat.replace(/^\./, '')}`;
+          } else {
+             filename += '.pdf';
+          }
+          
+          const urlParts = resource.fileUrl.split('/');
+          const lastPart = urlParts[urlParts.length - 1];
+          if (lastPart) {
+             const decoded = decodeURIComponent(lastPart);
+             const parts = decoded.split('-');
+             if (parts.length > 1) {
+               filename = parts.slice(1).join('-');
+             } else {
+               filename = decoded;
+             }
+          }
+
+          await sendDigitalResourceEmail({
+             toEmail: payment.email,
+             buyerName: data.metadata?.name || null,
+             resourceTitle: resource.title,
+             fileName: filename,
+             fileContentBase64: base64
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to send digital resource email:', e);
+    }
 
     return { message: 'Beauvision payment verified and processed successfully' };
   }
