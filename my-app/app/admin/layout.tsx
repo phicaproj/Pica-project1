@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { ToastProvider } from "./components/ToastContext";
 import { useTheme } from '@/components/ThemeContext';
 import { clearSession, getAccessToken, getStoredUser } from "@/lib/authClient";
 import {
