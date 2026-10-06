@@ -36,6 +36,7 @@ const couponSelect = {
   amountOff: true,
   percentOff: true,
   isActive: true,
+  isMaster: true,
   status: true,
   maxUses: true,
   usedCount: true,
@@ -58,6 +59,7 @@ const toCoupon = (coupon: RawCoupon): CouponResponse => ({
   amountOff: coupon.amountOff.toNumber(),
   percentOff: coupon.percentOff.toNumber(),
   isActive: coupon.isActive,
+  isMaster: coupon.isMaster,
   status: coupon.status,
   maxUses: coupon.maxUses,
   usedCount: coupon.usedCount,
@@ -86,7 +88,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
     plan === Plan.SUBSCRIPTION ? (input.subscriptionPlanId ?? null) : null;
   // User-scoped coupons are single-use by definition; otherwise honour the
   // admin's cap (Zod already defaulted it to 1 when omitted).
-  const maxUses = input.userId ? 1 : input.maxUses;
+  const maxUses = (input.userId && !input.isMaster) ? 1 : input.maxUses;
 
   let userEmail: string | null = null;
   if (input.userId) {
@@ -148,6 +150,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           amountOff,
           percentOff,
           isActive: input.isActive,
+          isMaster: input.isMaster ?? false,
           userId: input.userId ?? null,
           plan,
           pillarId,
@@ -176,6 +179,7 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
           amountOff,
           percentOff,
           isActive: input.isActive,
+          isMaster: input.isMaster ?? false,
           userId: input.userId ?? null,
           plan,
           pillarId,
@@ -202,6 +206,7 @@ export async function listCouponsService(query: ListCouponsQuery): Promise<Coupo
   const where: Prisma.DiscountWhereInput = {
     ...(query.userId ? { userId: query.userId } : {}),
     ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
+    ...(query.isMaster !== undefined ? { isMaster: query.isMaster } : {}),
     ...(query.plan ? { plan: query.plan } : {}),
     ...(query.pillarId ? { pillarId: query.pillarId } : {}),
   };
@@ -228,12 +233,12 @@ export async function updateCouponService(
 ): Promise<CouponDetailResponse> {
   const existing = await prisma.discount.findUnique({
     where: { id: couponId },
-    select: { id: true, userId: true, usedCount: true, maxUses: true },
+    select: { id: true, userId: true, usedCount: true, maxUses: true, isMaster: true },
   });
   if (!existing) throw new AppError('Coupon not found', NOT_FOUND);
 
   if (input.maxUses !== undefined) {
-    if (existing.userId && input.maxUses !== 1) {
+    if (existing.userId && !existing.isMaster && input.maxUses !== undefined && input.maxUses !== 1) {
       throw new AppError(
         'A user-specific coupon can only have 1 use — remove the user to allow more',
         UNPROCESSABLE_CONTENT
@@ -258,6 +263,7 @@ export async function updateCouponService(
     data: {
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      ...(input.isMaster !== undefined ? { isMaster: input.isMaster } : {}),
       ...(input.maxUses !== undefined
         ? {
             maxUses: input.maxUses,
@@ -311,6 +317,7 @@ export async function validateAndPriceCoupon(
       amountOff: true,
       percentOff: true,
       isActive: true,
+  isMaster: true,
       status: true,
       maxUses: true,
       usedCount: true,
@@ -336,16 +343,18 @@ export async function validateAndPriceCoupon(
 
   // One redemption per user per code — a prior SUCCESS payment with this
   // coupon means this user already benefited once.
-  const priorUse = await prisma.payment.findFirst({
+  if (!coupon.isMaster) {
+    const priorUse = await prisma.payment.findFirst({
     where: {
       userId,
       appliedCouponCode: coupon.code,
       status: PaymentStatus.SUCCESS,
     },
     select: { id: true },
-  });
-  if (priorUse) {
-    throw new AppError('You have already used this coupon', UNPROCESSABLE_CONTENT);
+    });
+    if (priorUse) {
+      throw new AppError('You have already used this coupon', UNPROCESSABLE_CONTENT);
+    }
   }
 
   if (coupon.plan && coupon.plan !== target.plan) {

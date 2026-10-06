@@ -48,6 +48,7 @@ type CouponDraft = {
   // How many people can use the code. Defaults to 1 so a forgotten field
   // can't create an unlimited promo; locked to 1 while a user is selected.
   maxUses: string;
+  isMaster: boolean;
 };
 
 const initialDraft: CouponDraft = {
@@ -61,6 +62,7 @@ const initialDraft: CouponDraft = {
   pillarId: "",
   subscriptionPlanId: "",
   maxUses: "1",
+    isMaster: false,
 };
 
 const fieldClass =
@@ -257,7 +259,7 @@ export default function CouponsPage() {
 
     // User-scoped coupons are always single-use; otherwise default a blank
     // field back to 1 so a forgotten value can't create an unlimited promo.
-    const maxUses = draft.userId.trim() ? 1 : Math.floor(Number(draft.maxUses) || 1);
+    const maxUses = (draft.userId.trim() && !draft.isMaster) ? 1 : Math.floor(Number(draft.maxUses) || 1);
     if (maxUses < 1) {
       setError("Number of uses must be at least 1.");
       return;
@@ -872,7 +874,7 @@ export default function CouponsPage() {
                         maxUses: String(Math.max(1, Math.floor(Number(prev.maxUses) || 1))),
                       }))
                     }
-                    className={`${fieldClass} ${selectedUser ? "opacity-60 cursor-not-allowed" : ""}`}
+                    className={`${fieldClass} ${selectedUser && !draft.isMaster ? "opacity-60 cursor-not-allowed" : ""}`}
                   />
                   <p className="mt-1.5 text-[11px] text-gray-500">
                     {selectedUser

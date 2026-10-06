@@ -1,3 +1,4 @@
+import { handleBeauvisionWebhookService } from '../../beauvision-module/payment/payment.service';
 import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';

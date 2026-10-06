@@ -25,6 +25,7 @@ export const createCouponSchema = z
       .max(100, 'percentOff cannot exceed 100')
       .optional(),
     isActive: z.boolean().default(true),
+    isMaster: z.boolean().default(false),
     userId: z.string().uuid('userId must be a valid UUID').optional(),
     plan: couponPlanSchema.optional().nullable(),
     pillarId: z.string().uuid('pillarId must be a valid UUID').optional().nullable(),
@@ -53,7 +54,7 @@ export const createCouponSchema = z
   .refine((data) => !(data.amountOff && data.percentOff), {
     message: 'provide only one of amountOff or percentOff, not both',
   })
-  .refine((data) => !data.userId || data.maxUses === 1, {
+  .refine((data) => !data.userId || data.isMaster || data.maxUses === 1, {
     path: ['maxUses'],
     message: 'a user-specific coupon can only have 1 use — remove the user to allow more',
   })
@@ -74,6 +75,7 @@ export const updateCouponSchema = z
   .object({
     description: z.string().trim().max(200).optional(),
     isActive: z.boolean().optional(),
+    isMaster: z.boolean().optional(),
     // Raising/lowering the cap after creation. Service-level rules: cannot be
     // set below usedCount, and stays locked to 1 on user-scoped coupons.
     maxUses: z.coerce
@@ -90,6 +92,7 @@ export const updateCouponSchema = z
 export const listCouponsQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   isActive: z.coerce.boolean().optional(),
+  isMaster: z.coerce.boolean().optional(),
   plan: couponPlanSchema.optional(),
   pillarId: z.string().uuid().optional(),
 });
@@ -134,6 +137,7 @@ export type CouponResponse = {
   amountOff: number;
   percentOff: number;
   isActive: boolean;
+  isMaster: boolean;
   status: string;
   maxUses: number;
   usedCount: number;

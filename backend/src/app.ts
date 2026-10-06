@@ -4,7 +4,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
-import { NODE_ENV, APP_URL } from './Config/env';
+import { NODE_ENV, APP_URL, BEAUVISION_APP_URL } from './Config/env';
 import { GlobalLimiter } from './service/shared/rateLimiter';
 import errorHandler from './service/middleware/errorHandler';
 import assessmentRouter from './module/assessment/assessment.routes';
@@ -14,6 +14,12 @@ import authRouter from './module/auth/auth.route';
 import paymentRouter from './module/payment/payment.routes';
 import userRouter from './module/user/user.routes';
 import adminRouter from './module/admin/admin.routes';
+import beauAdminRouter from './beauvision-module/admin/admin.routes';
+import beauInquiryRouter from './beauvision-module/inquiry/inquiry.routes';
+import beauPaymentRouter from './beauvision-module/payment/payment.routes';
+import beauResourceRouter from './beauvision-module/resource/resource.routes';
+import beauBlogRouter from './beauvision-module/blog/blog.routes';
+
 import couponRouter from './module/coupon/coupon.routes';
 import subscriptionRouter from './module/subscription/subscription.routes';
 import consultationRouter from './module/consultation/consultation.routes';
@@ -29,9 +35,10 @@ app.use(
 
      
       const allowedOrigin = APP_URL.replace(/\/$/, '');
+      const beauvisionOrigin = BEAUVISION_APP_URL.replace(/\/$/, '');
       
-      // 3. Always allow the main production URL
-      if (origin === allowedOrigin) return callback(null, true);
+      // 3. Always allow the main production URLs
+      if (origin === allowedOrigin || origin === beauvisionOrigin) return callback(null, true);
 
       // 4. If in development mode, automatically allow localhost (React/Vue/Angular testing)
       if (NODE_ENV !== 'production' && /^http:\/\/localhost:\d+$/.test(origin)) {
@@ -89,6 +96,14 @@ app.use('/api/admin', adminRouter);
 app.use('/api/coupon', couponRouter);
 app.use('/api/subscription', subscriptionRouter);
 app.use('/api/consultation', consultationRouter);
+
+// Beauvision Routes
+app.use('/api/beauvision/admin', beauAdminRouter);
+app.use('/api/beauvision/inquiry', beauInquiryRouter);
+app.use('/api/beauvision/payment', beauPaymentRouter);
+app.use('/api/beauvision/resource', beauResourceRouter);
+app.use('/api/beauvision/blog', beauBlogRouter);
+
 
 // OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
 const openApiDocument = buildOpenApiDocument();

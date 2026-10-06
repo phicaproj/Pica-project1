@@ -17,7 +17,7 @@ import { BAD_REQUEST } from './http';
 
 export interface TokenPayload {
   id: string;
-  role: 'USER' | 'ADMIN';
+  role: 'USER' | 'ADMIN' | 'OWNER';
   adminRoleName?: string;
   permissions?: string[];
 }

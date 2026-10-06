@@ -533,6 +533,7 @@ export async function initPaymentService(
     currency: chargeCurrency,
     reference,
     metadata: {
+        project: 'PICA',
       paymentId: payment.id,
       userId: user.id,
       sessionId: paymentSessionId,

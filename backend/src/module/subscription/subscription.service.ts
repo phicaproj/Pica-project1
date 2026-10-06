@@ -455,6 +455,7 @@ export async function subscribeService(
     currency: chargeCurrency,
     reference,
     metadata: {
+        project: 'PICA',
       kind: 'subscription',
       userId: user.id,
       planId: plan.id,

@@ -618,3 +618,74 @@ export async function sendConsultationNoteUpdatedEmail({
     htmlContent: html,
   });
 }
+export async function sendAdminCredentialsEmail({
+  toEmail,
+  name,
+  password,
+  loginUrl,
+}: {
+  toEmail: string;
+  name: string;
+  password?: string;
+  loginUrl: string;
+}): Promise<any> {
+  const html = `
+    <p>Hi ${name},</p>
+    <p>An admin account has been created for you.</p>
+    <p><strong>Email:</strong> ${toEmail}</p>
+    ${password ? `<p><strong>Temporary Password:</strong> ${password}</p>` : ''}
+    <p><a href="${loginUrl}" style="display:inline-block;padding:10px 20px;background-color:#000;color:#fff;text-decoration:none;border-radius:4px;">Log in to your account</a></p>
+  `;
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your Admin Account Credentials`,
+    htmlContent: html,
+  });
+}
+
+export async function sendInquiryEmail(
+  toEmail: string,
+  inquiry: { name: string; email: string; companyName?: string; serviceRequested: string; message?: string }
+): Promise<{ success: boolean; error?: string }> {
+  const html = renderEmail({
+    heading: `New Service Inquiry`,
+    preheader: `You have received a new service inquiry from ${inquiry.name}.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;"><strong>Name:</strong> ${inquiry.name}</p>
+      <p style="margin:0 0 16px 0;"><strong>Email:</strong> ${inquiry.email}</p>
+      <p style="margin:0 0 16px 0;"><strong>Company:</strong> ${inquiry.companyName || 'N/A'}</p>
+      <p style="margin:0 0 16px 0;"><strong>Service Requested:</strong> ${inquiry.serviceRequested}</p>
+      <p style="margin:0 0 16px 0;"><strong>Message:</strong><br/> ${inquiry.message || 'No message provided.'}</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `New Service Inquiry - ${inquiry.serviceRequested}`,
+    htmlContent: html,
+  });
+}
+
+
+export async function sendAdminPasswordResetLinkEmail(
+  toEmail: string,
+  resetUrl: string
+): Promise<{ success: boolean; error?: string }> {
+  const html = renderEmail({
+    heading: `Reset your admin password`,
+    preheader: `Click the link to reset your admin password.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">You requested a password reset. Click the button below to set a new password:</p>
+      ${ctaButton(resetUrl, 'Reset Password')}
+      <p style="margin:16px 0 0 0; color:${MUTED_COLOR}; font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Reset your admin password`,
+    htmlContent: html,
+  });
+}
+

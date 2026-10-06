@@ -34,3 +34,11 @@ export const R2_ACCESS_KEY_ID = getEnv('R2_ACCESS_KEY_ID');
 export const R2_SECRET_ACCESS_KEY = getEnv('R2_SECRET_ACCESS_KEY');
 export const R2_BUCKET = getEnv('R2_BUCKET');
 export const R2_PUBLIC_BASE_URL = getEnv('R2_PUBLIC_BASE_URL');
+
+export const BEAUVISION_R2_BUCKET = process.env.BEAUVISION_R2_BUCKET ?? 'beauvision-dev-bucket';
+export const BEAUVISION_R2_PUBLIC_BASE_URL =
+  process.env.BEAUVISION_R2_PUBLIC_BASE_URL ?? 'https://dev.beauvision.com';
+
+export const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || getEnv('MONGODB_URI');
+
+export const BEAUVISION_APP_URL = process.env.BEAUVISION_APP_URL ?? 'https://beauvisiongroup.com';
