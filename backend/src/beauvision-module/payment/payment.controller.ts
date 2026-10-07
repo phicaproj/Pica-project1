@@ -37,7 +37,7 @@ export const getPaymentByReference = catchErrors(async (req: Request, res: Respo
 
 export const verifyPaymentManual = catchErrors(async (req: Request, res: Response) => {
   const reference = req.params.reference as string;
-  const payment = await Payment.findOne({ reference }).populate('resourceId', 'title price');
+  const payment = await Payment.findOne({ reference }).populate('resourceIds', 'title price');
   if (!payment) throw new AppError('Payment not found', NOT_FOUND);
 
   let status = payment.status;

@@ -9,8 +9,7 @@ export class InquiryService {
     const inquiry = await ServiceInquiry.create(data);
     
     // Call the sendInquiryEmail function to send an email notification to the admin
-    // assuming an admin email from env or a default one
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@beauvisiongroup.com';
+    const adminEmail = 'admin@beauvisiongroup.com';
     await sendInquiryEmail(adminEmail, data).catch((err) => {
       console.error('Failed to send inquiry email:', err);
     });

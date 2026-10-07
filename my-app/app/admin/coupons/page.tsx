@@ -862,8 +862,8 @@ export default function CouponsPage() {
                     type="number"
                     min="1"
                     step="1"
-                    value={selectedUser ? "1" : draft.maxUses}
-                    disabled={Boolean(selectedUser)}
+                    value={selectedUser && !draft.isMaster ? "1" : draft.maxUses}
+                    disabled={Boolean(selectedUser) && !draft.isMaster}
                     onChange={(event) =>
                       setDraft((prev) => ({ ...prev, maxUses: event.target.value }))
                     }
@@ -877,13 +877,27 @@ export default function CouponsPage() {
                     className={`${fieldClass} ${selectedUser && !draft.isMaster ? "opacity-60 cursor-not-allowed" : ""}`}
                   />
                   <p className="mt-1.5 text-[11px] text-gray-500">
-                    {selectedUser
-                      ? "Locked to 1 — remove the selected user to allow more people."
-                      : "How many different people can redeem this code (each person once)."}
+                    {selectedUser && !draft.isMaster
+                      ? "Locked to 1 — remove the selected user or make it a master coupon to allow more uses."
+                      : "How many uses are allowed for this coupon."}
                   </p>
                 </div>
-                <div className="flex items-end pb-7">
-                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                <div className="flex flex-col gap-3 pb-4 pt-1">
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer w-fit">
+                    <input
+                      type="checkbox"
+                      checked={draft.isMaster}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, isMaster: event.target.checked }))
+                      }
+                      className="h-4 w-4 accent-purple-500"
+                    />
+                    <span className="flex flex-col">
+                      <span>Master Coupon</span>
+                      <span className="text-[11px] text-gray-500">Bypasses limits: can be used by anyone multiple times, ignores max uses.</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer w-fit">
                     <input
                       type="checkbox"
                       checked={draft.isActive}

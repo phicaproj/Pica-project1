@@ -5,7 +5,7 @@ export interface IPayment extends Document {
   email: string;
   amount: number;
   status: 'SUCCESS' | 'FAILED' | 'PENDING';
-  resourceId?: mongoose.Types.ObjectId; 
+  resourceIds?: mongoose.Types.ObjectId[]; 
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -17,7 +17,7 @@ const PaymentSchema = new Schema<IPayment>(
     email: { type: String, required: true },
     amount: { type: Number, required: true },
     status: { type: String, enum: ['SUCCESS', 'FAILED', 'PENDING'], default: 'PENDING' },
-    resourceId: { type: Schema.Types.ObjectId, ref: 'DigitalResource' },
+    resourceIds: [{ type: Schema.Types.ObjectId, ref: 'DigitalResource' }],
     metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }

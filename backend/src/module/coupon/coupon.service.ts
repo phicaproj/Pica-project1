@@ -333,7 +333,7 @@ export async function validateAndPriceCoupon(
     throw new AppError('Invalid or inactive coupon code', UNPROCESSABLE_CONTENT);
   }
 
-  if (coupon.status === 'USED' || coupon.usedCount >= coupon.maxUses) {
+  if (!coupon.isMaster && (coupon.status === 'USED' || coupon.usedCount >= coupon.maxUses)) {
     throw new AppError('This coupon has been fully used up', UNPROCESSABLE_CONTENT);
   }
 

@@ -1472,25 +1472,25 @@ export async function grantSuccessEntitlements(
     try {
       const couponRecord = await tx.discount.findUnique({
         where: { code: payment.appliedCouponCode },
-        select: { maxUses: true, status: true, isActive: true },
+        select: { maxUses: true, status: true, isActive: true, isMaster: true },
       });
 
       if (couponRecord) {
-        if (!couponRecord.isActive || couponRecord.status === 'USED') {
+        if (!couponRecord.isActive || (!couponRecord.isMaster && couponRecord.status === 'USED')) {
           throw new AppError('This coupon is no longer active', UNPROCESSABLE_CONTENT);
         }
 
         const coupon = await tx.discount.update({
           where: {
             code: payment.appliedCouponCode,
-            usedCount: { lt: couponRecord.maxUses },
+            ...(couponRecord.isMaster ? {} : { usedCount: { lt: couponRecord.maxUses } }),
             isActive: true,
           },
           data: { usedCount: { increment: 1 } },
-          select: { usedCount: true, maxUses: true, id: true },
+          select: { usedCount: true, maxUses: true, id: true, isMaster: true },
         });
 
-        if (coupon.usedCount >= coupon.maxUses) {
+        if (!coupon.isMaster && coupon.usedCount >= coupon.maxUses) {
           await tx.discount.update({
             where: { id: coupon.id },
             data: { status: 'USED', isActive: false },
