@@ -13,6 +13,8 @@ import {
   updateQuestionSchema,
   createScoreLabelSchema,
   updateScoreLabelSchema,
+  createPillarScoreLabelSchema,
+  updatePillarScoreLabelSchema,
   bulkCreateQuestionSchema,
 } from './question.types';
 import {
@@ -30,6 +32,10 @@ import {
   listScoreLabelsService,
   createScoreLabelService,
   updateScoreLabelService,
+  listPillarScoreLabelsService,
+  createPillarScoreLabelService,
+  updatePillarScoreLabelService,
+  deletePillarScoreLabelService,
   deleteScoreLabelService,
   bulkCreateQuestionService,
 } from './question.admin.service';
@@ -262,4 +268,27 @@ export const bulkCreateQuestions = asyncHandler(async (req: Request, res: Respon
     });
   }
   return res.status(CREATED).json(result);
+});
+
+export const listPillarScoreLabels = asyncHandler(async (req: Request, res: Response) => {
+  const pillarId = req.query.pillarId as string;
+  const result = await listPillarScoreLabelsService(pillarId);
+  res.status(200).json(result);
+});
+
+export const createPillarScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const input = createPillarScoreLabelSchema.parse(req.body);
+  const result = await createPillarScoreLabelService(input);
+  res.status(201).json(result);
+});
+
+export const updatePillarScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const input = updatePillarScoreLabelSchema.parse(req.body);
+  const result = await updatePillarScoreLabelService(req.params.id as string, input);
+  res.status(200).json(result);
+});
+
+export const deletePillarScoreLabel = asyncHandler(async (req: Request, res: Response) => {
+  const result = await deletePillarScoreLabelService(req.params.id as string);
+  res.status(200).json(result);
 });

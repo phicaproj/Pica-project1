@@ -1332,14 +1332,15 @@ const drawPillar2BPage = (
 
   // Sort findings to find the highest score and lowest score
   const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
-  const highestRec =
+  const fallbackRec =
     highestScored?.recommendation ||
     highestScored?.actionPlanItems?.[0] ||
     'Leverage existing operational strengths to drive scaling.';
+  const highestRec = pillar.pillarRecommendation || fallbackRec;
   const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
 
   // Shifted recommendation to the next line using a single newline (\n) without paragraphing
-  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
 
   // Dynamically compute explanation height and the card's height to prevent overlaps
   const explanationH = doc
@@ -1718,14 +1719,15 @@ const drawPillarPage = (
 
   // Sort findings to find the highest score and lowest score
   const highestScored = [...findingsToRender].sort((a, b) => b.score - a.score)[0];
-  const highestRec =
+  const fallbackRec =
     highestScored?.recommendation ||
     highestScored?.actionPlanItems?.[0] ||
     'Leverage existing operational strengths to drive scaling.';
+  const highestRec = pillar.pillarRecommendation || fallbackRec;
   const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
 
   // Shifted recommendation to the next line using a single newline (\n) without paragraphing
-  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
 
   // Dynamically compute explanation height and the card's height to prevent overlaps
   const explanationH = doc

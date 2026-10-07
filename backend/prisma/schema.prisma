@@ -118,6 +118,23 @@ enum PillarCode {
 
 // ============================================================
 
+
+model PillarScoreLabel {
+  id          String   @id @default(uuid())
+  pillarId    String   @map("pillar_id")
+  minScore    Int      @map("min_score")
+  maxScore    Int      @map("max_score")
+  label       String
+  description String   @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pillar      Pillar   @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+
+  @@index([pillarId, minScore, maxScore])
+  @@map("pillar_score_labels")
+}
+
 model Pillar {
   id           String     @id @default(uuid())
   code         PillarCode @unique // e.g. "FL", "FR", "BM", "OP", "MS", "GC", "SS"
@@ -129,6 +146,7 @@ model Pillar {
 
   // Relations
   questions           Question[]
+  pillarScoreLabels PillarScoreLabel[]
   sessionPillarScores SessionPillarScore[]
   // Phase 2B: a payment / session / unlock can be scoped to one pillar.
   payments            Payment[]

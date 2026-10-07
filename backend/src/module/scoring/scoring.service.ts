@@ -198,7 +198,7 @@ export async function computeScoring(
   } as const;
 
   // ── 1. Fetch questions, responses, and band thresholds in parallel ────────
-  const [phaseQuestions, responses, thresholds] = await Promise.all([
+  const [phaseQuestions, responses, thresholds, allPillarLabels] = await Promise.all([
     tx.question.findMany({
       where: phaseQuestionWhere,
       select: {
@@ -258,6 +258,7 @@ export async function computeScoring(
       },
     }),
     getBandThresholds(tx),
+    tx.pillarScoreLabel.findMany(),
   ]);
 
   // ── 2. Build lookup maps from questions ─────────────────
@@ -368,6 +369,11 @@ export async function computeScoring(
     const pillarWeight = pillarWeightById.get(pillarId) ?? 0;
     totalScore += weightedScore * (pillarWeight / totalWeightSafe);
 
+    const roundedWeightedScore = Math.max(0, Math.min(100, Math.round(weightedScore)));
+    const matchingLabel = allPillarLabels.find(
+      (lbl) => lbl.pillarId === pillarId && roundedWeightedScore >= lbl.minScore && roundedWeightedScore <= lbl.maxScore
+    );
+
     pillarScores.push({
       pillarId,
       pillarName: pillarNameById.get(pillarId) ?? 'Unknown Pillar',
@@ -379,6 +385,7 @@ export async function computeScoring(
       hasKnockout,
       colorBand,
       insightRuleApplied,
+      pillarRecommendation: matchingLabel?.description,
       findings,
       allFindings,
     });

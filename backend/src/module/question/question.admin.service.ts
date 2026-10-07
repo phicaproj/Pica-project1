@@ -1,3 +1,5 @@
+import { BAD_REQUEST } from '../../service/shared/http';
+import { createPillarScoreLabelSchema, updatePillarScoreLabelSchema } from './question.types';
 import { BusinessSize, Phase, Prisma, RiskType } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
@@ -787,4 +789,70 @@ export async function deleteScoreLabelService(id: string) {
   return {
     message: 'Score label deleted successfully',
   };
+}
+
+export async function listPillarScoreLabelsService(pillarId?: string) {
+  const where = pillarId ? { pillarId } : {};
+  const labels = await prisma.pillarScoreLabel.findMany({
+    where,
+    orderBy: [{ pillarId: 'asc' }, { minScore: 'asc' }],
+    include: { pillar: { select: { code: true, name: true } } },
+  });
+  return { data: labels };
+}
+
+export async function createPillarScoreLabelService(data: import('zod').infer<typeof createPillarScoreLabelSchema>) {
+  const overlaps = await prisma.pillarScoreLabel.findMany({
+    where: {
+      pillarId: data.pillarId,
+      OR: [
+        { minScore: { lte: data.maxScore, gte: data.minScore } },
+        { maxScore: { lte: data.maxScore, gte: data.minScore } },
+        { minScore: { lte: data.minScore }, maxScore: { gte: data.maxScore } }
+      ],
+    },
+  });
+  if (overlaps.length > 0) {
+    throw new AppError('Score range overlaps with an existing label for this pillar', BAD_REQUEST);
+  }
+
+  const label = await prisma.pillarScoreLabel.create({ data });
+  return { message: 'Pillar score label created successfully', data: label };
+}
+
+export async function updatePillarScoreLabelService(id: string, data: import('zod').infer<typeof updatePillarScoreLabelSchema>) {
+  const existing = await prisma.pillarScoreLabel.findUnique({ where: { id } });
+  if (!existing) throw new AppError('Pillar score label not found', NOT_FOUND);
+
+  const minScore = data.minScore ?? existing.minScore;
+  const maxScore = data.maxScore ?? existing.maxScore;
+  const pillarId = data.pillarId ?? existing.pillarId;
+
+  if (data.minScore !== undefined || data.maxScore !== undefined || data.pillarId !== undefined) {
+    const overlaps = await prisma.pillarScoreLabel.findMany({
+      where: {
+        pillarId,
+        id: { not: id },
+        OR: [
+          { minScore: { lte: maxScore, gte: minScore } },
+          { maxScore: { lte: maxScore, gte: minScore } },
+          { minScore: { lte: minScore }, maxScore: { gte: maxScore } }
+        ],
+      },
+    });
+    if (overlaps.length > 0) {
+      throw new AppError('Score range overlaps with an existing label for this pillar', BAD_REQUEST);
+    }
+  }
+
+  const label = await prisma.pillarScoreLabel.update({
+    where: { id },
+    data,
+  });
+  return { message: 'Pillar score label updated successfully', data: label };
+}
+
+export async function deletePillarScoreLabelService(id: string) {
+  await prisma.pillarScoreLabel.delete({ where: { id } });
+  return { message: 'Pillar score label deleted successfully' };
 }

@@ -943,3 +943,66 @@ export const getAdminAuditLogs = async (params?: { search?: string }) => {
 	if (params?.search) query.append('search', params.search)
 	return authedFetch<AdminAuditLogListResponse>(`/admin/audit?${query.toString()}`)
 }
+
+export type AdminPillarScoreLabel = {
+  id: string
+  pillarId: string
+  minScore: number
+  maxScore: number
+  label: string
+  description: string
+  createdAt: string
+  updatedAt: string
+  pillar: { code: string; name: string }
+}
+
+export type AdminPillarScoreLabelListResponse = {
+  data: AdminPillarScoreLabel[]
+}
+
+export type AdminPillarScoreLabelDetailResponse = {
+  message: string
+  data: AdminPillarScoreLabel
+}
+
+export const getAdminPillarScoreLabels = async (pillarId?: string) => {
+  const query = pillarId ? `?pillarId=${pillarId}` : ''
+  return authedFetch<AdminPillarScoreLabelListResponse>(`/admin/pillar-score-labels${query}`, {
+    method: 'GET',
+  })
+}
+
+export const createAdminPillarScoreLabel = async (payload: {
+  pillarId: string
+  minScore: number
+  maxScore: number
+  label: string
+  description: string
+}) => {
+  return authedFetch<AdminPillarScoreLabelDetailResponse>('/admin/pillar-score-labels', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export const updateAdminPillarScoreLabel = async (
+  id: string,
+  payload: {
+    pillarId?: string
+    minScore?: number
+    maxScore?: number
+    label?: string
+    description?: string
+  },
+) => {
+  return authedFetch<AdminPillarScoreLabelDetailResponse>(`/admin/pillar-score-labels/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export const deleteAdminPillarScoreLabel = async (id: string) => {
+  return authedFetch<{ message: string }>(`/admin/pillar-score-labels/${id}`, {
+    method: 'DELETE',
+  })
+}

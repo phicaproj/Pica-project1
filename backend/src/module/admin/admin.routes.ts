@@ -36,6 +36,10 @@ import {
   createScoreLabel,
   updateScoreLabel,
   deleteScoreLabel,
+  listPillarScoreLabels,
+  createPillarScoreLabel,
+  updatePillarScoreLabel,
+  deletePillarScoreLabel,
 } from '../question/question.admin.controller';
 import { createCoupon, deleteCoupon, listCoupons, updateCoupon } from '../coupon/coupon.controller';
 import {
@@ -234,5 +238,13 @@ adminRouter.patch(
   hasPermission('consultations:write'),
   adminUpdateConsultationBookingNotes,
 );
+
+
+
+// Pillar Score Labels
+adminRouter.get('/pillar-score-labels', hasPermission('questions_read'), listPillarScoreLabels);
+adminRouter.post('/pillar-score-labels', hasPermission('questions_write'), createPillarScoreLabel);
+adminRouter.patch('/pillar-score-labels/:id', hasPermission('questions_write'), updatePillarScoreLabel);
+adminRouter.delete('/pillar-score-labels/:id', hasPermission('questions_write'), deletePillarScoreLabel);
 
 export default adminRouter;

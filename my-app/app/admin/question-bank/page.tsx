@@ -36,6 +36,11 @@ import {
   getAdminScoreLabels,
   createAdminScoreLabel,
   updateAdminScoreLabel,
+  AdminPillarScoreLabel,
+  getAdminPillarScoreLabels,
+  createAdminPillarScoreLabel,
+  updateAdminPillarScoreLabel,
+  deleteAdminPillarScoreLabel,
   deleteAdminScoreLabel,
   type AdminScoreLabel,
   getStoredUser,
@@ -166,7 +171,14 @@ export default function QuestionBankPage() {
 
 
   // Score Labels state
-  const [mode, setMode] = useState<"questions" | "labels">("questions");
+  const [mode, setMode] = useState<"questions" | "labels" | "pillar_labels">("questions");
+  const [pillarLabels, setPillarLabels] = useState<AdminPillarScoreLabel[]>([]);
+  const [activePillarLabelId, setActivePillarLabelId] = useState<string | null>(null);
+  const [editPillarLabelOpen, setEditPillarLabelOpen] = useState(false);
+  const [createPillarLabelOpen, setCreatePillarLabelOpen] = useState(false);
+  const [pillarLabelDraft, setPillarLabelDraft] = useState<{ id: string, pillarId: string, minScore: number, maxScore: number, label: string, description: string } | null>(null);
+  const [createPillarLabelDraft, setCreatePillarLabelDraft] = useState({ pillarId: "", minScore: 0, maxScore: 30, label: "", description: "" });
+
   const [scoreLabels, setScoreLabels] = useState<AdminScoreLabel[]>([]);
   const [activeLabelId, setActiveLabelId] = useState<string | null>(null);
   const [editLabelOpen, setEditLabelOpen] = useState(false);
@@ -188,6 +200,11 @@ export default function QuestionBankPage() {
   const activeQuestion = useMemo(
     () => questions.find((question) => question.id === activeId) ?? null,
     [activeId, questions],
+  );
+
+  const activePillarLabel = useMemo(
+    () => pillarLabels.find((label) => label.id === activePillarLabelId) ?? null,
+    [activePillarLabelId, pillarLabels],
   );
 
   const activeScoreLabel = useMemo(
@@ -251,6 +268,19 @@ export default function QuestionBankPage() {
 
     setLoading(false);
   }, [businessFilter, includeInactive, phaseFilter, pillarFilter, search, knockoutFilter]);
+
+  
+  const loadPillarScoreLabels = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getAdminPillarScoreLabels(pillarFilter || undefined);
+      setPillarLabels((res as any)?.data || []);
+    } catch (err: any) {
+      showError(err.message || "Failed to load pillar score labels");
+    } finally {
+      setLoading(false);
+    }
+  }, [showError, pillarFilter]);
 
   const loadScoreLabels = useCallback(async () => {
     setLoading(true);
@@ -371,7 +401,20 @@ export default function QuestionBankPage() {
     }, 250);
 
     return () => window.clearTimeout(timer);
-  }, [loadQuestions, loadScoreLabels, mode, search, pillarFilter, phaseFilter, businessFilter, includeInactive, knockoutFilter]);
+  }, [loadQuestions, loadScoreLabels, loadPillarScoreLabels, mode, search, pillarFilter, phaseFilter, businessFilter, includeInactive, knockoutFilter]);
+
+  
+  const filteredPillarLabels = useMemo(() => {
+    if (mode !== "pillar_labels") return [];
+    const query = search.toLowerCase().trim();
+    if (!query) return pillarLabels;
+    return pillarLabels.filter(
+      (l) =>
+        l.label.toLowerCase().includes(query) ||
+        l.description.toLowerCase().includes(query) ||
+        l.pillar.name.toLowerCase().includes(query)
+    );
+  }, [mode, search, pillarLabels]);
 
   const filteredLabels = useMemo(() => {
     if (mode !== "labels") return [];
@@ -799,22 +842,21 @@ export default function QuestionBankPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setMode(mode === "questions" ? "labels" : "questions")}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1C1F2E] border border-white/10 rounded-lg hover:border-white/20 hover:bg-white/5 transition-all text-sm font-semibold text-gray-200"
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as any)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#1C1F2E] border border-white/10 rounded-lg hover:border-white/20 transition-all text-sm font-semibold text-gray-200 outline-none"
           >
-            <RefreshCw className="w-4 h-4 text-gray-400" />
-            {mode === "questions" ? "Overall Recommendations" : "Questions View"}
-          </button>
+            <option value="questions">Questions View</option>
+            <option value="labels">Overall Recommendations</option>
+            <option value="pillar_labels">Pillar Recommendations</option>
+          </select>
           <button
             type="button"
             onClick={() => {
-              if (mode === "questions") {
-                void loadQuestions();
-              } else {
-                void loadScoreLabels();
-              }
+              if (mode === "questions") void loadQuestions();
+              else if (mode === "labels") void loadScoreLabels();
+              else void loadPillarScoreLabels();
             }}
             disabled={loading}
             className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-60"
@@ -822,7 +864,62 @@ export default function QuestionBankPage() {
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          {mode === "questions" ? (
+          
+        {mode === "pillar_labels" ? (
+          filteredPillarLabels.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-white/5 bg-white/[0.02] py-24 text-center">
+              <Database className="mb-4 h-12 w-12 text-gray-600" />
+              <h3 className="text-lg font-medium text-white">No pillar recommendations found</h3>
+              <p className="mt-2 max-w-sm text-sm text-gray-500">
+                {search || pillarFilter ? "Try adjusting your filters." : "Create your first pillar recommendation to get started."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredPillarLabels.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => {
+                    setActivePillarLabelId(l.id);
+                    setPillarLabelDraft({
+                      id: l.id,
+                      pillarId: l.pillarId,
+                      minScore: l.minScore,
+                      maxScore: l.maxScore,
+                      label: l.label,
+                      description: l.description,
+                    });
+                    setEditPillarLabelOpen(true);
+                  }}
+                  className="group relative flex flex-col text-left overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] p-6 transition-all hover:border-blue-500/30 hover:shadow-xl hover:shadow-blue-500/5"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="inline-flex items-center rounded-md bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">
+                        {l.minScore} - {l.maxScore}%
+                      </span>
+                      <span className="text-xs font-semibold text-gray-400 bg-white/5 px-2 py-1 rounded">
+                        {l.pillar.code}
+                      </span>
+                    </div>
+                    <h3 className="text-base font-extrabold text-white mb-2 uppercase tracking-wide">
+                      {l.label}
+                    </h3>
+                    <p className="line-clamp-3 text-xs leading-relaxed text-gray-400 min-h-[50px]">
+                      {l.description}
+                    </p>
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center gap-2 text-[10px] font-semibold text-gray-600 w-full uppercase tracking-wider">
+                    <Database className="h-3.5 w-3.5" />
+                    Pillar Recommendation Bank
+                  </div>
+                </button>
+              ))}
+            </div>
+          )
+        ) : null}
+
+        {mode === "questions" ? (
             <>
               <button
                 type="button"
@@ -891,7 +988,7 @@ export default function QuestionBankPage() {
           </div>
 
           {/* Bottom row: Dropdowns and checkboxes (only visible in questions mode) */}
-          {mode === "questions" && (
+          {mode !== "labels" && (
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pillar:</span>

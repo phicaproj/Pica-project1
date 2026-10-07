@@ -33,6 +33,8 @@ export interface ScoringPillarPayload {
   hasKnockout: boolean;
   colorBand: ColorBand;
   insightRuleApplied: InsightRule;
+  /** Recommendation specifically for this pillar based on weightedScore */
+  pillarRecommendation?: string;
   /** Top 1–2 findings surfaced on the result page view. */
   findings: ScoringFinding[];
   /**

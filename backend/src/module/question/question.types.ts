@@ -444,3 +444,18 @@ export const updateScoreLabelSchema = z.object({
   description: z.string().trim().min(1).optional(),
 });
 
+export const createPillarScoreLabelSchema = z.object({
+  pillarId: z.string().uuid(),
+  minScore: z.number().int().min(0).max(100),
+  maxScore: z.number().int().min(0).max(100),
+  label: z.string().trim().min(1, 'Label is required'),
+  description: z.string().trim().min(1, 'Description is required'),
+});
+
+export const updatePillarScoreLabelSchema = z.object({
+  pillarId: z.string().uuid().optional(),
+  minScore: z.number().int().min(0).max(100).optional(),
+  maxScore: z.number().int().min(0).max(100).optional(),
+  label: z.string().trim().min(1).optional(),
+  description: z.string().trim().min(1).optional(),
+});
