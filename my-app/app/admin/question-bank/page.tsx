@@ -274,7 +274,7 @@ export default function QuestionBankPage() {
     setLoading(true);
     try {
       const res = await getAdminPillarScoreLabels(pillarFilter || undefined);
-      setPillarLabels((res as any)?.data || []);
+      setPillarLabels((res.data?.data as AdminPillarScoreLabel[]) || (res.data as unknown as AdminPillarScoreLabel[]) || []);
     } catch (err: any) {
       showError(err.message || "Failed to load pillar score labels");
     } finally {
