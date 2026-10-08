@@ -57,20 +57,26 @@ const STATUS_COLORS: Record<ReportSessionStatus, (d: boolean) => string> = {
 };
 
 const BAND_LABELS: Record<ReportColorBand, string> = {
-  RED: "Urgent attention",
-  AMBER: "Needs work",
-  GREEN: "Healthy",
+  RED: "Reactive",
+  ORANGE: "Foundational Emergent",
+  AMBER: "Operationally Sound",
+  LIGHT_GREEN: "Strategically Fortified",
+  GREEN: "Future-Proofed",
 };
 
 const BAND_DOT: Record<ReportColorBand, string> = {
   RED: "bg-red-500",
+  ORANGE: "bg-orange-500",
   AMBER: "bg-amber-500",
+  LIGHT_GREEN: "bg-lime-500",
   GREEN: "bg-emerald-500",
 };
 
 const BAND_TEXT: Record<ReportColorBand, (d: boolean) => string> = {
   RED: (d) => d ? "text-red-400" : "text-red-600",
+  ORANGE: (d) => d ? "text-orange-400" : "text-orange-600",
   AMBER: (d) => d ? "text-amber-400" : "text-amber-600",
+  LIGHT_GREEN: (d) => d ? "text-lime-400" : "text-lime-600",
   GREEN: (d) => d ? "text-emerald-400" : "text-emerald-600",
 };
 

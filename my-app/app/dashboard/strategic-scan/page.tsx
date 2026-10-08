@@ -24,7 +24,7 @@ const API_BASE =
 
 type ScanState = 'landing' | 'questions' | 'processing'
 
-type ColorBand = 'RED' | 'AMBER' | 'GREEN'
+type ColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 
 interface QuestionOption {
 	id: string

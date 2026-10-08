@@ -53,13 +53,15 @@ type SessionResponseRecord = {
 };
 
 type BandThresholds = {
+  orangeMin: number;
   amberMin: number;
+  lightGreenMin: number;
   greenMin: number;
 };
 
 // Fallbacks if the scoring_settings singleton row is missing (fresh DB before
 // seed) — the original hardcoded thresholds.
-const DEFAULT_THRESHOLDS: BandThresholds = { amberMin: 50, greenMin: 80 };
+const DEFAULT_THRESHOLDS: BandThresholds = { orangeMin: 31, amberMin: 51, lightGreenMin: 71, greenMin: 91 };
 
 /**
  * Loads the admin-editable color-band thresholds from the scoring_settings
@@ -68,22 +70,26 @@ const DEFAULT_THRESHOLDS: BandThresholds = { amberMin: 50, greenMin: 80 };
  */
 async function getBandThresholds(tx: ScoringTx): Promise<BandThresholds> {
   const settings = await tx.scoringSettings.findFirst({
-    select: { amberMin: true, greenMin: true },
+    select: { orangeMin: true, amberMin: true, lightGreenMin: true, greenMin: true },
   });
   if (!settings) return DEFAULT_THRESHOLDS;
   return {
+    orangeMin: Number(settings.orangeMin),
     amberMin: Number(settings.amberMin),
+    lightGreenMin: Number(settings.lightGreenMin),
     greenMin: Number(settings.greenMin),
   };
 }
 
 /**
  * Maps a 0–100 weighted score to a colour band using the admin-configured
- * thresholds (defaults: >= 80 GREEN, >= 50 AMBER, else RED).
+ * thresholds.
  */
 const toColorBand = (score: number, thresholds: BandThresholds): ColorBand => {
   if (score >= thresholds.greenMin) return ColorBand.GREEN;
+  if (score >= thresholds.lightGreenMin) return ColorBand.LIGHT_GREEN;
   if (score >= thresholds.amberMin) return ColorBand.AMBER;
+  if (score >= thresholds.orangeMin) return ColorBand.ORANGE;
   return ColorBand.RED;
 };
 

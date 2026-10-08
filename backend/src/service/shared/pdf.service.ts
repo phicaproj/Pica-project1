@@ -1,4 +1,4 @@
-import PDFDocument from 'pdfkit';
+﻿import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { Phase } from '@prisma/client';
@@ -10,7 +10,7 @@ import type {
 } from '../../module/scoring/scoring.types';
 
 // ============================================================
-// CONSTANTS — PICA brand palette
+// CONSTANTS â€” PICA brand palette
 // ============================================================
 const COLORS = {
   primary: '#111827', // PICA dark navy
@@ -125,12 +125,12 @@ const BUILDING_IMG_BUFFER: Buffer | null = (() => {
   }
 })();
 
-// Phase → human label shown on the cover + summary header. Uses the agreed
+// Phase â†’ human label shown on the cover + summary header. Uses the agreed
 // commercial nomenclature (no internal "Phase 2A/2B" wording in any output).
 const phaseLabel = (phase: Phase): string => {
-  if (phase === Phase.PHASE2A) return 'PICA Strategic Scan – Structured Diagnosis';
-  if (phase === Phase.PHASE2B) return 'PICA Deep Dive – In-Depth Audit';
-  return 'PICA Business Snapshot – Assessment';
+  if (phase === Phase.PHASE2A) return 'PICA Strategic Scan â€“ Structured Diagnosis';
+  if (phase === Phase.PHASE2B) return 'PICA Deep Dive â€“ In-Depth Audit';
+  return 'PICA Business Snapshot â€“ Assessment';
 };
 
 const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
@@ -141,7 +141,7 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       border: COLORS.redBorder,
       label: 'REACTIVE (OVERRIDDEN)',
       interpretation: 'This pillar has failed critical compliance or safety criteria.',
-      emoji: '✕',
+      emoji: '😨',
     };
   }
   if (score >= 91) {
@@ -150,39 +150,38 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
       bg: COLORS.greenBg,
       border: COLORS.greenBorder,
       label: 'FUTURE-PROOFED',
-      interpretation:
-        'This pillar is performing at a leading level with standard-setting resilience.',
-      emoji: '✓',
+      interpretation: 'This pillar is performing at a leading level with standard-setting resilience.',
+      emoji: '🌟',
     };
   }
   if (score >= 71) {
     return {
-      text: '#15803D', // green-700
-      bg: '#F0FDF4', // green-50
-      border: '#22C55E', // green-500
-      label: 'STRUCTURALLY SOUND',
-      interpretation: 'This pillar is performing well with no critical risks flagged.',
-      emoji: '✓',
+      text: '#166534', // green-800 for light neon green look
+      bg: '#DCFCE7', // green-100
+      border: '#4ADE80', // green-400
+      label: 'STRATEGICALLY FORTIFIED',
+      interpretation: 'Strong strategic positioning and resilient practices.',
+      emoji: '🚀',
     };
   }
   if (score >= 51) {
     return {
-      text: '#854D0E', // yellow-800
-      bg: '#FEF9C3', // yellow-50
-      border: '#EAB308', // yellow-500
+      text: COLORS.amber,
+      bg: COLORS.amberBg,
+      border: COLORS.amberBorder,
       label: 'OPERATIONALLY SOUND',
-      interpretation: 'This pillar is functional but has minor bottlenecks worth addressing.',
-      emoji: '!',
+      interpretation: 'Solid operations with room for strategic optimization.',
+      emoji: '⚠️',
     };
   }
   if (score >= 31) {
     return {
-      text: '#B45309', // amber-700
-      bg: '#FFFBEB', // amber-50
-      border: '#F59E0B', // amber-500
-      label: 'FOUNDATIONAL',
-      interpretation: 'This pillar is functional but has moderate risks worth addressing.',
-      emoji: '!',
+      text: '#C2410C', // orange-700
+      bg: '#FFEDD5', // orange-100
+      border: '#F97316', // orange-500
+      label: 'FOUNDATIONAL EMERGENT',
+      interpretation: 'Basic foundations are in place but require structured enhancement.',
+      emoji: '⚠️',
     };
   }
   return {
@@ -191,10 +190,9 @@ const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
     border: COLORS.redBorder,
     label: 'REACTIVE',
     interpretation: 'This pillar shows critical gaps that need immediate attention.',
-    emoji: '✕',
+    emoji: '😨',
   };
 };
-
 const getExecutiveNarrativeDetails = (score: number, hasKnockout: boolean) => {
   if (hasKnockout) {
     return {
@@ -454,7 +452,7 @@ const drawHeader = (
       .fontSize(11)
       .font('Helvetica-Bold')
       .fillColor(COLORS.white)
-      .text('CRITICAL SURVIVAL ALERT — ACTION REQUIRED IMMEDIATELY', 0, 19, {
+      .text('CRITICAL SURVIVAL ALERT â€” ACTION REQUIRED IMMEDIATELY', 0, 19, {
         align: 'center',
         width: doc.page.width,
       });
@@ -532,7 +530,7 @@ const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: s
     .fontSize(8)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text(`© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
+    .text(`Â© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
       align: 'left',
       width: COLORS.pageWidth / 2,
       lineBreak: false,
@@ -602,7 +600,7 @@ const drawCoverPage = (
     .fontSize(28)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('PICA – Business Health', PAGE_MARGIN, 130, {
+    .text('PICA â€“ Business Health', PAGE_MARGIN, 130, {
       width: COLORS.pageWidth,
       align: 'center',
     });
@@ -700,7 +698,7 @@ const drawCoverPage = (
     .text(businessName, textStartX, gridY + 10, { width: 145 });
 
   const pillY = Math.max(gridY + 28, doc.y + 4);
-  const sizeText = metadata?.businessSize === 'SMALL' ? '● Small Business' : '● Medium Business';
+  const sizeText = metadata?.businessSize === 'SMALL' ? 'â— Small Business' : 'â— Medium Business';
   const pillW = 85;
   roundedRect(doc, textStartX, pillY, pillW, 14, 3, '#EEF2F6', '#E2E8F0');
   doc
@@ -1260,7 +1258,7 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
   // Description text under the title. Admin-editable via
-  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
+  // PATCH /api/admin/pillars/:id/copy â€” never hardcode report copy here.
   const descText =
     pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
@@ -1298,7 +1296,7 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
 };
 
 // ============================================================
-// PHASE 2B PILLAR PAGE — observation + N-Day Action Plan blocks
+// PHASE 2B PILLAR PAGE â€” observation + N-Day Action Plan blocks
 // ============================================================
 //
 // Unlike the Phase 1 / 2A pillar page (fixed single-page layout with the
@@ -1504,7 +1502,7 @@ const drawPillar2BPage = (
   // 3. Observations & Audit Summary Section Title
   drawSectionTitle(doc, 'Observations & Audit Summary');
 
-  // Pull up to 6 findings, already priority-ordered (KNOCKOUT → RISK → NORMAL)
+  // Pull up to 6 findings, already priority-ordered (KNOCKOUT â†’ RISK â†’ NORMAL)
   const findings = findingsToRender.slice(0, 6);
 
   const cardX = PAGE_MARGIN;
@@ -1673,7 +1671,7 @@ const drawPillarPage = (
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
   // Description text under the title. Admin-editable via
-  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
+  // PATCH /api/admin/pillars/:id/copy â€” never hardcode report copy here.
   const descText =
     pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
@@ -2106,7 +2104,7 @@ const drawPillarPage = (
 
   // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the
   // bottom consistently). Box height 165 ends at Y=800, inside the ~802 usable
-  // bottom of an A4 page — enlarged from 125 so each step gets a two-line title
+  // bottom of an A4 page â€” enlarged from 125 so each step gets a two-line title
   // and a multi-line recommendation instead of single-line ellipsis clipping.
   const mapY = 635;
   const mapH = 165;
@@ -2186,7 +2184,7 @@ const drawPillarPage = (
         .fontSize(7)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(planItems.join('  •  '), sx + 22, sy + 33, {
+        .text(planItems.join('  â€¢  '), sx + 22, sy + 33, {
           width: stepW - 25,
           height: 16,
           ellipsis: true,
@@ -3007,7 +3005,7 @@ const drawVisualizationPage = (
 
   // Benchmark Performance Card (renamed from "Executive Performance Summary"
   // to avoid colliding with the Executive Summary page at the front of the
-  // report — testers read this end-page card as a second, misplaced summary).
+  // report â€” testers read this end-page card as a second, misplaced summary).
   const topY = headY + 45;
   roundedRect(doc, PAGE_MARGIN, topY, COLORS.pageWidth, 75, 6, COLORS.lightGrey, COLORS.borderGrey);
   roundedRect(doc, PAGE_MARGIN, topY, 4, 75, 2, '#3B82F6');
@@ -3282,7 +3280,7 @@ export async function generateReportPDF(
       size: 'A4',
       bufferPages: true,
       info: {
-        Title: `PICA Business Health Report — ${businessName}`,
+        Title: `PICA Business Health Report â€” ${businessName}`,
         Author: 'Beauvision Associates Ltd',
         Subject: `PICA ${phaseLabel(phase)}`,
       },
@@ -3318,7 +3316,7 @@ export async function generateReportPDF(
     // --- Pages 3-9: The 7 Pillars ---
     // Sorted by worst performing first to prioritize critical areas
     const sortedWorstFirst = [...result.pillarScores].sort((a, b) => {
-      const order = { RED: 0, AMBER: 1, GREEN: 2 };
+      const order = { RED: 0, ORANGE: 1, AMBER: 2, LIGHT_GREEN: 3, GREEN: 4 };
       return (
         (order[a.colorBand as keyof typeof order] ?? 0) -
         (order[b.colorBand as keyof typeof order] ?? 0)
@@ -3388,7 +3386,7 @@ export async function generateSnapshotPDF(
       size: 'A4',
       bufferPages: true,
       info: {
-        Title: `PICA Business Snapshot — ${businessName}`,
+        Title: `PICA Business Snapshot â€” ${businessName}`,
         Author: 'Beauvision Associates Ltd',
         Subject: 'PICA Business Snapshot',
       },
@@ -3595,7 +3593,14 @@ function getBandColors(band: string, COLORS: any, theme: 'light' | 'dark' = 'lig
     return {
       text: isDark ? '#34D399' : '#15803D',
       bg: isDark ? '#064E3B' : '#F0FDF4',
-      border: isDark ? '#10B981' : '#22C55E',
+      border: isDark ? '#10B981' : '#22C25E',
+    };
+  }
+  if (band === 'LIGHT_GREEN') {
+    return {
+      text: isDark ? '#4ADE80' : '#166534',
+      bg: isDark ? '#14532D' : '#DCFCE7',
+      border: isDark ? '#22C55E' : '#4ADE80',
     };
   }
   if (band === 'AMBER') {
@@ -3605,9 +3610,20 @@ function getBandColors(band: string, COLORS: any, theme: 'light' | 'dark' = 'lig
       border: isDark ? '#F59E0B' : '#F59E0B',
     };
   }
+  if (band === 'ORANGE') {
+    return {
+      text: isDark ? '#F97316' : '#C2410C',
+      bg: isDark ? '#7C2D13' : '#FFEDD5',
+      border: isDark ? '#EA580C' : '#F97316',
+    };
+  }
   return {
     text: isDark ? '#F87171' : '#EF4444',
     bg: isDark ? '#7F1D1D' : '#FEF2F2',
     border: isDark ? '#F43F5E' : '#EF4444',
   };
 }
+
+
+
+

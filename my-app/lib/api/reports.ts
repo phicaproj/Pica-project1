@@ -8,7 +8,7 @@ import {
 } from './config'
 
 export type ReportPhase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
-export type ReportColorBand = 'RED' | 'AMBER' | 'GREEN'
+export type ReportColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 export type ReportSessionStatus =
 	| 'IN_PROGRESS'
 	| 'COMPLETED'

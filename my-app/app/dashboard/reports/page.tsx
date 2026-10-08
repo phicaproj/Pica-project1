@@ -31,12 +31,12 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://pica-project1.onrender.com/api";
 
-type ColorBand = "RED" | "AMBER" | "GREEN";
+type ColorBand = "RED" | "ORANGE" | "AMBER" | "LIGHT_GREEN" | "GREEN";
 
 function normalizeColorBand(value: unknown): ColorBand {
   if (typeof value !== "string") return "AMBER";
   const normalized = value.trim().toUpperCase();
-  if (normalized === "GREEN" || normalized === "AMBER" || normalized === "RED") {
+  if (normalized === "GREEN" || normalized === "LIGHT_GREEN" || normalized === "AMBER" || normalized === "ORANGE" || normalized === "RED") {
     return normalized;
   }
   if (normalized === "YELLOW") return "AMBER";

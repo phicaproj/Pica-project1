@@ -37,7 +37,7 @@ const PILLAR_COLORS = [
   { hex: "#f97316", text: "text-orange-400" },
 ];
 
-type BandKey = "red" | "amber" | "green";
+type BandKey = "red" | "orange" | "amber" | "lightGreen" | "green";
 
 type BandDraft = {
   label: string;
@@ -130,7 +130,7 @@ export default function ScoringPage() {
       bandDrafts.green.label !== settings.greenLabel ||
       bandDrafts.green.description !== settings.greenDescription
     );
-  }, [settings, amberMinDraft, greenMinDraft, bandDrafts]);
+  }, [settings, orangeMinDraft, amberMinDraft, lightGreenMinDraft, greenMinDraft, bandDrafts]);
 
   const dirty = weightsDirty || settingsDirty;
 
@@ -174,7 +174,7 @@ export default function ScoringPage() {
     }
 
     return null;
-  }, [pillars, weightDraft, settings, amberMinDraft, greenMinDraft, bandDrafts]);
+  }, [pillars, weightDraft, settings, orangeMinDraft, amberMinDraft, lightGreenMinDraft, greenMinDraft, bandDrafts]);
 
   // ── Save ───────────────────────────────────────────────────────────────
 

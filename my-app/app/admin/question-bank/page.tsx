@@ -274,9 +274,16 @@ export default function QuestionBankPage() {
     setLoading(true);
     try {
       const res = await getAdminPillarScoreLabels(pillarFilter || undefined);
-      setPillarLabels((res.data?.data as AdminPillarScoreLabel[]) || (res.data as unknown as AdminPillarScoreLabel[]) || []);
+      if (res.error) {
+        showError(res.error.message || "Failed to load pillar score labels");
+        setPillarLabels([]);
+      } else {
+        const labels = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
+        setPillarLabels(labels as AdminPillarScoreLabel[]);
+      }
     } catch (err: any) {
       showError(err.message || "Failed to load pillar score labels");
+      setPillarLabels([]);
     } finally {
       setLoading(false);
     }
@@ -975,7 +982,7 @@ export default function QuestionBankPage() {
               New Question
             </button>
           </>
-          ) : (
+          ) : mode === "labels" ? (
             hasWriteAccess && (
               <button
                 type="button"
@@ -986,29 +993,40 @@ export default function QuestionBankPage() {
                 New Score Label
               </button>
             )
-          )}
+          ) : mode === "pillar_labels" ? (
+            hasWriteAccess && (
+              <button
+                type="button"
+                onClick={() => setCreatePillarLabelOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+              >
+                <Plus className="h-4 w-4" />
+                New Pillar Label
+              </button>
+            )
+          ) : null}
         </div>
       </div>
 
-      
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
-          <div className="text-xs font-semibold uppercase text-gray-500">Visible Questions</div>
-          <div className="mt-2 text-2xl font-bold text-white">{activeCount}</div>
-          <div className="mt-1 text-xs text-gray-500">In the current result set</div>
+      {mode === "questions" && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+            <div className="text-xs font-semibold uppercase text-gray-500">Visible Questions</div>
+            <div className="mt-2 text-2xl font-bold text-white">{activeCount}</div>
+            <div className="mt-1 text-xs text-gray-500">In the current result set</div>
+          </div>
+          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+            <div className="text-xs font-semibold uppercase text-gray-500">Total Loaded</div>
+            <div className="mt-2 text-2xl font-bold text-white">{questions.length}</div>
+            <div className="mt-1 text-xs text-gray-500">Matches the active filters</div>
+          </div>
+          <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
+            <div className="text-xs font-semibold uppercase text-gray-500">Pillars</div>
+            <div className="mt-2 text-2xl font-bold text-white">{pillars.length}</div>
+            <div className="mt-1 text-xs text-gray-500">Available for authoring</div>
+          </div>
         </div>
-        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
-          <div className="text-xs font-semibold uppercase text-gray-500">Total Loaded</div>
-          <div className="mt-2 text-2xl font-bold text-white">{questions.length}</div>
-          <div className="mt-1 text-xs text-gray-500">Matches the active filters</div>
-        </div>
-        <div className="rounded-xl border border-white/5 bg-[#1C1F2E] p-5">
-          <div className="text-xs font-semibold uppercase text-gray-500">Pillars</div>
-          <div className="mt-2 text-2xl font-bold text-white">{pillars.length}</div>
-          <div className="mt-1 text-xs text-gray-500">Available for authoring</div>
-        </div>
-      </div>
+      )}
 
       <div className="w-full space-y-4">
         {/* Search & Filters */}

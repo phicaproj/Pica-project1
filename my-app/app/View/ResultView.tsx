@@ -19,7 +19,7 @@ const API_BASE =
 	process.env.NEXT_PUBLIC_API_BASE_URL ||
 	'https://pica-project1.onrender.com/api'
 
-type ColorBand = 'RED' | 'AMBER' | 'GREEN'
+type ColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 
 interface Finding {
 	optionId: string
@@ -78,17 +78,17 @@ const COLOR_BAND_TO_STATUS: Record<
 	{ label: string; bar: string; pill: string }
 > = {
 	GREEN: {
-		label: 'Optimized',
+		label: 'Future-Proofed',
 		bar: 'bg-emerald-400',
 		pill: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20',
 	},
 	AMBER: {
-		label: 'Active',
+		label: 'Operationally Sound',
 		bar: 'bg-amber-400',
 		pill: 'bg-amber-500/15 text-amber-300 border-amber-400/20',
 	},
 	RED: {
-		label: 'Attention',
+		label: 'Reactive',
 		bar: 'bg-rose-400',
 		pill: 'bg-rose-500/15 text-rose-300 border-rose-400/20',
 	},

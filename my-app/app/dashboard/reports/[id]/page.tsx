@@ -23,7 +23,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://pica-project1.onrender.com/api";
 
-type ColorBand = "RED" | "AMBER" | "GREEN";
+type ColorBand = "RED" | "ORANGE" | "AMBER" | "LIGHT_GREEN" | "GREEN";
 
 interface Finding {
   optionId: string;
@@ -110,7 +110,7 @@ const COLOR_BAND_TO_RING: Record<ColorBand, string> = {
 function normalizeColorBand(value: unknown): ColorBand {
   if (typeof value !== "string") return "AMBER";
   const normalized = value.trim().toUpperCase();
-  if (normalized === "GREEN" || normalized === "AMBER" || normalized === "RED") {
+  if (normalized === "GREEN" || normalized === "LIGHT_GREEN" || normalized === "AMBER" || normalized === "ORANGE" || normalized === "RED") {
     return normalized;
   }
   if (normalized === "YELLOW") return "AMBER";
@@ -526,8 +526,12 @@ export default function ReportDetailPage() {
                         ? status.pill
                         : band === "GREEN"
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : band === "LIGHT_GREEN"
+                        ? "bg-lime-50 text-lime-700 border-lime-200"
                         : band === "AMBER"
                         ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : band === "ORANGE"
+                        ? "bg-orange-50 text-orange-700 border-orange-200"
                         : "bg-rose-50 text-rose-700 border-rose-200"
                     }`}
                   >

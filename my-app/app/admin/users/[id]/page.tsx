@@ -51,7 +51,7 @@ const paymentBadge = (status: string) =>
       ? "bg-amber-500/10 text-amber-400"
       : "bg-red-500/10 text-red-400";
 
-const bandBadge = (band: "RED" | "AMBER" | "GREEN" | null) => {
+const bandBadge = (band: "RED" | "ORANGE" | "AMBER" | "LIGHT_GREEN" | "GREEN" | null) => {
   if (band === "GREEN") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
   if (band === "AMBER") return "bg-amber-500/10 text-amber-400 border-amber-500/20";
   if (band === "RED") return "bg-red-500/10 text-red-400 border-red-500/20";

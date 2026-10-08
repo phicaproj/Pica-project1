@@ -907,6 +907,9 @@ function LockedScanPickerModal({
   const bandColor = (band: string) => {
     const b = band.toUpperCase();
     if (b === "GREEN") return "text-emerald-400";
+    if (b === "LIGHT_GREEN") return "text-lime-400";
+    if (b === "AMBER") return "text-amber-400";
+    if (b === "ORANGE") return "text-orange-400";
     if (b === "RED") return "text-rose-400";
     return "text-amber-400";
   };

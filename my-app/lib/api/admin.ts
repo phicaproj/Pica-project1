@@ -1,10 +1,10 @@
-import { authedFetch, type BusinessSize } from './config'
+﻿import { authedFetch, type BusinessSize } from './config'
 import type { PricingRow } from './payment'
 
 // PricingRow lives in ./payment and is surfaced through the lib/authClient
 // barrel. Imported here only to define the admin-pricing response shapes.
 
-// ── Pricing (pay-per-use plans) ────────────────────────────────────────────
+// â”€â”€ Pricing (pay-per-use plans) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminPricingResponse = {
 	message: string
@@ -28,7 +28,7 @@ export type AdminPricingPayload = {
 export type AdminPricingUpdatePayload = {
 	price?: number
 	pillarId?: string | null
-	// Feature bullets — whole-array replacement, not a partial merge. Send
+	// Feature bullets â€” whole-array replacement, not a partial merge. Send
 	// `[]` to clear all bullets.
 	features?: string[]
 }
@@ -90,7 +90,7 @@ export const getAdminPillars = async () => {
 	})
 }
 
-// ── Admin scoring page — pillar weights + score interpretation ─────────────
+// â”€â”€ Admin scoring page â€” pillar weights + score interpretation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // /admin/pillars actually returns this superset of PillarMeta; the detailed
 // shape backs the scoring page (weights, counts), while older consumers keep
@@ -100,7 +100,7 @@ export type AdminPillarDetailed = PillarMeta & {
 	isActive: boolean
 	activeQuestionCount: number
 	totalQuestionCount: number
-	// Active-question counts split by phase and business size — what a real
+	// Active-question counts split by phase and business size â€” what a real
 	// session actually delivers per pillar (activeQuestionCount sums all of them).
 	counts: {
 		phase2a: { SMALL: number; MEDIUM: number }
@@ -114,12 +114,18 @@ export type AdminPillarsDetailedResponse = {
 }
 
 export type ScoringSettings = {
+	orangeMin: number
 	amberMin: number
+	lightGreenMin: number
 	greenMin: number
 	redLabel: string
 	redDescription: string
+	orangeLabel: string
+	orangeDescription: string
 	amberLabel: string
 	amberDescription: string
+	lightGreenLabel: string
+	lightGreenDescription: string
 	greenLabel: string
 	greenDescription: string
 	phase2aQuestionLimit: number
@@ -176,7 +182,7 @@ export const updateScoringSettings = async (
 	})
 }
 
-// ── Question bank ──────────────────────────────────────────────────────────
+// â”€â”€ Question bank â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminQuestionPhase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
 export type AdminRiskType = 'NORMAL' | 'RISK' | 'KNOCKOUT'
@@ -336,7 +342,7 @@ export const deleteAdminQuestionOption = async (optionId: string) => {
 	})
 }
 
-// ── Coupons ────────────────────────────────────────────────────────────────
+// â”€â”€ Coupons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminCoupon = {
 	id: string
@@ -439,7 +445,7 @@ export const deleteAdminCoupon = async (id: string) => {
 	})
 }
 
-// ── Admin: users list + per-user detail + status ───────────────────────────
+// â”€â”€ Admin: users list + per-user detail + status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminUserStatus = 'ACTIVE' | 'DISABLED'
 
@@ -456,7 +462,7 @@ export type AdminUserRow = {
 	subscriptionPlan: 'PHASE2A' | 'PHASE2B_PILLAR' | null
 	isActive: boolean
 	lastSeenAt: string | null
-	// Account standing — DISABLED means suspended (login + tokens blocked).
+	// Account standing â€” DISABLED means suspended (login + tokens blocked).
 	status: AdminUserStatus
 	adminRoleId?: string | null
 	adminRole?: {
@@ -556,13 +562,13 @@ export const updateAdminUserStatus = async (
 	})
 }
 
-// ─── Admin: per-user paginated histories + session detail ──────────────────
+// â”€â”€â”€ Admin: per-user paginated histories + session detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminUserSessionRow = AdminUserDetails['recentSessions'][number] & {
 	startedAt: string
 	completedAt: string | null
 	totalScore: number | null
-	colorBand: 'RED' | 'AMBER' | 'GREEN' | null
+	colorBand: 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN' | null
 }
 
 export type AdminUserSessionsResponse = {
@@ -591,7 +597,7 @@ export type AdminSessionPillarScore = {
 	maxPossibleScore: number
 	weightedScore: number
 	hasKnockout: boolean
-	colorBand: 'RED' | 'AMBER' | 'GREEN'
+	colorBand: 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 	insightRuleApplied: 'KNOCKOUT' | 'BOTH_RISK' | 'ONE_RISK' | 'BOTH_NORMAL'
 }
 
@@ -625,7 +631,7 @@ export type AdminSessionDetail = {
 	}
 	result: {
 		totalScore: number
-		colorBand: 'RED' | 'AMBER' | 'GREEN'
+		colorBand: 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 		hasAnyKnockout: boolean
 		isPaid: boolean
 		reportPdfUrl: string | null
@@ -675,7 +681,7 @@ export const getAdminSessionDetails = async (sessionId: string) => {
 	})
 }
 
-// ── Admin roles ────────────────────────────────────────────────────────────
+// â”€â”€ Admin roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminRoleRow = {
 	id: string
@@ -738,7 +744,7 @@ export const assignAdminRole = async (
 	)
 }
 
-// ── Admin onboarding (invite staff) ────────────────────────────────────────
+// â”€â”€ Admin onboarding (invite staff) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type InvitedAdmin = {
 	id: string
@@ -778,7 +784,7 @@ export const updateAdminAccess = async (
 	)
 }
 
-// ── Admin self-service profile (personal info) ─────────────────────────────
+// â”€â”€ Admin self-service profile (personal info) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AdminProfile = {
 	id: string
@@ -809,20 +815,20 @@ export const updateMyAdminProfile = async (payload: {
 	)
 }
 
-// ──────────────────────────────────────────────────────────────────────────
-// App settings — singleton holding the USD→NGN FX rate used to convert USD
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// App settings â€” singleton holding the USDâ†’NGN FX rate used to convert USD
 // catalogue prices into NGN at charge time / display time for Nigerian users.
 // Only `settings:read`/`settings:write` admins can touch this.
-// ──────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type AppSettingsPayload = {
 	usdToNgn: number
-	// Section F — storefront section toggles. BE enforces "at least one
+	// Section F â€” storefront section toggles. BE enforces "at least one
 	// section must stay live" on PATCH; the FE additionally disables the
 	// toggle that would zero everything so the user can't even try.
 	payPerUseActive: boolean
 	subscriptionActive: boolean
-	// BE-1 — Phase 2B multi-pillar bundle discount. `pctPerPillar` is the %
+	// BE-1 â€” Phase 2B multi-pillar bundle discount. `pctPerPillar` is the %
 	// shaved off the bundle total per extra pillar; `maxPillars` caps how many
 	// pillars count toward the discount.
 	phase2bDiscountPctPerPillar: number
@@ -1006,3 +1012,6 @@ export const deleteAdminPillarScoreLabel = async (id: string) => {
     method: 'DELETE',
   })
 }
+
+
+

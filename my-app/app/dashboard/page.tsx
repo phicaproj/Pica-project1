@@ -32,7 +32,7 @@ const API_BASE =
 	process.env.NEXT_PUBLIC_API_BASE_URL ||
 	'https://pica-project1.onrender.com/api'
 
-type ColorBand = 'RED' | 'AMBER' | 'GREEN'
+type ColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 
 type Phase = 'PHASE1' | 'PHASE2A' | 'PHASE2B'
 

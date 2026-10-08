@@ -57,7 +57,9 @@ const formatRelative = (iso: string | null) => {
 
 const BAND_DOT: Record<ReportColorBand, string> = {
   RED: "bg-red-500",
+  ORANGE: "bg-orange-500",
   AMBER: "bg-amber-500",
+  LIGHT_GREEN: "bg-lime-500",
   GREEN: "bg-emerald-500",
 };
 

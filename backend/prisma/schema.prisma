@@ -20,7 +20,9 @@ enum RiskType {
 
 enum ColorBand {
   RED
+  ORANGE
   AMBER
+  LIGHT_GREEN
   GREEN
 }
 
@@ -118,7 +120,6 @@ enum PillarCode {
 
 // ============================================================
 
-
 model PillarScoreLabel {
   id          String   @id @default(uuid())
   pillarId    String   @map("pillar_id")
@@ -129,7 +130,7 @@ model PillarScoreLabel {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  pillar      Pillar   @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+  pillar Pillar @relation(fields: [pillarId], references: [id], onDelete: Cascade)
 
   @@index([pillarId, minScore, maxScore])
   @@map("pillar_score_labels")
@@ -146,7 +147,7 @@ model Pillar {
 
   // Relations
   questions           Question[]
-  pillarScoreLabels PillarScoreLabel[]
+  pillarScoreLabels   PillarScoreLabel[]
   sessionPillarScores SessionPillarScore[]
   // Phase 2B: a payment / session / unlock can be scoped to one pillar.
   payments            Payment[]
@@ -161,19 +162,25 @@ model Pillar {
   @@map("pillars")
 }
 
-/// Singleton (one row) — admin-editable RED/AMBER/GREEN color-band thresholds
+/// Singleton (one row) — admin-editable 5-tier color-band thresholds
 model ScoringSettings {
   id String @id @default(uuid())
 
-  amberMin Decimal @map("amber_min") @db.Decimal(5, 2) // default 50
-  greenMin Decimal @map("green_min") @db.Decimal(5, 2) // default 80
+  orangeMin     Decimal @default(31) @map("orange_min") @db.Decimal(5, 2)
+  amberMin      Decimal @default(51) @map("amber_min") @db.Decimal(5, 2)
+  lightGreenMin Decimal @default(71) @map("light_green_min") @db.Decimal(5, 2)
+  greenMin      Decimal @default(91) @map("green_min") @db.Decimal(5, 2)
 
-  redLabel         String @default("Urgent attention") @map("red_label")
-  redDescription   String @default("Critical gaps that need immediate action.") @map("red_description")
-  amberLabel       String @default("Needs work") @map("amber_label")
-  amberDescription String @default("Improving, but key risks remain.") @map("amber_description")
-  greenLabel       String @default("Healthy") @map("green_label")
-  greenDescription String @default("Strong performance — keep it up.") @map("green_description")
+  redLabel              String @default("Reactive") @map("red_label")
+  redDescription        String @default("Critical gaps that need immediate action.") @map("red_description")
+  orangeLabel           String @default("Foundational Emergent") @map("orange_label")
+  orangeDescription     String @default("Basic foundations are in place but require structured enhancement.") @map("orange_description")
+  amberLabel            String @default("Operationally Sound") @map("amber_label")
+  amberDescription      String @default("Solid operations with room for strategic optimization.") @map("amber_description")
+  lightGreenLabel       String @default("Strategically Fortified") @map("light_green_label")
+  lightGreenDescription String @default("Strong strategic positioning and resilient practices.") @map("light_green_description")
+  greenLabel            String @default("Future-Proofed") @map("green_label")
+  greenDescription      String @default("Industry-leading practices with long-term sustainability.") @map("green_description")
 
   phase2aQuestionLimit Int @default(40) @map("phase2a_question_limit")
   phase2bQuestionLimit Int @default(30) @map("phase2b_question_limit")
