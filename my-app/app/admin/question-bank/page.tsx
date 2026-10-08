@@ -396,6 +396,10 @@ export default function QuestionBankPage() {
       void loadScoreLabels();
       return;
     }
+    if (mode === "pillar_labels") {
+      void loadPillarScoreLabels();
+      return;
+    }
     const timer = window.setTimeout(() => {
       void loadQuestions();
     }, 250);
@@ -2188,6 +2192,246 @@ export default function QuestionBankPage() {
                   onClick={() => void createScoreLabelAction()}
                   disabled={saving}
                   className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                >
+                  {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Create Label
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Edit Pillar Score Label Modal */}
+      {editPillarLabelOpen && activePillarLabel && pillarLabelDraft && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">Edit Pillar Recommendation</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Update score range thresholds, label title, and recommendation for {activePillarLabel.pillar?.name}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditPillarLabelOpen(false)}
+                className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Min Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    disabled={!hasWriteAccess}
+                    value={pillarLabelDraft.minScore}
+                    onChange={(e) => setPillarLabelDraft({ ...pillarLabelDraft, minScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Max Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    disabled={!hasWriteAccess}
+                    value={pillarLabelDraft.maxScore}
+                    onChange={(e) => setPillarLabelDraft({ ...pillarLabelDraft, maxScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Label Title
+                </label>
+                <input
+                  type="text"
+                  disabled={!hasWriteAccess}
+                  value={pillarLabelDraft.label}
+                  onChange={(e) => setPillarLabelDraft({ ...pillarLabelDraft, label: e.target.value })}
+                  placeholder="e.g. REACTIVE, CELESTIAL"
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Overall Recommendation / Summary Description
+                </label>
+                <textarea
+                  rows={6}
+                  disabled={!hasWriteAccess}
+                  value={pillarLabelDraft.description}
+                  onChange={(e) => setPillarLabelDraft({ ...pillarLabelDraft, description: e.target.value })}
+                  placeholder="Enter the detailed recommendation copy..."
+                  className={textareaClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
+              {hasWriteAccess ? (
+                <button
+                  type="button"
+                  onClick={() => void deletePillarScoreLabelAction(activePillarLabel.id)}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-500/20 px-4 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Label
+                </button>
+              ) : (
+                <div />
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditPillarLabelOpen(false)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition"
+                >
+                  {hasWriteAccess ? "Cancel" : "Close"}
+                </button>
+                {hasWriteAccess && (
+                  <button
+                    type="button"
+                    onClick={() => void savePillarScoreLabel()}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
+                  >
+                    {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    Save Label
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Pillar Score Label Modal */}
+      {createPillarLabelOpen && hasWriteAccess && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4">
+          <div className="flex flex-col max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-[#1C1F2E] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5 bg-[#171923]">
+              <div>
+                <h2 className="text-xl font-bold text-white">New Pillar Recommendation</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Define a score range threshold, label title, and recommendation for a pillar.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreatePillarLabelOpen(false)}
+                className="rounded-lg p-2 text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Pillar
+                </label>
+                <select
+                  value={createPillarLabelDraft.pillarId}
+                  onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, pillarId: e.target.value })}
+                  className={fieldClass}
+                >
+                  <option value="">-- Select Pillar --</option>
+                  {pillars.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Min Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={createPillarLabelDraft.minScore}
+                    onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, minScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                    Max Score (0-100)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={createPillarLabelDraft.maxScore}
+                    onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, maxScore: Number(e.target.value) })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Label Title
+                </label>
+                <input
+                  type="text"
+                  value={createPillarLabelDraft.label}
+                  onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, label: e.target.value })}
+                  placeholder="e.g. REACTIVE, CELESTIAL"
+                  className={fieldClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
+                  Overall Recommendation / Summary Description
+                </label>
+                <textarea
+                  rows={6}
+                  value={createPillarLabelDraft.description}
+                  onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, description: e.target.value })}
+                  placeholder="Enter the detailed recommendation copy..."
+                  className={textareaClass}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end items-center border-t border-white/5 px-6 py-5 bg-[#171923]">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCreatePillarLabelOpen(false)}
+                  className="rounded-lg px-4 py-2.5 text-sm font-semibold text-gray-400 hover:text-white transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void createPillarScoreLabelAction()}
+                  disabled={saving || !createPillarLabelDraft.pillarId}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-50"
                 >
                   {saving ? <Loader className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Create Label
