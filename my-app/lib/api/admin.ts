@@ -46,10 +46,12 @@ export type AllPillarsResponse = {
 	pillars: PillarMeta[]
 }
 
-export const getAdminPricing = async (params: {
-	plan?: PricingPlan
-	pillarId?: string
-} = {}) => {
+export const getAdminPricing = async (
+	params: {
+		plan?: PricingPlan
+		pillarId?: string
+	} = {},
+) => {
 	const qs = new URLSearchParams()
 	if (params.plan) qs.set('plan', params.plan)
 	if (params.pillarId) qs.set('pillarId', params.pillarId)
@@ -138,7 +140,9 @@ export type ScoringSettingsResponse = {
 	settings: ScoringSettings
 }
 
-export type UpdateScoringSettingsPayload = Partial<Omit<ScoringSettings, 'updatedAt'>>
+export type UpdateScoringSettingsPayload = Partial<
+	Omit<ScoringSettings, 'updatedAt'>
+>
 
 export const getAdminPillarsDetailed = async () => {
 	return authedFetch<AdminPillarsDetailedResponse>('/admin/pillars', {
@@ -149,10 +153,13 @@ export const getAdminPillarsDetailed = async () => {
 export const saveAdminPillarWeights = async (
 	weights: Array<{ pillarId: string; weight: number }>,
 ) => {
-	return authedFetch<AdminPillarsDetailedResponse>('/admin/pillars/weights', {
-		method: 'PATCH',
-		body: JSON.stringify({ weights }),
-	})
+	return authedFetch<AdminPillarsDetailedResponse>(
+		'/admin/pillars/weights',
+		{
+			method: 'PATCH',
+			body: JSON.stringify({ weights }),
+		},
+	)
 }
 
 // Pillar display copy. `description` prints under the pillar title on every
@@ -161,10 +168,13 @@ export const saveAdminPillarCopy = async (
 	pillarId: string,
 	payload: { name?: string; description?: string },
 ) => {
-	return authedFetch<AdminPillarsDetailedResponse>(`/admin/pillars/${pillarId}/copy`, {
-		method: 'PATCH',
-		body: JSON.stringify(payload),
-	})
+	return authedFetch<AdminPillarsDetailedResponse>(
+		`/admin/pillars/${pillarId}/copy`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const getScoringSettings = async () => {
@@ -259,16 +269,19 @@ export type UpdateAdminQuestionPayload = {
 	options?: (UpdateAdminQuestionOptionPayload & { id: string })[]
 }
 
-export type UpdateAdminQuestionOptionPayload = Partial<AdminQuestionOptionPayload>
+export type UpdateAdminQuestionOptionPayload =
+	Partial<AdminQuestionOptionPayload>
 
-export const getAdminQuestions = async (params: {
-	pillarId?: string
-	phase?: AdminQuestionPhase
-	businessSize?: BusinessSize
-	search?: string
-	includeInactive?: boolean
-	isKnockout?: boolean
-} = {}) => {
+export const getAdminQuestions = async (
+	params: {
+		pillarId?: string
+		phase?: AdminQuestionPhase
+		businessSize?: BusinessSize
+		search?: string
+		includeInactive?: boolean
+		isKnockout?: boolean
+	} = {},
+) => {
 	const qs = new URLSearchParams()
 	if (params.pillarId) qs.set('pillarId', params.pillarId)
 	if (params.phase) qs.set('phase', params.phase)
@@ -301,16 +314,22 @@ export const updateAdminQuestion = async (
 	id: string,
 	payload: UpdateAdminQuestionPayload,
 ) => {
-	return authedFetch<AdminQuestionDetailResponse>(`/admin/questions/${id}`, {
-		method: 'PATCH',
-		body: JSON.stringify(payload),
-	})
+	return authedFetch<AdminQuestionDetailResponse>(
+		`/admin/questions/${id}`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const deleteAdminQuestion = async (id: string) => {
-	return authedFetch<AdminQuestionDetailResponse>(`/admin/questions/${id}`, {
-		method: 'DELETE',
-	})
+	return authedFetch<AdminQuestionDetailResponse>(
+		`/admin/questions/${id}`,
+		{
+			method: 'DELETE',
+		},
+	)
 }
 
 export const addAdminQuestionOption = async (
@@ -330,16 +349,22 @@ export const updateAdminQuestionOption = async (
 	optionId: string,
 	payload: UpdateAdminQuestionOptionPayload,
 ) => {
-	return authedFetch<AdminQuestionDetailResponse>(`/admin/options/${optionId}`, {
-		method: 'PATCH',
-		body: JSON.stringify(payload),
-	})
+	return authedFetch<AdminQuestionDetailResponse>(
+		`/admin/options/${optionId}`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const deleteAdminQuestionOption = async (optionId: string) => {
-	return authedFetch<AdminQuestionDetailResponse>(`/admin/options/${optionId}`, {
-		method: 'DELETE',
-	})
+	return authedFetch<AdminQuestionDetailResponse>(
+		`/admin/options/${optionId}`,
+		{
+			method: 'DELETE',
+		},
+	)
 }
 
 // â”€â”€ Coupons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -386,6 +411,7 @@ export type CreateAdminCouponPayload = {
 	amountOff?: number
 	percentOff?: number
 	isActive: boolean
+	isMaster: boolean
 	userId?: string
 	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION' | null
 	pillarId?: string | null
@@ -403,15 +429,18 @@ export type UpdateAdminCouponPayload = {
 	maxUses?: number
 }
 
-export const getAdminCoupons = async (params: {
-	userId?: string
-	isActive?: boolean
-	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION'
-	pillarId?: string
-} = {}) => {
+export const getAdminCoupons = async (
+	params: {
+		userId?: string
+		isActive?: boolean
+		plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'SUBSCRIPTION'
+		pillarId?: string
+	} = {},
+) => {
 	const qs = new URLSearchParams()
 	if (params.userId) qs.set('userId', params.userId)
-	if (params.isActive !== undefined) qs.set('isActive', String(params.isActive))
+	if (params.isActive !== undefined)
+		qs.set('isActive', String(params.isActive))
 	if (params.plan) qs.set('plan', params.plan)
 	if (params.pillarId) qs.set('pillarId', params.pillarId)
 	const query = qs.toString()
@@ -487,15 +516,17 @@ export type ListUsersResponse = {
 	users: AdminUserRow[]
 }
 
-export const getAllUsers = async (params: {
-	page?: number
-	pageSize?: number
-	search?: string
-	businessSize?: BusinessSize
-	plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'FREE'
-	active?: boolean
-	role?: 'USER' | 'ADMIN'
-} = {}) => {
+export const getAllUsers = async (
+	params: {
+		page?: number
+		pageSize?: number
+		search?: string
+		businessSize?: BusinessSize
+		plan?: 'PHASE2A' | 'PHASE2B_PILLAR' | 'FREE'
+		active?: boolean
+		role?: 'USER' | 'ADMIN'
+	} = {},
+) => {
 	const qs = new URLSearchParams()
 	if (params.page) qs.set('page', String(params.page))
 	if (params.pageSize) qs.set('pageSize', String(params.pageSize))
@@ -676,9 +707,12 @@ export const getAdminUserPayments = async (
 }
 
 export const getAdminSessionDetails = async (sessionId: string) => {
-	return authedFetch<AdminSessionDetailResponse>(`/admin/sessions/${sessionId}`, {
-		method: 'GET',
-	})
+	return authedFetch<AdminSessionDetailResponse>(
+		`/admin/sessions/${sessionId}`,
+		{
+			method: 'GET',
+		},
+	)
 }
 
 // â”€â”€ Admin roles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -728,10 +762,9 @@ export const updateAdminRole = async (
 }
 
 export const deleteAdminRole = async (id: string) => {
-	return authedFetch<{ message: string }>(
-		`/admin/roles/${id}`,
-		{ method: 'DELETE' },
-	)
+	return authedFetch<{ message: string }>(`/admin/roles/${id}`, {
+		method: 'DELETE',
+	})
 }
 
 export const assignAdminRole = async (
@@ -767,10 +800,10 @@ export const inviteAdmin = async (payload: {
 // Resend a 24h activation link to a pending admin. Backend refuses (409) if
 // the admin has already activated their account.
 export const resendAdminInvite = async (userId: string) => {
-	return authedFetch<{ message: string; admin: { id: string; email: string } }>(
-		`/admin/users/${userId}/resend-invite`,
-		{ method: 'POST' },
-	)
+	return authedFetch<{
+		message: string
+		admin: { id: string; email: string }
+	}>(`/admin/users/${userId}/resend-invite`, { method: 'POST' })
 }
 
 // Edit an existing admin's department + per-person permissions.
@@ -844,7 +877,9 @@ export type AppSettingsResponse = {
 }
 
 export const getAdminAppSettings = async () => {
-	return authedFetch<AppSettingsResponse>('/admin/app-settings', { method: 'GET' })
+	return authedFetch<AppSettingsResponse>('/admin/app-settings', {
+		method: 'GET',
+	})
 }
 
 export const updateAdminAppSettings = async (input: {
@@ -908,10 +943,13 @@ export const updateAdminScoreLabel = async (
 		description?: string
 	},
 ) => {
-	return authedFetch<AdminScoreLabelDetailResponse>(`/admin/score-labels/${id}`, {
-		method: 'PATCH',
-		body: JSON.stringify(payload),
-	})
+	return authedFetch<AdminScoreLabelDetailResponse>(
+		`/admin/score-labels/${id}`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const deleteAdminScoreLabel = async (id: string) => {
@@ -947,71 +985,82 @@ export type AdminAuditLogListResponse = {
 export const getAdminAuditLogs = async (params?: { search?: string }) => {
 	const query = new URLSearchParams()
 	if (params?.search) query.append('search', params.search)
-	return authedFetch<AdminAuditLogListResponse>(`/admin/audit?${query.toString()}`)
+	return authedFetch<AdminAuditLogListResponse>(
+		`/admin/audit?${query.toString()}`,
+	)
 }
 
 export type AdminPillarScoreLabel = {
-  id: string
-  pillarId: string
-  minScore: number
-  maxScore: number
-  label: string
-  description: string
-  createdAt: string
-  updatedAt: string
-  pillar: { code: string; name: string }
+	id: string
+	pillarId: string
+	minScore: number
+	maxScore: number
+	label: string
+	description: string
+	createdAt: string
+	updatedAt: string
+	pillar: { code: string; name: string }
 }
 
 export type AdminPillarScoreLabelListResponse = {
-  data: AdminPillarScoreLabel[]
+	data: AdminPillarScoreLabel[]
 }
 
 export type AdminPillarScoreLabelDetailResponse = {
-  message: string
-  data: AdminPillarScoreLabel
+	message: string
+	data: AdminPillarScoreLabel
 }
 
 export const getAdminPillarScoreLabels = async (pillarId?: string) => {
-  const query = pillarId ? `?pillarId=${pillarId}` : ''
-  return authedFetch<AdminPillarScoreLabelListResponse>(`/admin/pillar-score-labels${query}`, {
-    method: 'GET',
-  })
+	const query = pillarId ? `?pillarId=${pillarId}` : ''
+	return authedFetch<AdminPillarScoreLabelListResponse>(
+		`/admin/pillar-score-labels${query}`,
+		{
+			method: 'GET',
+		},
+	)
 }
 
 export const createAdminPillarScoreLabel = async (payload: {
-  pillarId: string
-  minScore: number
-  maxScore: number
-  label: string
-  description: string
+	pillarId: string
+	minScore: number
+	maxScore: number
+	label: string
+	description: string
 }) => {
-  return authedFetch<AdminPillarScoreLabelDetailResponse>('/admin/pillar-score-labels', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+	return authedFetch<AdminPillarScoreLabelDetailResponse>(
+		'/admin/pillar-score-labels',
+		{
+			method: 'POST',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const updateAdminPillarScoreLabel = async (
-  id: string,
-  payload: {
-    pillarId?: string
-    minScore?: number
-    maxScore?: number
-    label?: string
-    description?: string
-  },
+	id: string,
+	payload: {
+		pillarId?: string
+		minScore?: number
+		maxScore?: number
+		label?: string
+		description?: string
+	},
 ) => {
-  return authedFetch<AdminPillarScoreLabelDetailResponse>(`/admin/pillar-score-labels/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
+	return authedFetch<AdminPillarScoreLabelDetailResponse>(
+		`/admin/pillar-score-labels/${id}`,
+		{
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+		},
+	)
 }
 
 export const deleteAdminPillarScoreLabel = async (id: string) => {
-  return authedFetch<{ message: string }>(`/admin/pillar-score-labels/${id}`, {
-    method: 'DELETE',
-  })
+	return authedFetch<{ message: string }>(
+		`/admin/pillar-score-labels/${id}`,
+		{
+			method: 'DELETE',
+		},
+	)
 }
-
-
-
