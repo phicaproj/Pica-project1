@@ -113,17 +113,27 @@ const COLOR_BAND_TO_STATUS: Record<
 	{ label: string; bar: string; pill: string }
 > = {
 	GREEN: {
-		label: 'Optimized',
+		label: 'Future-Proofed',
 		bar: 'bg-emerald-400',
 		pill: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20',
 	},
+	LIGHT_GREEN: {
+		label: 'Strategically Fortified',
+		bar: 'bg-lime-400',
+		pill: 'bg-lime-500/15 text-lime-400 border-lime-400/20',
+	},
 	AMBER: {
-		label: 'Active',
+		label: 'Operationally Sound',
 		bar: 'bg-amber-400',
 		pill: 'bg-amber-500/15 text-amber-300 border-amber-400/20',
 	},
+	ORANGE: {
+		label: 'Foundational Emergent',
+		bar: 'bg-orange-400',
+		pill: 'bg-orange-500/15 text-orange-300 border-orange-400/20',
+	},
 	RED: {
-		label: 'Attention',
+		label: 'Reactive',
 		bar: 'bg-rose-400',
 		pill: 'bg-rose-500/15 text-rose-300 border-rose-400/20',
 	},
@@ -131,7 +141,9 @@ const COLOR_BAND_TO_STATUS: Record<
 
 const COLOR_BAND_TO_RING: Record<ColorBand, string> = {
 	GREEN: 'from-emerald-400 to-teal-300',
-	AMBER: 'from-amber-400 to-orange-300',
+	LIGHT_GREEN: 'from-lime-400 to-green-300',
+	AMBER: 'from-amber-400 to-yellow-300',
+	ORANGE: 'from-orange-400 to-amber-300',
 	RED: 'from-rose-400 to-orange-300',
 }
 
@@ -140,10 +152,12 @@ function normalizeColorBand(value: unknown): ColorBand {
 	const normalized = value.trim().toUpperCase()
 	if (
 		normalized === 'GREEN' ||
+		normalized === 'LIGHT_GREEN' ||
 		normalized === 'AMBER' ||
+		normalized === 'ORANGE' ||
 		normalized === 'RED'
 	) {
-		return normalized
+		return normalized as ColorBand
 	}
 	if (normalized === 'YELLOW') return 'AMBER'
 	return 'AMBER'

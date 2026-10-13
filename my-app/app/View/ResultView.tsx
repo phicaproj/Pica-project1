@@ -82,10 +82,20 @@ const COLOR_BAND_TO_STATUS: Record<
 		bar: 'bg-emerald-400',
 		pill: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20',
 	},
+	LIGHT_GREEN: {
+		label: 'Strategically Fortified',
+		bar: 'bg-lime-400',
+		pill: 'bg-lime-500/15 text-lime-400 border-lime-400/20',
+	},
 	AMBER: {
 		label: 'Operationally Sound',
 		bar: 'bg-amber-400',
 		pill: 'bg-amber-500/15 text-amber-300 border-amber-400/20',
+	},
+	ORANGE: {
+		label: 'Foundational Emergent',
+		bar: 'bg-orange-400',
+		pill: 'bg-orange-500/15 text-orange-300 border-orange-400/20',
 	},
 	RED: {
 		label: 'Reactive',
@@ -97,8 +107,14 @@ const COLOR_BAND_TO_STATUS: Record<
 function normalizeColorBand(value: unknown): ColorBand {
 	if (typeof value !== 'string') return 'AMBER'
 	const normalized = value.trim().toUpperCase()
-	if (normalized === 'GREEN' || normalized === 'AMBER' || normalized === 'RED') {
-		return normalized
+	if (
+		normalized === 'GREEN' ||
+		normalized === 'LIGHT_GREEN' ||
+		normalized === 'AMBER' ||
+		normalized === 'ORANGE' ||
+		normalized === 'RED'
+	) {
+		return normalized as ColorBand
 	}
 	if (normalized === 'YELLOW') return 'AMBER'
 	return 'AMBER'

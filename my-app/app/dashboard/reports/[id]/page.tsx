@@ -85,17 +85,27 @@ const COLOR_BAND_TO_STATUS: Record<
   { label: string; bar: string; pill: string }
 > = {
   GREEN: {
-    label: "Optimized",
+    label: "Future-Proofed",
     bar: "bg-emerald-400",
     pill: "bg-emerald-500/15 text-emerald-300 border-emerald-400/20",
   },
+  LIGHT_GREEN: {
+    label: "Strategically Fortified",
+    bar: "bg-lime-400",
+    pill: "bg-lime-500/15 text-lime-300 border-lime-400/20",
+  },
   AMBER: {
-    label: "Active",
+    label: "Operationally Sound",
     bar: "bg-amber-400",
     pill: "bg-amber-500/15 text-amber-300 border-amber-400/20",
   },
+  ORANGE: {
+    label: "Foundational Emergent",
+    bar: "bg-orange-400",
+    pill: "bg-orange-500/15 text-orange-300 border-orange-400/20",
+  },
   RED: {
-    label: "Attention",
+    label: "Reactive",
     bar: "bg-rose-400",
     pill: "bg-rose-500/15 text-rose-300 border-rose-400/20",
   },
@@ -103,7 +113,9 @@ const COLOR_BAND_TO_STATUS: Record<
 
 const COLOR_BAND_TO_RING: Record<ColorBand, string> = {
   GREEN: "from-emerald-400 to-teal-300",
-  AMBER: "from-amber-400 to-orange-300",
+  LIGHT_GREEN: "from-lime-400 to-emerald-300",
+  AMBER: "from-amber-400 to-yellow-300",
+  ORANGE: "from-orange-400 to-amber-300",
   RED: "from-rose-400 to-orange-300",
 };
 
@@ -680,10 +692,12 @@ function Phase2BReport({ resultData, handleDownloadPdf, downloadMode }: { result
   const band = normalizeColorBand(pillarScore.colorBand);
   
   const bandColors = {
-    RED: { ring: "from-rose-500 to-rose-400/50", border: "#f43f5e", text: d ? "text-rose-400" : "text-rose-600", label: "Attention Required" },
-    AMBER: { ring: "from-amber-500 to-amber-400/50", border: "#fbbf24", text: d ? "text-amber-400" : "text-amber-600", label: "Needs Improvement" },
-    GREEN: { ring: "from-emerald-500 to-emerald-400/50", border: "#10b981", text: d ? "text-emerald-400" : "text-emerald-600", label: "Optimized" }
-  }[band];
+    RED: { ring: "from-rose-500 to-rose-400/50", border: "#f43f5e", text: d ? "text-rose-400" : "text-rose-600", label: "Reactive" },
+    ORANGE: { ring: "from-orange-500 to-orange-400/50", border: "#f97316", text: d ? "text-orange-400" : "text-orange-600", label: "Foundational Emergent" },
+    AMBER: { ring: "from-amber-500 to-amber-400/50", border: "#fbbf24", text: d ? "text-amber-400" : "text-amber-600", label: "Operationally Sound" },
+    LIGHT_GREEN: { ring: "from-lime-500 to-lime-400/50", border: "#84cc16", text: d ? "text-lime-400" : "text-lime-600", label: "Strategically Fortified" },
+    GREEN: { ring: "from-emerald-500 to-emerald-400/50", border: "#10b981", text: d ? "text-emerald-400" : "text-emerald-600", label: "Future-Proofed" }
+  }[band] || { ring: "from-amber-500 to-amber-400/50", border: "#fbbf24", text: d ? "text-amber-400" : "text-amber-600", label: "Operationally Sound" };
 
   // Try to load all 4 findings from the raw scoring payload inside insightPayload, otherwise fallback to standard findings list
   const insight = result.insightPayload as any;

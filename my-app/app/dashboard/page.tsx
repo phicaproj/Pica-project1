@@ -107,21 +107,27 @@ type DashboardState =
 const COLOR_BAND_TO_RISK: Record<ColorBand, { label: string; color: string }> =
 	{
 		GREEN: { label: 'Low', color: 'text-green-400' },
-		AMBER: { label: 'Moderate', color: 'text-yellow-400' },
+		LIGHT_GREEN: { label: 'Low-Moderate', color: 'text-lime-400' },
+		AMBER: { label: 'Moderate', color: 'text-amber-400' },
+		ORANGE: { label: 'Moderate-High', color: 'text-orange-400' },
 		RED: { label: 'High', color: 'text-red-400' },
 	}
 
 const COLOR_BAND_TO_BAR: Record<ColorBand, string> = {
 	GREEN: 'bg-green-400',
-	AMBER: 'bg-yellow-400',
+	LIGHT_GREEN: 'bg-lime-400',
+	AMBER: 'bg-amber-400',
+	ORANGE: 'bg-orange-400',
 	RED: 'bg-red-400',
 }
 
 const COLOR_BAND_TO_STATUS: Record<ColorBand, { label: string; pill: string }> =
 	{
-		GREEN: { label: 'Healthy', pill: 'bg-green-500/20 text-green-400' },
-		AMBER: { label: 'Watch', pill: 'bg-yellow-500/20 text-yellow-400' },
-		RED: { label: 'Attention', pill: 'bg-red-500/20 text-red-400' },
+		GREEN: { label: 'Future-Proofed', pill: 'bg-green-500/20 text-green-400' },
+		LIGHT_GREEN: { label: 'Strategically Fortified', pill: 'bg-lime-500/20 text-lime-400' },
+		AMBER: { label: 'Operationally Sound', pill: 'bg-amber-500/20 text-amber-400' },
+		ORANGE: { label: 'Foundational Emergent', pill: 'bg-orange-500/20 text-orange-400' },
+		RED: { label: 'Reactive', pill: 'bg-red-500/20 text-red-400' },
 	}
 
 function normalizeColorBand(value: unknown): ColorBand {
@@ -129,7 +135,9 @@ function normalizeColorBand(value: unknown): ColorBand {
 	const normalized = value.trim().toUpperCase()
 	if (
 		normalized === 'GREEN' ||
+		normalized === 'LIGHT_GREEN' ||
 		normalized === 'AMBER' ||
+		normalized === 'ORANGE' ||
 		normalized === 'RED'
 	) {
 		return normalized

@@ -60,11 +60,15 @@ export default function ScoringPage() {
 
   // Drafts — what the admin is editing. Saved values live in pillars/settings.
   const [weightDraft, setWeightDraft] = useState<Record<string, number>>({});
+  const [orangeMinDraft, setOrangeMinDraft] = useState("");
   const [amberMinDraft, setAmberMinDraft] = useState("");
+  const [lightGreenMinDraft, setLightGreenMinDraft] = useState("");
   const [greenMinDraft, setGreenMinDraft] = useState("");
   const [bandDrafts, setBandDrafts] = useState<Record<BandKey, BandDraft>>({
     red: { label: "", description: "" },
+    orange: { label: "", description: "" },
     amber: { label: "", description: "" },
+    lightGreen: { label: "", description: "" },
     green: { label: "", description: "" },
   });
 
@@ -96,11 +100,15 @@ export default function ScoringPage() {
     if (settingsRes.data) {
       const s = settingsRes.data.settings;
       setSettings(s);
+      setOrangeMinDraft(String(s.orangeMin));
       setAmberMinDraft(String(s.amberMin));
+      setLightGreenMinDraft(String(s.lightGreenMin));
       setGreenMinDraft(String(s.greenMin));
       setBandDrafts({
         red: { label: s.redLabel, description: s.redDescription },
+        orange: { label: s.orangeLabel, description: s.orangeDescription },
         amber: { label: s.amberLabel, description: s.amberDescription },
+        lightGreen: { label: s.lightGreenLabel, description: s.lightGreenDescription },
         green: { label: s.greenLabel, description: s.greenDescription },
       });
     }
@@ -121,12 +129,18 @@ export default function ScoringPage() {
   const settingsDirty = useMemo(() => {
     if (!settings) return false;
     return (
+      Number(orangeMinDraft) !== settings.orangeMin ||
       Number(amberMinDraft) !== settings.amberMin ||
+      Number(lightGreenMinDraft) !== settings.lightGreenMin ||
       Number(greenMinDraft) !== settings.greenMin ||
       bandDrafts.red.label !== settings.redLabel ||
       bandDrafts.red.description !== settings.redDescription ||
+      bandDrafts.orange.label !== settings.orangeLabel ||
+      bandDrafts.orange.description !== settings.orangeDescription ||
       bandDrafts.amber.label !== settings.amberLabel ||
       bandDrafts.amber.description !== settings.amberDescription ||
+      bandDrafts.lightGreen.label !== settings.lightGreenLabel ||
+      bandDrafts.lightGreen.description !== settings.lightGreenDescription ||
       bandDrafts.green.label !== settings.greenLabel ||
       bandDrafts.green.description !== settings.greenDescription
     );
@@ -154,18 +168,21 @@ export default function ScoringPage() {
     }
 
     if (settings) {
+      const orange = Number(orangeMinDraft);
       const amber = Number(amberMinDraft);
+      const lightGreen = Number(lightGreenMinDraft);
       const green = Number(greenMinDraft);
-      if (!Number.isFinite(amber) || amber <= 0 || amber > 100) {
-        return "Amber cutoff must be between 0 and 100.";
+      
+      if (!Number.isFinite(orange) || orange <= 0 || orange > 100) return "Orange cutoff must be between 0 and 100.";
+      if (!Number.isFinite(amber) || amber <= 0 || amber > 100) return "Amber cutoff must be between 0 and 100.";
+      if (!Number.isFinite(lightGreen) || lightGreen <= 0 || lightGreen > 100) return "Light green cutoff must be between 0 and 100.";
+      if (!Number.isFinite(green) || green <= 0 || green > 100) return "Green cutoff must be between 0 and 100.";
+      
+      if (orange >= amber || amber >= lightGreen || lightGreen >= green) {
+        return "Cutoffs must be strictly increasing (Orange < Amber < Light Green < Green).";
       }
-      if (!Number.isFinite(green) || green <= 0 || green > 100) {
-        return "Green cutoff must be between 0 and 100.";
-      }
-      if (amber >= green) {
-        return "Amber cutoff must be lower than the green cutoff.";
-      }
-      for (const key of ["red", "amber", "green"] as BandKey[]) {
+      
+      for (const key of ["red", "orange", "amber", "lightGreen", "green"] as BandKey[]) {
         if (!bandDrafts[key].label.trim()) return "Band labels cannot be empty.";
         if (!bandDrafts[key].description.trim()) {
           return "Band descriptions cannot be empty.";
@@ -201,12 +218,18 @@ export default function ScoringPage() {
 
     if (settingsDirty && settings) {
       const res = await updateScoringSettings({
+        orangeMin: Number(orangeMinDraft),
         amberMin: Number(amberMinDraft),
+        lightGreenMin: Number(lightGreenMinDraft),
         greenMin: Number(greenMinDraft),
         redLabel: bandDrafts.red.label.trim(),
         redDescription: bandDrafts.red.description.trim(),
+        orangeLabel: bandDrafts.orange.label.trim(),
+        orangeDescription: bandDrafts.orange.description.trim(),
         amberLabel: bandDrafts.amber.label.trim(),
         amberDescription: bandDrafts.amber.description.trim(),
+        lightGreenLabel: bandDrafts.lightGreen.label.trim(),
+        lightGreenDescription: bandDrafts.lightGreen.description.trim(),
         greenLabel: bandDrafts.green.label.trim(),
         greenDescription: bandDrafts.green.description.trim(),
       });
@@ -226,11 +249,15 @@ export default function ScoringPage() {
   const handleReset = () => {
     setWeightDraft(Object.fromEntries(pillars.map((p) => [p.id, p.weight])));
     if (settings) {
+      setOrangeMinDraft(String(settings.orangeMin));
       setAmberMinDraft(String(settings.amberMin));
+      setLightGreenMinDraft(String(settings.lightGreenMin));
       setGreenMinDraft(String(settings.greenMin));
       setBandDrafts({
         red: { label: settings.redLabel, description: settings.redDescription },
+        orange: { label: settings.orangeLabel, description: settings.orangeDescription },
         amber: { label: settings.amberLabel, description: settings.amberDescription },
+        lightGreen: { label: settings.lightGreenLabel, description: settings.lightGreenDescription },
         green: { label: settings.greenLabel, description: settings.greenDescription },
       });
     }
@@ -254,22 +281,38 @@ export default function ScoringPage() {
 
   // Band rows rendered from drafts so cutoff edits preview live.
   const bands = useMemo(() => {
+    const orange = Number(orangeMinDraft) || 0;
     const amber = Number(amberMinDraft) || 0;
+    const lightGreen = Number(lightGreenMinDraft) || 0;
     const green = Number(greenMinDraft) || 0;
     return [
       {
         key: "red" as BandKey,
-        range: `0 – ${Math.max(amber - 1, 0)}`,
+        range: `0 – ${Math.max(orange - 1, 0)}`,
         labelColor: "text-red-400",
         barColor: "bg-red-500",
         border: "border-red-500/20 bg-red-500/5",
       },
       {
+        key: "orange" as BandKey,
+        range: `${orange} – ${Math.max(amber - 1, 0)}`,
+        labelColor: "text-orange-400",
+        barColor: "bg-orange-500",
+        border: "border-orange-500/20 bg-orange-500/5",
+      },
+      {
         key: "amber" as BandKey,
-        range: `${amber} – ${Math.max(green - 1, 0)}`,
+        range: `${amber} – ${Math.max(lightGreen - 1, 0)}`,
         labelColor: "text-amber-400",
         barColor: "bg-amber-500",
         border: "border-amber-500/20 bg-amber-500/5",
+      },
+      {
+        key: "lightGreen" as BandKey,
+        range: `${lightGreen} – ${Math.max(green - 1, 0)}`,
+        labelColor: "text-lime-400",
+        barColor: "bg-lime-500",
+        border: "border-lime-500/20 bg-lime-500/5",
       },
       {
         key: "green" as BandKey,
@@ -279,7 +322,7 @@ export default function ScoringPage() {
         border: "border-emerald-500/20 bg-emerald-500/5",
       },
     ];
-  }, [amberMinDraft, greenMinDraft]);
+  }, [orangeMinDraft, amberMinDraft, lightGreenMinDraft, greenMinDraft]);
 
   if (loading) {
     return (
@@ -458,7 +501,24 @@ export default function ScoringPage() {
           </p>
 
           {/* Cutoffs */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div>
+              <label className="block text-xs font-semibold text-orange-400 mb-1.5">
+                Orange starts at
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={orangeMinDraft}
+                disabled={!isEditing}
+                onChange={(e) => {
+                  setSuccess(null);
+                  setOrangeMinDraft(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-orange-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
             <div>
               <label className="block text-xs font-semibold text-amber-400 mb-1.5">
                 Amber starts at
@@ -474,6 +534,23 @@ export default function ScoringPage() {
                   setAmberMinDraft(e.target.value);
                 }}
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-lime-400 mb-1.5">
+                Lt Green starts at
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={lightGreenMinDraft}
+                disabled={!isEditing}
+                onChange={(e) => {
+                  setSuccess(null);
+                  setLightGreenMinDraft(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-lime-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
               />
             </div>
             <div>

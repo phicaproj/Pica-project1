@@ -232,20 +232,30 @@ export default function ReportsPage() {
     ? "text-gray-500 bg-gray-500/10 border-gray-500/20"
     : "text-gray-600 bg-gray-100 border-gray-200";
   if (totalAssessments > 0) {
-    if (healthScore >= 70) {
-      healthStatusLabel = "HEALTHY";
+    if (healthScore >= 91) {
+      healthStatusLabel = "FUTURE-PROOFED";
       healthStatusColor = d
-        ? "text-teal-400 bg-teal-500/10 border-teal-500/20"
-        : "text-teal-700 bg-teal-50 border-teal-200";
-    } else if (healthScore >= 40) {
-      healthStatusLabel = "NEEDS ATTENTION";
+        ? "text-emerald-400 bg-emerald-500/10 border-emerald-400/20"
+        : "text-emerald-700 bg-emerald-50 border-emerald-200";
+    } else if (healthScore >= 71) {
+      healthStatusLabel = "STRATEGICALLY FORTIFIED";
       healthStatusColor = d
-        ? "text-orange-400 bg-orange-500/10 border-orange-500/20"
+        ? "text-lime-400 bg-lime-500/10 border-lime-400/20"
+        : "text-lime-700 bg-lime-50 border-lime-200";
+    } else if (healthScore >= 51) {
+      healthStatusLabel = "OPERATIONALLY SOUND";
+      healthStatusColor = d
+        ? "text-amber-400 bg-amber-500/10 border-amber-400/20"
+        : "text-amber-700 bg-amber-50 border-amber-200";
+    } else if (healthScore >= 31) {
+      healthStatusLabel = "FOUNDATIONAL EMERGENT";
+      healthStatusColor = d
+        ? "text-orange-400 bg-orange-500/10 border-orange-400/20"
         : "text-orange-700 bg-orange-50 border-orange-200";
     } else {
-      healthStatusLabel = "CRITICAL RISK";
+      healthStatusLabel = "REACTIVE";
       healthStatusColor = d
-        ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+        ? "text-rose-400 bg-rose-500/10 border-rose-400/20"
         : "text-rose-700 bg-rose-50 border-rose-200";
     }
   }
@@ -311,9 +321,11 @@ export default function ReportsPage() {
     const score = res.totalScore || 0;
     const matchesScore =
       selectedScore === "ALL" ||
-      (selectedScore === "HIGH" && score >= 70) ||
-      (selectedScore === "MEDIUM" && score >= 40 && score < 70) ||
-      (selectedScore === "LOW" && score < 40);
+      (selectedScore === "GREEN" && score >= 91) ||
+      (selectedScore === "LIGHT_GREEN" && score >= 71 && score <= 90) ||
+      (selectedScore === "AMBER" && score >= 51 && score <= 70) ||
+      (selectedScore === "ORANGE" && score >= 31 && score <= 50) ||
+      (selectedScore === "RED" && score <= 30);
 
     // Lock Status
     const matchesStatus =
@@ -574,17 +586,32 @@ export default function ReportsPage() {
 
                 // Normalise scoring band
                 const band = normalizeColorBand(res.colorBand);
-                let badgeLabel: string = band;
+                let badgeLabel = 'Operationally Sound';
                 let badgeStyle = d 
                   ? "bg-amber-500/10 border-amber-500/20 text-amber-400" 
                   : "bg-amber-50 border-amber-200 text-amber-700";
                 if (band === "GREEN") {
-                  badgeLabel = "Healthy";
+                  badgeLabel = "Future-Proofed";
                   badgeStyle = d 
                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
                     : "bg-emerald-50 border-emerald-200 text-emerald-700";
+                } else if (band === "LIGHT_GREEN") {
+                  badgeLabel = "Strategically Fortified";
+                  badgeStyle = d 
+                    ? "bg-lime-500/10 border-lime-500/20 text-lime-400" 
+                    : "bg-lime-50 border-lime-200 text-lime-700";
+                } else if (band === "AMBER") {
+                  badgeLabel = "Operationally Sound";
+                  badgeStyle = d 
+                    ? "bg-amber-500/10 border-amber-500/20 text-amber-400" 
+                    : "bg-amber-50 border-amber-200 text-amber-700";
+                } else if (band === "ORANGE") {
+                  badgeLabel = "Foundational Emergent";
+                  badgeStyle = d 
+                    ? "bg-orange-500/10 border-orange-500/20 text-orange-400" 
+                    : "bg-orange-50 border-orange-200 text-orange-700";
                 } else if (band === "RED") {
-                  badgeLabel = "Critical Risk";
+                  badgeLabel = "Reactive";
                   badgeStyle = d 
                     ? "bg-rose-500/10 border-rose-500/20 text-rose-400" 
                     : "bg-rose-50 border-rose-200 text-rose-700";
