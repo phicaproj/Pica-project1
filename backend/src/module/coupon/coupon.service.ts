@@ -84,11 +84,10 @@ export async function createCouponService(input: CreateCouponInput): Promise<Cou
   // SUBSCRIPTION coupons can optionally narrow to one tier. The Zod refinement
   // already rejects subscriptionPlanId set on non-SUBSCRIPTION plans; we still
   // null-coalesce here so the column is never set on the wrong shape of coupon.
-  const subscriptionPlanId =
-    plan === Plan.SUBSCRIPTION ? (input.subscriptionPlanId ?? null) : null;
+  const subscriptionPlanId = plan === Plan.SUBSCRIPTION ? (input.subscriptionPlanId ?? null) : null;
   // User-scoped coupons are single-use by definition; otherwise honour the
   // admin's cap (Zod already defaulted it to 1 when omitted).
-  const maxUses = (input.userId && !input.isMaster) ? 1 : input.maxUses;
+  const maxUses = input.userId && !input.isMaster ? 1 : input.maxUses;
 
   let userEmail: string | null = null;
   if (input.userId) {
@@ -238,7 +237,12 @@ export async function updateCouponService(
   if (!existing) throw new AppError('Coupon not found', NOT_FOUND);
 
   if (input.maxUses !== undefined) {
-    if (existing.userId && !existing.isMaster && input.maxUses !== undefined && input.maxUses !== 1) {
+    if (
+      existing.userId &&
+      !existing.isMaster &&
+      input.maxUses !== undefined &&
+      input.maxUses !== 1
+    ) {
       throw new AppError(
         'A user-specific coupon can only have 1 use — remove the user to allow more',
         UNPROCESSABLE_CONTENT
@@ -317,7 +321,7 @@ export async function validateAndPriceCoupon(
       amountOff: true,
       percentOff: true,
       isActive: true,
-  isMaster: true,
+      isMaster: true,
       status: true,
       maxUses: true,
       usedCount: true,
@@ -345,12 +349,12 @@ export async function validateAndPriceCoupon(
   // coupon means this user already benefited once.
   if (!coupon.isMaster) {
     const priorUse = await prisma.payment.findFirst({
-    where: {
-      userId,
-      appliedCouponCode: coupon.code,
-      status: PaymentStatus.SUCCESS,
-    },
-    select: { id: true },
+      where: {
+        userId,
+        appliedCouponCode: coupon.code,
+        status: PaymentStatus.SUCCESS,
+      },
+      select: { id: true },
     });
     if (priorUse) {
       throw new AppError('You have already used this coupon', UNPROCESSABLE_CONTENT);
