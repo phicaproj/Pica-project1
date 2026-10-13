@@ -968,14 +968,14 @@ const drawExecutiveSummaryPage = (
     .fillColor(COLORS.green)
     .text('STRUCTURAL STRENGTHS', sx + 12, colY + 12, { characterSpacing: 0.5 });
 
-  const strengths = result.pillarScores.filter((p) => p.weightedScore >= 70);
+  const strengths = result.pillarScores.filter((p) => p.weightedScore >= 71);
   if (strengths.length === 0) {
     doc
       .fontSize(8)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
       .text(
-        'Note: No observed structural strength. Current data indicates that all organizational pillars are operating below the 70% efficiency threshold, requiring immediate foundational intervention.',
+        'Note: No observed structural strength. Current data indicates that all organizational pillars are operating below the 71% efficiency threshold, requiring immediate foundational intervention.',
         sx + 12,
         colY + 35,
         { width: colW - 24, lineGap: 2 }
@@ -1035,14 +1035,14 @@ const drawExecutiveSummaryPage = (
     .fillColor(COLORS.red)
     .text('STRUCTURAL RISKS', rx + 12, colY + 12, { characterSpacing: 0.5 });
 
-  const risks = result.pillarScores.filter((p) => p.weightedScore <= 40);
+  const risks = result.pillarScores.filter((p) => p.weightedScore <= 30);
   if (risks.length === 0) {
     doc
       .fontSize(8)
       .font('Helvetica')
       .fillColor(COLORS.mutedText)
       .text(
-        'Note: No observed structural risk. Current data indicates that all organizational pillars are operating above the 40% criticality threshold, suggesting a stable baseline for further optimization.',
+        'Note: No observed structural risk. Current data indicates that all organizational pillars are operating above the 30% criticality threshold, suggesting a stable baseline for further optimization.',
         rx + 12,
         colY + 35,
         { width: colW - 24, lineGap: 2 }
@@ -1198,24 +1198,54 @@ const drawExecutiveSummaryPage = (
 // top-right score donut, ending with the divider at Y=152. Used by both the
 // full pillar page (Phase 1 / 2A) and the Phase 2B action-plan page so the
 // header treatment stays identical across phases.
+const getPillarArchitectureTier = (score: number) => {
+  if (score >= 91) return 'future-proofed';
+  if (score >= 71) return 'strategically fortified';
+  if (score >= 51) return 'operationally sound';
+  if (score >= 31) return 'foundational emergent';
+  return 'reactive';
+};
+
 const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayload) => {
   const COLORS = getColors(doc);
   const badgeY = 80;
 
-  // Draw status pill based on score/knockout
   const isGreen = pillar.weightedScore >= 71 && !pillar.hasKnockout;
   const isAmber = pillar.weightedScore >= 41 && pillar.weightedScore < 71 && !pillar.hasKnockout;
 
-  const badgeText = isGreen
-    ? 'TOP STRENGTH'
-    : isAmber
-      ? 'STABILIZING'
-      : 'CRITICAL UNDERPERFORMANCE';
-  const badgeColor = isGreen ? COLORS.greenBorder : isAmber ? COLORS.amberBorder : COLORS.redBorder; // Solid color for fill
-  const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12; // Dynamic width with 6pt padding on left/right
+  // Draw status pill based on 5-tier scoring and knockout
+  let badgeText = 'CRITICAL UNDERPERFORMANCE';
+  let badgeColor = COLORS.redBorder;
+  let statusBoxColor = COLORS.red;
+  let boxBg = COLORS.redBg;
+
+  if (!pillar.hasKnockout) {
+    if (pillar.weightedScore >= 91) {
+      badgeText = 'FUTURE-PROOFED';
+      badgeColor = COLORS.greenBorder;
+      statusBoxColor = COLORS.green;
+      boxBg = COLORS.greenBg;
+    } else if (pillar.weightedScore >= 71) {
+      badgeText = 'STRATEGICALLY FORTIFIED';
+      badgeColor = '#4ADE80';
+      statusBoxColor = '#166534';
+      boxBg = '#DCFCE7';
+    } else if (pillar.weightedScore >= 51) {
+      badgeText = 'OPERATIONALLY SOUND';
+      badgeColor = COLORS.amberBorder;
+      statusBoxColor = COLORS.amber;
+      boxBg = COLORS.amberBg;
+    } else if (pillar.weightedScore >= 31) {
+      badgeText = 'FOUNDATIONAL EMERGENT';
+      badgeColor = '#F97316';
+      statusBoxColor = '#C2410C';
+      boxBg = '#FFEDD5';
+    }
+  }
+
+  const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12;
 
   // Draw left check/warning square box with radius 3
-  const statusBoxColor = isGreen ? COLORS.green : isAmber ? COLORS.amber : COLORS.red;
   roundedRect(
     doc,
     PAGE_MARGIN,
@@ -1223,7 +1253,7 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
     14,
     14,
     3,
-    isGreen ? COLORS.greenBg : isAmber ? COLORS.amberBg : COLORS.redBg,
+    boxBg,
     statusBoxColor
   );
   drawShieldIcon(doc, PAGE_MARGIN + 2, badgeY + 2, 10, statusBoxColor);
@@ -1338,7 +1368,7 @@ const drawPillar2BPage = (
   const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
 
   // Shifted recommendation to the next line using a single newline (\n) without paragraphing
-  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${getPillarArchitectureTier(pillar.weightedScore)} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
 
   // Dynamically compute explanation height and the card's height to prevent overlaps
   const explanationH = doc
@@ -1615,20 +1645,42 @@ const drawPillarPage = (
 
   const badgeY = 80;
 
-  // Draw status pill based on score/knockout
   const isGreen = pillar.weightedScore >= 71 && !pillar.hasKnockout;
   const isAmber = pillar.weightedScore >= 41 && pillar.weightedScore < 71 && !pillar.hasKnockout;
 
-  const badgeText = isGreen
-    ? 'TOP STRENGTH'
-    : isAmber
-      ? 'STABILIZING'
-      : 'CRITICAL UNDERPERFORMANCE';
-  const badgeColor = isGreen ? COLORS.greenBorder : isAmber ? COLORS.amberBorder : COLORS.redBorder; // Solid color for fill
-  const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12; // Dynamic width with 6pt padding on left/right
+  // Draw status pill based on 5-tier scoring and knockout
+  let badgeText = 'CRITICAL UNDERPERFORMANCE';
+  let badgeColor = COLORS.redBorder;
+  let statusBoxColor = COLORS.red;
+  let boxBg = COLORS.redBg;
+
+  if (!pillar.hasKnockout) {
+    if (pillar.weightedScore >= 91) {
+      badgeText = 'FUTURE-PROOFED';
+      badgeColor = COLORS.greenBorder;
+      statusBoxColor = COLORS.green;
+      boxBg = COLORS.greenBg;
+    } else if (pillar.weightedScore >= 71) {
+      badgeText = 'STRATEGICALLY FORTIFIED';
+      badgeColor = '#4ADE80';
+      statusBoxColor = '#166534';
+      boxBg = '#DCFCE7';
+    } else if (pillar.weightedScore >= 51) {
+      badgeText = 'OPERATIONALLY SOUND';
+      badgeColor = COLORS.amberBorder;
+      statusBoxColor = COLORS.amber;
+      boxBg = COLORS.amberBg;
+    } else if (pillar.weightedScore >= 31) {
+      badgeText = 'FOUNDATIONAL EMERGENT';
+      badgeColor = '#F97316';
+      statusBoxColor = '#C2410C';
+      boxBg = '#FFEDD5';
+    }
+  }
+
+  const badgeW = doc.font('Helvetica-Bold').fontSize(6.5).widthOfString(badgeText) + 12;
 
   // Draw left check/warning square box with radius 3
-  const statusBoxColor = isGreen ? COLORS.green : isAmber ? COLORS.amber : COLORS.red;
   roundedRect(
     doc,
     PAGE_MARGIN,
@@ -1636,7 +1688,7 @@ const drawPillarPage = (
     14,
     14,
     3,
-    isGreen ? COLORS.greenBg : isAmber ? COLORS.amberBg : COLORS.redBg,
+    boxBg,
     statusBoxColor
   );
   drawShieldIcon(doc, PAGE_MARGIN + 2, badgeY + 2, 10, statusBoxColor);
@@ -1725,7 +1777,7 @@ const drawPillarPage = (
   const isActionPlan = (highestScored?.actionPlanItems?.length ?? 0) > 0;
 
   // Shifted recommendation to the next line using a single newline (\n) without paragraphing
-  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${pillar.weightedScore >= 71 ? 'strong' : pillar.weightedScore >= 51 ? 'stable' : 'reactive'} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
+  const explanation = `Your ${pillar.pillarName.toLowerCase()} architecture is operating at a ${getPillarArchitectureTier(pillar.weightedScore)} level.\n${isActionPlan && !pillar.pillarRecommendation ? 'Priority Action' : 'Recommendation'}: ${highestRec}`;
 
   // Dynamically compute explanation height and the card's height to prevent overlaps
   const explanationH = doc

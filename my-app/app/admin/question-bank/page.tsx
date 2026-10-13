@@ -2158,17 +2158,26 @@ export default function QuestionBankPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                  Overall Recommendation / Summary Description
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase text-gray-500">
+                    Overall Recommendation / Summary Description
+                  </label>
+                  <span className={`text-[11px] ${labelDraft.description.length >= 260 ? 'text-amber-400 font-semibold' : 'text-gray-400'}`}>
+                    {labelDraft.description.length} / 280 chars ({labelDraft.description.trim() ? labelDraft.description.trim().split(/\s+/).length : 0} words)
+                  </span>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={5}
+                  maxLength={280}
                   disabled={!hasWriteAccess}
                   value={labelDraft.description}
                   onChange={(e) => setLabelDraft({ ...labelDraft, description: e.target.value })}
-                  placeholder="Enter the detailed recommendation copy..."
+                  placeholder="Enter the overall recommendation copy (max 280 characters to fit Page 2 PDF layout)..."
                   className={textareaClass}
                 />
+                <p className="mt-1.5 text-[11px] text-gray-500">
+                  Capped at 280 characters (~45 words) to ensure the summary fits neatly on Page 2 of the PDF without breaking the layout.
+                </p>
               </div>
             </div>
 
@@ -2275,16 +2284,25 @@ export default function QuestionBankPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                  Overall Recommendation / Summary Description
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase text-gray-500">
+                    Overall Recommendation / Summary Description
+                  </label>
+                  <span className={`text-[11px] ${createLabelDraft.description.length >= 260 ? 'text-amber-400 font-semibold' : 'text-gray-400'}`}>
+                    {createLabelDraft.description.length} / 280 chars ({createLabelDraft.description.trim() ? createLabelDraft.description.trim().split(/\s+/).length : 0} words)
+                  </span>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={5}
+                  maxLength={280}
                   value={createLabelDraft.description}
                   onChange={(e) => setCreateLabelDraft({ ...createLabelDraft, description: e.target.value })}
-                  placeholder="Enter the detailed recommendation copy..."
+                  placeholder="Enter the overall recommendation copy (max 280 characters to fit Page 2 PDF layout)..."
                   className={textareaClass}
                 />
+                <p className="mt-1.5 text-[11px] text-gray-500">
+                  Capped at 280 characters (~45 words) to ensure the summary fits neatly on Page 2 of the PDF without breaking the layout.
+                </p>
               </div>
             </div>
 
@@ -2392,17 +2410,26 @@ export default function QuestionBankPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                  Overall Recommendation / Summary Description
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase text-gray-500">
+                    Pillar Recommendation / Description
+                  </label>
+                  <span className={`text-[11px] ${pillarLabelDraft.description.length >= 230 ? 'text-amber-400 font-semibold' : 'text-gray-400'}`}>
+                    {pillarLabelDraft.description.length} / 250 chars ({pillarLabelDraft.description.trim() ? pillarLabelDraft.description.trim().split(/\s+/).length : 0} words)
+                  </span>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={5}
+                  maxLength={250}
                   disabled={!hasWriteAccess}
                   value={pillarLabelDraft.description}
                   onChange={(e) => setPillarLabelDraft({ ...pillarLabelDraft, description: e.target.value })}
-                  placeholder="Enter the detailed recommendation copy..."
+                  placeholder="Enter the strategic recommendation for this pillar (max 250 characters)..."
                   className={textareaClass}
                 />
+                <p className="mt-1.5 text-[11px] text-gray-500">
+                  Capped at 250 characters (~40 words) to prevent PDF card overflow across report pages.
+                </p>
               </div>
             </div>
 
@@ -2527,16 +2554,25 @@ export default function QuestionBankPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-xs font-semibold uppercase text-gray-500">
-                  Overall Recommendation / Summary Description
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase text-gray-500">
+                    Pillar Recommendation / Description
+                  </label>
+                  <span className={`text-[11px] ${createPillarLabelDraft.description.length >= 230 ? 'text-amber-400 font-semibold' : 'text-gray-400'}`}>
+                    {createPillarLabelDraft.description.length} / 250 chars ({createPillarLabelDraft.description.trim() ? createPillarLabelDraft.description.trim().split(/\s+/).length : 0} words)
+                  </span>
+                </div>
                 <textarea
-                  rows={6}
+                  rows={5}
+                  maxLength={250}
                   value={createPillarLabelDraft.description}
                   onChange={(e) => setCreatePillarLabelDraft({ ...createPillarLabelDraft, description: e.target.value })}
-                  placeholder="Enter the detailed recommendation copy..."
+                  placeholder="Enter the strategic recommendation for this pillar (max 250 characters)..."
                   className={textareaClass}
                 />
+                <p className="mt-1.5 text-[11px] text-gray-500">
+                  Capped at 250 characters (~40 words) to prevent PDF card overflow across report pages.
+                </p>
               </div>
             </div>
 

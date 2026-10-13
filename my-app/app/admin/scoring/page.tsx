@@ -599,6 +599,14 @@ export default function ScoringPage() {
                         className={`flex-1 min-w-0 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold uppercase focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed ${band.labelColor}`}
                       />
                     </div>
+                    <div className="flex items-center justify-between mt-2 mb-1">
+                      <span className="text-[10px] text-gray-500 uppercase font-semibold">
+                        Overall Band Description (Page 2 PDF Summary)
+                      </span>
+                      <span className={`text-[10px] ${bandDrafts[band.key].description.length >= 180 ? 'text-amber-400 font-semibold' : 'text-gray-500'}`}>
+                        {bandDrafts[band.key].description.length} / 200 chars
+                      </span>
+                    </div>
                     <input
                       type="text"
                       maxLength={200}
