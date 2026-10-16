@@ -2,6 +2,7 @@
 
 import { useToast } from "@/components/ToastContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
@@ -13,6 +14,7 @@ import {
   Scale,
 } from "lucide-react";
 import {
+  clearSession,
   getAdminPillarsDetailed,
   getScoringSettings,
   saveAdminPillarWeights,
@@ -45,6 +47,7 @@ type BandDraft = {
 };
 
 export default function ScoringPage() {
+  const router = useRouter();
   const [pillars, setPillars] = useState<AdminPillarDetailed[]>([]);
   const [settings, setSettings] = useState<ScoringSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,6 +84,20 @@ export default function ScoringPage() {
       getScoringSettings(),
     ]);
 
+    const isUnauthorized =
+      pillarsRes.error?.message?.includes("401") ||
+      settingsRes.error?.message?.includes("401") ||
+      pillarsRes.error?.message?.toLowerCase().includes("not authenticated") ||
+      settingsRes.error?.message?.toLowerCase().includes("not authenticated") ||
+      pillarsRes.error?.message?.toLowerCase().includes("expired token") ||
+      settingsRes.error?.message?.toLowerCase().includes("expired token");
+
+    if (isUnauthorized) {
+      clearSession();
+      router.replace("/admin/login");
+      return;
+    }
+
     if (pillarsRes.error || settingsRes.error) {
       setError(
         pillarsRes.error?.message ||
@@ -100,20 +117,20 @@ export default function ScoringPage() {
     if (settingsRes.data) {
       const s = settingsRes.data.settings;
       setSettings(s);
-      setOrangeMinDraft(String(s.orangeMin));
-      setAmberMinDraft(String(s.amberMin));
-      setLightGreenMinDraft(String(s.lightGreenMin));
-      setGreenMinDraft(String(s.greenMin));
+      setOrangeMinDraft(String(s.orangeMin ?? 31));
+      setAmberMinDraft(String(s.amberMin ?? 51));
+      setLightGreenMinDraft(String(s.lightGreenMin ?? 71));
+      setGreenMinDraft(String(s.greenMin ?? 91));
       setBandDrafts({
-        red: { label: s.redLabel, description: s.redDescription },
-        orange: { label: s.orangeLabel, description: s.orangeDescription },
-        amber: { label: s.amberLabel, description: s.amberDescription },
-        lightGreen: { label: s.lightGreenLabel, description: s.lightGreenDescription },
-        green: { label: s.greenLabel, description: s.greenDescription },
+        red: { label: s.redLabel ?? "Reactive", description: s.redDescription ?? "" },
+        orange: { label: s.orangeLabel ?? "Foundational Emergent", description: s.orangeDescription ?? "" },
+        amber: { label: s.amberLabel ?? "Operationally Sound", description: s.amberDescription ?? "" },
+        lightGreen: { label: s.lightGreenLabel ?? "Strategically Fortified", description: s.lightGreenDescription ?? "" },
+        green: { label: s.greenLabel ?? "Future-Proofed", description: s.greenDescription ?? "" },
       });
     }
     setLoading(false);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     void loadData();
@@ -129,20 +146,20 @@ export default function ScoringPage() {
   const settingsDirty = useMemo(() => {
     if (!settings) return false;
     return (
-      Number(orangeMinDraft) !== settings.orangeMin ||
-      Number(amberMinDraft) !== settings.amberMin ||
-      Number(lightGreenMinDraft) !== settings.lightGreenMin ||
-      Number(greenMinDraft) !== settings.greenMin ||
-      bandDrafts.red.label !== settings.redLabel ||
-      bandDrafts.red.description !== settings.redDescription ||
-      bandDrafts.orange.label !== settings.orangeLabel ||
-      bandDrafts.orange.description !== settings.orangeDescription ||
-      bandDrafts.amber.label !== settings.amberLabel ||
-      bandDrafts.amber.description !== settings.amberDescription ||
-      bandDrafts.lightGreen.label !== settings.lightGreenLabel ||
-      bandDrafts.lightGreen.description !== settings.lightGreenDescription ||
-      bandDrafts.green.label !== settings.greenLabel ||
-      bandDrafts.green.description !== settings.greenDescription
+      Number(orangeMinDraft) !== (settings.orangeMin ?? 31) ||
+      Number(amberMinDraft) !== (settings.amberMin ?? 51) ||
+      Number(lightGreenMinDraft) !== (settings.lightGreenMin ?? 71) ||
+      Number(greenMinDraft) !== (settings.greenMin ?? 91) ||
+      (bandDrafts.red?.label ?? "") !== (settings.redLabel ?? "") ||
+      (bandDrafts.red?.description ?? "") !== (settings.redDescription ?? "") ||
+      (bandDrafts.orange?.label ?? "") !== (settings.orangeLabel ?? "") ||
+      (bandDrafts.orange?.description ?? "") !== (settings.orangeDescription ?? "") ||
+      (bandDrafts.amber?.label ?? "") !== (settings.amberLabel ?? "") ||
+      (bandDrafts.amber?.description ?? "") !== (settings.amberDescription ?? "") ||
+      (bandDrafts.lightGreen?.label ?? "") !== (settings.lightGreenLabel ?? "") ||
+      (bandDrafts.lightGreen?.description ?? "") !== (settings.lightGreenDescription ?? "") ||
+      (bandDrafts.green?.label ?? "") !== (settings.greenLabel ?? "") ||
+      (bandDrafts.green?.description ?? "") !== (settings.greenDescription ?? "")
     );
   }, [settings, orangeMinDraft, amberMinDraft, lightGreenMinDraft, greenMinDraft, bandDrafts]);
 
@@ -183,8 +200,9 @@ export default function ScoringPage() {
       }
       
       for (const key of ["red", "orange", "amber", "lightGreen", "green"] as BandKey[]) {
-        if (!bandDrafts[key].label.trim()) return "Band labels cannot be empty.";
-        if (!bandDrafts[key].description.trim()) {
+        const draft = bandDrafts[key] ?? { label: "", description: "" };
+        if (!(draft.label ?? "").trim()) return "Band labels cannot be empty.";
+        if (!(draft.description ?? "").trim()) {
           return "Band descriptions cannot be empty.";
         }
       }
@@ -222,16 +240,16 @@ export default function ScoringPage() {
         amberMin: Number(amberMinDraft),
         lightGreenMin: Number(lightGreenMinDraft),
         greenMin: Number(greenMinDraft),
-        redLabel: bandDrafts.red.label.trim(),
-        redDescription: bandDrafts.red.description.trim(),
-        orangeLabel: bandDrafts.orange.label.trim(),
-        orangeDescription: bandDrafts.orange.description.trim(),
-        amberLabel: bandDrafts.amber.label.trim(),
-        amberDescription: bandDrafts.amber.description.trim(),
-        lightGreenLabel: bandDrafts.lightGreen.label.trim(),
-        lightGreenDescription: bandDrafts.lightGreen.description.trim(),
-        greenLabel: bandDrafts.green.label.trim(),
-        greenDescription: bandDrafts.green.description.trim(),
+        redLabel: (bandDrafts.red?.label ?? "").trim(),
+        redDescription: (bandDrafts.red?.description ?? "").trim(),
+        orangeLabel: (bandDrafts.orange?.label ?? "").trim(),
+        orangeDescription: (bandDrafts.orange?.description ?? "").trim(),
+        amberLabel: (bandDrafts.amber?.label ?? "").trim(),
+        amberDescription: (bandDrafts.amber?.description ?? "").trim(),
+        lightGreenLabel: (bandDrafts.lightGreen?.label ?? "").trim(),
+        lightGreenDescription: (bandDrafts.lightGreen?.description ?? "").trim(),
+        greenLabel: (bandDrafts.green?.label ?? "").trim(),
+        greenDescription: (bandDrafts.green?.description ?? "").trim(),
       });
       if (res.error) {
         setError(res.error.message);
@@ -249,16 +267,16 @@ export default function ScoringPage() {
   const handleReset = () => {
     setWeightDraft(Object.fromEntries(pillars.map((p) => [p.id, p.weight])));
     if (settings) {
-      setOrangeMinDraft(String(settings.orangeMin));
-      setAmberMinDraft(String(settings.amberMin));
-      setLightGreenMinDraft(String(settings.lightGreenMin));
-      setGreenMinDraft(String(settings.greenMin));
+      setOrangeMinDraft(String(settings.orangeMin ?? 31));
+      setAmberMinDraft(String(settings.amberMin ?? 51));
+      setLightGreenMinDraft(String(settings.lightGreenMin ?? 71));
+      setGreenMinDraft(String(settings.greenMin ?? 91));
       setBandDrafts({
-        red: { label: settings.redLabel, description: settings.redDescription },
-        orange: { label: settings.orangeLabel, description: settings.orangeDescription },
-        amber: { label: settings.amberLabel, description: settings.amberDescription },
-        lightGreen: { label: settings.lightGreenLabel, description: settings.lightGreenDescription },
-        green: { label: settings.greenLabel, description: settings.greenDescription },
+        red: { label: settings.redLabel ?? "Reactive", description: settings.redDescription ?? "" },
+        orange: { label: settings.orangeLabel ?? "Foundational Emergent", description: settings.orangeDescription ?? "" },
+        amber: { label: settings.amberLabel ?? "Operationally Sound", description: settings.amberDescription ?? "" },
+        lightGreen: { label: settings.lightGreenLabel ?? "Strategically Fortified", description: settings.lightGreenDescription ?? "" },
+        green: { label: settings.greenLabel ?? "Future-Proofed", description: settings.greenDescription ?? "" },
       });
     }
     setError(null);
@@ -574,53 +592,59 @@ export default function ScoringPage() {
 
           {/* Bands */}
           <div className="space-y-3">
-            {bands.map((band) => (
-              <div
-                key={band.key}
-                className={`rounded-xl border p-4 ${band.border}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-1 h-16 rounded-full flex-shrink-0 mt-1 ${band.barColor}`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-gray-400 flex-shrink-0">
-                        {band.range}:
-                      </span>
+            {bands.map((band) => {
+              const currentDraft = bandDrafts[band.key] ?? { label: "", description: "" };
+              const desc = currentDraft.description ?? "";
+              const label = currentDraft.label ?? "";
+
+              return (
+                <div
+                  key={band.key}
+                  className={`rounded-xl border p-4 ${band.border}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`w-1 h-16 rounded-full flex-shrink-0 mt-1 ${band.barColor}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-gray-400 flex-shrink-0">
+                          {band.range}:
+                        </span>
+                        <input
+                          type="text"
+                          maxLength={50}
+                          value={label}
+                          disabled={!isEditing}
+                          onChange={(e) =>
+                            setBandDraft(band.key, { label: e.target.value })
+                          }
+                          className={`flex-1 min-w-0 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold uppercase focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed ${band.labelColor}`}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-2 mb-1">
+                        <span className="text-[10px] text-gray-500 uppercase font-semibold">
+                          Overall Band Description (Page 2 PDF Summary)
+                        </span>
+                        <span className={`text-[10px] ${desc.length >= 180 ? 'text-amber-400 font-semibold' : 'text-gray-500'}`}>
+                          {desc.length} / 200 chars
+                        </span>
+                      </div>
                       <input
                         type="text"
-                        maxLength={50}
-                        value={bandDrafts[band.key].label}
+                        maxLength={200}
+                        value={desc}
                         disabled={!isEditing}
                         onChange={(e) =>
-                          setBandDraft(band.key, { label: e.target.value })
+                          setBandDraft(band.key, { description: e.target.value })
                         }
-                        className={`flex-1 min-w-0 px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs font-bold uppercase focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed ${band.labelColor}`}
+                        className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400 focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                     </div>
-                    <div className="flex items-center justify-between mt-2 mb-1">
-                      <span className="text-[10px] text-gray-500 uppercase font-semibold">
-                        Overall Band Description (Page 2 PDF Summary)
-                      </span>
-                      <span className={`text-[10px] ${bandDrafts[band.key].description.length >= 180 ? 'text-amber-400 font-semibold' : 'text-gray-500'}`}>
-                        {bandDrafts[band.key].description.length} / 200 chars
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={200}
-                      value={bandDrafts[band.key].description}
-                      disabled={!isEditing}
-                      onChange={(e) =>
-                        setBandDraft(band.key, { description: e.target.value })
-                      }
-                      className="w-full px-2 py-1 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400 focus:outline-none focus:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
-                    />
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <p className="text-[11px] text-gray-600 mt-6">

@@ -73,12 +73,18 @@ const bandDescription = z.string().trim().min(1, 'description is required').max(
 
 export const updateScoringSettingsSchema = z
   .object({
+    orangeMin: bandCutoff.optional(),
     amberMin: bandCutoff.optional(),
+    lightGreenMin: bandCutoff.optional(),
     greenMin: bandCutoff.optional(),
     redLabel: bandLabel.optional(),
     redDescription: bandDescription.optional(),
+    orangeLabel: bandLabel.optional(),
+    orangeDescription: bandDescription.optional(),
     amberLabel: bandLabel.optional(),
     amberDescription: bandDescription.optional(),
+    lightGreenLabel: bandLabel.optional(),
+    lightGreenDescription: bandDescription.optional(),
     greenLabel: bandLabel.optional(),
     greenDescription: bandDescription.optional(),
     phase2aQuestionLimit: z.number().int().min(1).max(200).optional(),
@@ -93,14 +99,22 @@ export type UpdateScoringSettingsInput = z.infer<typeof updateScoringSettingsSch
 export type ScoringSettingsResponse = {
   message: string;
   settings: {
+    orangeMin: number;
     amberMin: number;
+    lightGreenMin: number;
     greenMin: number;
     redLabel: string;
     redDescription: string;
+    orangeLabel: string;
+    orangeDescription: string;
     amberLabel: string;
     amberDescription: string;
+    lightGreenLabel: string;
+    lightGreenDescription: string;
     greenLabel: string;
     greenDescription: string;
+    phase2aQuestionLimit: number;
+    phase2bQuestionLimit: number;
     updatedAt: string;
   };
 };
