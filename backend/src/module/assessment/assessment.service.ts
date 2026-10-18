@@ -652,9 +652,11 @@ async function submitPhase2AService(sessionId: string): Promise<SubmitAssessment
 }
 
 /**
- * Creates (or resumes) a Phase 2A session for an authenticated user. Snapshots the
- * 70 question IDs (deterministic by displayOrder) onto the session so the user's set
- * is frozen against admin edits.
+ * Creates (or resumes) a Phase 2A session for an authenticated user. Randomly
+ * selects the question IDs and snapshots them onto the session so the user's set is
+ * frozen against admin edits. Questions the user already answered in Phase 1 are excluded entirely; if a
+ * pillar's remaining pool is too small to meet its quota, the shortfall is
+ * redistributed to other pillars rather than re-asking answered questions.
  */
 export async function startPhase2AService(userId: string): Promise<StartPhase2AResponse> {
   const user = await prisma.user.findUnique({
@@ -700,8 +702,25 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
     };
   }
 
-  // Snapshot active PHASE2A question for the user's businessSize, ordered by
-  // pillar then question displayOrder. Gated by configured limit per pillar.
+  // Retrieve all question IDs this user already answered in Phase 1 (1A)
+  // so they are not asked the same questions again during Phase 2A.
+  const phase1Responses = await prisma.sessionResponse.findMany({
+    where: {
+      session: {
+        phase: Phase.PHASE1,
+        OR: [
+          { userId: user.id },
+          { leadEmail: user.email },
+          { leadEmail: user.email.toLowerCase().trim() },
+        ],
+      },
+    },
+    select: { questionId: true },
+  });
+  const answeredInPhase1Ids = new Set(phase1Responses.map((r) => r.questionId));
+
+  // Snapshot active PHASE2A questions for the user's businessSize, ordered by
+  // pillar then question displayOrder. Prioritizes fresh questions not answered in 1A.
   const pillars = await prisma.pillar.findMany({
     where: { isActive: true },
     select: {
@@ -722,18 +741,44 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
   const settings = await prisma.scoringSettings.findFirst();
   const targetLimit = settings?.phase2aQuestionLimit ?? 40;
 
-  // Split the target across pillars as evenly as possible. flooring alone
+  // Split the target across pillars as evenly as possible. Flooring alone
   // silently drops the remainder (e.g. 40/7 -> 5 each = 35), so hand the
-  // leftover to the first pillars: quotas differ by at most 1, keeping the
-  // set balanced without back-filling a short pillar from another one.
+  // leftover to the first pillars: quotas differ by at most 1.
   const numPillars = Math.max(pillars.length, 1);
   const baseQuota = Math.floor(targetLimit / numPillars);
   const remainder = targetLimit % numPillars;
 
-  const selectedQuestionIds = pillars.flatMap((p, i) => {
-    const quota = baseQuota + (i < remainder ? 1 : 0);
-    return p.questions.slice(0, quota).map((q) => q.id);
-  });
+  // Questions already answered in Phase 1 are excluded entirely so the user is
+  // never asked the same question twice. Shuffle each pillar's pool so the
+  // picked questions vary between attempts (matches Phase 1's selection).
+  const freshPools = pillars.map((p) =>
+    p.questions.filter((q) => !answeredInPhase1Ids.has(q.id)).sort(() => Math.random() - 0.5)
+  );
+  const quotas = freshPools.map((_, i) => baseQuota + (i < remainder ? 1 : 0));
+  const takeCounts = freshPools.map((pool, i) => Math.min(pool.length, quotas[i]));
+
+  // Safeguard: a pillar whose fresh pool is smaller than its quota leaves the
+  // set short. Redistribute that shortfall to pillars that still have
+  // unanswered questions, round-robin so the extra load spreads out rather
+  // than landing on the first pillar with spare capacity. If the entire fresh
+  // pool is exhausted the session carries fewer questions — we never fall back
+  // to re-asking Phase 1 questions.
+  let shortfall = quotas.reduce((sum, quota, i) => sum + (quota - takeCounts[i]), 0);
+  while (shortfall > 0) {
+    let redistributed = false;
+    for (let i = 0; i < freshPools.length && shortfall > 0; i++) {
+      if (takeCounts[i] < freshPools[i].length) {
+        takeCounts[i] += 1;
+        shortfall -= 1;
+        redistributed = true;
+      }
+    }
+    if (!redistributed) break;
+  }
+
+  const selectedQuestionIds = freshPools.flatMap((pool, i) =>
+    pool.slice(0, takeCounts[i]).map((q) => q.id)
+  );
 
   if (selectedQuestionIds.length === 0) {
     throw new AppError(

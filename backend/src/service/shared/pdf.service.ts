@@ -10,7 +10,7 @@ import type {
 } from '../../module/scoring/scoring.types';
 
 // ============================================================
-// CONSTANTS â€” PICA brand palette
+// CONSTANTS — PICA brand palette
 // ============================================================
 const COLORS = {
   primary: '#111827', // PICA dark navy
@@ -79,58 +79,47 @@ const drawPageBackground = (doc: PDFKit.PDFDocument) => {
   }
 };
 
-// Logo lives in the assets folder
-const LOGO_PATH = path.join(process.cwd(), 'assets', 'logo.png');
-const LOGO_BUFFER: Buffer | null = (() => {
-  try {
-    return fs.readFileSync(LOGO_PATH);
-  } catch {
-    return null;
-  }
-})();
-
-// Cover Page Image
-const COVER_PATH = path.join(process.cwd(), 'assets', 'cover.png');
-const COVER_BUFFER: Buffer | null = (() => {
-  try {
-    return fs.readFileSync(COVER_PATH);
-  } catch {
+// Resolve a bundled asset regardless of the process working directory.
+// `process.cwd()` is unreliable: `npm run dev`/`start` run from backend/, some
+// launchers use the repo root, and the compiled bundle lives under dist/. Walk a
+// few known locations and fall back to the sibling "PDF report design" folder.
+const loadAsset = (filename: string, extraCandidates: string[] = []): Buffer | null => {
+  const candidates = [
+    path.join(process.cwd(), 'assets', filename),
+    path.join(__dirname, '..', '..', '..', 'assets', filename),
+    path.join(__dirname, '..', '..', '..', '..', 'assets', filename),
+    ...extraCandidates,
+  ];
+  for (const candidate of candidates) {
     try {
-      return fs.readFileSync(
-        path.join(process.cwd(), '..', 'PDF report design', 'Cover page image.png')
-      );
+      return fs.readFileSync(candidate);
     } catch {
-      return null;
+      // Try the next candidate location.
     }
   }
-})();
+  return null;
+};
+
+// Logo lives in the assets folder
+const LOGO_BUFFER: Buffer | null = loadAsset('logo.png');
+
+// Cover Page Image (falls back to the design source folder when assets is absent)
+const COVER_BUFFER: Buffer | null = loadAsset('cover.png', [
+  path.join(process.cwd(), '..', 'PDF report design', 'Cover page image.png'),
+]);
 
 // Pillar page image for right visual block
-const PILLAR_IMG_PATH = path.join(process.cwd(), 'assets', 'pillarPage-image.png');
-const PILLAR_IMG_BUFFER: Buffer | null = (() => {
-  try {
-    return fs.readFileSync(PILLAR_IMG_PATH);
-  } catch {
-    return null;
-  }
-})();
+const PILLAR_IMG_BUFFER: Buffer | null = loadAsset('pillarPage-image.png');
 
 // Next Steps building image
-const BUILDING_IMG_PATH = path.join(process.cwd(), 'assets', 'building-image.png');
-const BUILDING_IMG_BUFFER: Buffer | null = (() => {
-  try {
-    return fs.readFileSync(BUILDING_IMG_PATH);
-  } catch {
-    return null;
-  }
-})();
+const BUILDING_IMG_BUFFER: Buffer | null = loadAsset('building-image.png');
 
-// Phase â†’ human label shown on the cover + summary header. Uses the agreed
+// Phase → human label shown on the cover + summary header. Uses the agreed
 // commercial nomenclature (no internal "Phase 2A/2B" wording in any output).
 const phaseLabel = (phase: Phase): string => {
-  if (phase === Phase.PHASE2A) return 'PICA Strategic Scan â€“ Structured Diagnosis';
-  if (phase === Phase.PHASE2B) return 'PICA Deep Dive â€“ In-Depth Audit';
-  return 'PICA Business Snapshot â€“ Assessment';
+  if (phase === Phase.PHASE2A) return 'PICA Strategic Scan – Structured Diagnosis';
+  if (phase === Phase.PHASE2B) return 'PICA Deep Dive – In-Depth Audit';
+  return 'PICA Business Snapshot – Assessment';
 };
 
 const getPdfBandDetails = (score: number, hasKnockout: boolean) => {
@@ -452,7 +441,7 @@ const drawHeader = (
       .fontSize(11)
       .font('Helvetica-Bold')
       .fillColor(COLORS.white)
-      .text('CRITICAL SURVIVAL ALERT â€” ACTION REQUIRED IMMEDIATELY', 0, 19, {
+      .text('CRITICAL SURVIVAL ALERT — ACTION REQUIRED IMMEDIATELY', 0, 19, {
         align: 'center',
         width: doc.page.width,
       });
@@ -530,7 +519,7 @@ const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: s
     .fontSize(8)
     .font('Helvetica')
     .fillColor(COLORS.mutedText)
-    .text(`Â© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
+    .text(`© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
       align: 'left',
       width: COLORS.pageWidth / 2,
       lineBreak: false,
@@ -600,7 +589,7 @@ const drawCoverPage = (
     .fontSize(28)
     .font('Helvetica-Bold')
     .fillColor(COLORS.primary)
-    .text('PICA â€“ Business Health', PAGE_MARGIN, 130, {
+    .text('PICA – Business Health', PAGE_MARGIN, 130, {
       width: COLORS.pageWidth,
       align: 'center',
     });
@@ -698,7 +687,7 @@ const drawCoverPage = (
     .text(businessName, textStartX, gridY + 10, { width: 145 });
 
   const pillY = Math.max(gridY + 28, doc.y + 4);
-  const sizeText = metadata?.businessSize === 'SMALL' ? 'â— Small Business' : 'â— Medium Business';
+  const sizeText = metadata?.businessSize === 'SMALL' ? '• Small Business' : '• Medium Business';
   const pillW = 85;
   roundedRect(doc, textStartX, pillY, pillW, 14, 3, '#EEF2F6', '#E2E8F0');
   doc
@@ -1288,7 +1277,7 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
   // Description text under the title. Admin-editable via
-  // PATCH /api/admin/pillars/:id/copy â€” never hardcode report copy here.
+  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
   const descText =
     pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
@@ -1326,7 +1315,7 @@ const drawPillarIdentity = (doc: PDFKit.PDFDocument, pillar: ScoringPillarPayloa
 };
 
 // ============================================================
-// PHASE 2B PILLAR PAGE â€” observation + N-Day Action Plan blocks
+// PHASE 2B PILLAR PAGE — observation + N-Day Action Plan blocks
 // ============================================================
 //
 // Unlike the Phase 1 / 2A pillar page (fixed single-page layout with the
@@ -1532,7 +1521,7 @@ const drawPillar2BPage = (
   // 3. Observations & Audit Summary Section Title
   drawSectionTitle(doc, 'Observations & Audit Summary');
 
-  // Pull up to 6 findings, already priority-ordered (KNOCKOUT â†’ RISK â†’ NORMAL)
+  // Pull up to 6 findings, already priority-ordered (KNOCKOUT → RISK → NORMAL)
   const findings = findingsToRender.slice(0, 6);
 
   const cardX = PAGE_MARGIN;
@@ -1723,7 +1712,7 @@ const drawPillarPage = (
     .text(pillar.pillarName, PAGE_MARGIN, nameY);
 
   // Description text under the title. Admin-editable via
-  // PATCH /api/admin/pillars/:id/copy â€” never hardcode report copy here.
+  // PATCH /api/admin/pillars/:id/copy — never hardcode report copy here.
   const descText =
     pillar.pillarDescription?.trim() ||
     'An in-depth diagnostic analysis of this operational architecture.';
@@ -2099,29 +2088,72 @@ const drawPillarPage = (
     }
   }
 
-  // Draw 4 grid boxes (Clean grey background, colored left accent stripe, answer as title, observation as description)
+  // Draw 4 grid boxes (Clean grey background, colored left accent stripe). Each
+  // box shows the observation (bold) with the selected answer beneath it. Box
+  // heights are measured from the actual text so long copy wraps and fills the
+  // box instead of being clipped, and the answer is always laid out below the
+  // observation so the two never overlap. Both boxes in a row share a height so
+  // the 2x2 grid stays aligned.
   const obsY = doc.y;
   const obsW = 248;
-  const obsH = 92;
+  const colGap = 19;
+  const rowGap = 10;
+  const boxPadTop = 9;
+  const boxPadBottom = 9;
+  const titleGap = 6;
+  const minBoxH = 92;
+  const maxGridBottom = 635 - 12; // keep clear of the Strategic Road Map (mapY = 635)
+
+  const obsMetrics = selectedFindings.slice(0, 4).map((finding) => {
+    const titleH = doc
+      .fontSize(8)
+      .font('Helvetica-Bold')
+      .heightOfString(finding.observation, { width: obsW - 35, lineGap: 1 });
+    const answerH = doc
+      .fontSize(7.5)
+      .font('Helvetica')
+      .heightOfString(finding.selectedLabel, { width: obsW - 20, lineGap: 1.5 });
+    return {
+      titleH,
+      boxH: Math.max(minBoxH, boxPadTop + titleH + titleGap + answerH + boxPadBottom),
+    };
+  });
+
+  // Row height = tallest box in that row; shrink proportionally only if the
+  // whole grid would otherwise collide with the Strategic Road Map below.
+  const rowHeights = [
+    Math.max(obsMetrics[0].boxH, obsMetrics[1].boxH),
+    Math.max(obsMetrics[2].boxH, obsMetrics[3].boxH),
+  ];
+  const available = maxGridBottom - obsY;
+  if (rowHeights[0] + rowGap + rowHeights[1] > available) {
+    const scale = Math.max(0, available - rowGap) / (rowHeights[0] + rowHeights[1]);
+    rowHeights[0] = Math.max(minBoxH, rowHeights[0] * scale);
+    rowHeights[1] = Math.max(minBoxH, rowHeights[1] * scale);
+  }
+
+  const rowTop = [obsY, obsY + rowHeights[0] + rowGap];
 
   for (let i = 0; i < 4; i++) {
     const finding = selectedFindings[i];
     const row = Math.floor(i / 2);
     const col = i % 2;
-    const ox = PAGE_MARGIN + col * (obsW + 19);
-    const oy = obsY + row * (obsH + 10);
+    const ox = PAGE_MARGIN + col * (obsW + colGap);
+    const oy = rowTop[row];
+    const boxH = rowHeights[row];
+    const metrics = obsMetrics[i];
 
     const isKo = finding.riskType === 'KNOCKOUT';
     const isRisk = finding.riskType === 'RISK';
     const fColor = isKo ? COLORS.redBorder : isRisk ? COLORS.amberBorder : COLORS.greenBorder;
 
     // Clean grey background box with grey border
-    roundedRect(doc, ox, oy, obsW, obsH, 6, COLORS.lightGrey, COLORS.borderGrey);
+    roundedRect(doc, ox, oy, obsW, boxH, 6, COLORS.lightGrey, COLORS.borderGrey);
     // Colored left accent stripe representing status
-    roundedRect(doc, ox, oy, 3, obsH, 2, fColor);
+    roundedRect(doc, ox, oy, 3, boxH, 2, fColor);
 
     const iconY = oy + 10.5;
-    const textY = oy + 9;
+    const textY = oy + boxPadTop;
 
     if (isKo || isRisk) {
       drawWarningIcon(doc, ox + 10, iconY, 11, fColor);
@@ -2129,34 +2161,32 @@ const drawPillarPage = (
       drawCheckIcon(doc, ox + 10, iconY, 11);
     }
 
-    // Title: Observation (bold, up to 2 lines)
+    // Observation (bold) — wraps freely to fill the box.
     doc
       .fontSize(8)
       .font('Helvetica-Bold')
       .fillColor(COLORS.primary)
       .text(finding.observation, ox + 25, textY, {
         width: obsW - 35,
-        height: 22,
-        ellipsis: true,
         lineGap: 1,
       });
 
-    // Description: Selected Answer Text (regular)
+    // Selected answer rendered directly beneath the observation using its
+    // measured height, so a wrapped observation can never run into it.
+    const answerY = textY + metrics.titleH + titleGap;
     doc
       .fontSize(7.5)
       .font('Helvetica')
       .fillColor(COLORS.bodyText)
-      .text(finding.selectedLabel, ox + 10, oy + 34, {
+      .text(finding.selectedLabel, ox + 10, answerY, {
         width: obsW - 20,
-        height: 50,
-        ellipsis: true,
         lineGap: 1.5,
       });
   }
 
   // Strategic Road Map at the bottom (anchored at Y = 635 to stay close to the
   // bottom consistently). Box height 165 ends at Y=800, inside the ~802 usable
-  // bottom of an A4 page â€” enlarged from 125 so each step gets a two-line title
+  // bottom of an A4 page — enlarged from 125 so each step gets a two-line title
   // and a multi-line recommendation instead of single-line ellipsis clipping.
   const mapY = 635;
   const mapH = 165;
@@ -2236,7 +2266,7 @@ const drawPillarPage = (
         .fontSize(7)
         .font('Helvetica')
         .fillColor(COLORS.mutedText)
-        .text(planItems.join('  â€¢  '), sx + 22, sy + 33, {
+        .text(planItems.join('  •  '), sx + 22, sy + 33, {
           width: stepW - 25,
           height: 16,
           ellipsis: true,
@@ -3057,7 +3087,7 @@ const drawVisualizationPage = (
 
   // Benchmark Performance Card (renamed from "Executive Performance Summary"
   // to avoid colliding with the Executive Summary page at the front of the
-  // report â€” testers read this end-page card as a second, misplaced summary).
+  // report — testers read this end-page card as a second, misplaced summary).
   const topY = headY + 45;
   roundedRect(doc, PAGE_MARGIN, topY, COLORS.pageWidth, 75, 6, COLORS.lightGrey, COLORS.borderGrey);
   roundedRect(doc, PAGE_MARGIN, topY, 4, 75, 2, '#3B82F6');
@@ -3332,7 +3362,7 @@ export async function generateReportPDF(
       size: 'A4',
       bufferPages: true,
       info: {
-        Title: `PICA Business Health Report â€” ${businessName}`,
+        Title: `PICA Business Health Report — ${businessName}`,
         Author: 'Beauvision Associates Ltd',
         Subject: `PICA ${phaseLabel(phase)}`,
       },
@@ -3438,7 +3468,7 @@ export async function generateSnapshotPDF(
       size: 'A4',
       bufferPages: true,
       info: {
-        Title: `PICA Business Snapshot â€” ${businessName}`,
+        Title: `PICA Business Snapshot — ${businessName}`,
         Author: 'Beauvision Associates Ltd',
         Subject: 'PICA Business Snapshot',
       },
@@ -3618,19 +3648,34 @@ export async function generateSnapshotPDF(
     // --- Unlock strategic scan call to action ---
     const ctaY = doc.y;
     const ctaH = 65;
-    
+    const phase2AUrl = 'https://pica.beauvisiongroup.com/dashboard/strategic-scan';
+
     // Draw rounded CTA card
     roundedRect(doc, PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH, 8, COLORS.greenBg, COLORS.greenBorder);
 
     doc.fontSize(12).font('Helvetica-Bold').fillColor(COLORS.green)
-      .text('Unlock the full Strategic Scan & Diagnostic', PAGE_MARGIN + 15, ctaY + 12, { lineBreak: false });
-      
+      .text('Unlock the full Strategic Scan & Diagnostic', PAGE_MARGIN + 15, ctaY + 12, {
+        width: COLORS.pageWidth - 30,
+        lineBreak: false,
+      });
+
+    // Visible destination so the CTA reads as a link in the printed/downloaded PDF
+    doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.green)
+      .text(phase2AUrl, PAGE_MARGIN, ctaY + 14, {
+        width: COLORS.pageWidth - 15,
+        align: 'right',
+        lineBreak: false,
+      });
+
     doc.fontSize(9).font('Helvetica').fillColor(COLORS.bodyText)
       .text(
         'Get a comprehensive 13-page operational breakdown, custom-designed recommendations, and a ' +
         'tailored, printable action plan to optimize your organization\'s efficiency and address compliance gaps.',
         PAGE_MARGIN + 15, ctaY + 28, { width: COLORS.pageWidth - 30 }
       );
+
+    // Clickable link over the whole CTA card, pointing to the Phase 2A page.
+    doc.link(PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH, phase2AUrl);
 
     // Footer at the bottom
     drawFooter(doc, businessName, metadata?.sessionId);
