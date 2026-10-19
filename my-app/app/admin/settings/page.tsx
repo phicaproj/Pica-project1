@@ -263,7 +263,7 @@ function PillarTab() {
                 className={`border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500/50 w-32 disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#111318] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
               />
               <div className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-                questions total (plus active knockouts)
+                questions total (plus 1 random knockout)
               </div>
             </div>
           </div>
@@ -281,7 +281,7 @@ function PillarTab() {
             </div>
           </div>
           <p className={`text-xs leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-            Configure the total number of questions a user gets to answer. Questions will be divided equally among all active pillars.
+            Configure the total number of questions a user gets to answer. Questions will be divided equally among all active pillars, with 1 knockout question included in each pillar&apos;s share.
           </p>
           <div className="space-y-2">
             <label className={`text-[10px] font-bold uppercase tracking-widest block ${d ? 'text-gray-400' : 'text-gray-600'}`}>

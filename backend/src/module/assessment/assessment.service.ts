@@ -187,7 +187,7 @@ export async function startAssessmentService(
     }
   }
 
-  // Append all showOnPhase1 = true knockout questions (PHASE2A) for that business size
+  // Add one randomly selected showOnPhase1 = true knockout question (PHASE2A)
   const knockoutQuestions = await prisma.question.findMany({
     where: {
       phase: Phase.PHASE2A,
@@ -198,7 +198,10 @@ export async function startAssessmentService(
     },
     select: { id: true },
   });
-  selectedQuestionIds.push(...knockoutQuestions.map((q) => q.id));
+  if (knockoutQuestions.length > 0) {
+    const randomIndex = Math.floor(Math.random() * knockoutQuestions.length);
+    selectedQuestionIds.push(knockoutQuestions[randomIndex].id);
+  }
 
   if (selectedQuestionIds.length === 0) {
     throw new AppError(
@@ -657,7 +660,9 @@ async function submitPhase2AService(sessionId: string): Promise<SubmitAssessment
 /**
  * Creates (or resumes) a Phase 2A session for an authenticated user. Randomly
  * selects the question IDs and snapshots them onto the session so the user's set is
- * frozen against admin edits. Questions the user already answered in Phase 1 are excluded entirely; if a
+ * frozen against admin edits. Each active pillar contributes one knockout
+ * question within its quota, and the total never exceeds the configured
+ * phase2aQuestionLimit. Questions the user already answered in Phase 1 are excluded; if a
  * pillar's remaining pool is too small to meet its quota, the shortfall is
  * redistributed to other pillars rather than re-asking answered questions.
  */
@@ -734,7 +739,7 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
           businessSize: user.businessSize,
           isActive: true,
         },
-        select: { id: true },
+        select: { id: true, isKnockout: true },
         orderBy: { displayOrder: 'asc' },
       },
     },
@@ -750,38 +755,66 @@ export async function startPhase2AService(userId: string): Promise<StartPhase2AR
   const numPillars = Math.max(pillars.length, 1);
   const baseQuota = Math.floor(targetLimit / numPillars);
   const remainder = targetLimit % numPillars;
+  const quotas = pillars.map((_, i) => baseQuota + (i < remainder ? 1 : 0));
 
-  // Questions already answered in Phase 1 are excluded entirely so the user is
-  // never asked the same question twice. Shuffle each pillar's pool so the
-  // picked questions vary between attempts (matches Phase 1's selection).
-  const freshPools = pillars.map((p) =>
-    p.questions.filter((q) => !answeredInPhase1Ids.has(q.id)).sort(() => Math.random() - 0.5)
-  );
-  const quotas = freshPools.map((_, i) => baseQuota + (i < remainder ? 1 : 0));
-  const takeCounts = freshPools.map((pool, i) => Math.min(pool.length, quotas[i]));
+  // Questions already answered in Phase 1 are excluded so the user is never
+  // asked the same question twice. Each pillar reserves one knockout slot, then
+  // fills the rest of its quota with regular questions. A knockout answered in
+  // Phase 1 is used only when the pillar has no fresh knockout left.
+  const pillarDraws: string[][] = [];
+  const spareRegularPools: { index: number; pool: string[] }[] = [];
+
+  pillars.forEach((pillar, i) => {
+    const quota = quotas[i];
+    const fresh = pillar.questions.filter((q) => !answeredInPhase1Ids.has(q.id));
+    const freshKnockouts = fresh.filter((q) => q.isKnockout);
+    const allKnockouts = pillar.questions.filter((q) => q.isKnockout);
+    const knockoutCandidates =
+      freshKnockouts.length > 0 ? freshKnockouts : allKnockouts;
+
+    const regular = fresh
+      .filter((q) => !q.isKnockout)
+      .sort(() => Math.random() - 0.5);
+
+    const picked: string[] = [];
+    if (quota > 0 && knockoutCandidates.length > 0) {
+      picked.push(
+        knockoutCandidates[Math.floor(Math.random() * knockoutCandidates.length)].id
+      );
+    }
+
+    const regularSlots = Math.max(0, quota - picked.length);
+    picked.push(...regular.slice(0, regularSlots).map((q) => q.id));
+    pillarDraws.push(picked);
+
+    if (regular.length > regularSlots) {
+      spareRegularPools.push({
+        index: i,
+        pool: regular.slice(regularSlots).map((q) => q.id),
+      });
+    }
+  });
 
   // Safeguard: a pillar whose fresh pool is smaller than its quota leaves the
   // set short. Redistribute that shortfall to pillars that still have
-  // unanswered questions, round-robin so the extra load spreads out rather
-  // than landing on the first pillar with spare capacity. If the entire fresh
-  // pool is exhausted the session carries fewer questions — we never fall back
-  // to re-asking Phase 1 questions.
-  let shortfall = quotas.reduce((sum, quota, i) => sum + (quota - takeCounts[i]), 0);
+  // unanswered regular questions, round-robin so the extra load spreads out
+  // rather than landing on the first pillar with spare capacity. The total is
+  // never allowed to exceed the configured limit.
+  let shortfall = targetLimit - pillarDraws.reduce((sum, draw) => sum + draw.length, 0);
   while (shortfall > 0) {
     let redistributed = false;
-    for (let i = 0; i < freshPools.length && shortfall > 0; i++) {
-      if (takeCounts[i] < freshPools[i].length) {
-        takeCounts[i] += 1;
-        shortfall -= 1;
-        redistributed = true;
-      }
+    for (const item of spareRegularPools) {
+      if (shortfall === 0) break;
+      const questionId = item.pool.pop();
+      if (!questionId) continue;
+      pillarDraws[item.index].push(questionId);
+      shortfall -= 1;
+      redistributed = true;
     }
     if (!redistributed) break;
   }
 
-  const selectedQuestionIds = freshPools.flatMap((pool, i) =>
-    pool.slice(0, takeCounts[i]).map((q) => q.id)
-  );
+  const selectedQuestionIds = pillarDraws.flat();
 
   if (selectedQuestionIds.length === 0) {
     throw new AppError(
