@@ -24,6 +24,12 @@ const API_BASE =
 	'https://pica-project1.onrender.com/api'
 
 const OPTIONS_LABELS = ['A', 'B', 'C', 'D']
+const PREPARING_MESSAGES = [
+	'Securing your session',
+	'Selecting your question set',
+	'Calibrating your assessment',
+	'Almost ready',
+]
 const INDUSTRIES = [
 	'Technology & SaaS',
 	'Retail & E-commerce',
@@ -71,7 +77,7 @@ interface ProfileData {
 	operatingYears: string
 }
 
-type Step = 'intro' | 'profile' | 'questions' | 'processing'
+type Step = 'intro' | 'profile' | 'preparing' | 'questions' | 'processing'
 type BusinessSize = 'SMALL' | 'MEDIUM'
 
 // ─── Step 1: Intro ─────────────────────────────────────────────────────────────
@@ -727,6 +733,110 @@ function QuestionStep({
 	)
 }
 
+// ─── Step 3b: Preparing questions ──────────────────────────────────────────────
+function PreparingStep({
+	dark,
+	businessName,
+}: {
+	dark: boolean
+	businessName?: string
+}) {
+	const d = dark
+	const [progress, setProgress] = useState(10)
+	const [messageIndex, setMessageIndex] = useState(0)
+
+	useEffect(() => {
+		const progressTimer = setInterval(() => {
+			setProgress((p) => (p >= 92 ? 92 : Math.min(92, p + 6)))
+		}, 180)
+		const messageTimer = setInterval(() => {
+			setMessageIndex((i) => (i + 1) % PREPARING_MESSAGES.length)
+		}, 1100)
+		return () => {
+			clearInterval(progressTimer)
+			clearInterval(messageTimer)
+		}
+	}, [])
+
+	return (
+		<div
+			className={`min-h-screen flex flex-col ${d ? 'bg-[#0d1117]' : 'bg-gray-50'}`}
+		>
+			<div className='flex-1 flex flex-col items-center justify-center px-4 sm:px-6 md:px-8 py-10 md:py-16'>
+				<div
+					className={`flex items-center gap-2 px-4 py-2 rounded-full border mb-10 ${d ? 'border-white/10 bg-[#161b22]' : 'border-gray-200 bg-white'}`}
+				>
+					<span
+						className={`w-2 h-2 rounded-full ${d ? 'bg-[#00ffaa]' : 'bg-teal-500'} animate-pulse`}
+					/>
+					<span
+						className={`text-xs font-bold uppercase tracking-widest ${d ? 'text-gray-300' : 'text-gray-600'}`}
+					>
+						Preparing Your Assessment
+					</span>
+				</div>
+
+				<div className='relative w-32 h-32 mb-10 flex items-center justify-center'>
+					<div
+						className='absolute inset-0 rounded-full border border-dashed border-white/20 animate-spin'
+						style={{ animationDuration: '10s' }}
+					/>
+					<div
+						className={`w-20 h-20 rounded-full border-4 border-[#f97316] flex items-center justify-center ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
+						style={{ boxShadow: '0 0 32px rgba(249,115,22,0.35)' }}
+					>
+						<Loader
+							className='w-8 h-8 text-[#f97316] animate-spin'
+							style={{ animationDuration: '2.5s' }}
+						/>
+					</div>
+				</div>
+
+				<h2
+					className={`text-3xl md:text-4xl font-extrabold mb-3 text-center ${d ? 'text-white' : 'text-gray-900'}`}
+				>
+					Preparing your questions...
+				</h2>
+				<p
+					className={`text-sm sm:text-base text-center mb-10 max-w-md ${d ? 'text-gray-400' : 'text-gray-600'}`}
+				>
+					We&apos;re pulling the right questions for{' '}
+					{businessName?.trim() || 'your business'} and getting your
+					session ready.
+				</p>
+
+				<div className='w-full max-w-md'>
+					<div className='flex items-center justify-between mb-2'>
+						<span
+							className={`text-[10px] sm:text-xs font-bold uppercase tracking-widest ${d ? 'text-[#00ffaa]' : 'text-teal-700'}`}
+						>
+							{PREPARING_MESSAGES[messageIndex]}
+						</span>
+						<span
+							className={`text-xs font-mono ${d ? 'text-gray-400' : 'text-gray-500'}`}
+						>
+							{Math.round(progress)}%
+						</span>
+					</div>
+					<div
+						className={`h-2 rounded-full overflow-hidden ${d ? 'bg-white/10' : 'bg-gray-200'}`}
+					>
+						<div
+							className='h-full rounded-full bg-gradient-to-r from-[#f97316] to-[#00ffaa] transition-all duration-300'
+							style={{ width: `${progress}%` }}
+						/>
+					</div>
+					<p
+						className={`mt-3 text-xs text-center ${d ? 'text-gray-500' : 'text-gray-500'}`}
+					>
+						This usually takes a few seconds.
+					</p>
+				</div>
+			</div>
+		</div>
+	)
+}
+
 // ─── Step 4: Processing ────────────────────────────────────────────────────────
 function ProcessingStep({ dark }: { dark: boolean }) {
 	const d = dark
@@ -920,9 +1030,14 @@ export default function GeneralTestPage() {
 	// Reset per-question progress when the size changes (e.g. user re-submits the profile).
 	useEffect(() => {
 		if (!sessionId) return
+		let cancelled = false
+		let transitionTimer: ReturnType<typeof setTimeout> | null = null
+
 		setCurrentIndex(0)
 		setAnswers({})
 		setAnswerError(null)
+		setAllQuestions([])
+
 		async function fetchQuestions() {
 			try {
 				const res = await fetch(
@@ -951,13 +1066,36 @@ export default function GeneralTestPage() {
 								})
 							})
 					})
+
+				if (flat.length === 0) {
+					throw new Error(
+						'No questions are available for your business yet. Please try again shortly.',
+					)
+				}
+
+				if (cancelled) return
 				setAllQuestions(flat)
+				// Hold the preparing screen briefly after the fetch resolves so
+				// it reads as a real step instead of a one-frame flash.
+				transitionTimer = setTimeout(() => {
+					if (!cancelled) setStep('questions')
+				}, 1100)
 			} catch (err: any) {
+				if (cancelled) return
 				console.error('Failed to load questions:', err)
 				setError(err.message || 'Failed to load questions')
+				// Drop the session so a retry from the profile form re-runs the
+				// whole start + fetch flow instead of being stuck on a stale id.
+				setSessionId(null)
+				setStep('profile')
 			}
 		}
 		fetchQuestions()
+
+		return () => {
+			cancelled = true
+			if (transitionTimer) clearTimeout(transitionTimer)
+		}
 	}, [sessionId])
 
 	// Start assessment session
@@ -988,6 +1126,7 @@ export default function GeneralTestPage() {
 
 		setLoading(true)
 		setError(null)
+		setStep('preparing')
 		try {
 			const res = await fetch(`${API_BASE}/assessment/start`, {
 				method: 'POST',
@@ -997,6 +1136,7 @@ export default function GeneralTestPage() {
 			const data = await res.json()
 
 			if (res.status === 409) {
+				setStep('profile')
 				setError(
 					data.message ||
 						'You already completed this assessment. Check your email for your report, or log in to your dashboard to view it.',
@@ -1029,9 +1169,9 @@ export default function GeneralTestPage() {
 					// non-fatal — user can re-answer; backend upserts
 				}
 			}
-
-			setStep('questions')
+			// Step changes to 'questions' once the fetch effect resolves.
 		} catch (err: any) {
+			setStep('profile')
 			setError(err.message)
 		} finally {
 			setLoading(false)
@@ -1140,6 +1280,10 @@ export default function GeneralTestPage() {
 				loading={loading}
 				error={error}
 			/>
+		)
+	if (step === 'preparing')
+		return (
+			<PreparingStep dark={dark} businessName={profile.businessName} />
 		)
 	if (step === 'questions' && allQuestions.length > 0) {
 		const current = allQuestions[currentIndex]

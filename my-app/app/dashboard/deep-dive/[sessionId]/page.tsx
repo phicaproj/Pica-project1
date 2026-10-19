@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -83,8 +83,30 @@ function QuestionsState({
   const current = flat[currentIndex];
   const progress = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
   const isLast = currentIndex === total - 1;
+  const cardRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
   if (!current) return null;
+
+  // The dashboard scrolls inside <main>, not the window, so scrollIntoView is
+  // used to reach the action row / top of the card on any screen size.
+  const scrollToActions = () =>
+    actionsRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  const scrollToQuestion = () =>
+    cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const selectAnswer = (optionId: string) => {
+    onSelect(optionId);
+    requestAnimationFrame(scrollToActions);
+  };
+  const goToPrev = () => {
+    onPrev();
+    requestAnimationFrame(scrollToQuestion);
+  };
+  const goToNext = () => {
+    onNext();
+    requestAnimationFrame(scrollToQuestion);
+  };
 
   return (
     <motion.div
@@ -93,7 +115,7 @@ function QuestionsState({
       exit={{ opacity: 0 }}
       className="space-y-6 max-w-full"
     >
-      <div className="rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-6 md:p-10">
+      <div ref={cardRef} className="rounded-2xl bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border border-white/5 p-6 md:p-10">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-teal-400 mb-1">
@@ -146,7 +168,7 @@ function QuestionsState({
                       whileHover={!saving && !submitting ? { scale: 1.01 } : {}}
                       whileTap={!saving && !submitting ? { scale: 0.99 } : {}}
                       key={opt.id}
-                      onClick={() => onSelect(opt.id)}
+                      onClick={() => selectAnswer(opt.id)}
                       disabled={saving || submitting}
                       className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl border text-left transition disabled:cursor-not-allowed ${
                         isSelected
@@ -188,9 +210,9 @@ function QuestionsState({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div ref={actionsRef} className="flex flex-wrap items-center justify-between gap-3">
           <button
-            onClick={onPrev}
+            onClick={goToPrev}
             disabled={currentIndex === 0 || saving || submitting}
             className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold border border-white/10 text-white hover:bg-white/5 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -206,7 +228,7 @@ function QuestionsState({
           </button>
 
           <button
-            onClick={onNext}
+            onClick={goToNext}
             disabled={!selectedOptionId || saving || submitting}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition ${
               selectedOptionId && !saving && !submitting
