@@ -12,7 +12,7 @@ export const phase2aQuerySchema = z.object({
 });
 
 export const phase2bQuerySchema = z.object({
-  pillarId: z.string({ error: 'pillarId is required' }).uuid('pillarId must be a valid UUID'),
+  sessionId: z.string({ error: 'sessionId is required' }).uuid('sessionId must be a valid UUID'),
 });
 
 export type BusinessSizeQuery = z.infer<typeof businessSizeQuerySchema>;
@@ -80,6 +80,7 @@ export type Phase2BPillarMeta = {
 
 export type Phase2BQuestionsResponse = {
   message: string;
+  sessionId: string;
   pillar: Phase2BPillarMeta;
   questions: QuestionResponse[];
 };

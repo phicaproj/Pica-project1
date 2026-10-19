@@ -35,9 +35,9 @@ export const getPhase2BQuestions = asyncHandler(async (req: Request, res: Respon
     throw new AppError('Authentication required', UNAUTHORIZED);
   }
 
-  const { pillarId } = phase2bQuerySchema.parse(req.query);
+  const { sessionId } = phase2bQuerySchema.parse(req.query);
 
-  const result = await getPhase2BQuestionsService(pillarId);
+  const result = await getPhase2BQuestionsService(sessionId, req.user.id);
 
   return res.status(OK).json(result);
 });

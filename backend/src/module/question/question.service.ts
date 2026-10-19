@@ -215,21 +215,61 @@ export async function getPhase2AQuestionsService(
 }
 
 /**
- * Returns every active PHASE2B question for a single pillar, ordered by
- * displayOrder. Phase 2B is per-pillar — a deep-dive session covers exactly
- * one pillar's question set, unlike Phase 2A which spans all pillars.
+ * Returns the PHASE2B questions frozen onto a specific session's snapshot,
+ * ordered by displayOrder. Phase 2B is per-pillar — a deep-dive session covers
+ * exactly one pillar's question set, unlike Phase 2A which spans all pillars.
  *
- * Caller responsibility: authentication is enforced at the route layer;
- * ownership of the related Phase2BPillarUnlock is enforced inside
- * startPhase2BService when the user begins a session. This endpoint itself
- * is safe to expose to any authenticated user since the questions are not
- * confidential — only the answers and findings are.
+ * The snapshot (not the live question bank) is the source of truth: it was
+ * capped to `phase2bQuestionLimit` and filtered for the user's businessSize at
+ * session start, so reading live questions here would surface IDs the answer
+ * endpoint rejects and questions the user was never meant to see.
  */
 export async function getPhase2BQuestionsService(
-  pillarId: string
+  sessionId: string,
+  authenticatedUserId: string
 ): Promise<Phase2BQuestionsResponse> {
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      userId: true,
+      phase: true,
+      status: true,
+      pillarId: true,
+      selectedQuestionIds: true,
+    },
+  });
+
+  if (!session) {
+    throw new AppError('Assessment session not found', NOT_FOUND);
+  }
+
+  if (session.userId !== authenticatedUserId) {
+    throw new AppError('You are not authorized to access this session', FORBIDDEN);
+  }
+
+  if (session.phase !== Phase.PHASE2B) {
+    throw new AppError('Session is not a Phase 2B session', CONFLICT);
+  }
+
+  if (session.status !== SessionStatus.IN_PROGRESS) {
+    throw new AppError('Session is no longer editable', CONFLICT);
+  }
+
+  if (!session.pillarId) {
+    throw new AppError(
+      'Phase 2B session is missing its pillar',
+      UNPROCESSABLE_CONTENT
+    );
+  }
+
+  const snapshot = (session.selectedQuestionIds ?? []) as string[];
+  if (!Array.isArray(snapshot) || snapshot.length === 0) {
+    throw new AppError('Phase 2B session has no question snapshot', UNPROCESSABLE_CONTENT);
+  }
+
   const pillar = await prisma.pillar.findUnique({
-    where: { id: pillarId },
+    where: { id: session.pillarId },
     select: {
       id: true,
       code: true,
@@ -244,11 +284,12 @@ export async function getPhase2BQuestionsService(
     throw new AppError('Pillar not found', NOT_FOUND);
   }
 
+  // Snapshot-exact: keep asking questions the session froze even if the admin
+  // deactivates them mid-run, otherwise the user can never complete the set.
   const questions = await prisma.question.findMany({
     where: {
+      id: { in: snapshot },
       pillarId: pillar.id,
-      phase: Phase.PHASE2B,
-      isActive: true,
     },
     select: questionSelect,
     orderBy: { displayOrder: 'asc' },
@@ -256,13 +297,14 @@ export async function getPhase2BQuestionsService(
 
   if (questions.length === 0) {
     throw new AppError(
-      `No active Phase 2B questions configured for pillar ${pillar.name}.`,
+      `No Phase 2B questions found for this session on pillar ${pillar.name}.`,
       NOT_FOUND
     );
   }
 
   return {
     message: 'Phase 2B questions fetched successfully',
+    sessionId: session.id,
     pillar: {
       id: pillar.id,
       code: pillar.code,

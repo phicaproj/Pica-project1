@@ -25,10 +25,10 @@ export const startPhase2B = async (payload: { pillarId: string }) => {
 	)
 }
 
-export const fetchPhase2BQuestions = async (pillarId: string) => {
+export const fetchPhase2BQuestions = async (sessionId: string) => {
 	// For now using `any` as the return type for questions until we have a Question type defined globally
 	return authedFetch<any>(
-		`/questions/phase2b?pillarId=${pillarId}`,
+		`/questions/phase2b?sessionId=${sessionId}`,
 		{ method: 'GET' }
 	)
 }

@@ -277,10 +277,13 @@ export async function answerAssessmentService(
   }
 
   return prisma.$transaction(async (tx) => {
+    // Phase 2A/2B answers are already constrained to the frozen snapshot above,
+    // so a mid-session admin deactivation must not strand an answerable question.
+    // Phase 1 keeps the live `isActive` guard.
     const question = await tx.question.findFirst({
       where: {
         id: data.questionId,
-        isActive: true,
+        ...(session.phase === Phase.PHASE1 ? { isActive: true } : {}),
       },
       select: {
         id: true,
@@ -895,12 +898,22 @@ export async function startPhase2BService(
     };
   }
 
-  // Snapshot active PHASE2B question for this pillar, ordered for
-  // deterministic display. Gated by configured limit.
+  // Snapshot active PHASE2B questions for this pillar and the user's business
+  // size, ordered for deterministic display. Gated by the configured limit.
+  // The session snapshot is the single source of truth for what the user may
+  // answer — the questions endpoint reads it back instead of the live bank.
+  if (!user.businessSize) {
+    throw new AppError(
+      'Please complete your profile (staff size required) before starting a paid assessment.',
+      FORBIDDEN
+    );
+  }
+
   const questions = await prisma.question.findMany({
     where: {
       pillarId: pillar.id,
       phase: Phase.PHASE2B,
+      businessSize: user.businessSize,
       isActive: true,
     },
     select: { id: true },
@@ -909,7 +922,7 @@ export async function startPhase2BService(
 
   if (questions.length === 0) {
     throw new AppError(
-      `No active Phase 2B questions configured for pillar ${pillar.name}.`,
+      `No active Phase 2B questions configured for pillar ${pillar.name} (businessSize=${user.businessSize}).`,
       UNPROCESSABLE_CONTENT
     );
   }

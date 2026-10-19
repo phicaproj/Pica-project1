@@ -157,17 +157,18 @@ registry.registerPath({
   method: 'get',
   path: '/api/questions/phase2b',
   tags: ['Questions'],
-  summary: 'Get Phase 2B questions for a specific pillar',
-  description: 'Authenticated. Returns the question set for a specific pillar in Phase 2B.',
+  summary: 'Get Phase 2B questions for a specific session',
+  description:
+    'Authenticated. Returns the questions frozen onto the given Phase 2B session snapshot (never the live question bank). The caller must own the session.',
   security: [{ bearerAuth: [] }],
   request: {
     query: z.object({
-      pillarId: z
+      sessionId: z
         .string()
         .uuid()
         .openapi({
-          param: { name: 'pillarId', in: 'query' },
-          description: 'Pillar UUID',
+          param: { name: 'sessionId', in: 'query' },
+          description: 'Phase 2B assessment session UUID',
         }),
     }),
   },
@@ -178,6 +179,7 @@ registry.registerPath({
         'application/json': {
           schema: z.object({
             message: z.string(),
+            sessionId: z.string().uuid(),
             pillar: Phase2BPillarMetaSchema,
             questions: z.array(QuestionSchema),
           }),
@@ -185,7 +187,9 @@ registry.registerPath({
       },
     },
     401: errorResponse('Missing or invalid token'),
-    404: errorResponse('Pillar not found'),
+    403: errorResponse('Not the owner of this session'),
+    404: errorResponse('Session or pillar not found'),
+    409: errorResponse('Not a Phase 2B session, or session is no longer editable'),
   },
 });
 

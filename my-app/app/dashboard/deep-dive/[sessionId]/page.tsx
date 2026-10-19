@@ -332,8 +332,8 @@ export default function DeepDiveSessionPage() {
         
         setPillarName(sessionMeta.pillarName);
         
-        // 2. Load Phase 2B questions for that pillar
-        const questionsRes = await fetchPhase2BQuestions(sessionMeta.pillarId);
+        // 2. Load the questions frozen onto this session's snapshot
+        const questionsRes = await fetchPhase2BQuestions(sessionId);
         const questions = questionsRes.data?.questions || [];
         
         // 3. Load user's saved answers
