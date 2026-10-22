@@ -55,7 +55,10 @@ export default function HomePage() {
 			{/* ── Hero ── */}
 			<section
 				className={`relative min-h-[calc(100vh-50px)] flex flex-col justify-center pt-28 pb-12 lg:pt-32 lg:pb-16 px-6 lg:px-8 overflow-hidden bg-cover bg-center ${d ? 'bg-[#0d1117]/90 bg-blend-overlay' : 'bg-[#0d1117]/60 bg-blend-overlay'}`}
-				style={{ backgroundImage: "url('/images/hero-background.png')" }}>
+				style={{
+					backgroundImage:
+						"url('/images/hero-background.png')",
+				}}>
 				{/* Background glows */}
 				{d && (
 					<div className='absolute top-10 left-1/4 w-96 h-96 rounded-full bg-teal-500/5 blur-3xl pointer-events-none' />
@@ -68,7 +71,8 @@ export default function HomePage() {
 					<div className='flex flex-col justify-center items-center lg:items-start text-center lg:text-left space-y-6 md:space-y-7 px-4 sm:px-6 lg:px-0 lg:pr-6 text-white'>
 						<div className='inline-flex self-center lg:self-start items-center gap-2 px-4 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20'>
 							<span className='w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse' />
-							<span className={`text-xs font-bold uppercase tracking-widest text-teal-400`}>
+							<span
+								className={`text-xs font-bold uppercase tracking-widest text-teal-400`}>
 								Precision Business Intelligence
 							</span>
 						</div>
@@ -100,13 +104,13 @@ export default function HomePage() {
 					</div>
 
 					{/* Right — Dashboard mockup with landing1 image */}
-					<div className="relative w-full h-[320px] sm:h-[480px] lg:h-[580px]">
+					<div className='relative w-full h-[320px] sm:h-[480px] lg:h-[580px]'>
 						<Image
-							src="/images/dashboard img.png"
-							alt="PICA Dashboard Preview"
+							src='/images/dashboard img.png'
+							alt='PICA Dashboard Preview'
 							fill
 							priority
-							className="object-contain"
+							className='object-contain'
 						/>
 					</div>
 				</div>
@@ -115,8 +119,11 @@ export default function HomePage() {
 				<div className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-0 relative z-10'>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
-							<Shield className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+						<div
+							className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Shield
+								className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+							/>
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -131,8 +138,11 @@ export default function HomePage() {
 					</div>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
-							<Brain className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+						<div
+							className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Brain
+								className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+							/>
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -147,8 +157,11 @@ export default function HomePage() {
 					</div>
 					<div
 						className={`p-6 rounded-2xl border ${d ? 'bg-[#161b22] border-white/10' : 'bg-white border-gray-200 shadow-sm'} flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1`}>
-						<div className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
-							<Layers className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+						<div
+							className={`w-10 h-10 rounded-xl flex items-center justify-center ${d ? 'bg-teal-500/10' : 'bg-teal-50'}`}>
+							<Layers
+								className={`w-5 h-5 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+							/>
 						</div>
 						<h3
 							className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -191,7 +204,8 @@ export default function HomePage() {
 					{/* Three pillars stepper */}
 					<div className='flex flex-col md:flex-row items-center justify-between gap-6 max-w-4xl mx-auto pt-8 relative'>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
+							<span
+								className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								01
 							</span>
 							<p
@@ -203,7 +217,8 @@ export default function HomePage() {
 							className={`hidden md:block h-px flex-1 border-t border-dashed ${d ? 'border-white/10' : 'border-gray-200'} max-w-[80px]`}
 						/>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
+							<span
+								className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								02
 							</span>
 							<p
@@ -215,7 +230,8 @@ export default function HomePage() {
 							className={`hidden md:block h-px flex-1 border-t border-dashed ${d ? 'border-white/10' : 'border-gray-200'} max-w-[80px]`}
 						/>
 						<div className='flex-1 flex flex-col items-center text-center'>
-							<span className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
+							<span
+								className={`text-3xl font-black mb-2 ${d ? 'text-teal-500' : 'text-teal-700'}`}>
 								03
 							</span>
 							<p
@@ -250,7 +266,9 @@ export default function HomePage() {
 								title: 'Pain-point',
 								desc: 'Isolating the core friction points that drain resources and energy.',
 								icon: (
-									<Eye className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Eye
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								color: 'from-teal-500/20 to-teal-500/5',
 								hasNext: true,
@@ -270,7 +288,9 @@ export default function HomePage() {
 								title: 'Classification',
 								desc: 'Sorting obstacles into the 7 architectural pillars for targeted action.',
 								icon: (
-									<Lightbulb className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Lightbulb
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								color: 'from-teal-500/20 to-teal-500/5',
 								hasNext: true,
@@ -332,7 +352,8 @@ export default function HomePage() {
 				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#161b22] border-white/5' : 'bg-gray-100 border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='space-y-3'>
-						<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+						<p
+							className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 							Core Capabilities
 						</p>
 						<h2
@@ -345,21 +366,27 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Search className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Search
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Blind Spot Discovery',
 								desc: 'Identify structural weaknesses in your business model that standard accounting software misses.',
 							},
 							{
 								icon: (
-									<BarChart2 className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<BarChart2
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Performance Benchmarking',
 								desc: 'Compare your KPIs against top-performing businesses in your specific sector.',
 							},
 							{
 								icon: (
-									<Rocket className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Rocket
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Growth Readiness',
 								desc: 'Determine if your infrastructure is truly ready for high-velocity scaling without breaking.',
@@ -389,9 +416,11 @@ export default function HomePage() {
 			<section
 				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
-					<div className={`grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b pb-8 ${d ? 'border-white/5' : 'border-gray-200'}`}>
+					<div
+						className={`grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-16 items-center border-b pb-8 ${d ? 'border-white/5' : 'border-gray-200'}`}>
 						<div className='space-y-3'>
-							<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+							<p
+								className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 								Structural Foundation
 							</p>
 							<h2
@@ -411,43 +440,57 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Users className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Users
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Founder & Leadership Capacity',
 							},
 							{
 								icon: (
-									<GitFork className={`w-6 h-6 rotate-90 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<GitFork
+										className={`w-6 h-6 rotate-90 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
-								label: 'Business Model Strenght',
+								label: 'Business Model',
 							},
 							{
 								icon: (
-									<MousePointerClick className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<MousePointerClick
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Market & Competitive Position',
 							},
 							{
 								icon: (
-									<Banknote className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Banknote
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Financial Readiness/Control',
 							},
 							{
 								icon: (
-									<Sparkles className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Sparkles
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Operations Processes & Execution',
 							},
 							{
 								icon: (
-									<Shield className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Shield
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Governance Culture & Structure',
 							},
 							{
 								icon: (
-									<Lightbulb className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Lightbulb
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								label: 'Growth Scalability and Sustainability',
 							},
@@ -495,7 +538,8 @@ export default function HomePage() {
 									className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Awareness
 								</h3>
-								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+								<p
+									className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									FULL VISIBILITY ACROSS ALL
 									OPERATIONAL CHANNELS. NO
 									MORE DARK SPOTS.
@@ -509,7 +553,9 @@ export default function HomePage() {
 										<li
 											key={item}
 											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+											<CheckCircle
+												className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+											/>
 											{item}
 										</li>
 									))}
@@ -523,15 +569,18 @@ export default function HomePage() {
 						</div>
 
 						{/* Layer 02 - Full Diagnostics (featured) */}
-						<div className={`rounded-2xl p-6 lg:p-8 border border-teal-500/40 relative flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/[0.03] ${d ? 'bg-[#152e22]' : 'bg-teal-50'}`}>
+						<div
+							className={`rounded-2xl p-6 lg:p-8 border border-teal-500/40 relative flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/[0.03] ${d ? 'bg-[#152e22]' : 'bg-teal-50'}`}>
 							<div className='absolute -top-3.5 left-1/2 -translate-x-1/2 bg-teal-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-wider shadow-lg'>
 								MOST SELECTED
 							</div>
 							<div className='space-y-4 pt-2'>
-								<h3 className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
+								<h3
+									className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Full Diagnostics
 								</h3>
-								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+								<p
+									className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									AUTOMATED IDENTIFICATION
 									OF STRUCTURAL
 									INEFFICIENCIES AND RISK
@@ -546,7 +595,9 @@ export default function HomePage() {
 										<li
 											key={item}
 											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-200' : 'text-gray-700'}`}>
-											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+											<CheckCircle
+												className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+											/>
 											{item}
 										</li>
 									))}
@@ -567,7 +618,8 @@ export default function HomePage() {
 									className={`text-2xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 									Intelligence
 								</h3>
-								<p className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+								<p
+									className={`text-[10px] font-bold uppercase tracking-wider leading-relaxed ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 									DEEP-DIVE MODELING FOR
 									FUTURE GROWTH AND RISK
 									MITIGATION.
@@ -581,7 +633,9 @@ export default function HomePage() {
 										<li
 											key={item}
 											className={`flex items-center gap-2.5 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-											<CheckCircle className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+											<CheckCircle
+												className={`w-4 h-4 flex-shrink-0 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+											/>
 											{item}
 										</li>
 									))}
@@ -603,7 +657,8 @@ export default function HomePage() {
 				<div className='max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center'>
 					<div className='space-y-6'>
 						<div className='space-y-3'>
-							<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+							<p
+								className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 								Output Quality
 							</p>
 							<h2
@@ -613,7 +668,10 @@ export default function HomePage() {
 						</div>
 						<p
 							className={`text-sm md:text-base leading-relaxed ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-							No generic advice. Our reports provide pinpoint detail on where your money is leaking and where your next 10x growth will come from.
+							No generic advice. Our reports provide
+							pinpoint detail on where your money is
+							leaking and where your next 10x growth
+							will come from.
 						</p>
 						<div className='space-y-4 pt-2'>
 							<div className='flex items-start gap-4'>
@@ -659,7 +717,8 @@ export default function HomePage() {
 					{/* Executive Summary Card */}
 					<div
 						className={`rounded-2xl border p-6 lg:p-8 shadow-2xl ${d ? 'bg-[#161b22] border-white/10 shadow-black/40' : 'bg-white border-gray-200'}`}>
-						<div className={`flex items-center justify-between mb-4 border-b pb-3 ${d ? 'border-white/5' : 'border-gray-200'}`}>
+						<div
+							className={`flex items-center justify-between mb-4 border-b pb-3 ${d ? 'border-white/5' : 'border-gray-200'}`}>
 							<p className='text-[10px] font-bold text-gray-500 uppercase tracking-wider'>
 								DIAGNOSTIC REPORT V2.4
 							</p>
@@ -684,7 +743,8 @@ export default function HomePage() {
 								<p className='text-xs text-gray-500 mb-1'>
 									Risk Profile
 								</p>
-								<p className={`text-lg font-bold ${d ? 'text-red-400' : 'text-red-600'}`}>
+								<p
+									className={`text-lg font-bold ${d ? 'text-red-400' : 'text-red-600'}`}>
 									Moderate High
 								</p>
 							</div>
@@ -692,7 +752,8 @@ export default function HomePage() {
 						<div className='space-y-3'>
 							<div
 								className={`rounded-xl p-4 border-l-4 border-red-500 ${d ? 'bg-red-500/10' : 'bg-red-50'}`}>
-								<p className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-red-400' : 'text-red-600'}`}>
+								<p
+									className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-red-400' : 'text-red-600'}`}>
 									<span className='w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse' />
 									CRITICAL: Cash-Flow
 									Concentration
@@ -707,7 +768,8 @@ export default function HomePage() {
 							</div>
 							<div
 								className={`rounded-xl p-4 border-l-4 border-yellow-500 ${d ? 'bg-yellow-500/10' : 'bg-yellow-50'}`}>
-								<p className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-yellow-400' : 'text-yellow-700'}`}>
+								<p
+									className={`text-xs font-bold mb-1 flex items-center gap-1 ${d ? 'text-yellow-400' : 'text-yellow-700'}`}>
 									<span className='w-1.5 h-1.5 rounded-full bg-yellow-500' />
 									ADVISORY: OpEx
 									Optimization
@@ -792,13 +854,19 @@ export default function HomePage() {
 				className={`py-20 md:py-28 px-6 lg:px-8 border-t ${d ? 'bg-[#0d1117] border-white/5' : 'bg-white border-gray-200'}`}>
 				<div className='max-w-7xl mx-auto space-y-12'>
 					<div className='text-center max-w-2xl mx-auto space-y-3'>
-						<p className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+						<p
+							className={`text-xs font-bold tracking-widest uppercase ${d ? 'text-teal-400' : 'text-teal-700'}`}>
 							Trust & Methodology
 						</p>
 						<h2
 							className={`text-3xl md:text-4xl font-black ${d ? 'text-white' : 'text-gray-900'}`}>
 							Built on Structured Logic,{' '}
-							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
+							<span
+								className={
+									d
+										? 'text-teal-400'
+										: 'text-teal-700'
+								}>
 								Not Hype
 							</span>
 						</h2>
@@ -815,28 +883,36 @@ export default function HomePage() {
 						{[
 							{
 								icon: (
-									<Database className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Database
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Data-First Approach',
 								desc: 'Quantifiable metrics drive every recommendation we make.',
 							},
 							{
 								icon: (
-									<Lock className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Lock
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Your Data is Private',
 								desc: 'Enterprise-grade encryption. Your business data is never shared or sold.',
 							},
 							{
 								icon: (
-									<Brain className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<Brain
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Expert-Backed Models',
 								desc: 'Diagnostic frameworks validated by seasoned business consultants.',
 							},
 							{
 								icon: (
-									<FileText className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`} />
+									<FileText
+										className={`w-6 h-6 ${d ? 'text-teal-400' : 'text-teal-700'}`}
+									/>
 								),
 								title: 'Actionable Reports',
 								desc: 'Every report comes with a priority-ranked roadmap you can execute immediately.',
@@ -886,7 +962,12 @@ export default function HomePage() {
 							className={`text-3xl md:text-4xl font-black leading-tight ${d ? 'text-white' : 'text-gray-900'}`}>
 							The Economy is Changing.
 							<br />
-							<span className={d ? 'text-teal-400' : 'text-teal-700'}>
+							<span
+								className={
+									d
+										? 'text-teal-400'
+										: 'text-teal-700'
+								}>
 								Is Your Business?
 							</span>
 						</h2>

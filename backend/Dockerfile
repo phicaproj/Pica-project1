@@ -33,8 +33,9 @@ COPY prisma ./prisma/
 # Install production dependencies only
 RUN npm install --omit=dev
 
-# Copy compiled app and generated prisma client from builder
+# Copy compiled app, PDF assets, and generated prisma client from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/assets ./assets
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
