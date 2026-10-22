@@ -1,7 +1,13 @@
 import { BusinessSize, Phase, Prisma, SessionStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
-import { CONFLICT, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_CONTENT } from '../../service/shared/http';
+import {
+  CONFLICT,
+  FORBIDDEN,
+  NOT_FOUND,
+  UNAUTHORIZED,
+  UNPROCESSABLE_CONTENT,
+} from '../../service/shared/http';
 import { computeScoring } from '../scoring/scoring.service';
 import type { ScoringResultPayload } from '../scoring/scoring.types';
 import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
@@ -266,7 +272,10 @@ export async function answerAssessmentService(
   // Phase 2A and Phase 2B are per-user with a frozen question snapshot —
   // enforce ownership and constrain answers to the snapshot.
   if (session.phase === Phase.PHASE2A || session.phase === Phase.PHASE2B) {
-    if (!authenticatedUserId || session.userId !== authenticatedUserId) {
+    if (!authenticatedUserId) {
+      throw new AppError('Your session has expired. Please log in again.', UNAUTHORIZED);
+    }
+    if (session.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to modify this session', FORBIDDEN);
     }
 
@@ -371,14 +380,20 @@ export async function submitAssessmentService(
   }
 
   if (sessionPhase.phase === Phase.PHASE2A) {
-    if (!authenticatedUserId || sessionPhase.userId !== authenticatedUserId) {
+    if (!authenticatedUserId) {
+      throw new AppError('Your session has expired. Please log in again.', UNAUTHORIZED);
+    }
+    if (sessionPhase.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to submit this session', FORBIDDEN);
     }
     return submitPhase2AService(sessionId);
   }
 
   if (sessionPhase.phase === Phase.PHASE2B) {
-    if (!authenticatedUserId || sessionPhase.userId !== authenticatedUserId) {
+    if (!authenticatedUserId) {
+      throw new AppError('Your session has expired. Please log in again.', UNAUTHORIZED);
+    }
+    if (sessionPhase.userId !== authenticatedUserId) {
       throw new AppError('You are not authorized to submit this session', FORBIDDEN);
     }
     return submitPhase2BService(sessionId);

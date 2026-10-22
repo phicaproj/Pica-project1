@@ -14,21 +14,9 @@ import {
   getMyPhase2BPillars,
   fetchPhase2BQuestions,
   getSessionResponses,
+  authedFetchRaw,
 } from "@/lib/authClient";
-import { getAccessToken } from "@/lib/authClient";
 import { motion, AnimatePresence } from "framer-motion";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://pica-project1.onrender.com/api";
-
-async function authFetch(path: string, init?: RequestInit) {
-  const token = getAccessToken();
-  const headers = new Headers(init?.headers || {});
-  headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  return fetch(`${API_BASE}${path}`, { ...init, headers });
-}
 
 type ScanState = "loading" | "questions" | "processing" | "error";
 
@@ -405,7 +393,7 @@ export default function DeepDiveSessionPage() {
       setSaving(true);
 
       try {
-        const res = await authFetch(`/assessment/${sessionId}/answer`, {
+        const res = await authedFetchRaw(`/assessment/${sessionId}/answer`, {
           method: "POST",
           body: JSON.stringify({
             questionId: current.question.id,
@@ -440,7 +428,7 @@ export default function DeepDiveSessionPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await authFetch(`/assessment/${sessionId}/submit`, {
+      const res = await authedFetchRaw(`/assessment/${sessionId}/submit`, {
         method: "POST",
         body: JSON.stringify({}),
       });

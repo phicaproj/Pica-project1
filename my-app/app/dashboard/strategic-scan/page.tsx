@@ -13,7 +13,13 @@ import {
 	Radar,
 	Save,
 } from 'lucide-react'
-import { getAccessToken, getMe, setLastSessionId, type MeUser } from '@/lib/authClient'
+import {
+	authedFetchRaw,
+	getAccessToken,
+	getMe,
+	setLastSessionId,
+	type MeUser,
+} from '@/lib/authClient'
 import { getMyPhase2ACredits } from '@/lib/api/consultation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '@/components/ThemeContext'
@@ -194,14 +200,6 @@ function formatRelativeTime(iso: string | null) {
 	}
 	const diffDays = Math.round(diffHours / 24)
 	return `Last updated ${diffDays} day${diffDays === 1 ? '' : 's'} ago`
-}
-
-async function authFetch(path: string, init?: RequestInit) {
-	const token = getAccessToken()
-	const headers = new Headers(init?.headers || {})
-	headers.set('Content-Type', 'application/json')
-	if (token) headers.set('Authorization', `Bearer ${token}`)
-	return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
 function flattenPillars(pillars: Phase2APillar[]): FlatQuestion[] {
@@ -764,7 +762,7 @@ export default function StrategicScanPage() {
 	}, [])
 
 	const loadResult = useCallback(async (id: string) => {
-		const res = await authFetch(`/result/${id}`)
+		const res = await authedFetchRaw(`/result/${id}`)
 		const data = await res.json().catch(() => ({}))
 
 		if (res.status === 409) {
@@ -801,7 +799,7 @@ export default function StrategicScanPage() {
 	)
 
 	const loadQuestions = useCallback(async (id: string) => {
-		const res = await authFetch(`/questions/phase2a?sessionId=${id}`)
+		const res = await authedFetchRaw(`/questions/phase2a?sessionId=${id}`)
 		const data = await res.json().catch(() => ({}))
 		if (!res.ok) {
 			throw new Error(data.message || 'Failed to load Strategic Scan questions')
@@ -846,7 +844,7 @@ export default function StrategicScanPage() {
 
 		setLoading(true)
 		try {
-			const startRes = await authFetch('/assessment/phase2a/start', {
+			const startRes = await authedFetchRaw('/assessment/phase2a/start', {
 				method: 'POST',
 				body: JSON.stringify({}),
 			})
@@ -884,7 +882,7 @@ export default function StrategicScanPage() {
 			setSaving(true)
 
 			try {
-				const res = await authFetch(`/assessment/${sessionId}/answer`, {
+				const res = await authedFetchRaw(`/assessment/${sessionId}/answer`, {
 					method: 'POST',
 					body: JSON.stringify({
 						questionId: current.question.id,
@@ -927,7 +925,7 @@ export default function StrategicScanPage() {
 		setError(null)
 		setSubmitting(true)
 		try {
-			const res = await authFetch(`/assessment/${sessionId}/submit`, {
+			const res = await authedFetchRaw(`/assessment/${sessionId}/submit`, {
 				method: 'POST',
 				body: JSON.stringify({}),
 			})

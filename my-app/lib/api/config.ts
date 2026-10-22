@@ -229,4 +229,68 @@ export async function authedFetch<T>(
 	}
 }
 
+let rawRefreshPromise: Promise<string | null> | null = null
+
+async function refreshAccessTokenOnce(): Promise<string | null> {
+	if (rawRefreshPromise) return rawRefreshPromise
+
+	rawRefreshPromise = (async () => {
+		if (typeof window === 'undefined') return null
+		const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+		if (!refreshToken) return null
+
+		try {
+			const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ refreshToken }),
+			})
+			if (!res.ok) return null
+
+			const data = await res.json()
+			if (!data.accessToken || !data.refreshToken) return null
+
+			localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
+			localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+			return data.accessToken as string
+		} catch {
+			return null
+		}
+	})()
+
+	try {
+		return await rawRefreshPromise
+	} finally {
+		rawRefreshPromise = null
+	}
+}
+
+// Response-returning variant of authedFetch for callers that need to inspect
+// status/body directly. Refreshes an expired access token once before retrying.
+export async function authedFetchRaw(
+	path: string,
+	init: RequestInit = {},
+): Promise<Response> {
+	const run = (token: string | null) => {
+		const headers = new Headers(init.headers || {})
+		if (!headers.has('Content-Type')) {
+			headers.set('Content-Type', 'application/json')
+		}
+		if (token) headers.set('Authorization', `Bearer ${token}`)
+		return fetch(`${API_BASE_URL}${path}`, { ...init, headers })
+	}
+
+	let res = await run(getAccessToken())
+
+	if (res.status === 401) {
+		const refreshed = await refreshAccessTokenOnce()
+		if (refreshed) {
+			res = await run(refreshed)
+		}
+	}
+
+	if (res.status === 401) clearSession()
+	return res
+}
+
 export type BusinessSize = 'SMALL' | 'MEDIUM'
