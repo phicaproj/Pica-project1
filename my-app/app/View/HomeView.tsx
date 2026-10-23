@@ -100,6 +100,11 @@ export default function HomePage() {
 								className='px-12 py-4 rounded-full bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95'>
 								Start Free Scan
 							</Link>
+							<Link
+								href='/Auth/signup'
+								className='px-12 py-4 rounded-full border-2 border-white/40 bg-white/10 text-white text-base font-bold backdrop-blur-sm transition-all text-center hover:border-white/60 hover:bg-white/20 hover:scale-[1.05] active:scale-95'>
+								Register
+							</Link>
 						</div>
 					</div>
 
