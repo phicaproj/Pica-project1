@@ -36,6 +36,19 @@ const COLORS = {
 
 const PAGE_MARGIN = 40;
 
+// Canonical public destination for every outbound link embedded in a report.
+// Keep this as a single constant so a domain change cannot leave stale links
+// scattered across the PDF layouts.
+const PICA_PUBLIC_URL = 'https://pica.beauvisiongroup.com';
+const PICA_PUBLIC_HOST = 'pica.beauvisiongroup.com';
+
+// Phase 2A reports are often forwarded to people who do not have an account,
+// so every link lands on the public homepage (where both Register and Start
+// Free Scan are visible) rather than a login-protected dashboard route. The
+// per-placement utm_content value lets us see which CTA is actually clicked.
+const phase2aPdfLink = (placement: string): string =>
+  `${PICA_PUBLIC_URL}/?utm_source=pdf&utm_medium=phase2a_report&utm_campaign=continue_online&utm_content=${encodeURIComponent(placement)}`;
+
 // Dynamic colors resolver helper
 const getThemeColors = (theme: 'light' | 'dark') => {
   if (theme === 'dark') {
@@ -507,7 +520,12 @@ const drawHeader = (
   doc.y = headerLineY + 15;
 };
 
-const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: string) => {
+const drawFooter = (
+  doc: PDFKit.PDFDocument,
+  businessName: string,
+  sessionId?: string,
+  websiteUrl?: string
+) => {
   const COLORS = getColors(doc);
   const footerY = doc.page.height - 40;
   const prevBottom = doc.page.margins.bottom;
@@ -515,19 +533,35 @@ const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: s
 
   hr(doc, footerY - 8);
 
-  doc
-    .fontSize(8)
-    .font('Helvetica')
-    .fillColor(COLORS.mutedText)
-    .text(`© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`, PAGE_MARGIN, footerY, {
+  const copyright = `© ${new Date().getFullYear()} Beauvision Associates | PICA-V4.2`;
+  const separator = websiteUrl ? ' | ' : '';
+
+  doc.fontSize(8).font('Helvetica').fillColor(COLORS.mutedText);
+  const prefixWidth = doc.widthOfString(`${copyright}${separator}`);
+  doc.text(`${copyright}${separator}`, PAGE_MARGIN, footerY, {
+    align: 'left',
+    width: COLORS.pageWidth / 2,
+    lineBreak: false,
+  });
+
+  if (websiteUrl) {
+    doc.fillColor(COLORS.accent).text(PICA_PUBLIC_HOST, PAGE_MARGIN + prefixWidth, footerY, {
       align: 'left',
-      width: COLORS.pageWidth / 2,
       lineBreak: false,
     });
+    doc.link(
+      PAGE_MARGIN + prefixWidth,
+      footerY - 1,
+      doc.widthOfString(PICA_PUBLIC_HOST),
+      10,
+      websiteUrl
+    );
+  }
 
   const displayId = sessionId ? `ID: BV-${sessionId.substring(0, 8).toUpperCase()}` : '';
   doc
     .fontSize(8)
+    .font('Helvetica')
     .fillColor(COLORS.mutedText)
     .text(`${businessName.substring(0, 30)}   ${displayId}`, PAGE_MARGIN, footerY, {
       align: 'right',
@@ -536,6 +570,61 @@ const drawFooter = (doc: PDFKit.PDFDocument, businessName: string, sessionId?: s
     });
 
   doc.page.margins.bottom = prevBottom;
+};
+
+// Shared CTA card used on the Phase 2A Next Steps and final annex pages. The
+// whole card is clickable, while the visible hostname keeps the destination
+// usable in viewers that disable PDF link annotations or on printed copies.
+const drawWebsiteCta = (
+  doc: PDFKit.PDFDocument,
+  y: number,
+  url: string,
+  heading = 'Continue with PICA online',
+  body = 'Log in to revisit this report, or create a free account to run your own assessment.'
+) => {
+  const COLORS = getColors(doc);
+  const cardH = 72;
+
+  roundedRect(doc, PAGE_MARGIN, y, COLORS.pageWidth, cardH, 8, COLORS.greenBg, COLORS.greenBorder);
+  roundedRect(doc, PAGE_MARGIN, y, 4, cardH, 2, COLORS.greenBorder);
+
+  doc
+    .fontSize(11)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.green)
+    .text(heading, PAGE_MARGIN + 18, y + 14, {
+      width: COLORS.pageWidth - 36,
+      lineBreak: false,
+    });
+
+  doc
+    .fontSize(8.5)
+    .font('Helvetica')
+    .fillColor(COLORS.bodyText)
+    .text(body, PAGE_MARGIN + 18, y + 32, {
+      width: COLORS.pageWidth - 225,
+      lineGap: 1.8,
+    });
+
+  const buttonX = PAGE_MARGIN + COLORS.pageWidth - 190;
+  const buttonY = y + 12;
+  const buttonW = 172;
+  const buttonH = 26;
+  roundedRect(doc, buttonX, buttonY, buttonW, buttonH, 5, COLORS.white, COLORS.greenBorder);
+
+  doc
+    .fontSize(9)
+    .font('Helvetica-Bold')
+    .fillColor(COLORS.green)
+    .text(PICA_PUBLIC_HOST, buttonX, buttonY + 8, {
+      width: buttonW,
+      align: 'center',
+      lineBreak: false,
+    });
+
+  doc.link(PAGE_MARGIN, y, COLORS.pageWidth, cardH, url);
+
+  return y + cardH;
 };
 
 // ============================================================
@@ -746,6 +835,17 @@ const drawCoverPage = (
     .font('Helvetica-Bold')
     .fillColor('#D97706')
     .text('PROPRIETARY', PAGE_MARGIN + 396, gridY + 54);
+
+  // Phase 2A reports are frequently forwarded, so keep the public destination
+  // on the cover as well as in the footer of every subsequent page.
+  if (phase === Phase.PHASE2A) {
+    const coverUrl = phase2aPdfLink('cover');
+    doc.fontSize(8).font('Helvetica-Bold').fillColor(COLORS.accent);
+    const labelW = doc.widthOfString(PICA_PUBLIC_HOST);
+    const labelX = PAGE_MARGIN + (COLORS.pageWidth - labelW) / 2;
+    doc.text(PICA_PUBLIC_HOST, labelX, pageH - 64, { lineBreak: false });
+    doc.link(labelX, pageH - 66, labelW, 12, coverUrl);
+  }
 };
 
 // ============================================================
@@ -2660,6 +2760,10 @@ const drawNextStepsPageCustom = (
       .fillColor(COLORS.mutedText)
       .text(supportData[i].desc, sx + 12, ssY + 68, { width: supportW - 24, lineGap: 1.8 });
   }
+
+  if (phase === Phase.PHASE2A) {
+    drawWebsiteCta(doc, ssY + 150, phase2aPdfLink('next_steps'));
+  }
 };
 
 // ============================================================
@@ -3048,6 +3152,7 @@ const drawVisualizationPage = (
   result: ScoringResultPayload,
   businessName: string,
   date: string,
+  phase: Phase,
   metadata?: { sessionId?: string }
 ) => {
   const COLORS = getColors(doc);
@@ -3214,6 +3319,10 @@ const drawVisualizationPage = (
     .font('Helvetica-Oblique')
     .fillColor('#1D4ED8')
     .text('R. Beauvision', sigX, botY + 10);
+
+  if (phase === Phase.PHASE2A) {
+    drawWebsiteCta(doc, botY + 70, phase2aPdfLink('final_page'));
+  }
 };
 
 const drawSectionTitle = (doc: PDFKit.PDFDocument, title: string) => {
@@ -3430,14 +3539,19 @@ export async function generateReportPDF(
     // --- Page 13: Spider Graph Visualization (only for full scan, i.e., not Phase 2B) ---
     if (!isSinglePillar) {
       doc.addPage();
-      drawVisualizationPage(doc, result, businessName, dateStr, metadata);
+      drawVisualizationPage(doc, result, businessName, dateStr, phase, metadata);
     }
 
     // Apply Footers to all pages except Cover Page
     const range = doc.bufferedPageRange();
     for (let i = range.start + 1; i < range.start + range.count; i++) {
       doc.switchToPage(i);
-      drawFooter(doc, businessName, metadata?.sessionId);
+      drawFooter(
+        doc,
+        businessName,
+        metadata?.sessionId,
+        phase === Phase.PHASE2A ? phase2aPdfLink('footer') : undefined
+      );
     }
 
     doc.end();
@@ -3648,7 +3762,7 @@ export async function generateSnapshotPDF(
     // --- Unlock strategic scan call to action ---
     const ctaY = doc.y;
     const ctaH = 65;
-    const phase2AUrl = 'https://pica.beauvisiongroup.com/dashboard/strategic-scan';
+    const phase2AUrl = `${PICA_PUBLIC_URL}/dashboard/strategic-scan`;
 
     // Draw rounded CTA card
     roundedRect(doc, PAGE_MARGIN, ctaY, COLORS.pageWidth, ctaH, 8, COLORS.greenBg, COLORS.greenBorder);
