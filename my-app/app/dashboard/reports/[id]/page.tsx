@@ -16,12 +16,9 @@ import {
   Presentation,
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
+import { API_BASE_URL as API_BASE } from "@/lib/api/config";
 import { motion } from "framer-motion";
 import { useTheme } from "@/components/ThemeContext";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://pica-project1.onrender.com/api";
 
 type ColorBand = "RED" | "ORANGE" | "AMBER" | "LIGHT_GREEN" | "GREEN";
 

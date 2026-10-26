@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Sun, Moon, Menu, X, ChevronDown, LayoutDashboard, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { clearSession, getStoredUser, type AuthUser } from "@/lib/authClient";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface NavItem {
   label: string;
@@ -28,6 +28,7 @@ export default function Navbar({
 }: NavbarProps) {
   const d = dark;
   const router = useRouter();
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -43,6 +44,14 @@ export default function Navbar({
   useEffect(() => {
     setUser(getStoredUser());
   }, []);
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    if (href === "/pages/freescan") {
+      return pathname === "/pages/freescan" || pathname === "/pages/generaltest";
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   const handleLogout = () => {
     clearSession();
@@ -96,20 +105,23 @@ export default function Navbar({
 
         {/* Desktop Navigation - hidden on mobile */}
         <div className="hidden md:flex items-center gap-6">
-          {navItems.map(({ label, href, active }) => (
-            <Link
-              key={label}
-              href={href}
-              className={`relative text-sm font-medium transition pb-1 after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[2px] after:bg-[#f97316] after:transition-all after:duration-300 hover:after:w-full ${active
-                  ? "text-teal-400 after:w-full after:bg-teal-400"
-                  : d
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-            >
-              {label}
-            </Link>
-          ))}
+          {navItems.map(({ label, href, active }) => {
+            const current = active ?? isActive(href);
+            return (
+              <Link
+                key={label}
+                href={href}
+                className={`relative text-sm font-medium transition pb-1 after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[2px] after:bg-[#f97316] after:transition-all after:duration-300 hover:after:w-full ${current
+                    ? "text-teal-400 after:w-full after:bg-teal-400"
+                    : d
+                      ? "text-gray-300 hover:text-white"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Desktop Right Actions - hidden on mobile */}
@@ -181,7 +193,7 @@ export default function Navbar({
                 Login
               </Link>
               <Link
-                href="/pages/about"
+                href="/pages/freescan"
                 className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
               >
                 Get Started
@@ -212,21 +224,24 @@ export default function Navbar({
         >
           <div className="flex flex-col p-4 space-y-3">
             {/* Navigation Links */}
-            {navItems.map(({ label, href, active }) => (
-              <Link
-                key={label}
-                href={href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition border-l-2 ${active
-                    ? "text-teal-400 bg-teal-400/10 border-teal-400"
-                    : d
-                      ? "text-gray-300 hover:text-white hover:bg-white/10 border-transparent hover:border-[#f97316]"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent hover:border-[#f97316]"
-                  }`}
-              >
-                {label}
-              </Link>
-            ))}
+            {navItems.map(({ label, href, active }) => {
+              const current = active ?? isActive(href);
+              return (
+                <Link
+                  key={label}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition border-l-2 ${current
+                      ? "text-teal-400 bg-teal-400/10 border-teal-400"
+                      : d
+                        ? "text-gray-300 hover:text-white hover:bg-white/10 border-transparent hover:border-[#f97316]"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 border-transparent hover:border-[#f97316]"
+                    }`}
+                >
+                  {label}
+                </Link>
+              );
+            })}
 
             {/* Divider */}
             <div className={`h-px my-2 ${d ? "bg-white/10" : "bg-gray-200"}`} />
@@ -296,7 +311,7 @@ export default function Navbar({
                   Login
                 </Link>
                 <Link
-                  href="/pages/about"
+                  href="/pages/freescan"
                   onClick={() => setMobileMenuOpen(false)}
                   className="px-3 py-2 rounded-lg text-sm font-semibold text-center bg-[#f97316] hover:bg-[#ea6c0a] text-white transition"
                 >

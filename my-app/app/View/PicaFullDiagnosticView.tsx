@@ -700,22 +700,24 @@ function IntelligenceCheckoutPage({
               d ? "text-gray-500" : "text-gray-400"
             }`}
           >
-            © 2024 PICA. Secure Encrypted Payment.
+            © 2026 PICA. Secure Encrypted Payment.
           </p>
           <div className="flex items-center gap-6">
-            {["Privacy Policy", "Terms of Service", "Security Standards"].map(
-              (item) => (
-                <Link
-                  key={item}
-                  href="#"
-                  className={`text-xs hover:opacity-70 transition ${
-                    d ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
-                  {item}
-                </Link>
-              )
-            )}
+            {[
+              { label: "Privacy Policy", href: "/data-policy" },
+              { label: "Terms of Service", href: "/terms" },
+              { label: "Security Standards", href: "/documentation" },
+            ].map(({ label, href }) => (
+              <Link
+                key={label}
+                href={href}
+                className={`text-xs hover:opacity-70 transition ${
+                  d ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         </div>
       </footer>

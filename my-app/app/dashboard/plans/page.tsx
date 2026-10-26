@@ -290,7 +290,7 @@ function PickerView({
 
   return (
     <>
-      <section className="text-center px-4 pt-16 pb-12 max-w-4xl mx-auto">
+      <section data-tour="plans-intro" className="text-center px-4 pt-16 pb-12 max-w-4xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 mb-4">
           <Crown className="w-3.5 h-3.5 text-orange-400" />
           <span className="text-[10px] font-bold uppercase tracking-widest text-orange-400">
@@ -309,18 +309,22 @@ function PickerView({
           tests expire. Need more for a one-off scan? Pay-per-use is always
           available.
         </p>
-        {hasActiveSub && (
-          // Anchor to /dashboard/settings with the deep-link param the
-          // billing tab will read to land on the Subscription sub-tab.
-          <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-5">
+          {hasActiveSub && (
             <Link
               href="/dashboard/settings?tab=Billing&billingTab=Subscription"
               className="inline-flex items-center gap-2 text-xs font-semibold text-orange-400 hover:text-orange-300 transition"
             >
               Manage subscription <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          </div>
-        )}
+          )}
+          <Link
+            href="/dashboard/subscription"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-orange-400 hover:text-orange-300 transition"
+          >
+            Buy a one-off scan <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-4">
@@ -375,7 +379,7 @@ function PickerView({
             </p>
           )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        <div data-tour="plans-cards" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
           {plans.map((plan, idx) => {
             // Annual price falls back to monthly when the tier has no annual
             // option — the toggle is hidden in that case so users never see

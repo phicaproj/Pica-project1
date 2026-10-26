@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
 import { setLastSessionId } from '@/lib/authClient'
+import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import {
 	Clock,
 	CheckSquare,
@@ -18,10 +19,6 @@ import {
 	Loader,
 	BarChart2,
 } from 'lucide-react'
-
-const API_BASE =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
 
 const OPTIONS_LABELS = ['A', 'B', 'C', 'D']
 const PREPARING_MESSAGES = [
@@ -182,6 +179,7 @@ function ProfileStep({
 	onBack,
 	loading,
 	error,
+	showRecovery,
 }: {
 	dark: boolean
 	profile: ProfileData
@@ -190,6 +188,7 @@ function ProfileStep({
 	onBack: () => void
 	loading: boolean
 	error: string | null
+	showRecovery: boolean
 }) {
 	const d = dark
 	const [industryOpen, setIndustryOpen] = useState(false)
@@ -201,22 +200,44 @@ function ProfileStep({
 	const [countriesData, setCountriesData] = useState<
 		{ name: string; states: { name: string }[] }[]
 	>([])
+	const [apiFailed, setApiFailed] = useState(false)
+	const [loadingCountries, setLoadingCountries] = useState(true)
 	const [selectedCountry, setSelectedCountry] = useState('')
 	const [selectedState, setSelectedState] = useState('')
 
 	useEffect(() => {
-		fetch('https://countriesnow.space/api/v0.1/countries/states')
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 8000)
+
+		fetch('https://countriesnow.space/api/v0.1/countries/states', {
+			signal: controller.signal,
+		})
 			.then((res) => res.json())
 			.then((data) => {
-				if (data && !data.error && Array.isArray(data.data)) {
+				if (data && !data.error && Array.isArray(data.data) && data.data.length > 0) {
 					const sorted = [...data.data].sort(
 						(a: { name: string }, b: { name: string }) =>
 							a.name.localeCompare(b.name)
 					)
 					setCountriesData(sorted)
+					setApiFailed(false)
+				} else {
+					setApiFailed(true)
 				}
 			})
-			.catch((err) => console.error('Failed to load countries', err))
+			.catch((err) => {
+				console.error('Failed to load countries', err)
+				setApiFailed(true)
+			})
+			.finally(() => {
+				clearTimeout(timeout)
+				setLoadingCountries(false)
+			})
+
+		return () => {
+			clearTimeout(timeout)
+			controller.abort()
+		}
 	}, [])
 
 	useEffect(() => {
@@ -224,6 +245,14 @@ function ProfileStep({
 			setProfile((prev: ProfileData) => ({ ...prev, location: `${selectedState}, ${selectedCountry}` }))
 		}
 	}, [selectedCountry, selectedState])
+
+	const selectedStates =
+		countriesData.find((c) => c.name === selectedCountry)?.states || []
+	const useLocationTextFallback =
+		apiFailed || (!loadingCountries && countriesData.length === 0)
+	const useStateTextFallback =
+		useLocationTextFallback ||
+		(!!selectedCountry && selectedStates.length === 0)
 
 	const update = (field: keyof ProfileData, value: string) => {
 		setProfile({ ...profile, [field]: value })
@@ -410,28 +439,43 @@ function ProfileStep({
 								Country
 							</label>
 							<div className='relative'>
-								<select
-									value={selectedCountry}
-									onChange={(e) => {
-										setSelectedCountry(e.target.value)
-										setSelectedState('')
-									}}
-									className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
-								>
-									<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
-										Country
-									</option>
-									{countriesData.map((c) => (
-										<option
-											key={c.name}
-											value={c.name}
-											className={d ? 'bg-[#0d1117] text-white' : ''}
+								{useLocationTextFallback ? (
+									<input
+										type='text'
+										placeholder='Country'
+										value={selectedCountry}
+										onChange={(e) => {
+											setSelectedCountry(e.target.value)
+											setSelectedState('')
+										}}
+										className={`w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`}
+									/>
+								) : (
+									<>
+										<select
+											value={selectedCountry}
+											onChange={(e) => {
+												setSelectedCountry(e.target.value)
+												setSelectedState('')
+											}}
+											className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
 										>
-											{c.name}
-										</option>
-									))}
-								</select>
-								<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
+											<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
+												Country
+											</option>
+											{countriesData.map((c) => (
+												<option
+													key={c.name}
+													value={c.name}
+													className={d ? 'bg-[#0d1117] text-white' : ''}
+												>
+													{c.name}
+												</option>
+											))}
+										</select>
+										<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
+									</>
+								)}
 							</div>
 						</div>
 						<div>
@@ -441,28 +485,39 @@ function ProfileStep({
 								State
 							</label>
 							<div className='relative'>
-								<select
-									value={selectedState}
-									onChange={(e) => setSelectedState(e.target.value)}
-									disabled={!selectedCountry}
-									className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
-								>
-									<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
-										State
-									</option>
-									{countriesData
-										.find((c) => c.name === selectedCountry)
-										?.states?.map((s) => (
-											<option
-												key={s.name}
-												value={s.name}
-												className={d ? 'bg-[#0d1117] text-white' : ''}
-											>
-												{s.name}
+								{useStateTextFallback ? (
+									<input
+										type='text'
+										placeholder='State / Province'
+										value={selectedState}
+										onChange={(e) => setSelectedState(e.target.value)}
+										disabled={!selectedCountry}
+										className={`w-full px-4 py-3 rounded-xl border text-sm focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'}`}
+									/>
+								) : (
+									<>
+										<select
+											value={selectedState}
+											onChange={(e) => setSelectedState(e.target.value)}
+											disabled={!selectedCountry}
+											className={`w-full px-4 py-3 rounded-xl border text-sm appearance-none pr-10 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed ${d ? 'bg-[#0d1117] border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+										>
+											<option value='' className={d ? 'bg-[#0d1117] text-white' : ''}>
+												State
 											</option>
-										))}
-								</select>
-								<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
+											{selectedStates.map((s) => (
+												<option
+													key={s.name}
+													value={s.name}
+													className={d ? 'bg-[#0d1117] text-white' : ''}
+												>
+													{s.name}
+												</option>
+											))}
+										</select>
+										<ChevronDown className='w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' />
+									</>
+								)}
 							</div>
 						</div>
 					</div>
@@ -470,7 +525,22 @@ function ProfileStep({
 
 				{error && (
 					<div className={`mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 ${d ? 'text-red-400' : 'text-red-600'} text-sm`}>
-						{error}
+						<p>{error}</p>
+						{showRecovery && (
+							<div className='mt-3 flex flex-wrap gap-3'>
+								<Link
+									href='/dashboard/reports'
+									className='inline-flex items-center gap-2 rounded-lg bg-[#f97316] px-4 py-2 text-xs font-bold text-gray-900 transition hover:bg-[#ea6c0a]'>
+									<FileText className='h-3.5 w-3.5' />
+									View report
+								</Link>
+								<Link
+									href='/Auth/login?next=/dashboard/reports'
+									className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold transition ${d ? 'border-white/15 text-white hover:bg-white/5' : 'border-gray-300 text-gray-800 hover:bg-gray-50'}`}>
+									Log in
+								</Link>
+							</div>
+						)}
 					</div>
 				)}
 
@@ -1013,6 +1083,7 @@ export default function GeneralTestPage() {
 	const [loading, setLoading] = useState(false)
 	const [submitting, setSubmitting] = useState(false)
 	const [error, setError] = useState<string | null>(null)
+	const [showRecovery, setShowRecovery] = useState(false)
 
 	const [profile, setProfile] = useState<ProfileData>({
 		leadEmail: '',
@@ -1126,6 +1197,7 @@ export default function GeneralTestPage() {
 
 		setLoading(true)
 		setError(null)
+		setShowRecovery(false)
 		setStep('preparing')
 		try {
 			const res = await fetch(`${API_BASE}/assessment/start`, {
@@ -1137,6 +1209,7 @@ export default function GeneralTestPage() {
 
 			if (res.status === 409) {
 				setStep('profile')
+				setShowRecovery(true)
 				setError(
 					data.message ||
 						'You already completed this assessment. Check your email for your report, or log in to your dashboard to view it.',
@@ -1279,6 +1352,7 @@ export default function GeneralTestPage() {
 				}}
 				loading={loading}
 				error={error}
+				showRecovery={showRecovery}
 			/>
 		)
 	if (step === 'preparing')

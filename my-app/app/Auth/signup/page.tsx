@@ -7,6 +7,7 @@ import { ChevronDown, MapPin } from 'lucide-react'
 import { SignUp } from '@/lib/authClient'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@/components/ThemeContext'
+import { appendNext, safeNextPath } from '@/lib/redirect'
 
 // Hoisted out of SignUpPage so the icon component identities are stable and
 // the password-eye toggle flips immediately instead of remounting on each
@@ -74,13 +75,25 @@ export default function SignUpPage() {
 	const [countriesData, setCountriesData] = useState<any[]>([])
 	const [apiFailed, setApiFailed] = useState(false)
 	const [loadingCountries, setLoadingCountries] = useState(false)
+	const [nextPath, setNextPath] = useState('/dashboard')
 
 	useEffect(() => {
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search)
+			setNextPath(safeNextPath(params.get('next')))
+		}
+	}, [])
+
+	useEffect(() => {
+		const controller = new AbortController()
+		const timeout = setTimeout(() => controller.abort(), 8000)
+
 		const fetchCountries = async () => {
 			setLoadingCountries(true)
 			try {
 				const res = await fetch(
 					'https://countriesnow.space/api/v0.1/countries/states',
+					{ signal: controller.signal },
 				)
 				const json = await res.json()
 				if (json && !json.error && Array.isArray(json.data)) {
@@ -89,6 +102,7 @@ export default function SignUpPage() {
 							a.name.localeCompare(b.name),
 					)
 					setCountriesData(sorted)
+					setApiFailed(false)
 				} else {
 					setApiFailed(true)
 				}
@@ -96,10 +110,16 @@ export default function SignUpPage() {
 				console.error('Error fetching countries API:', err)
 				setApiFailed(true)
 			} finally {
+				clearTimeout(timeout)
 				setLoadingCountries(false)
 			}
 		}
 		fetchCountries()
+
+		return () => {
+			clearTimeout(timeout)
+			controller.abort()
+		}
 	}, [])
 
 	const [form, setForm] = useState({
@@ -120,6 +140,8 @@ export default function SignUpPage() {
 		(c: any) => c.name === form.country,
 	)
 	const statesList = selectedCountryObj?.states || []
+	const useCountryTextFallback =
+		apiFailed || (!loadingCountries && countriesData.length === 0)
 	const [submitError, setSubmitError] = useState('')
 
 	const [errors, setErrors] = useState<Record<string, string>>({})
@@ -179,7 +201,10 @@ export default function SignUpPage() {
 				)
 			}
 			router.push(
-				`/Auth/verify-code?email=${encodeURIComponent(form.email)}&type=email-verify`,
+				appendNext(
+					`/Auth/verify-code?email=${encodeURIComponent(form.email)}&type=email-verify`,
+					nextPath,
+				),
 			)
 		}
 	}
@@ -541,49 +566,69 @@ export default function SignUpPage() {
 							{/* Country and State dropdowns */}
 							<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
 								<div className='relative'>
-									<select
-										value={form.country}
-										onChange={(e) => {
-											handleChange(
-												'country',
-												e.target
-													.value,
-											)
-											handleChange(
-												'state',
-												'',
-											)
-										}}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
-											errors.country
-												? 'border-red-500 focus:ring-red-400'
-												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
-										}`}>
-										<option
-											value=''
-											disabled
-											className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
-											Select
-											Country*
-										</option>
-										{countriesData.map(
-											(c) => (
+									{useCountryTextFallback ? (
+										<input
+											type='text'
+											placeholder='Country*'
+											value={form.country}
+											onChange={(e) =>
+												handleChange(
+													'country',
+													e.target.value,
+												)
+											}
+											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+												errors.country
+													? 'border-red-500 focus:ring-red-400'
+													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
+											}`}
+										/>
+									) : (
+										<>
+											<select
+												value={form.country}
+												onChange={(e) => {
+													handleChange(
+														'country',
+														e.target.value,
+													)
+													handleChange(
+														'state',
+														'',
+													)
+												}}
+												className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
+													errors.country
+														? 'border-red-500 focus:ring-red-400'
+														: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
+												}`}>
 												<option
-													key={
-														c.name
-													}
-													value={
-														c.name
-													}
-													className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
-													{
-														c.name
-													}
+													value=''
+													disabled
+													className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
+													Select
+													Country*
 												</option>
-											),
-										)}
-									</select>
-									<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none' />
+												{countriesData.map(
+													(c) => (
+														<option
+															key={
+																c.name
+															}
+															value={
+																c.name
+															}
+															className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
+															{
+																c.name
+															}
+														</option>
+													),
+												)}
+											</select>
+											<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none' />
+										</>
+									)}
 									{errors.country && (
 										<p className='text-red-500 text-xs mt-1'>
 											{
@@ -836,7 +881,7 @@ export default function SignUpPage() {
 						<p className={`text-center text-sm mt-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Already have an account?
 							<Link
-								href='/Auth/login'
+								href={appendNext('/Auth/login', nextPath)}
 								className={`font-bold transition ml-1 underline ${d ? 'text-white hover:text-[#f97316]' : 'text-gray-900 hover:text-[#f97316]'}`}>
 								Login
 							</Link>
@@ -877,13 +922,13 @@ export default function SignUpPage() {
 						Terms of Service
 					</Link>
 					<Link
-						href='#'
+						href='/documentation'
 						className='text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition'>
 						Security Architecture
 					</Link>
 				</div>
 				<p className='text-xs text-gray-600 uppercase tracking-wider'>
-					© 2024 PICA Intelligence Systems. All rights
+					© 2026 PICA Intelligence Systems. All rights
 					reserved.
 				</p>
 			</footer>

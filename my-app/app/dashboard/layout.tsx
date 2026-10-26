@@ -15,7 +15,6 @@ import {
   CreditCard,
   Crown,
   Settings,
-  Bell,
   Menu,
   X,
   Sun,
@@ -23,6 +22,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { AuthUser, getStoredUser, clearSession } from "@/lib/authClient";
+import { appendNext } from "@/lib/redirect";
+import DashboardTour from "@/components/DashboardTour";
 
 const NAV_MAIN = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
@@ -32,16 +33,17 @@ const NAV_MAIN = [
   { label: "Reports", icon: FileText, href: "/dashboard/reports" },
 ];
 
-const NAV_SUPPORT = [
-  // Monthly plans (recurring subscription tiers) — distinct from
-  // /dashboard/subscription which is the one-off pay-per-use checkout.
-  { label: "Plans", icon: Crown, href: "/dashboard/plans" },
-  { label: "Pay-per-use", icon: CreditCard, href: "/dashboard/subscription" },
+const NAV_BILLING = [
+  { label: "Subscription Plans", icon: Crown, href: "/dashboard/plans" },
+  { label: "Pay-per-use Scans", icon: CreditCard, href: "/dashboard/subscription" },
+];
+
+const NAV_ACCOUNT = [
   { label: "Settings", icon: Settings, href: "/dashboard/settings" },
 ];
 
 function getPageTitle(pathname: string) {
-  const all = [...NAV_MAIN, ...NAV_SUPPORT];
+  const all = [...NAV_MAIN, ...NAV_BILLING, ...NAV_ACCOUNT];
   const match = all.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
   return match?.label || "Home";
 }
@@ -61,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     const stored = getStoredUser();
     if (!stored) {
-      router.replace("/Auth/login");
+      router.replace(appendNext("/Auth/login", pathname));
       return;
     }
     if (stored.role === "ADMIN") {
@@ -70,7 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setUser(stored);
     setAuthChecked(true);
-  }, [router]);
+  }, [router, pathname]);
 
   // Close the account dropdown on any outside click.
   useEffect(() => {
@@ -83,6 +85,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [menuOpen]);
+
+  // Let the onboarding tour open the mobile sidebar while it explains the nav.
+  useEffect(() => {
+    const onTourSidebar = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      setSidebarOpen(Boolean(detail?.open));
+    };
+    window.addEventListener("pica:tour-sidebar", onTourSidebar);
+    return () => window.removeEventListener("pica:tour-sidebar", onTourSidebar);
+  }, []);
 
   // Auto log-out on inactivity (15 minutes)
   useEffect(() => {
@@ -116,9 +128,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = (params?: { reason?: string }) => {
     clearSession();
     if (params?.reason) {
-      router.push(`/Auth/login?reason=${params.reason}`);
+      router.push(appendNext(`/Auth/login?reason=${params.reason}`, pathname));
     } else {
-      router.push("/Auth/login");
+      router.push(appendNext("/Auth/login", pathname));
     }
   };
 
@@ -163,6 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-4">
           {/* Mobile hamburger */}
           <button
+            data-tour="dashboard-nav-toggle"
             className={`lg:hidden ${d ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
@@ -189,11 +202,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             title="Toggle theme"
           >
             {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-
-          {/* Notification bell */}
-          <button className={`relative p-2 rounded-full transition ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
-            <Bell className="w-5 h-5" />
           </button>
 
           {/* User avatar → account menu (Settings / Logout) */}
@@ -268,21 +276,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          <nav className="space-y-1">
-            {NAV_MAIN.map((item) => (
-              <NavItem key={item.label} item={item} />
-            ))}
-          </nav>
-
-          <div className="mt-6">
-            <p className={`px-4 text-[10px] font-semibold ${d ? 'text-orange-400/70' : 'text-orange-600/70'} uppercase tracking-widest mb-2`}>
-              Support
-            </p>
+          <div data-tour="dashboard-sidebar" className="flex flex-col">
             <nav className="space-y-1">
-              {NAV_SUPPORT.map((item) => (
+              {NAV_MAIN.map((item) => (
                 <NavItem key={item.label} item={item} />
               ))}
             </nav>
+
+            <div className="mt-6">
+              <p className={`px-4 text-[10px] font-semibold ${d ? 'text-orange-400/70' : 'text-orange-600/70'} uppercase tracking-widest mb-2`}>
+                Billing
+              </p>
+              <nav className="space-y-1">
+                {NAV_BILLING.map((item) => (
+                  <NavItem key={item.label} item={item} />
+                ))}
+              </nav>
+            </div>
+
+            <div className="mt-6">
+              <p className={`px-4 text-[10px] font-semibold ${d ? 'text-orange-400/70' : 'text-orange-600/70'} uppercase tracking-widest mb-2`}>
+                Account
+              </p>
+              <nav className="space-y-1">
+                {NAV_ACCOUNT.map((item) => (
+                  <NavItem key={item.label} item={item} />
+                ))}
+              </nav>
+            </div>
           </div>
 
           <div className="mt-auto pt-6">
@@ -308,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex flex-wrap items-center justify-center gap-4 mb-2">
               <Link href="/data-policy" className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>PRIVACY POLICY</Link>
               <Link href="/terms" className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>TERMS OF SERVICE</Link>
-              <span className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>SUPPORT</span>
+              <Link href="/pages/contact" className={`cursor-pointer ${d ? 'hover:text-gray-300' : 'hover:text-gray-900'}`}>SUPPORT</Link>
             </div>
             <p>&copy; 2026 PICA</p>
           </footer>
@@ -322,6 +343,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
       </button>
+
+      <DashboardTour />
     </div>
   );
 }

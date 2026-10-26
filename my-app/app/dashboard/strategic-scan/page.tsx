@@ -20,13 +20,11 @@ import {
 	setLastSessionId,
 	type MeUser,
 } from '@/lib/authClient'
+import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import { getMyPhase2ACredits } from '@/lib/api/consultation'
+import { appendNext } from '@/lib/redirect'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTheme } from '@/components/ThemeContext'
-
-const API_BASE =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
 
 type ScanState = 'landing' | 'questions' | 'processing'
 
@@ -243,6 +241,7 @@ function LandingState({
 
 	return (
 		<motion.div
+			data-tour='strategic-scan-hero'
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
 			exit={{ opacity: 0, y: -20 }}
@@ -830,7 +829,7 @@ export default function StrategicScanPage() {
 
 		if (!getAccessToken()) {
 			setError('You need to be signed in to start the full diagnostic.')
-			router.push('/Auth/login')
+			router.push(appendNext('/Auth/login', '/dashboard/strategic-scan'))
 			return
 		}
 

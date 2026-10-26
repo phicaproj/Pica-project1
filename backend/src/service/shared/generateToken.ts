@@ -11,6 +11,8 @@ import {
   JWT_PASSWORD_RESET_EXPIRE,
   JWT_INVITE_SECRET,
   JWT_INVITE_EXPIRE,
+  JWT_SIGNUP_CLAIM_SECRET,
+  JWT_SIGNUP_CLAIM_EXPIRE,
 } from '../../Config/env';
 import AppError from './appError';
 import { BAD_REQUEST } from './http';
@@ -36,6 +38,12 @@ export interface PasswordResetTokenPayload {
 export interface InviteTokenPayload {
   email: string;
   purpose: 'admin-invite';
+}
+
+export interface SignupClaimTokenPayload {
+  sessionId: string;
+  email: string;
+  purpose: 'signup-claim';
 }
 
 export function generateAccessToken(payload: TokenPayload) {
@@ -140,5 +148,24 @@ export function verifyInviteToken(token: string): InviteTokenPayload {
     return decoded;
   } catch (error) {
     throw new AppError('Invalid or expired invite link', BAD_REQUEST);
+  }
+}
+
+export function generateSignupClaimToken(payload: SignupClaimTokenPayload) {
+  return jwt.sign(payload, JWT_SIGNUP_CLAIM_SECRET as jwt.Secret, {
+    expiresIn: JWT_SIGNUP_CLAIM_EXPIRE as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifySignupClaimToken(token: string): SignupClaimTokenPayload {
+  try {
+    const decoded = jwt.verify(
+      token,
+      JWT_SIGNUP_CLAIM_SECRET as jwt.Secret
+    ) as SignupClaimTokenPayload;
+
+    return decoded;
+  } catch (error) {
+    throw new AppError('Invalid or expired signup link', BAD_REQUEST);
   }
 }

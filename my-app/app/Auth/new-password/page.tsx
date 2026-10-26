@@ -1,9 +1,10 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { resetPassword } from '@/lib/authClient'
 import { useTheme } from '@/components/ThemeContext'
+import { appendNext, safeNextPath } from '@/lib/redirect'
 
 // Hoisted so the icon components keep stable identities across re-renders —
 // see Auth/login/page.tsx for the rationale. Otherwise typing into either
@@ -52,6 +53,8 @@ function NewPasswordContent() {
 	const { dark } = useTheme()
 	const d = dark
 	const router = useRouter()
+	const searchParams = useSearchParams()
+	const nextPath = safeNextPath(searchParams.get('next'))
 
 	const [showNew, setShowNew] = useState(false)
 	const [showConfirm, setShowConfirm] = useState(false)
@@ -83,7 +86,7 @@ function NewPasswordContent() {
 				return
 			}
 			alert('Password reset successfully')
-			router.push('/Auth/login')
+			router.push(appendNext('/Auth/login', nextPath))
 		} catch {
 			setError('Something went wrong. Please try again.')
 			alert('Something went wrong. Please try again.')
@@ -208,7 +211,7 @@ function NewPasswordContent() {
 
 			{/* Footer */}
 			<div className={`relative z-10 py-4 text-center text-sm backdrop-blur-sm ${d ? 'text-gray-400 bg-[#0d1117]/80' : 'text-gray-600 bg-white/80'}`}>
-				© Beauvision 2024 . All rights reserved.
+				© Beauvision 2026 . All rights reserved.
 			</div>
 		</div>
 	)

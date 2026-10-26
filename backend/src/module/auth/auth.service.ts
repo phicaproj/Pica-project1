@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
-import { BusinessSize, Phase, SessionStatus, UserRole, UserStatus } from '@prisma/client';
+import { BusinessSize, Phase, Prisma, SessionStatus, UserRole, UserStatus } from '@prisma/client';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import { parseLocation } from '../../service/shared/location';
@@ -24,6 +24,7 @@ import {
   verifyOtpToken,
   verifyPasswordResetToken,
   verifyRefreshToken,
+  verifySignupClaimToken,
 } from '../../service/shared/generateToken';
 import {
   adminCodeEmail,
@@ -46,6 +47,9 @@ import type { RefreshTokenInput,
   ResendVerificationResponse,
   ResetPasswordInput,
   ResetPasswordResponse,
+  SignupClaimInput,
+  SignupClaimPreviewResponse,
+  SignupClaimResponse,
   VerifyAdminOTPInput,
   VerifyAdminOTPResponse,
   VerifyEmailInput,
@@ -63,6 +67,17 @@ function classifyStaffSizeForRegistration(staffSize: string): BusinessSize {
   if (!match) return BusinessSize.SMALL;
   const headcount = Number.parseInt(match[0], 10);
   return headcount > SMALL_STAFF_THRESHOLD ? BusinessSize.MEDIUM : BusinessSize.SMALL;
+}
+
+async function linkPhase1SessionsToUser(userId: string, email: string): Promise<void> {
+  await prisma.assessmentSession.updateMany({
+    where: {
+      leadEmail: email.trim().toLowerCase(),
+      phase: Phase.PHASE1,
+      userId: null,
+    },
+    data: { userId },
+  });
 }
 
 export async function registerService(data: RegisterInput): Promise<RegisterResponse> {
@@ -132,10 +147,7 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     },
   });
 
-  await prisma.assessmentSession.updateMany({
-    where: { leadEmail: user.email },
-    data: { userId: user.id },
-  });
+  await linkPhase1SessionsToUser(user.id, user.email);
 
   // Hard email-verification gate: the account is created unverified and must
   const otpToken = await issueEmailVerification(user.email);
@@ -145,6 +157,196 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     requiresVerification: true,
     otpToken,
     email: user.email,
+  };
+}
+
+const CLAIMABLE_PHASE1_STATUSES = new Set<SessionStatus>([
+  SessionStatus.COMPLETED,
+  SessionStatus.PAID,
+  SessionStatus.REPORT_GENERATED,
+]);
+
+// Shared validation for the "create your password" link emailed with the free
+// scan report. The token is a 20-day JWT that points at the Phase 1 session, so
+// the account can be built from the profile the lead already submitted.
+async function resolveSignupClaim(
+  token: string,
+  options: { allowExisting?: boolean } = {}
+) {
+  const payload = verifySignupClaimToken(token);
+
+  if (payload.purpose !== 'signup-claim' || !payload.sessionId || !payload.email) {
+    throw new AppError('Invalid signup link', BAD_REQUEST);
+  }
+
+  const email = payload.email.trim().toLowerCase();
+
+  const session = await prisma.assessmentSession.findUnique({
+    where: { id: payload.sessionId },
+    select: {
+      id: true,
+      phase: true,
+      status: true,
+      leadEmail: true,
+      businessName: true,
+      staffSize: true,
+      industry: true,
+      location: true,
+      operatingYears: true,
+      annualRevenue: true,
+      businessSize: true,
+      userId: true,
+    },
+  });
+
+  if (!session || session.phase !== Phase.PHASE1) {
+    throw new AppError('This signup link is no longer valid', BAD_REQUEST);
+  }
+
+  if (!CLAIMABLE_PHASE1_STATUSES.has(session.status)) {
+    throw new AppError('Complete your free scan before creating a password', BAD_REQUEST);
+  }
+
+  if (session.userId) {
+    throw new AppError(
+      'This signup link has already been used. Please log in instead.',
+      CONFLICT
+    );
+  }
+
+  if (!session.leadEmail || session.leadEmail.trim().toLowerCase() !== email) {
+    throw new AppError('This signup link is no longer valid', BAD_REQUEST);
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existingUser && !options.allowExisting) {
+    throw new AppError(
+      'An account with this email already exists. Please log in instead.',
+      CONFLICT
+    );
+  }
+
+  return { email, session, existingUser };
+}
+
+export async function previewSignupClaimService(
+  token: string
+): Promise<SignupClaimPreviewResponse> {
+  const { email, session } = await resolveSignupClaim(token);
+  const location = parseLocation(session.location);
+
+  return {
+    message: 'Signup link verified',
+    email,
+    businessName: session.businessName,
+    staffSize: session.staffSize,
+    industry: session.industry,
+    operatingYears: session.operatingYears,
+    country: location.country,
+    state: location.state,
+  };
+}
+
+export async function claimSignupService(data: SignupClaimInput): Promise<SignupClaimResponse> {
+  const { email, session, existingUser } = await resolveSignupClaim(data.token, {
+    allowExisting: true,
+  });
+
+  if (existingUser) {
+    await linkPhase1SessionsToUser(existingUser.id, email);
+    throw new AppError(
+      'An account with this email already exists. Please log in to view your report.',
+      CONFLICT
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+  const location = parseLocation(session.location);
+  const businessSize = session.staffSize
+    ? classifyStaffSizeForRegistration(session.staffSize)
+    : session.businessSize;
+
+  const user = await (async () => {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email,
+            passwordHash,
+            businessName: session.businessName,
+            businessSize,
+            staffSize: session.staffSize,
+            industry: session.industry,
+            country: location.country,
+            state: location.state,
+            operatingYears: session.operatingYears,
+            annualRevenue: session.annualRevenue,
+            // Possession of the emailed claim token proves control of this inbox,
+            // so the account can skip the separate OTP verification step.
+            isVerified: true,
+          },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            businessName: true,
+            phone: true,
+            avatarUrl: true,
+            isVerified: true,
+            role: true,
+          },
+        });
+
+        await tx.assessmentSession.updateMany({
+          where: { leadEmail: email, phase: Phase.PHASE1 },
+          data: { userId: created.id },
+        });
+
+        return created;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new AppError(
+          'An account with this email already exists. Please log in instead.',
+          CONFLICT
+        );
+      }
+      throw error;
+    }
+  })();
+
+  try {
+    await sendWelcomeEmail(user.email, user.businessName ?? user.email);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error sending welcome email:', message);
+  }
+
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  return {
+    message: 'Account created successfully',
+    requiresOtp: false,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: user.isVerified,
+      role: user.role,
+    },
+    accessToken,
+    refreshToken,
   };
 }
 
@@ -226,6 +428,8 @@ export async function loginService(data: LoginInput): Promise<LoginResponse> {
       email: user.email,
     };
   }
+
+  await linkPhase1SessionsToUser(user.id, user.email);
 
   const tokenPayload = { id: user.id, role: user.role };
   const accessToken = generateAccessToken(tokenPayload);
@@ -460,6 +664,8 @@ export async function verifyEmailService(data: VerifyEmailInput): Promise<Verify
       console.error('Error sending welcome email:', message);
     }
   }
+
+  await linkPhase1SessionsToUser(user.id, user.email);
 
   const tokenPayload = { id: user.id, role: user.role };
   const accessToken = generateAccessToken(tokenPayload);
@@ -723,6 +929,10 @@ export async function meService(userId: string): Promise<MeResponse> {
 
   if (!user) {
     throw new AppError('User not found', NOT_FOUND);
+  }
+
+  if (user.role !== UserRole.ADMIN) {
+    await linkPhase1SessionsToUser(user.id, user.email);
   }
 
   // Per-result paywall: "has the user paid for anything?" is now derived

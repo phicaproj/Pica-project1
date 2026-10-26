@@ -589,7 +589,7 @@ export default function ConsultationPage() {
         // ─── ACTIVE BOOKINGS DASHBOARD LAYOUT ───
         <div className="space-y-8 animate-fadeIn">
           {/* Header Banner */}
-          <div className={`relative overflow-hidden rounded-3xl border p-8 md:p-10 ${
+          <div data-tour="consultation-overview" className={`relative overflow-hidden rounded-3xl border p-8 md:p-10 ${
             d
               ? 'border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16]'
               : 'border-gray-200 bg-gradient-to-br from-orange-50/50 via-white to-gray-50'
@@ -635,7 +635,7 @@ export default function ConsultationPage() {
             {/* Left Column (Main Engagement Content) */}
             <div className="space-y-8 lg:col-span-2">
               {/* Current Engagements */}
-              <div>
+              <div data-tour="consultation-engagements">
                 <h3 className={`text-xs font-bold uppercase tracking-widest mb-4 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
                   Current Engagement
                 </h3>
@@ -828,7 +828,7 @@ export default function ConsultationPage() {
             {/* Right Column (Sidebar Quick Actions) */}
             <div className="space-y-8">
               {/* Quick Booking */}
-              <div className={`rounded-2xl border p-6 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'}`}>
+              <div data-tour="consultation-booking" className={`rounded-2xl border p-6 ${d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'}`}>
                 <h4 className={`text-lg font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>Quick Booking</h4>
                 <p className={`text-xs mb-6 leading-relaxed ${d ? 'text-gray-500' : 'text-gray-500'}`}>
                   Fast track an operational briefing with Pica&apos;s lead celestial architects.
@@ -943,7 +943,7 @@ export default function ConsultationPage() {
         // ─── EMPTY STATE DESIGN LAYOUT ───
         <div className="space-y-12 animate-fadeIn max-w-5xl mx-auto">
           {/* Hero Banner Grid */}
-          <div className={`relative overflow-hidden rounded-3xl border p-8 md:p-12 ${
+          <div data-tour="consultation-overview" className={`relative overflow-hidden rounded-3xl border p-8 md:p-12 ${
             d
               ? 'border-white/5 bg-gradient-to-br from-[#0c1a26] via-[#0b141e] to-[#090d16]'
               : 'border-gray-200 bg-gradient-to-br from-orange-50/60 via-white to-gray-50'
@@ -968,7 +968,7 @@ export default function ConsultationPage() {
                   competitive delta findings.
                 </p>
 
-                <div className="mt-8 flex flex-wrap gap-4">
+                <div data-tour="consultation-booking" className="mt-8 flex flex-wrap gap-4">
                   <button
                     onClick={openBookingModal}
                     className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 px-6 py-3.5 text-sm font-bold text-white uppercase tracking-wider transition shadow-lg shadow-orange-500/20 active:scale-95"
@@ -1073,7 +1073,7 @@ export default function ConsultationPage() {
           </div>
 
           {/* Upcoming Sessions Box (Empty State Version) */}
-          <div className={`rounded-2xl border overflow-hidden ${
+          <div data-tour="consultation-engagements" className={`rounded-2xl border overflow-hidden ${
             d ? 'border-white/5 bg-[#111318]' : 'border-gray-200 bg-white shadow-sm'
           }`}>
             <div className={`px-6 py-4 border-b flex items-center justify-between ${d ? 'border-white/5' : 'border-gray-100'}`}>

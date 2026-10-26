@@ -10,7 +10,7 @@ import { ToastProvider } from "@/components/ToastContext";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "Free Scan", href: "/pages/about" },
+  { label: "Free Scan", href: "/pages/freescan" },
   { label: "Pricing", href: "/pages/pricing" },
   { label: "Support", href: "/pages/contact" },
 ];
@@ -162,7 +162,7 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       {/* Floating CTA */}
       {pathname === "/" && (
         <Link 
-          href="/pages/about"
+          href="/pages/freescan"
           className="fixed bottom-28 right-6 md:bottom-20 md:right-6 z-50 flex flex-col items-center justify-center p-2 rounded-xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
         >
           <ScanSearch className="w-5 h-5 mb-0.5" />

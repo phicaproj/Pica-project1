@@ -22,6 +22,8 @@ const BG_COLOR = '#F3F4F6';
 const CARD_COLOR = '#FFFFFF';
 const TEXT_COLOR = '#1F2937';
 const MUTED_COLOR = '#6B7280';
+const WEBSITE_URL = 'https://pica.beauvisiongroup.com';
+const WEBSITE_HOST = 'pica.beauvisiongroup.com';
 
 interface EmailLayoutOptions {
   // Main heading shown at the top of the white card.
@@ -30,6 +32,15 @@ interface EmailLayoutOptions {
   bodyHtml: string;
   // Optional preheader: the grey preview snippet shown in the inbox list.
   preheader?: string;
+}
+
+// Shared back-to-website link. Included in every email footer so a recipient
+// can move from their inbox on any device back to the public site.
+function websiteLinkHtml(marginTop = 14): string {
+  return `
+    <p style="margin:${marginTop}px 0 0 0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:${MUTED_COLOR};">
+      <a href="${WEBSITE_URL}" target="_blank" rel="noopener noreferrer" style="color:${BRAND_COLOR}; font-weight:600; text-decoration:none;">Visit ${WEBSITE_HOST}</a>
+    </p>`;
 }
 
 function renderEmail({ heading, bodyHtml, preheader }: EmailLayoutOptions): string {
@@ -75,6 +86,7 @@ function renderEmail({ heading, bodyHtml, preheader }: EmailLayoutOptions): stri
             <tr>
               <td align="center" style="background-color:${CARD_COLOR}; border-radius:0 0 12px 12px; padding:24px 40px 32px 40px; border-top:1px solid #EEF0F3;">
                 <p style="margin:0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:13px; color:${MUTED_COLOR};">— The Beauvision Team</p>
+                ${websiteLinkHtml()}
                 <p style="margin:12px 0 0 0; font-family:'Segoe UI',Helvetica,Arial,sans-serif; font-size:11px; color:#9CA3AF;">© ${BRAND} ${BRAND_TAGLINE}. This is an automated message — please do not reply.</p>
               </td>
             </tr>
@@ -162,6 +174,7 @@ export async function sendWelcomeEmail(
     bodyHtml: `
       <p style="margin:0 0 16px 0;">Thanks for creating your account with ${BRAND} ${BRAND_TAGLINE}.</p>
       <p style="margin:0 0 16px 0;">You can now sign in to view your assessment results, track your business health, and unlock the full snapshot report.</p>
+      ${ctaButton(WEBSITE_URL, 'Open PICA')}
       <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">If you didn't create this account, you can safely ignore this email.</p>
     `,
   });
@@ -316,12 +329,22 @@ export async function sendReportEmail({
   businessName,
   pdfBuffer,
   reportPdfUrl,
+  createPasswordUrl,
 }: {
   toEmail: string;
   businessName: string;
   pdfBuffer: Buffer;
   reportPdfUrl: string;
+  createPasswordUrl?: string | null;
 }): Promise<SendEmailResponse> {
+  const createAccountCta = createPasswordUrl
+    ? `
+      <p style="margin:0 0 8px 0;">Want to save this report and track your progress? Create your ${BRAND} password and we'll set up your account from the details you already gave us.</p>
+      ${ctaButton(createPasswordUrl, 'Create your PICA password')}
+      <p style="margin:0 0 20px 0; color:${MUTED_COLOR}; font-size:13px;">This secure link is valid for 20 days.</p>
+    `
+    : '';
+
   const html = renderEmail({
     heading: 'Your Snapshot Report is ready',
     preheader: `Your ${BRAND} Business Health Report is attached.`,
@@ -329,6 +352,7 @@ export async function sendReportEmail({
       <p style="margin:0 0 16px 0;">Hi ${businessName},</p>
       <p style="margin:0 0 16px 0;">Thank you for completing the ${BRAND} Business Health Assessment.</p>
       <p style="margin:0 0 8px 0;">Your full report is attached to this email as a PDF.</p>
+      ${createAccountCta}
       ${ctaButton(reportPdfUrl, 'Download your report')}
     `,
   });
@@ -635,6 +659,7 @@ export async function sendAdminCredentialsEmail({
     <p><strong>Email:</strong> ${toEmail}</p>
     ${password ? `<p><strong>Temporary Password:</strong> ${password}</p>` : ''}
     <p><a href="${loginUrl}" style="display:inline-block;padding:10px 20px;background-color:#000;color:#fff;text-decoration:none;border-radius:4px;">Log in to your account</a></p>
+    ${websiteLinkHtml(20)}
   `;
 
   return sendBrevoEmail({

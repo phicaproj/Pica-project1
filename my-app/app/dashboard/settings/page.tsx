@@ -97,6 +97,17 @@ function DashboardSettingsPageInner() {
     });
   };
 
+  // Keep the active tab in sync when the URL changes outside the tab buttons,
+  // e.g. the dashboard onboarding tour deep-linking to Business Info/Billing.
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    const next: Tab =
+      t === "Profile" || t === "Business Info" || t === "Billing"
+        ? t
+        : "Profile";
+    setActiveTab((current) => (current === next ? current : next));
+  }, [searchParams]);
+
   const fetchUserData = async () => {
     try {
       const res = await getMe();
@@ -129,7 +140,7 @@ function DashboardSettingsPageInner() {
   return (
     <div className={`max-w-4xl mx-auto px-4 md:px-6 py-6 min-h-screen transition-colors duration-200 ${d ? 'text-white bg-[#0d1117]' : 'text-gray-900 bg-gray-50'}`}>
       {/* Centralized Tabs */}
-      <div className={`flex justify-center border-b pb-4 mb-8 overflow-x-auto scrollbar-hide ${d ? 'border-white/5' : 'border-gray-200'}`}>
+      <div data-tour="settings-tabs" className={`flex justify-center border-b pb-4 mb-8 overflow-x-auto scrollbar-hide ${d ? 'border-white/5' : 'border-gray-200'}`}>
         <div className="flex gap-3 sm:gap-8 justify-center">
           {TABS.map((tab) => (
             <button
@@ -378,7 +389,7 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       : (d ? "bg-teal-500/20 text-teal-400 border border-teal-500/20" : "bg-teal-50 text-teal-600 border border-teal-200");
 
   return (
-    <div className="space-y-6">
+    <div data-tour="settings-profile" className="space-y-6">
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -782,7 +793,7 @@ function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onU
   const statesList = selectedCountryObj?.states || [];
 
   return (
-    <div className="space-y-6">
+    <div data-tour="settings-business" className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className={`text-3xl md:text-4xl font-bold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -1135,8 +1146,34 @@ function BillingSettings() {
     router.replace(`/dashboard/settings?${params.toString()}`, { scroll: false });
   };
 
+  useEffect(() => {
+    const next: BillingSubTab =
+      searchParams.get("billingTab") === "Subscription" ? "Subscription" : "History";
+    setBillingTab((current) => (current === next ? current : next));
+  }, [searchParams]);
+
   return (
-    <div className="space-y-6">
+    <div data-tour="settings-billing" className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className={`text-sm ${d ? "text-gray-400" : "text-gray-600"}`}>
+          Manage your subscription, invoices, and payment methods in one place.
+        </p>
+        <div className="flex flex-wrap items-center gap-5 text-xs font-semibold">
+          <Link
+            href="/dashboard/plans"
+            className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-400 transition"
+          >
+            Compare plans <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+          <Link
+            href="/dashboard/subscription"
+            className="inline-flex items-center gap-2 text-orange-500 hover:text-orange-400 transition"
+          >
+            Buy a one-off scan <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+
       {/* Sub-tab strip — mirrors the pattern admin/settings uses for its
           internal nested tabs (Roles / Personal info). Sits inside the
           outer Billing tab so the page reads as one product. */}

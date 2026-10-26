@@ -46,6 +46,7 @@ import {
 	type PublicPricingResponse,
 	type VerifyPaymentResponse,
 } from '@/lib/authClient'
+import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import {
 	convertFromUsd,
 	formatMoney,
@@ -54,10 +55,6 @@ import {
 } from '@/lib/utils'
 import { SubscriptionPickerSkeleton } from '@/components/ui/skeleton'
 import { useTheme } from '@/components/ThemeContext'
-
-const API_BASE =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
 
 type LockedScan = {
 	sessionId: string
@@ -1230,7 +1227,7 @@ function ChoosePlanView({
 	return (
 		<div
 			className={`min-h-screen ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} pb-20`}>
-			<section className='text-center px-4 pt-16 pb-12 max-w-4xl mx-auto'>
+			<section data-tour='payperuse-intro' className='text-center px-4 pt-16 pb-12 max-w-4xl mx-auto'>
 				<h1
 					className={`text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight mb-4 ${d ? 'text-white' : 'text-gray-900'}`}>
 					Celestial Intelligence{' '}
@@ -1251,6 +1248,18 @@ function ChoosePlanView({
 					</span>
 					.
 				</p>
+				<div className='mt-6 flex flex-wrap items-center justify-center gap-5 text-xs font-semibold'>
+					<Link
+						href='/dashboard/plans'
+						className='inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 transition'>
+						View subscription plans <ArrowRight className='w-3.5 h-3.5' />
+					</Link>
+					<Link
+						href='/dashboard/settings?tab=Billing'
+						className='inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 transition'>
+						Manage billing <ArrowRight className='w-3.5 h-3.5' />
+					</Link>
+				</div>
 			</section>
 
 			{!businessSize && (
@@ -1315,7 +1324,7 @@ function ChoosePlanView({
 					</p>
 				</div>
 
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
+				<div data-tour='payperuse-cards' className='grid grid-cols-1 md:grid-cols-2 gap-5'>
 					{plans.map((plan) => (
 						<PricingCard
 							key={plan.name}
@@ -2195,20 +2204,23 @@ function CheckoutView({
 					PICA
 				</span>
 				<div className='flex items-center gap-6'>
-					<span
+					<Link
+						href='/data-policy'
 						className={`${d ? 'hover:text-gray-400' : 'hover:text-gray-800'} cursor-pointer transition`}>
 						PRIVACY
-					</span>
-					<span
+					</Link>
+					<Link
+						href='/terms'
 						className={`${d ? 'hover:text-gray-400' : 'hover:text-gray-800'} cursor-pointer transition`}>
 						TERMS
-					</span>
-					<span
+					</Link>
+					<Link
+						href='/pages/contact'
 						className={`${d ? 'hover:text-gray-400' : 'hover:text-gray-800'} cursor-pointer transition`}>
 						SUPPORT
-					</span>
+					</Link>
 				</div>
-				<span>&copy; 2024 PICA.</span>
+				<span>&copy; 2026 PICA.</span>
 			</footer>
 		</div>
 	)

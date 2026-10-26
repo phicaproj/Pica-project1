@@ -97,6 +97,21 @@ export const acceptInviteSchema = z.object({
     ),
 });
 
+export const signupClaimPreviewSchema = z.object({
+  token: z.string().min(1, 'Signup link token is required'),
+});
+
+export const signupClaimSchema = z.object({
+  token: z.string().min(1, 'Signup link token is required'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one special character, lowercase letter, uppercase letter, and number'
+    ),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
@@ -106,6 +121,8 @@ export type VerifyResetOtpInput = z.infer<typeof verifyResetOtpSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type VerifyAdminOTPInput = z.infer<typeof verifyAdminOTPSchema>;
 export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
+export type SignupClaimPreviewInput = z.infer<typeof signupClaimPreviewSchema>;
+export type SignupClaimInput = z.infer<typeof signupClaimSchema>;
 export type AuthUser = {
   id: string;
   email: string;
@@ -184,6 +201,25 @@ export type ResetPasswordResponse = {
 
 export type AcceptInviteResponse = {
   message: string;
+};
+
+export type SignupClaimPreviewResponse = {
+  message: string;
+  email: string;
+  businessName: string;
+  staffSize: string | null;
+  industry: string | null;
+  operatingYears: string | null;
+  country: string | null;
+  state: string | null;
+};
+
+export type SignupClaimResponse = {
+  message: string;
+  requiresOtp: false;
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
 };
 
 export type AdminLoginResponse = {

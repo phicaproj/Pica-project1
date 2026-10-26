@@ -3,10 +3,12 @@ import { authenticate } from '../../service/middleware/authMiddleware';
 import { authLimiter } from '../../service/shared/rateLimiter';
 import {
   acceptInvite,
+  claimSignup,
   forgotPassword,
   login,
   loginAdmin,
   me,
+  previewSignupClaim,
   register,
   resendVerification,
   resetPassword,
@@ -18,6 +20,8 @@ import {
 const authRouter = Router();
 
 authRouter.post('/register', authLimiter, register);
+authRouter.post('/signup-claim/preview', authLimiter, previewSignupClaim);
+authRouter.post('/signup-claim', authLimiter, claimSignup);
 authRouter.post('/login', authLimiter, login);
 authRouter.post('/verify-email', authLimiter, verifyEmail);
 authRouter.post('/resend-verification', authLimiter, resendVerification);

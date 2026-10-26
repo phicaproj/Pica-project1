@@ -317,7 +317,7 @@ export default function PricingPage() {
 										))}
 									</ul>
 									<Link
-										href='/pages/about'
+										href='/pages/freescan'
 										className='block w-full py-3.5 rounded-xl text-sm font-bold bg-[#f97316] hover:bg-[#ea6c0a] text-white transition text-center shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95'>
 										Start Free Scan
 									</Link>

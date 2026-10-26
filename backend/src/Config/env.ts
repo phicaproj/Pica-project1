@@ -24,9 +24,14 @@ export const JWT_PASSWORD_RESET_SECRET = getEnv('JWT_PASSWORD_RESET_SECRET');
 export const JWT_PASSWORD_RESET_EXPIRE = getEnv('JWT_PASSWORD_RESET_EXPIRE');
 export const JWT_INVITE_SECRET = getEnv('JWT_INVITE_SECRET');
 export const JWT_INVITE_EXPIRE = getEnv('JWT_INVITE_EXPIRE');
+// Dedicated secret/expiry for the free-scan "create your password" link. Falls
+// back to the invite secret so existing deployments don't need a new env var.
+export const JWT_SIGNUP_CLAIM_SECRET =
+  process.env.JWT_SIGNUP_CLAIM_SECRET || JWT_INVITE_SECRET;
+export const JWT_SIGNUP_CLAIM_EXPIRE = process.env.JWT_SIGNUP_CLAIM_EXPIRE || '20d';
 export const PAYSTACK_SECRET_KEY = getEnv('PAYSTACK_SECRET_KEY');
 export const PAYSTACK_BASE_URL = process.env.PAYSTACK_BASE_URL ?? 'https://api.paystack.co';
-export const APP_URL = process.env.APP_URL ?? 'https://pica.beauvision.com';
+export const APP_URL = process.env.APP_URL ?? 'https://pica.beauvisiongroup.com';
 
 // Cloudflare R2 (S3-compatible object storage)
 export const R2_ACCOUNT_ID = getEnv('R2_ACCOUNT_ID');

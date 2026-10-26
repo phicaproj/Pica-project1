@@ -26,11 +26,9 @@ import {
 	getStoredUser,
 	type MeUser,
 } from '@/lib/authClient'
+import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import { useTheme } from '@/components/ThemeContext'
-
-const API_BASE =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
+import { appendNext } from '@/lib/redirect'
 
 type ColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 
@@ -214,7 +212,7 @@ function ErrorState({ message }: { message: string }) {
 function InProgressState() {
 	const { dark: d } = useTheme();
 	return (
-		<div className={`rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-10 text-center max-w-2xl mx-auto`}>
+		<div data-tour='dashboard-content' className={`rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-10 text-center max-w-2xl mx-auto`}>
 			<div className={`w-16 h-16 rounded-full ${d ? 'bg-teal-500/10' : 'bg-teal-50'} flex items-center justify-center mx-auto mb-4`}>
 				<RotateCcw className={`w-7 h-7 ${d ? 'text-teal-400' : 'text-teal-600'}`} />
 			</div>
@@ -240,7 +238,7 @@ function EmptyState({ user }: { user: AuthUser | null }) {
 	const { dark: d } = useTheme();
 	const greeting = user?.businessName ? `, ${user.businessName}` : ''
 	return (
-		<div className='space-y-6 max-w-full'>
+		<div data-tour='dashboard-content' className='space-y-6 max-w-full'>
 			<div className={`relative rounded-2xl ${d ? 'bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border-white/5' : 'bg-gradient-to-br from-white via-gray-50 to-white border-gray-200'} overflow-hidden p-6 md:p-10 border`}>
 				<div className='absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none' />
 				<div className='absolute right-20 bottom-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none' />
@@ -388,7 +386,7 @@ function ActiveState({
 	)
 
 	return (
-		<div className='space-y-6 max-w-full'>
+		<div data-tour='dashboard-content' className='space-y-6 max-w-full'>
 			{/* Greeting */}
 			<div className={`relative rounded-2xl ${d ? 'bg-gradient-to-br from-[#111827] via-[#0f1a2e] to-[#0d1117] border-white/5' : 'bg-gradient-to-br from-white via-gray-50 to-white border-gray-200'} overflow-hidden p-6 md:p-10 border`}>
 				<div className='absolute right-0 top-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none' />
@@ -460,7 +458,7 @@ function ActiveState({
 
 			{/* Stats + AI Insight */}
 			<div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'>
-				<div className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-5`}>
+				<div data-tour='dashboard-score' className={`rounded-xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-5`}>
 					<p className={`text-[10px] ${d ? 'text-gray-500' : 'text-gray-500'} uppercase font-bold tracking-wider mb-2`}>
 						Overall Score
 					</p>
@@ -567,7 +565,7 @@ function ActiveState({
 			</div>
 
 			{/* Pillar breakdown */}
-			<div>
+			<div data-tour='dashboard-pillars'>
 				<div className='flex items-center justify-between mb-4'>
 					<h2 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
 						Pillar Breakdown
@@ -634,7 +632,7 @@ function ActiveState({
 			</div>
 
 			{/* Phase Findings */}
-			<div className={`rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-6`}>
+			<div data-tour='dashboard-findings' className={`rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200'} border p-6`}>
 				<div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-6'>
 					<div>
 						<h3 className={`text-lg font-bold ${d ? 'text-white' : 'text-gray-900'}`}>
@@ -764,7 +762,7 @@ export default function DashboardHomePage() {
 	useEffect(() => {
 		const token = getAccessToken()
 		if (!token) {
-			router.push('/Auth/login')
+			router.push(appendNext('/Auth/login', '/dashboard'))
 			return
 		}
 
@@ -781,7 +779,7 @@ export default function DashboardHomePage() {
 				if (cancelled) return
 
 				if (meRes.error || !meRes.data) {
-					router.push('/Auth/login')
+					router.push(appendNext('/Auth/login', '/dashboard'))
 					return
 				}
 
@@ -840,7 +838,7 @@ export default function DashboardHomePage() {
 						return
 					}
 					if (latestRes.status === 401 || latestRes.status === 403) {
-						router.push('/Auth/login')
+						router.push(appendNext('/Auth/login', '/dashboard'))
 						return
 					}
 					setState('empty')
@@ -859,7 +857,7 @@ export default function DashboardHomePage() {
 
 				if (!res.ok) {
 					if (res.status === 401 || res.status === 403) {
-						router.push('/Auth/login')
+						router.push(appendNext('/Auth/login', '/dashboard'))
 						return
 					}
 					if (res.status === 409) {

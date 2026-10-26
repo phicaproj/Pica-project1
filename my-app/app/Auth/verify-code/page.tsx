@@ -11,6 +11,7 @@ import {
   verifyResetOtp,
 } from "@/lib/authClient";
 import { useTheme } from "@/components/ThemeContext";
+import { appendNext, safeNextPath } from "@/lib/redirect";
 
 function VerifyCodeContent() {
   const { dark } = useTheme();
@@ -19,6 +20,7 @@ function VerifyCodeContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const type = searchParams.get("type") || "forget-password";
+  const nextPath = safeNextPath(searchParams.get("next"));
   const isAdminLogin = type === "admin-login";
   const isEmailVerify = type === "email-verify";
 
@@ -91,12 +93,15 @@ function VerifyCodeContent() {
 
       if (isEmailVerify) {
         // verifyEmail establishes the session on success — go straight in.
-        router.push("/dashboard");
+        router.push(nextPath);
         return;
       }
 
       router.push(
-        `/Auth/new-password?email=${encodeURIComponent(email)}`,
+        appendNext(
+          `/Auth/new-password?email=${encodeURIComponent(email)}`,
+          nextPath,
+        ),
       );
     } catch {
       setCodeError("Something went wrong. Please try again.");
@@ -112,7 +117,7 @@ function VerifyCodeContent() {
     inputRefs.current[0]?.focus();
 
     if (isAdminLogin) {
-      router.push("/Auth/login");
+      router.push(appendNext("/Auth/login", nextPath));
       return;
     }
 
@@ -222,8 +227,11 @@ function VerifyCodeContent() {
                 onClick={() =>
                   router.push(
                     isEmailVerify || isAdminLogin
-                      ? "/Auth/login"
-                      : `/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`,
+                      ? appendNext("/Auth/login", nextPath)
+                      : appendNext(
+                          `/Auth/forget-password${email ? `?email=${encodeURIComponent(email)}` : ""}`,
+                          nextPath,
+                        ),
                   )
                 }
                 className={`w-full py-3 rounded-xl border font-semibold text-sm transition ${
@@ -255,14 +263,14 @@ function VerifyCodeContent() {
             Terms of Service
           </Link>
           <Link
-            href="#"
+            href="/documentation"
             className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
           >
             Security Architecture
           </Link>
         </div>
         <p className="text-xs text-gray-600 uppercase tracking-wider">
-          © 2024 PICA Intelligence Systems. All rights reserved.
+          © 2026 PICA Intelligence Systems. All rights reserved.
         </p>
       </footer>
     </div>

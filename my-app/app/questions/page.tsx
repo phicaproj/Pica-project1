@@ -294,7 +294,7 @@ export default function QuestionPage() {
 
         {/* Footer */}
         <div className="relative z-10 py-4 text-center text-sm text-white/60">
-          © Beauvision 2024 . All rights reserved.
+          © Beauvision 2026 . All rights reserved.
         </div>
       </div>
     );
@@ -361,7 +361,7 @@ export default function QuestionPage() {
 
       {/* Footer */}
       <div className="relative z-10 py-4 text-center text-sm text-gray-500 bg-white/60 backdrop-blur-sm">
-        © Beauvision 2024 . All rights reserved.
+        © Beauvision 2026 . All rights reserved.
       </div>
     </div>
   );

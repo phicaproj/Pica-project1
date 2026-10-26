@@ -238,7 +238,7 @@ function AcceptInviteContent() {
 
 			{/* Footer */}
 			<div className={`relative z-10 py-4 text-center text-sm backdrop-blur-sm ${d ? 'text-gray-400 bg-[#0d1117]/80' : 'text-gray-600 bg-white/80'}`}>
-				© Beauvision 2024 . All rights reserved.
+				© Beauvision 2026 . All rights reserved.
 			</div>
 		</div>
 	)

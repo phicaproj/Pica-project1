@@ -9,6 +9,8 @@ import {
   registerSchema,
   resendVerificationSchema,
   resetPasswordSchema,
+  signupClaimPreviewSchema,
+  signupClaimSchema,
   verifyAdminOTPSchema,
   verifyEmailSchema,
   verifyResetOtpSchema,
@@ -16,9 +18,11 @@ import {
 import {
   acceptInviteService,
   adminLoginService,
+  claimSignupService,
   forgotPasswordService,
   loginService,
   meService,
+  previewSignupClaimService,
   registerService,
   resendVerificationService,
   resetPasswordService,
@@ -30,6 +34,20 @@ import {
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const request = registerSchema.parse(req.body);
   const result = await registerService(request);
+
+  return res.status(CREATED).json(result);
+});
+
+export const previewSignupClaim = asyncHandler(async (req: Request, res: Response) => {
+  const request = signupClaimPreviewSchema.parse(req.body);
+  const result = await previewSignupClaimService(request.token);
+
+  return res.status(OK).json(result);
+});
+
+export const claimSignup = asyncHandler(async (req: Request, res: Response) => {
+  const request = signupClaimSchema.parse(req.body);
+  const result = await claimSignupService(request);
 
   return res.status(CREATED).json(result);
 });

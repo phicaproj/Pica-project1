@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Download,
   CalendarDays,
@@ -312,12 +313,12 @@ export default function InsightsPage() {
               <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'} leading-relaxed mb-4`}>
                 Secure multi-node ledger for tracking real-time asset movement across 3PL partners.
               </p>
-              <a
-                href="#"
+              <Link
+                href="/dashboard/deep-dive"
                 className={`inline-flex items-center gap-1 text-sm font-semibold ${d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-600'} transition`}
               >
                 Deploy Module <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              </Link>
             </div>
 
             {/* Recommendation 2 */}
@@ -329,12 +330,12 @@ export default function InsightsPage() {
               <p className={`text-xs ${d ? 'text-gray-400' : 'text-gray-600'} leading-relaxed mb-4`}>
                 Standardize cross-departmental endpoints to reduce data collision by 45%.
               </p>
-              <a
-                href="#"
+              <Link
+                href="/dashboard/strategic-scan"
                 className={`inline-flex items-center gap-1 text-sm font-semibold ${d ? 'text-teal-400 hover:text-teal-300' : 'text-teal-700 hover:text-teal-600'} transition`}
               >
                 Begin Audit <ExternalLink className="w-3.5 h-3.5" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>

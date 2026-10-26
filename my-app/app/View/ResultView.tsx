@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/ThemeContext'
+import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import {
 	Download,
 	Loader,
@@ -14,10 +15,6 @@ import {
 	ArrowRight,
 	Presentation,
 } from 'lucide-react'
-
-const API_BASE =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
 
 type ColorBand = 'RED' | 'ORANGE' | 'AMBER' | 'LIGHT_GREEN' | 'GREEN'
 

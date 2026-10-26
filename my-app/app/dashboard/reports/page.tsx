@@ -24,12 +24,9 @@ import {
   ChevronDown
 } from "lucide-react";
 import { getAccessToken } from "@/lib/authClient";
+import { API_BASE_URL as API_BASE } from "@/lib/api/config";
 import { ReportsListSkeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/components/ThemeContext";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://pica-project1.onrender.com/api";
 
 type ColorBand = "RED" | "ORANGE" | "AMBER" | "LIGHT_GREEN" | "GREEN";
 
@@ -339,7 +336,7 @@ export default function ReportsPage() {
   return (
     <div className={`max-w-7xl mx-auto px-4 md:px-6 py-6 min-h-screen space-y-8 ${d ? 'text-white bg-[#0d1117]' : 'text-gray-900 bg-gray-50'}`}>
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div data-tour="reports-overview" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className={`text-3xl md:text-4xl font-bold ${d ? 'text-white' : 'text-gray-900'} mb-2`}>
             Reports & Assessments
@@ -474,6 +471,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          <div data-tour="reports-archive" className="space-y-8">
           {/* Filter Bar */}
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search Input */}
@@ -709,6 +707,7 @@ export default function ReportsPage() {
                 );
               })
             )}
+          </div>
           </div>
 
           {/* Footer Call to Action Box */}

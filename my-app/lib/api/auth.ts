@@ -7,7 +7,7 @@ import {
 	EMAIL_VERIFY_OTP_TOKEN_KEY,
 	RESET_OTP_TOKEN_KEY,
 	RESET_PASSWORD_TOKEN_KEY,
-	USER_KEY,
+	setStoredUser,
 	type AuthUser,
 	type BusinessSize,
 } from './config'
@@ -81,7 +81,7 @@ export const getMe = async () => {
 			hasPaidPhase2A: res.data.user.hasAnyPaidPhase2AResult || res.data.user.hasPaidPhase2A,
 			profileComplete: res.data.user.profileComplete,
 		}
-		localStorage.setItem(USER_KEY, JSON.stringify(stored))
+		setStoredUser(stored)
 	}
 	return res
 }
@@ -114,6 +114,49 @@ export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
 	return apiFetch<RegisterResponse>('/auth/register', body)
 }
 
+export type SignupClaimPreviewResponse = {
+	message: string
+	email: string
+	businessName: string
+	staffSize: string | null
+	industry: string | null
+	operatingYears: string | null
+	country: string | null
+	state: string | null
+}
+
+export type SignupClaimResponse = {
+	message: string
+	requiresOtp: false
+	user: AuthUser
+	accessToken: string
+	refreshToken: string
+}
+
+export const PreviewSignupClaim = async (token: string) =>
+	apiFetch<SignupClaimPreviewResponse>('/auth/signup-claim/preview', {
+		token,
+	})
+
+export const ClaimSignup = async ({
+	token,
+	password,
+}: {
+	token: string
+	password: string
+}) => {
+	const res = await apiFetch<SignupClaimResponse>('/auth/signup-claim', {
+		token,
+		password,
+	})
+
+	if (res.data && typeof window !== 'undefined') {
+		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+	}
+
+	return res
+}
+
 export type LoginResponse =
 	| {
 			message: string
@@ -143,7 +186,13 @@ export type VerifyAdminOtpResponse = {
 	refreshToken: string
 }
 
-export const Login = async ({ payload }: { payload: LoginPayload }) => {
+export const Login = async ({
+	payload,
+	remember = true,
+}: {
+	payload: LoginPayload
+	remember?: boolean
+}) => {
 	const res = await apiFetch<LoginResponse>('/auth/login', payload)
 
 	if (res.data && 'requiresOtp' in res.data && res.data.requiresOtp) {
@@ -157,7 +206,12 @@ export const Login = async ({ payload }: { payload: LoginPayload }) => {
 			sessionStorage.setItem(EMAIL_VERIFY_OTP_TOKEN_KEY, res.data.otpToken)
 		}
 	} else if (res.data && 'accessToken' in res.data) {
-		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+		setSession(
+			res.data.accessToken,
+			res.data.refreshToken,
+			res.data.user,
+			remember,
+		)
 	}
 
 	return res

@@ -277,7 +277,7 @@ export default function DeepDivePage() {
       {/* Top area: Main card + Pain points */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Action Card (Left) */}
-        <div className={`lg:col-span-2 rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-6 flex flex-col justify-between relative overflow-hidden`}>
+        <div data-tour="deep-dive-main" className={`lg:col-span-2 rounded-2xl ${d ? 'bg-[#111827] border-white/5' : 'bg-white border-gray-200 shadow-sm'} border p-6 flex flex-col justify-between relative overflow-hidden`}>
           <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
           <div className="relative z-10">
             {activeSession ? (
@@ -346,7 +346,7 @@ export default function DeepDivePage() {
         </div>
 
         {/* Critical Pain Points */}
-        <div className="flex flex-col">
+        <div data-tour="deep-dive-pain-points" className="flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className={`text-base font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Critical Pain Points</h3>
             {allFindings.length > 0 && (
@@ -401,7 +401,7 @@ export default function DeepDivePage() {
       </div>
 
       {/* Architectural Modules Sidebar (Bottom/Full width) */}
-      <div>
+      <div data-tour="deep-dive-modules">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className={`text-xl font-bold ${d ? 'text-white' : 'text-gray-900'}`}>Architectural Modules</h2>

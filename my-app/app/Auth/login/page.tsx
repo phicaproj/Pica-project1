@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Login } from '@/lib/authClient'
 import { useTheme } from '@/components/ThemeContext'
+import { appendNext, safeNextPath } from '@/lib/redirect'
 
 // Hoisted outside the component so they are stable references — defining
 // them inside LoginPage created a new component identity every render, which
@@ -60,6 +61,7 @@ export default function LoginPage() {
 	const [error, setError] = useState('')
 	const [isLoading, setIsLoading] = useState(false)
 	const [inactivityLoggedOut, setInactivityLoggedOut] = useState(false)
+	const [nextPath, setNextPath] = useState('/dashboard')
 
 	useEffect(() => {
 		if (typeof window !== 'undefined') {
@@ -67,6 +69,7 @@ export default function LoginPage() {
 			if (params.get('reason') === 'inactivity') {
 				setInactivityLoggedOut(true)
 			}
+			setNextPath(safeNextPath(params.get('next')))
 		}
 	}, [])
 
@@ -76,7 +79,10 @@ export default function LoginPage() {
 		setIsLoading(true)
 
 		try {
-			const res = await Login({ payload: { email, password } })
+			const res = await Login({
+				payload: { email, password },
+				remember: rememberMe,
+			})
 
 			if (res.error) {
 				setError(
@@ -92,7 +98,10 @@ export default function LoginPage() {
 				res.data.requiresOtp
 			) {
 				router.push(
-					`/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=admin-login`,
+					appendNext(
+						`/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=admin-login`,
+						nextPath,
+					),
 				)
 				return
 			}
@@ -104,12 +113,15 @@ export default function LoginPage() {
 			) {
 				// Unverified account: a fresh code was sent — send them to verify.
 				router.push(
-					`/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=email-verify`,
+					appendNext(
+						`/Auth/verify-code?email=${encodeURIComponent(res.data.email)}&type=email-verify`,
+						nextPath,
+					),
 				)
 				return
 			}
 
-			router.push('/dashboard')
+			router.push(nextPath)
 		} catch {
 			setError('Something went wrong. Please try again.')
 		} finally {
@@ -269,7 +281,7 @@ export default function LoginPage() {
 									</span>
 								</label>
 								<Link
-									href='/Auth/forget-password'
+									href={appendNext('/Auth/forget-password', nextPath)}
 									className={`text-sm transition ${d ? 'text-gray-400 hover:text-[#f97316]' : 'text-gray-600 hover:text-[#f97316]'}`}>
 									Forgot Password?
 								</Link>
@@ -290,7 +302,7 @@ export default function LoginPage() {
 						<p className={`text-center text-sm mt-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Don&apos;t have an account?
 							<Link
-								href='/Auth/signup'
+								href={appendNext('/Auth/signup', nextPath)}
 								className={`font-bold transition ml-1 underline ${d ? 'text-white hover:text-[#f97316]' : 'text-gray-900 hover:text-[#f97316]'}`}>
 								Signup
 							</Link>
@@ -323,13 +335,13 @@ export default function LoginPage() {
 						Terms of Service
 					</Link>
 					<Link
-						href='#'
+						href='/documentation'
 						className='text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition'>
 						Security Architecture
 					</Link>
 				</div>
 				<p className='text-xs text-gray-600 uppercase tracking-wider'>
-					© 2024 PICA Intelligence Systems. All rights
+					© 2026 PICA Intelligence Systems. All rights
 					reserved.
 				</p>
 			</footer>

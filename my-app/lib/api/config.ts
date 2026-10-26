@@ -7,9 +7,30 @@
 // Keeping these here means every endpoint module imports the same fetchers,
 // so error shapes, 401 handling, and content-type defaults stay consistent.
 
-export const API_BASE_URL =
-	process.env.NEXT_PUBLIC_API_BASE_URL ||
-	'https://pica-project1.onrender.com/api'
+const LOCAL_API_BASE_URL = 'http://localhost:3210/api'
+const DEFAULT_API_BASE_URL = 'https://pica-project1.onrender.com/api'
+
+function isLocalhost(hostname: string) {
+	return (
+		hostname === 'localhost' ||
+		hostname === '127.0.0.1' ||
+		hostname === '::1' ||
+		hostname === '[::1]'
+	)
+}
+
+export function getApiBaseUrl() {
+	if (
+		typeof window !== 'undefined' &&
+		isLocalhost(window.location.hostname.toLowerCase())
+	) {
+		return LOCAL_API_BASE_URL
+	}
+
+	return process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
+}
+
+export const API_BASE_URL = getApiBaseUrl()
 
 export const ACCESS_TOKEN_KEY = 'pica.accessToken'
 export const REFRESH_TOKEN_KEY = 'pica.refreshToken'
@@ -70,11 +91,39 @@ export async function apiFetch<T>(path: string, body: unknown): Promise<ApiResul
 	}
 }
 
-export function setSession(accessToken: string, refreshToken: string, user: AuthUser) {
+function getRefreshToken(): string | null {
+	if (typeof window === 'undefined') return null
+	return (
+		sessionStorage.getItem(REFRESH_TOKEN_KEY) ??
+		localStorage.getItem(REFRESH_TOKEN_KEY)
+	)
+}
+
+function setRefreshedTokens(accessToken: string, refreshToken: string) {
 	if (typeof window === 'undefined') return
-	localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-	localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-	localStorage.setItem(USER_KEY, JSON.stringify(user))
+	const storage =
+		sessionStorage.getItem(REFRESH_TOKEN_KEY) !== null
+			? sessionStorage
+			: localStorage
+	storage.setItem(ACCESS_TOKEN_KEY, accessToken)
+	storage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+}
+
+export function setSession(
+	accessToken: string,
+	refreshToken: string,
+	user: AuthUser,
+	remember = true,
+) {
+	if (typeof window === 'undefined') return
+	const storage = remember ? localStorage : sessionStorage
+	const otherStorage = remember ? sessionStorage : localStorage
+	storage.setItem(ACCESS_TOKEN_KEY, accessToken)
+	storage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+	storage.setItem(USER_KEY, JSON.stringify(user))
+	otherStorage.removeItem(ACCESS_TOKEN_KEY)
+	otherStorage.removeItem(REFRESH_TOKEN_KEY)
+	otherStorage.removeItem(USER_KEY)
 	// Drop any anonymous free-scan pointer left in this browser by a previous
 	// visitor. Without this, signing in with a different email on a shared
 	// machine would load the prior user's Phase-1 scan (session bleed).
@@ -83,12 +132,25 @@ export function setSession(accessToken: string, refreshToken: string, user: Auth
 
 export function getAccessToken(): string | null {
 	if (typeof window === 'undefined') return null
-	return localStorage.getItem(ACCESS_TOKEN_KEY)
+	return (
+		sessionStorage.getItem(ACCESS_TOKEN_KEY) ??
+		localStorage.getItem(ACCESS_TOKEN_KEY)
+	)
+}
+
+export function setStoredUser(user: AuthUser) {
+	if (typeof window === 'undefined') return
+	const storage =
+		sessionStorage.getItem(REFRESH_TOKEN_KEY) !== null
+			? sessionStorage
+			: localStorage
+	storage.setItem(USER_KEY, JSON.stringify(user))
 }
 
 export function getStoredUser(): AuthUser | null {
 	if (typeof window === 'undefined') return null
-	const raw = localStorage.getItem(USER_KEY)
+	const raw =
+		sessionStorage.getItem(USER_KEY) ?? localStorage.getItem(USER_KEY)
 	if (!raw) return null
 	try {
 		return JSON.parse(raw) as AuthUser
@@ -99,6 +161,9 @@ export function getStoredUser(): AuthUser | null {
 
 export function clearSession() {
 	if (typeof window === 'undefined') return
+	sessionStorage.removeItem(ACCESS_TOKEN_KEY)
+	sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+	sessionStorage.removeItem(USER_KEY)
 	localStorage.removeItem(ACCESS_TOKEN_KEY)
 	localStorage.removeItem(REFRESH_TOKEN_KEY)
 	localStorage.removeItem(USER_KEY)
@@ -161,7 +226,7 @@ export async function authedFetch<T>(
 		})
 
 		if (res.status === 401) {
-			const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+			const refreshToken = getRefreshToken();
 			if (refreshToken) {
 				if (!isRefreshing) {
 					isRefreshing = true;
@@ -174,8 +239,7 @@ export async function authedFetch<T>(
 						if (refreshRes.ok) {
 							const data = await refreshRes.json();
 							if (data.accessToken && data.refreshToken) {
-								localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-								localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+								setRefreshedTokens(data.accessToken, data.refreshToken);
 								token = data.accessToken;
 								onRefreshed(data.accessToken);
 							} else {
@@ -236,7 +300,7 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
 
 	rawRefreshPromise = (async () => {
 		if (typeof window === 'undefined') return null
-		const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+		const refreshToken = getRefreshToken()
 		if (!refreshToken) return null
 
 		try {
@@ -250,8 +314,7 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
 			const data = await res.json()
 			if (!data.accessToken || !data.refreshToken) return null
 
-			localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
-			localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+			setRefreshedTokens(data.accessToken, data.refreshToken)
 			return data.accessToken as string
 		} catch {
 			return null

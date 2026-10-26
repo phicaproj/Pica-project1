@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { forgotPassword } from "@/lib/authClient";
 import { useTheme } from "@/components/ThemeContext";
+import { appendNext, safeNextPath } from "@/lib/redirect";
 
 export default function ForgotPasswordPage() {
   const { dark } = useTheme();
@@ -29,8 +30,17 @@ export default function ForgotPasswordPage() {
         return;
       }
 
+      const nextPath =
+        typeof window !== "undefined"
+          ? safeNextPath(
+              new URLSearchParams(window.location.search).get("next"),
+            )
+          : "/dashboard";
       router.push(
-        `/Auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
+        appendNext(
+          `/Auth/verify-code?email=${encodeURIComponent(email)}&type=forget-password`,
+          nextPath,
+        ),
       );
     } catch {
       setError("Something went wrong. Please try again.");
@@ -107,20 +117,22 @@ export default function ForgotPasswordPage() {
       {/* Footer */}
       <footer className={`py-6 text-center border-t ${d ? "border-white/5" : "border-gray-200"}`}>
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-3">
-          {["Privacy Policy", "Terms of Service", "Security Architecture"].map(
-            (item) => (
-              <Link
-                key={item}
-                href="#"
-                className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
-              >
-                {item}
-              </Link>
-            )
-          )}
+          {[
+            { label: "Privacy Policy", href: "/data-policy" },
+            { label: "Terms of Service", href: "/terms" },
+            { label: "Security Architecture", href: "/documentation" },
+          ].map(({ label, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="text-xs font-semibold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition"
+            >
+              {label}
+            </Link>
+          ))}
         </div>
         <p className="text-xs text-gray-600 uppercase tracking-wider">
-          © 2024 PICA Intelligence Systems. All rights reserved.
+          © 2026 PICA Intelligence Systems. All rights reserved.
         </p>
       </footer>
     </div>

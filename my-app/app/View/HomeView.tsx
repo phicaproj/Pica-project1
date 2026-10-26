@@ -48,6 +48,7 @@ export default function HomePage() {
 	useEffect(() => {
 		setUser(getStoredUser())
 	}, [])
+	const accountHref = user?.role === 'ADMIN' ? '/admin' : '/dashboard'
 
 	return (
 		<div
@@ -95,15 +96,23 @@ export default function HomePage() {
 							initial assessment.
 						</p>
 						<div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md lg:max-w-none'>
+							{user ? (
+								<Link
+									href={accountHref}
+									className='px-12 py-4 rounded-full bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95'>
+									Go to Dashboard
+								</Link>
+							) : (
+								<Link
+									href='/pages/freescan'
+									className='px-12 py-4 rounded-full bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95'>
+									Start Free Scan
+								</Link>
+							)}
 							<Link
-								href='/pages/about'
-								className='px-12 py-4 rounded-full bg-[#f97316] hover:bg-[#ea6c0a] text-white text-base font-bold transition-all text-center shadow-xl shadow-orange-500/20 hover:scale-[1.05] active:scale-95'>
-								Start Free Scan
-							</Link>
-							<Link
-								href='/Auth/signup'
+								href={user ? '/pages/freescan' : '/Auth/signup'}
 								className='px-12 py-4 rounded-full border-2 border-white/40 bg-white/10 text-white text-base font-bold backdrop-blur-sm transition-all text-center hover:border-white/60 hover:bg-white/20 hover:scale-[1.05] active:scale-95'>
-								Register
+								{user ? 'Start Free Scan' : 'Register'}
 							</Link>
 						</div>
 					</div>
@@ -567,7 +576,7 @@ export default function HomePage() {
 								</ul>
 							</div>
 							<Link
-								href='/pages/about'
+								href='/pages/freescan'
 								className='mt-8 w-full py-3 rounded-xl text-xs font-bold text-white text-center block active:scale-95 transition shadow-lg shadow-orange-500/20 bg-[#f97316] hover:bg-[#ea6c0a]'>
 								Start Free Scan
 							</Link>
@@ -994,14 +1003,14 @@ export default function HomePage() {
 							</p>
 							<div>
 								<Link
-									href='/pages/about'
+									href='/pages/freescan'
 									className='inline-block px-8 py-3 rounded-xl bg-[#f97316] hover:bg-[#ea6c0a] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-95'>
 									Run Your Free Scan Now
 								</Link>
 							</div>
 							<p className='text-[9px] text-gray-500 font-bold uppercase tracking-wider'>
 								No credit card required &bull;
-								Takes 15 minutes
+								Takes 5-10 minutes
 							</p>
 						</div>
 					</div>
@@ -1026,13 +1035,13 @@ export default function HomePage() {
 					</p>
 					<div className='pt-2'>
 						<Link
-							href='/pages/about'
+							href='/pages/freescan'
 							className='inline-block px-10 py-4 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold uppercase tracking-wider transition-all shadow-xl shadow-black/20 hover:scale-105 active:scale-95'>
 							Start Free Scan
 						</Link>
 					</div>
 					<p className='text-[10px] text-gray-900/60 font-bold uppercase tracking-widest pt-2'>
-						NO CREDIT CARD REQUIRED · TAKES 15 MINUTES
+						NO CREDIT CARD REQUIRED · TAKES 5-10 MINUTES
 					</p>
 				</div>
 			</section>
