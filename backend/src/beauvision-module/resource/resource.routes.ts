@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as ResourceController from './resource.controller';
-import { authenticate } from '../authentication/auth.middleware';
+import { authenticate, hasPermission } from '../authentication/auth.middleware';
 import multer from 'multer';
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -42,10 +42,10 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/', authenticate, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'resourceFile', maxCount: 1 }]), ResourceController.createResource);
+router.post('/', authenticate, hasPermission('write'), upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'resourceFile', maxCount: 1 }]), ResourceController.createResource);
 router.get('/', ResourceController.getResources);
 router.get('/:id', ResourceController.getResourceById);
-router.patch('/:id', authenticate, upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'resourceFile', maxCount: 1 }]), ResourceController.updateResource);
-router.delete('/:id', authenticate, ResourceController.deleteResource);
+router.patch('/:id', authenticate, hasPermission('write'), upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'resourceFile', maxCount: 1 }]), ResourceController.updateResource);
+router.delete('/:id', authenticate, hasPermission('delete'), ResourceController.deleteResource);
 
 export default router;

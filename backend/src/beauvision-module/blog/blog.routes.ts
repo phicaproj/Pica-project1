@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as BlogController from './blog.controller';
-import { authenticate } from '../authentication/auth.middleware';
+import { authenticate, hasPermission } from '../authentication/auth.middleware';
 import multer from 'multer';
 
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -29,8 +29,8 @@ router.get('/', BlogController.getBlogs);
 router.get('/:slug', BlogController.getBlogBySlug);
 
 // Protected admin routes
-router.post('/', authenticate, upload.single('coverImage'), BlogController.createBlog);
-router.patch('/:id', authenticate, upload.single('coverImage'), BlogController.updateBlog);
-router.delete('/:id', authenticate, BlogController.deleteBlog);
+router.post('/', authenticate, hasPermission('write'), upload.single('coverImage'), BlogController.createBlog);
+router.patch('/:id', authenticate, hasPermission('write'), upload.single('coverImage'), BlogController.updateBlog);
+router.delete('/:id', authenticate, hasPermission('delete'), BlogController.deleteBlog);
 
 export default router;

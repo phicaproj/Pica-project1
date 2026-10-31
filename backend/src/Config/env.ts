@@ -24,6 +24,12 @@ export const JWT_PASSWORD_RESET_SECRET = getEnv('JWT_PASSWORD_RESET_SECRET');
 export const JWT_PASSWORD_RESET_EXPIRE = getEnv('JWT_PASSWORD_RESET_EXPIRE');
 export const JWT_INVITE_SECRET = getEnv('JWT_INVITE_SECRET');
 export const JWT_INVITE_EXPIRE = getEnv('JWT_INVITE_EXPIRE');
+// Optional dedicated secret/expiry for Beauvision admin invitations. Falls back
+// to the shared invite secret so no new env var is required to deploy.
+export const JWT_BEAUVISION_INVITE_SECRET =
+  process.env.JWT_BEAUVISION_INVITE_SECRET || JWT_INVITE_SECRET;
+export const JWT_BEAUVISION_INVITE_EXPIRE =
+  process.env.JWT_BEAUVISION_INVITE_EXPIRE || '24h';
 // Dedicated secret/expiry for the free-scan "create your password" link. Falls
 // back to the invite secret so existing deployments don't need a new env var.
 export const JWT_SIGNUP_CLAIM_SECRET =

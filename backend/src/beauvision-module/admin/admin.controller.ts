@@ -4,8 +4,12 @@ import { CREATED, OK, UNAUTHORIZED } from '../../service/shared/http';
 import catchErrors from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
 import {
+  AcceptInvite,
   CreateAdmin,
+  InviteAdmin,
   LoginAdmin,
+  UpdateAdminAccess,
+  UpdateAdminStatus,
   UpdateProfileSchema,
   ChangePasswordSchema,
   ForgotPasswordSchema,
@@ -22,6 +26,69 @@ export const createAdmin = catchErrors(async (req: Request, res: Response) => {
     status: true,
     message: 'Admin created successfully',
     data: admin,
+  });
+});
+
+export const inviteAdmin = catchErrors(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const result = await AdminService.inviteAdmin(InviteAdmin.parse(req.body));
+  res.status(CREATED).json({
+    status: true,
+    message: result.message,
+    data: result.admin,
+  });
+});
+
+export const acceptInvite = catchErrors(async (req: Request, res: Response) => {
+  const result = await AdminService.acceptInvite(AcceptInvite.parse(req.body));
+  res.status(OK).json({
+    status: true,
+    message: result.message,
+  });
+});
+
+export const resendAdminInvite = catchErrors(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const result = await AdminService.resendAdminInvite(req.params.id as string);
+  res.status(OK).json({
+    status: true,
+    message: result.message,
+    data: result.admin,
+  });
+});
+
+export const updateAdminAccess = catchErrors(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const admin = await AdminService.updateAdminAccess(
+    req.params.id as string,
+    UpdateAdminAccess.parse(req.body)
+  );
+  res.status(OK).json({
+    status: true,
+    message: 'Admin access updated successfully',
+    data: admin,
+  });
+});
+
+export const updateAdminStatus = catchErrors(async (req: Request, res: Response) => {
+  if (!req.user?.id) {
+    throw new AppError('User not authenticated', UNAUTHORIZED);
+  }
+  const result = await AdminService.updateAdminStatus(
+    req.params.id as string,
+    UpdateAdminStatus.parse(req.body),
+    req.user.id
+  );
+  res.status(OK).json({
+    status: true,
+    message: result.message,
+    data: result.admin,
   });
 });
 

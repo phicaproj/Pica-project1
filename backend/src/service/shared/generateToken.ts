@@ -11,6 +11,8 @@ import {
   JWT_PASSWORD_RESET_EXPIRE,
   JWT_INVITE_SECRET,
   JWT_INVITE_EXPIRE,
+  JWT_BEAUVISION_INVITE_SECRET,
+  JWT_BEAUVISION_INVITE_EXPIRE,
   JWT_SIGNUP_CLAIM_SECRET,
   JWT_SIGNUP_CLAIM_EXPIRE,
 } from '../../Config/env';
@@ -38,6 +40,11 @@ export interface PasswordResetTokenPayload {
 export interface InviteTokenPayload {
   email: string;
   purpose: 'admin-invite';
+}
+
+export interface BeauvisionInviteTokenPayload {
+  email: string;
+  purpose: 'beauvision-admin-invite';
 }
 
 export interface SignupClaimTokenPayload {
@@ -144,6 +151,25 @@ export function generateInviteToken(payload: InviteTokenPayload) {
 export function verifyInviteToken(token: string): InviteTokenPayload {
   try {
     const decoded = jwt.verify(token, JWT_INVITE_SECRET as jwt.Secret) as InviteTokenPayload;
+
+    return decoded;
+  } catch (error) {
+    throw new AppError('Invalid or expired invite link', BAD_REQUEST);
+  }
+}
+
+export function generateBeauvisionInviteToken(payload: BeauvisionInviteTokenPayload) {
+  return jwt.sign(payload, JWT_BEAUVISION_INVITE_SECRET as jwt.Secret, {
+    expiresIn: JWT_BEAUVISION_INVITE_EXPIRE as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifyBeauvisionInviteToken(token: string): BeauvisionInviteTokenPayload {
+  try {
+    const decoded = jwt.verify(
+      token,
+      JWT_BEAUVISION_INVITE_SECRET as jwt.Secret
+    ) as BeauvisionInviteTokenPayload;
 
     return decoded;
   } catch (error) {
