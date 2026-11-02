@@ -16,6 +16,8 @@ export type PaystackInitInput = {
   reference: string;
 
   metadata?: Record<string, unknown>;
+
+  callbackUrl?: string;
 };
 
 export type PaystackInitData = {
@@ -53,6 +55,7 @@ export async function initializeTransaction(input: PaystackInitInput): Promise<P
       currency,
       reference: input.reference,
       metadata: input.metadata ?? {},
+      ...(input.callbackUrl ? { callback_url: input.callbackUrl } : {}),
     }),
   });
 

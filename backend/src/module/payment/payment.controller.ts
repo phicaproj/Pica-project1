@@ -1,8 +1,9 @@
 import { handleBeauvisionWebhookService } from '../../beauvision-module/payment/payment.service';
+import { ConsultationService } from '../../beauvision-module/consultation/consultation.service';
 import { Request, Response } from 'express';
 import asyncHandler from '../../service/shared/catchErrors';
 import AppError from '../../service/shared/appError';
-import { OK, UNAUTHORIZED } from '../../service/shared/http';
+import { BAD_REQUEST, OK, UNAUTHORIZED } from '../../service/shared/http';
 import { verifyWebhookSignature } from '../../service/shared/paystack.service';
 import {
   initPaymentSchema,
@@ -52,6 +53,31 @@ export const handlePaymentWebhook = asyncHandler(async (req: Request, res: Respo
 
   const signatureValid = verifyWebhookSignature(rawBody, signature);
   const parsedBody = JSON.parse(rawBody.toString('utf8'));
+
+  const metadata = parsedBody?.data?.metadata as Record<string, unknown> | undefined;
+  if (metadata?.module === 'beauvision-consultation') {
+    if (!signatureValid) {
+      throw new AppError('Invalid webhook signature', BAD_REQUEST);
+    }
+
+    if (parsedBody.event !== 'charge.success') {
+      return res.status(OK).json({ status: true, message: 'Event ignored' });
+    }
+
+    const reference = parsedBody?.data?.reference as string | undefined;
+    if (!reference) {
+      throw new AppError('Missing reference in webhook payload', BAD_REQUEST);
+    }
+
+    const result = await ConsultationService.finalize(reference);
+    return res.status(OK).json({
+      status: true,
+      message:
+        result.payment.status === 'SUCCESS'
+          ? 'Consultation payment confirmed'
+          : 'Consultation payment processed',
+    });
+  }
 
   const result = await handleWebhookService({
     signatureValid,

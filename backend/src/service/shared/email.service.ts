@@ -642,6 +642,40 @@ export async function sendConsultationNoteUpdatedEmail({
     htmlContent: html,
   });
 }
+export async function sendConsultationReceiptEmail({
+  toEmail,
+  name,
+  amount,
+  reference,
+  durationMinutes,
+}: {
+  toEmail: string;
+  name: string;
+  amount: number;
+  reference: string;
+  durationMinutes: number;
+}): Promise<SendEmailResponse> {
+  const formattedAmount = `\u20A6${amount.toLocaleString('en-NG')}`;
+
+  const html = renderEmail({
+    heading: 'Consultation payment confirmed',
+    preheader: `We received your ${formattedAmount} consultation fee.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${name},</p>
+      <p style="margin:0 0 16px 0;">Thank you &mdash; we have received your payment for a <strong>${durationMinutes}-minute strategy consultation</strong>.</p>
+      <p style="margin:0 0 16px 0;"><strong>Amount paid:</strong> ${formattedAmount}</p>
+      <p style="margin:0 0 16px 0;"><strong>Payment reference:</strong> ${reference}</p>
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">Our team will reach out shortly to schedule a time that works for you.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: 'Your consultation payment is confirmed',
+    htmlContent: html,
+  });
+}
+
 export async function sendAdminCredentialsEmail({
   toEmail,
   name,

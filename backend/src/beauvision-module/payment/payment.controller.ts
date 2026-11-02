@@ -6,6 +6,7 @@ import { InitPaymentSchema } from './payment.types';
 import { Payment } from './payment.model';
 import { verifyTransaction } from '../../service/shared/paystack.service';
 import AppError from '../../service/shared/appError';
+import { ConsultationService } from '../consultation/consultation.service';
 
 export const initializePayment = catchErrors(async (req: Request, res: Response) => {
   const data = InitPaymentSchema.parse(req.body);
@@ -37,6 +38,21 @@ export const getPaymentByReference = catchErrors(async (req: Request, res: Respo
 
 export const verifyPaymentManual = catchErrors(async (req: Request, res: Response) => {
   const reference = req.params.reference as string;
+  const existing = await Payment.findOne({ reference });
+  if (!existing) throw new AppError('Payment not found', NOT_FOUND);
+
+  // Consultation payments only create their inquiry once payment is confirmed.
+  // Admin manual verification is a confirmation path, so let it create the
+  // inquiry if the webhook hasn't arrived yet. Resource payments are untouched.
+  if (existing.metadata?.module === 'beauvision-consultation') {
+    const result = await ConsultationService.finalize(reference, { createInquiry: true });
+    return res.status(OK).json({
+      status: true,
+      message: `Payment verified. Status: ${result.payment.status}`,
+      data: result.payment,
+    });
+  }
+
   const payment = await Payment.findOne({ reference }).populate('resourceIds', 'title price');
   if (!payment) throw new AppError('Payment not found', NOT_FOUND);
 

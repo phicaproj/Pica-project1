@@ -19,6 +19,7 @@ import beauInquiryRouter from './beauvision-module/inquiry/inquiry.routes';
 import beauPaymentRouter from './beauvision-module/payment/payment.routes';
 import beauResourceRouter from './beauvision-module/resource/resource.routes';
 import beauBlogRouter from './beauvision-module/blog/blog.routes';
+import beauConsultationRouter from './beauvision-module/consultation/consultation.routes';
 
 import couponRouter from './module/coupon/coupon.routes';
 import subscriptionRouter from './module/subscription/subscription.routes';
@@ -101,6 +102,7 @@ app.use('/api/beauvision/inquiry', beauInquiryRouter);
 app.use('/api/beauvision/payment', beauPaymentRouter);
 app.use('/api/beauvision/resource', beauResourceRouter);
 app.use('/api/beauvision/blog', beauBlogRouter);
+app.use('/api/beauvision/consultation', beauConsultationRouter);
 
 // OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
 const openApiDocument = buildOpenApiDocument();

@@ -3,6 +3,7 @@
 export const createInquirySchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   email: z.string().trim().email("Invalid email"),
+  phone: z.string().trim().optional(),
   companyName: z.string().trim().optional(),
   serviceRequested: z.string().trim().min(1, "Service requested is required"),
   message: z.string().trim().optional(),
