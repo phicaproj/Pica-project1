@@ -135,6 +135,8 @@ function VerifyCodeContent() {
     }
   };
 
+  const totalSteps = isEmailVerify || isAdminLogin ? 2 : 3;
+  const currentStep = isEmailVerify || isAdminLogin ? 2 : 2;
   const heading = isAdminLogin
     ? "Admin Verification"
     : isEmailVerify
@@ -158,10 +160,13 @@ function VerifyCodeContent() {
 
         {/* Card */}
         <div className={`w-full max-w-md rounded-2xl border p-8 md:p-10 ${d ? "border-white/10 bg-[#161b22]" : "border-gray-200 bg-white"}`}>
+          <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${d ? "text-teal-400" : "text-teal-700"}`}>
+            Step {currentStep} of {totalSteps}
+          </p>
           <h2 className={`text-2xl font-bold text-center mb-2 ${d ? "text-white" : "text-gray-900"}`}>
             {heading}
           </h2>
-          <p className={`text-sm text-center mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
+          <p className={`text-base text-center mb-8 ${d ? "text-gray-400" : "text-gray-600"}`}>
             {subtext}
           </p>
 
@@ -182,7 +187,7 @@ function VerifyCodeContent() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={index === 0 ? handlePaste : undefined}
-                  className={`w-10 h-12 sm:w-14 sm:h-14 text-center text-lg font-semibold rounded-xl border-2 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
+                  className={`w-12 h-14 sm:w-16 sm:h-16 text-center text-xl font-semibold rounded-xl border-2 focus:outline-none focus:ring-2 focus:border-transparent transition disabled:opacity-60 ${
                     d ? "bg-[#0d1117] text-white" : "bg-gray-50 text-gray-900"
                   } ${
                     codeError
@@ -194,14 +199,14 @@ function VerifyCodeContent() {
             </div>
 
             {/* Error message */}
-            {codeError && (
-              <p className="text-red-500 text-xs text-center mb-2">
-                {codeError}
-              </p>
-            )}
+                  {codeError && (
+                    <p className="text-red-500 text-sm text-center mb-2">
+                      {codeError}
+                    </p>
+                  )}
 
             {/* Resend */}
-            <p className={`text-sm text-center mb-6 ${d ? "text-gray-400" : "text-gray-600"}`}>
+            <p className={`text-base text-center mb-6 ${d ? "text-gray-400" : "text-gray-600"}`}>
               {isAdminLogin ? "Need a new admin code?" : "Didn't receive the email yet?"}{" "}
               <button
                 type="button"

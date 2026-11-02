@@ -24,6 +24,8 @@ import {
 import { AuthUser, getStoredUser, clearSession } from "@/lib/authClient";
 import { appendNext } from "@/lib/redirect";
 import DashboardTour from "@/components/DashboardTour";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { Home } from "lucide-react";
 
 const NAV_MAIN = [
   { label: "Home", icon: LayoutDashboard, href: "/dashboard" },
@@ -47,6 +49,40 @@ function getPageTitle(pathname: string) {
   const match = all.find((item) => pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
   return match?.label || "Home";
 }
+
+const DASHBOARD_SECTION_LABELS: Record<string, string> = {
+  "/dashboard/strategic-scan": "Strategic Scan",
+  "/dashboard/deep-dive": "Deep Dive",
+  "/dashboard/consultation": "Consultation",
+  "/dashboard/reports": "Reports",
+  "/dashboard/plans": "Subscription Plans",
+  "/dashboard/subscription": "Pay-per-use Scans",
+  "/dashboard/settings": "Settings",
+  "/dashboard/benchmarks": "Benchmarks",
+  "/dashboard/insights": "Insights",
+};
+
+const getDashboardBreadcrumbs = (pathname: string) => {
+  if (pathname === "/dashboard") return null;
+  const items: { label: string; href: string }[] = [
+    { label: "Home", href: "/dashboard" },
+  ];
+  const matched = Object.entries(DASHBOARD_SECTION_LABELS).find(([route]) =>
+    pathname.startsWith(route)
+  );
+  if (matched) {
+    items.push({ label: matched[1], href: matched[0] });
+  } else {
+    items.push({ label: "Dashboard", href: "/dashboard" });
+  }
+  if (pathname.includes("/reports/") && pathname.split("/").length > 4) {
+    items.push({ label: "Report", href: "" });
+  }
+  if (pathname.includes("/deep-dive/") && pathname.split("/").length > 4) {
+    items.push({ label: "Session", href: "" });
+  }
+  return items;
+};
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -145,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Link
         href={item.href}
         onClick={() => setSidebarOpen(false)}
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
+        className={`flex items-center gap-3 px-4 py-3 min-h-[48px] rounded-lg text-base font-medium transition-colors relative ${
           active
             ? (d ? "text-orange-400 bg-orange-400/5" : "text-orange-600 bg-orange-50")
             : (d ? "text-gray-400 hover:text-white hover:bg-white/5" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100")
@@ -176,7 +212,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Mobile hamburger */}
           <button
             data-tour="dashboard-nav-toggle"
-            className={`lg:hidden ${d ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+            aria-label={sidebarOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={sidebarOpen}
+            className={`lg:hidden p-3 min-w-[44px] min-h-[44px] rounded-lg ${d ? 'text-gray-300 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -197,9 +235,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-3">
           {/* Theme toggle */}
           <button
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
             onClick={() => setDark(!dark)}
             className={`p-2 rounded-full transition ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-            title="Toggle theme"
           >
             {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
@@ -307,19 +345,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="mt-auto pt-6">
-            <button
-              onClick={() => handleLogout()}
-              className={`flex w-full items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-            >
-              <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
-              Logout
-            </button>
+          <button
+            aria-label="Log out"
+            onClick={() => handleLogout()}
+            className={`flex w-full items-center gap-3 px-4 py-3 min-h-[48px] rounded-lg text-base font-medium transition-colors ${d ? 'text-gray-400 hover:text-white hover:bg-white/5' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+          >
+            <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+            Logout
+          </button>
           </div>
         </aside>
 
         {/* ── Main content (Offset for fixed sidebar) ── */}
         <main className="flex-1 lg:ml-56 overflow-y-auto overflow-x-hidden p-4 md:p-6 lg:p-8 flex flex-col justify-between min-h-0">
           <div>
+            {getDashboardBreadcrumbs(pathname) && (
+              <div className="mb-4">
+                <Breadcrumb items={getDashboardBreadcrumbs(pathname)!} />
+              </div>
+            )}
             {children}
           </div>
           
@@ -338,6 +382,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Mobile dark/light mode toggle ── */}
       <button
+        aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
         onClick={() => setDark(!dark)}
         className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full border flex items-center justify-center shadow-lg transition lg:hidden ${d ? 'bg-[#1c2333] border-white/10 shadow-black/40 text-gray-300 hover:text-white' : 'bg-white border-gray-200 shadow-gray-200/60 text-gray-700 hover:text-gray-900'}`}
       >

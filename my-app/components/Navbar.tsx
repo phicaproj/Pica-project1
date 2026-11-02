@@ -128,6 +128,7 @@ export default function Navbar({
         <div className="hidden md:flex items-center gap-2">
           <button
             onClick={() => setDark(!d)}
+            aria-label={d ? "Switch to light mode" : "Switch to dark mode"}
             className={`p-2 rounded-full transition ${d
                 ? "bg-white/10 text-white hover:bg-white/20"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -139,6 +140,9 @@ export default function Navbar({
             <div className="relative">
               <button
                 type="button"
+                aria-label={accountMenuOpen ? "Close account menu" : "Open account menu"}
+                aria-haspopup="menu"
+                aria-expanded={accountMenuOpen}
                 onClick={() => setAccountMenuOpen((open) => !open)}
                 className={`flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition ${
                   d ? "hover:bg-white/10 text-white" : "hover:bg-gray-100 text-gray-800"
@@ -204,8 +208,10 @@ export default function Navbar({
 
         {/* Mobile Menu Button */}
         <button
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={mobileMenuOpen}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className={`md:hidden p-2 rounded-lg transition ${d
+          className={`md:hidden p-3 min-w-[44px] min-h-[44px] rounded-lg transition ${d
               ? "text-white hover:bg-white/10"
               : "text-gray-700 hover:bg-gray-100"
             }`}
@@ -248,6 +254,7 @@ export default function Navbar({
 
             {/* Theme Toggle - Mobile */}
             <button
+              aria-label={d ? "Switch to light mode" : "Switch to dark mode"}
               onClick={() => setDark(!d)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${d
                   ? "text-white hover:bg-white/10"

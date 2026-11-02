@@ -39,6 +39,7 @@ import {
 } from "@/lib/authClient";
 import { formatMoney, type Currency } from "@/lib/utils";
 import { useTheme } from "@/components/ThemeContext";
+import { useToast } from "@/components/ToastContext";
 
 type Tab = "Profile" | "Business Info" | "Billing";
 
@@ -67,6 +68,7 @@ function DashboardSettingsPageInner() {
   const d = dark;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast, success, error } = useToast();
   // Outer tab persists via ?tab=Billing; defaults to Profile. Reading the
   // param on mount lets the /dashboard/plans "Manage subscription →" link
   // land deep on Billing → Subscription without an extra click.
@@ -230,6 +232,7 @@ const resizeImage = (file: File, maxWidth = 400, maxHeight = 400, quality = 0.8)
 function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate: () => void }) {
   const { dark } = useTheme();
   const d = dark;
+  const { toast, success, error } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -285,14 +288,14 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       });
 
       if (res.error) {
-        alert(res.error.message);
+        error(res.error.message ?? "Failed to save profile.");
       } else {
         setIsEditing(false);
         onUpdate();
-        alert("Profile changes saved successfully!");
+        success("Profile changes saved successfully!");
       }
     } catch (err) {
-      alert("An unexpected error occurred while saving profile.");
+      error("An unexpected error occurred while saving profile.");
     } finally {
       setSaving(false);
     }
@@ -303,14 +306,14 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
     try {
       const res = await deleteMyAccount();
       if (res.error) {
-        alert(res.error.message);
+        error(res.error.message ?? "Failed to delete account.");
       } else {
-        alert("Your account has been deleted successfully.");
+        success("Your account has been deleted successfully.");
         // Redirect to login or home
         window.location.href = "/Auth/login";
       }
     } catch (err) {
-      alert("An unexpected error occurred while deleting your account.");
+      error("An unexpected error occurred while deleting your account.");
     } finally {
       setDeletingAccount(false);
       setShowDeleteModal(false);
@@ -321,14 +324,14 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
     try {
       const res = await verifyUserEmail();
       if (res.error) {
-        alert(res.error.message);
+        error(res.error.message ?? "Failed to verify email.");
       } else {
         setIsVerified(true);
         onUpdate();
-        alert("Verification successful! Email verified.");
+        success("Verification successful! Email verified.");
       }
     } catch (err) {
-      alert("An error occurred during email verification.");
+      error("An error occurred during email verification.");
     }
   };
 
@@ -347,7 +350,7 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
       // Strict 2MB Guard (file size is in bytes)
       const MAX_SIZE = 2 * 1024 * 1024;
       if (file.size > MAX_SIZE) {
-        alert("Profile picture upload is limited to a maximum of 2MB. Please select a smaller file.");
+        error("Profile picture upload is limited to a maximum of 2MB. Please select a smaller file.");
         if (fileInputRef.current) fileInputRef.current.value = "";
         setUploading(false);
         return;
@@ -355,14 +358,14 @@ function ProfileSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate
 
       const res = await uploadAvatarApi(file);
       if (res.error) {
-        alert(res.error.message);
+        error(res.error.message ?? "Failed to upload profile picture.");
       } else if (res.data?.avatarUrl) {
         setAvatarUrl(res.data.avatarUrl);
         onUpdate();
-        alert("Profile picture uploaded successfully!");
+        success("Profile picture uploaded successfully!");
       }
     } catch (err) {
-      alert("An error occurred while uploading your profile picture.");
+      error("An error occurred while uploading your profile picture.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -707,6 +710,7 @@ function PhoneIcon(props: any) {
 function BusinessInfoSettings({ initialUser, onUpdate }: { initialUser: any, onUpdate: () => void }) {
   const { dark } = useTheme();
   const d = dark;
+  const { toast, success, error } = useToast();
   const [businessName, setBusinessName] = useState(initialUser?.businessName || "");
   const [industry, setIndustry] = useState(initialUser?.industry || "");
   const [country, setCountry] = useState(initialUser?.country || "");
@@ -1126,6 +1130,7 @@ type BillingSubTab = "History" | "Subscription";
 function BillingSettings() {
   const { dark } = useTheme();
   const d = dark;
+  const { toast, success, error } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialBillingTab: BillingSubTab =

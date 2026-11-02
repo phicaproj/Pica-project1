@@ -20,7 +20,9 @@ import {
   Menu,
   X,
   LogOut,
+  Home,
 } from "lucide-react";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 type NavItemConfig = {
   label: string;
@@ -121,6 +123,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
+  };
+
+  const ADMIN_SECTION_LABELS: Record<string, string> = {
+    "/admin/users": "Users",
+    "/admin/reports": "Reports & Analytics",
+    "/admin/subscription": "Subscription",
+    "/admin/consultations": "Consultations",
+    "/admin/payments": "Payments",
+    "/admin/audit": "Audit Logs",
+    "/admin/coupons": "Coupons",
+    "/admin/question-bank": "Question Bank",
+    "/admin/scoring": "Scoring",
+    "/admin/settings": "Settings",
+  };
+
+  const getAdminBreadcrumbs = () => {
+    if (pathname === "/admin" || pathname === "/admin/login") return null;
+    const items: { label: string; href: string }[] = [
+      { label: "Home", href: "/admin" },
+    ];
+    const matched = Object.entries(ADMIN_SECTION_LABELS).find(([route]) =>
+      pathname.startsWith(route)
+    );
+    if (matched) {
+      items.push({ label: matched[1], href: matched[0] });
+      if (pathname !== matched[0] && pathname.includes("/users/")) {
+        items.push({ label: "User", href: "" });
+      }
+    } else {
+      items.push({ label: "Admin", href: "/admin" });
+    }
+    return items;
   };
 
   const handleLogout = () => {
@@ -266,6 +300,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Subtle gradient background element */}
           <div className={`absolute top-0 left-0 w-full h-96 bg-gradient-to-b ${d ? 'from-blue-900/10' : 'from-blue-50/30'} to-transparent pointer-events-none`} />
           <div className="relative p-4 md:p-6 lg:p-8">
+            {getAdminBreadcrumbs() && (
+              <div className="mb-4">
+                <Breadcrumb items={getAdminBreadcrumbs()!} />
+              </div>
+            )}
             {children}
           </div>
         </main>

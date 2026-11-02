@@ -29,8 +29,8 @@ router.get('/', BlogController.getBlogs);
 router.get('/:slug', BlogController.getBlogBySlug);
 
 // Protected admin routes
-router.post('/', authenticate, hasPermission('write'), upload.single('coverImage'), BlogController.createBlog);
-router.patch('/:id', authenticate, hasPermission('write'), upload.single('coverImage'), BlogController.updateBlog);
-router.delete('/:id', authenticate, hasPermission('delete'), BlogController.deleteBlog);
+router.post('/', authenticate, hasPermission('blogs:write'), upload.single('coverImage'), BlogController.createBlog);
+router.patch('/:id', authenticate, hasPermission('blogs:write'), upload.single('coverImage'), BlogController.updateBlog);
+router.delete('/:id', authenticate, hasPermission('blogs:delete'), BlogController.deleteBlog);
 
 export default router;

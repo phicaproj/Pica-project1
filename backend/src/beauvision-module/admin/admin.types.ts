@@ -1,6 +1,20 @@
 import z from 'zod';
 
-export const BEAUVISION_PERMISSION_KEYS = ['read', 'write', 'delete'] as const;
+export const BEAUVISION_PERMISSION_KEYS = [
+  'blogs:read',
+  'blogs:write',
+  'blogs:delete',
+  'resources:read',
+  'resources:write',
+  'resources:delete',
+  'resources:upload',
+  'inquiries:read',
+  'inquiries:write',
+  'payments:read',
+  'payments:write',
+  'admins:read',
+  'admins:write',
+] as const;
 
 export const BeauvisionPermissionSchema = z.enum(BEAUVISION_PERMISSION_KEYS);
 

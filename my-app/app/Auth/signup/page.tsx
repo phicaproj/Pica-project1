@@ -293,7 +293,14 @@ export default function SignUpPage() {
 							{/* Contact person name */}
 							<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
 								<div>
+									<label
+										htmlFor='signup-firstName'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										First name
+									</label>
 									<input
+										id='signup-firstName'
 										type='text'
 										placeholder='Contact first name*'
 										value={
@@ -306,14 +313,14 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 											errors.firstName
 												? 'border-red-500 focus:ring-red-400'
 												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.firstName && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{
 												errors.firstName
 											}
@@ -321,7 +328,14 @@ export default function SignUpPage() {
 									)}
 								</div>
 								<div>
+									<label
+										htmlFor='signup-lastName'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Last name
+									</label>
 									<input
+										id='signup-lastName'
 										type='text'
 										placeholder='Contact last name*'
 										value={
@@ -334,14 +348,14 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 											errors.lastName
 												? 'border-red-500 focus:ring-red-400'
 												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.lastName && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{
 												errors.lastName
 											}
@@ -352,7 +366,14 @@ export default function SignUpPage() {
 
 							{/* Business Name */}
 							<div>
+								<label
+									htmlFor='signup-businessName'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Business name
+								</label>
 								<input
+									id='signup-businessName'
 									type='text'
 									placeholder='Business name*'
 									value={form.businessName}
@@ -363,14 +384,14 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 										errors.businessName
 											? 'border-red-500 focus:ring-red-400'
 											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.businessName && (
-									<p className='text-red-500 text-xs mt-1'>
+									<p className='text-red-500 text-sm mt-1'>
 										{
 											errors.businessName
 										}
@@ -380,7 +401,14 @@ export default function SignUpPage() {
 
 							{/* Business Email */}
 							<div>
+								<label
+									htmlFor='signup-email'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Business email
+								</label>
 								<input
+									id='signup-email'
 									type='email'
 									placeholder='Business email*'
 									value={form.email}
@@ -391,14 +419,14 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 										errors.email
 											? 'border-red-500 focus:ring-red-400'
 											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.email && (
-									<p className='text-red-500 text-xs mt-1'>
+									<p className='text-red-500 text-sm mt-1'>
 										{errors.email}
 									</p>
 								)}
@@ -406,7 +434,14 @@ export default function SignUpPage() {
 
 							{/* Phone Number */}
 							<div>
+								<label
+									htmlFor='signup-phone'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Phone number
+								</label>
 								<input
+									id='signup-phone'
 									type='tel'
 									placeholder='Phone number*'
 									value={form.phone}
@@ -417,14 +452,14 @@ export default function SignUpPage() {
 												.value,
 										)
 									}
-									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+									className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 										errors.phone
 											? 'border-red-500 focus:ring-red-400'
 											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 									}`}
 								/>
 								{errors.phone && (
-									<p className='text-red-500 text-xs mt-1'>
+									<p className='text-red-500 text-sm mt-1'>
 										{errors.phone}
 									</p>
 								)}
@@ -433,7 +468,14 @@ export default function SignUpPage() {
 							{/* Staff size + years in operation */}
 							<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
 								<div>
+									<label
+										htmlFor='signup-staffSize'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Staff size
+									</label>
 									<input
+										id='signup-staffSize'
 										type='number'
 										min={1}
 										step={1}
@@ -463,14 +505,14 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 											errors.staffSize
 												? 'border-red-500 focus:ring-red-400'
 												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.staffSize && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{
 												errors.staffSize
 											}
@@ -478,7 +520,14 @@ export default function SignUpPage() {
 									)}
 								</div>
 								<div>
+									<label
+										htmlFor='signup-operatingYears'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Years in operation
+									</label>
 									<input
+										id='signup-operatingYears'
 										type='number'
 										min={0}
 										step={1}
@@ -507,14 +556,14 @@ export default function SignUpPage() {
 													.value,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+										className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 											errors.operatingYears
 												? 'border-red-500 focus:ring-red-400'
 												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
 										}`}
 									/>
 									{errors.operatingYears && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{
 												errors.operatingYears
 											}
@@ -524,50 +573,66 @@ export default function SignUpPage() {
 							</div>
 
 							{/* Sector / industry dropdown */}
-							<div className='relative'>
-								<select
-									value={form.industry}
-									onChange={(e) =>
-										handleChange(
-											'industry',
-											e.target
-												.value,
-										)
-									}
-									className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
-										errors.industry
-											? 'border-red-500 focus:ring-red-400'
-											: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
-									}`}>
-									<option
-										value=''
-										disabled
-										className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
-										Select Sector /
-										Industry*
-									</option>
-									{INDUSTRIES.map((ind) => (
+							<div>
+								<label
+									htmlFor='signup-industry'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Sector / Industry
+								</label>
+								<div className='relative'>
+									<select
+										id='signup-industry'
+										value={form.industry}
+										onChange={(e) =>
+											handleChange(
+												'industry',
+												e.target
+													.value,
+											)
+										}
+										className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
+											errors.industry
+												? 'border-red-500 focus:ring-red-400'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
+										}`}>
 										<option
-											key={ind}
-											value={ind}
-											className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
-											{ind}
+											value=''
+											disabled
+											className={d ? 'text-gray-500 bg-[#0d1117]' : 'text-gray-400 bg-white'}>
+											Select Sector /
+											Industry*
 										</option>
-									))}
-								</select>
-								<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none' />
-								{errors.industry && (
-									<p className='text-red-500 text-xs mt-1'>
-										{errors.industry}
-									</p>
-								)}
+										{INDUSTRIES.map((ind) => (
+											<option
+												key={ind}
+												value={ind}
+												className={d ? 'bg-[#0d1117] text-white' : 'bg-white text-gray-900'}>
+												{ind}
+											</option>
+										))}
+									</select>
+									<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 pointer-events-none' />
+									{errors.industry && (
+										<p className='text-red-500 text-sm mt-1'>
+											{errors.industry}
+										</p>
+									)}
+								</div>
 							</div>
 
 							{/* Country and State dropdowns */}
 							<div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
 								<div className='relative'>
+									<label
+										htmlFor='signup-country'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										Country
+									</label>
 									{useCountryTextFallback ? (
 										<input
+											id='signup-country'
 											type='text'
 											placeholder='Country*'
 											value={form.country}
@@ -577,7 +642,7 @@ export default function SignUpPage() {
 													e.target.value,
 												)
 											}
-											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+											className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 												errors.country
 													? 'border-red-500 focus:ring-red-400'
 													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
@@ -586,6 +651,7 @@ export default function SignUpPage() {
 									) : (
 										<>
 											<select
+												id='signup-country'
 												value={form.country}
 												onChange={(e) => {
 													handleChange(
@@ -597,7 +663,7 @@ export default function SignUpPage() {
 														'',
 													)
 												}}
-												className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
+												className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
 													errors.country
 														? 'border-red-500 focus:ring-red-400'
 														: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
@@ -626,11 +692,11 @@ export default function SignUpPage() {
 													),
 												)}
 											</select>
-											<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none' />
+											<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 pointer-events-none' />
 										</>
 									)}
 									{errors.country && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{
 												errors.country
 											}
@@ -639,9 +705,16 @@ export default function SignUpPage() {
 								</div>
 
 								<div className='relative'>
+									<label
+										htmlFor='signup-state'
+										className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+									>
+										State / Province
+									</label>
 									{statesList.length ===
 									0 ? (
 										<input
+											id='signup-state'
 											type='text'
 											placeholder='State / Province*'
 											value={
@@ -657,7 +730,7 @@ export default function SignUpPage() {
 														.value,
 												)
 											}
-											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+											className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 												errors.state
 													? 'border-red-500 focus:ring-red-400'
 													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
@@ -665,6 +738,7 @@ export default function SignUpPage() {
 										/>
 									) : (
 										<select
+											id='signup-state'
 											value={
 												form.state
 											}
@@ -678,7 +752,7 @@ export default function SignUpPage() {
 														.value,
 												)
 											}
-											className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
+											className={`w-full px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition appearance-none pr-10 ${d ? 'bg-[#0d1117] text-white' : 'bg-gray-50 text-gray-900'} ${
 												errors.state
 													? 'border-red-500 focus:ring-red-400'
 													: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
@@ -712,10 +786,10 @@ export default function SignUpPage() {
 									)}
 									{statesList.length >
 										0 && (
-										<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none' />
+										<ChevronDown className='absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 pointer-events-none' />
 									)}
 									{errors.state && (
-										<p className='text-red-500 text-xs mt-1'>
+										<p className='text-red-500 text-sm mt-1'>
 											{errors.state}
 										</p>
 									)}
@@ -723,9 +797,16 @@ export default function SignUpPage() {
 							</div>
 
 							{/* Password with tooltip */}
-							<div className='relative'>
+							<div>
+								<label
+									htmlFor='signup-password'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Password
+								</label>
 								<div className='relative'>
 									<input
+										id='signup-password'
 										type={
 											showPassword
 												? 'text'
@@ -752,7 +833,7 @@ export default function SignUpPage() {
 												false,
 											)
 										}
-										className={`w-full px-4 py-3.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${d ? 'bg-[#0d1117] text-white placeholder-gray-500' : 'bg-gray-50 text-gray-900 placeholder-gray-400'} ${
+										className={`w-full pr-16 px-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
 											errors.password
 												? 'border-red-500 focus:ring-red-400'
 												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
@@ -766,7 +847,7 @@ export default function SignUpPage() {
 											)
 										}
 										// Instant flip — no CSS transition on the toggle button.
-										className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300'>
+										className='absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-300'>
 										{showPassword ? (
 											<EyeOffIcon />
 										) : (
@@ -775,7 +856,7 @@ export default function SignUpPage() {
 									</button>
 								</div>
 								{errors.password && (
-									<p className='text-red-500 text-xs mt-1'>
+									<p className='text-red-500 text-sm mt-1'>
 										{errors.password}
 									</p>
 								)}
@@ -841,9 +922,9 @@ export default function SignUpPage() {
 													}),
 												)
 										}}
-										className={`mt-0.5 w-4 h-4 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
+										className={`mt-0.5 w-5 h-5 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
 									/>
-									<span className={`text-sm leading-snug ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+									<span className={`text-base leading-snug ${d ? 'text-gray-300' : 'text-gray-700'}`}>
 										I agree with{' '}
 										<Link
 											href='/terms'
@@ -878,7 +959,7 @@ export default function SignUpPage() {
 						</form>
 
 						{/* Login link */}
-						<p className={`text-center text-sm mt-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+						<p className={`text-center text-base mt-5 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Already have an account?
 							<Link
 								href={appendNext('/Auth/login', nextPath)}

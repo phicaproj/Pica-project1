@@ -86,6 +86,30 @@ export const hasPermission = (requiredPermission: BeauvisionPermission) => {
   };
 };
 
+export const hasAnyPermission = (...requiredPermissions: BeauvisionPermission[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    if (req.user.role === 'OWNER') {
+      return next();
+    }
+
+    const permissions = req.user.permissions || [];
+    const has = requiredPermissions.some((p) => permissions.includes(p));
+    if (!has) {
+      return res.status(403).json({
+        message: `Forbidden: You do not have any of the required permissions (${requiredPermissions.join(
+          ', '
+        )})`,
+      });
+    }
+
+    next();
+  };
+};
+
 export const superAdminOnly = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ message: 'User not authenticated' });

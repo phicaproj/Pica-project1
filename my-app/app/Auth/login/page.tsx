@@ -179,7 +179,7 @@ export default function LoginPage() {
 							place
 						</p>
 						{inactivityLoggedOut && (
-							<div className='mb-6 p-4 rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400 text-sm animate-pulse'>
+							<div className='mb-6 p-4 rounded-xl border border-orange-500/20 bg-orange-500/10 text-orange-400 text-base animate-pulse'>
 								You have been logged out due to
 								inactivity. Please login again.
 							</div>
@@ -274,9 +274,9 @@ export default function LoginPage() {
 													.checked,
 											)
 										}
-										className={`w-4 h-4 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
+										className={`w-5 h-5 rounded border-gray-600 text-[#f97316] focus:ring-[#f97316] cursor-pointer ${d ? 'bg-[#0d1117]' : 'bg-white'}`}
 									/>
-									<span className={`text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+									<span className={`text-base ${d ? 'text-gray-300' : 'text-gray-700'}`}>
 										Remember me
 									</span>
 								</label>
@@ -299,7 +299,7 @@ export default function LoginPage() {
 						</form>
 
 						{/* Sign up link */}
-						<p className={`text-center text-sm mt-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
+						<p className={`text-center text-base mt-6 ${d ? 'text-gray-400' : 'text-gray-600'}`}>
 							Don&apos;t have an account?
 							<Link
 								href={appendNext('/Auth/signup', nextPath)}

@@ -118,6 +118,9 @@ function NewPasswordContent() {
 				{/* Card - centered */}
 				<div className='flex-1 flex items-center justify-center pb-10'>
 					<div className={`rounded-md shadow-xl p-10 w-full max-w-md mx-4 ${d ? 'bg-[#161b22] border border-white/10' : 'bg-white'}`}>
+						<p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${d ? 'text-teal-400' : 'text-teal-700'}`}>
+							Step 3 of 3
+						</p>
 						<h2 className={`text-xl font-bold text-center mb-8 ${d ? 'text-white' : 'text-gray-900'}`}>
 							New Password
 						</h2>

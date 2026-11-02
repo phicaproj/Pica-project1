@@ -25,7 +25,7 @@ function useScrollAnimations(containerRef: React.RefObject<HTMLElement | null>) 
     const container = containerRef.current;
     if (!container) return;
 
-    // Respect reduced motion
+    // Respect reduced motion — skip JS animation setup entirely.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     // Small delay so the DOM settles after route change
@@ -159,29 +159,30 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* Floating CTA */}
-      {pathname === "/" && (
-        <Link 
-          href="/pages/freescan"
-          className="fixed bottom-28 right-6 md:bottom-20 md:right-6 z-50 flex flex-col items-center justify-center p-2 rounded-xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
+      {/* Bottom-right floating actions stack (mobile). CTA stays most accessible. */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 lg:hidden">
+        {pathname === "/" && (
+          <Link
+            href="/pages/freescan"
+            className="flex flex-col items-center justify-center p-3 rounded-xl bg-[#f97316] hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all hover:-translate-y-1 group"
+          >
+            <ScanSearch className="w-5 h-5 mb-0.5" />
+            <span className="text-[9px] font-black uppercase tracking-wider text-center max-w-[70px] leading-tight">Start Free Scan</span>
+          </Link>
+        )}
+        <button
+          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+          onClick={() => setDark(!dark)}
+          className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition"
+          style={{
+            backgroundColor: dark ? "#1c2333" : "#f3f4f6",
+            border: dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
+            color: dark ? "#d1d5db" : "#374151",
+          }}
         >
-          <ScanSearch className="w-5 h-5 mb-0.5" />
-          <span className="text-[9px] font-black uppercase tracking-wider text-center max-w-[70px] leading-tight">Start Free Scan</span>
-        </Link>
-      )}
-
-      {/* Floating dark/light mode toggle — bottom right on mobile */}
-      <button
-        onClick={() => setDark(!dark)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition md:hidden"
-        style={{
-          backgroundColor: dark ? "#1c2333" : "#f3f4f6",
-          border: dark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.1)",
-          color: dark ? "#d1d5db" : "#374151",
-        }}
-      >
-        {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-      </button>
+          {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+      </div>
     </div>
   );
 }

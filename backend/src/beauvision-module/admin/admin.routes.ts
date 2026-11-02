@@ -16,7 +16,7 @@ adminRouter.post('/reset-password', AdminController.resetPassword);
 adminRouter.post('/accept-invite', AdminController.acceptInvite);
 
 // Protected routes
-adminRouter.get('/', authenticate, hasPermission('read'), AdminController.getAdmins);
+adminRouter.get('/', authenticate, hasPermission('admins:read'), AdminController.getAdmins);
 
 // Only a super admin can add, invite, disable, or delete another admin.
 adminRouter.post('/register', authenticate, superAdminOnly, AdminController.createAdmin);
