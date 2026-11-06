@@ -335,8 +335,8 @@ model AssessmentSession {
   result        SessionResult?
   phase2bUnlock Phase2BPillarUnlock?
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("assessment_sessions")
 }

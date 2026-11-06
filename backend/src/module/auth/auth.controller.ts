@@ -12,6 +12,7 @@ import {
   signupClaimPreviewSchema,
   signupClaimSchema,
   verifyAdminOTPSchema,
+  verifyEmailLinkSchema,
   verifyEmailSchema,
   verifyResetOtpSchema,
 } from './auth.types';
@@ -26,9 +27,10 @@ import {
   registerService,
   resendVerificationService,
   resetPasswordService,
+  verifyAdminOTPService,
+  verifyEmailLinkService,
   verifyEmailService,
   verifyResetOtpService,
-  verifyAdminOTPService,
 } from './auth.service';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
@@ -90,6 +92,13 @@ export const verifyResetOtp = asyncHandler(async (req: Request, res: Response) =
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const request = verifyEmailSchema.parse(req.body);
   const result = await verifyEmailService(request);
+
+  return res.status(OK).json(result);
+});
+
+export const verifyEmailLink = asyncHandler(async (req: Request, res: Response) => {
+  const request = verifyEmailLinkSchema.parse(req.query);
+  const result = await verifyEmailLinkService(request);
 
   return res.status(OK).json(result);
 });

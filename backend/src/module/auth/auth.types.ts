@@ -56,6 +56,10 @@ export const verifyEmailSchema = z.object({
   otpToken: z.string().min(1, 'Verification token is required'),
 });
 
+export const verifyEmailLinkSchema = z.object({
+  token: z.string().min(1, 'Verification token is required'),
+});
+
 export const resendVerificationSchema = z.object({
   email: z.email('Invalid email address'),
 });
@@ -179,6 +183,12 @@ export type VerifyEmailResponse = {
   user: AuthUser;
   accessToken: string;
   refreshToken: string;
+};
+
+export type VerifyEmailLinkResponse = {
+  message: string;
+  email: string;
+  verified: boolean;
 };
 
 export type ResendVerificationResponse = {

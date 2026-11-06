@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
-import { setLastSessionId } from '@/lib/authClient'
+import { setLastSessionId, setSession } from '@/lib/authClient'
 import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import {
 	Clock,
@@ -67,6 +67,8 @@ interface Pillar {
 
 interface ProfileData {
 	leadEmail: string
+	phone: string
+	password: string
 	staffSize: string
 	businessName: string
 	industry: string
@@ -76,6 +78,44 @@ interface ProfileData {
 
 type Step = 'intro' | 'profile' | 'preparing' | 'questions' | 'processing'
 type BusinessSize = 'SMALL' | 'MEDIUM'
+
+// Password visibility toggle icons (stable identities to avoid remounting per keystroke).
+const EyeIcon = () => (
+	<svg
+		xmlns='http://www.w3.org/2000/svg'
+		className='w-5 h-5'
+		fill='none'
+		viewBox='0 0 24 24'
+		stroke='currentColor'
+		strokeWidth={1.5}>
+		<path
+			strokeLinecap='round'
+			strokeLinejoin='round'
+			d='M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z'
+		/>
+		<path
+			strokeLinecap='round'
+			strokeLinejoin='round'
+			d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+		/>
+	</svg>
+)
+
+const EyeOffIcon = () => (
+	<svg
+		xmlns='http://www.w3.org/2000/svg'
+		className='w-5 h-5'
+		fill='none'
+		viewBox='0 0 24 24'
+		stroke='currentColor'
+		strokeWidth={1.5}>
+		<path
+			strokeLinecap='round'
+			strokeLinejoin='round'
+			d='M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88'
+		/>
+	</svg>
+)
 
 // ─── Step 1: Intro ─────────────────────────────────────────────────────────────
 function IntroStep({ dark, onStart }: { dark: boolean; onStart: () => void }) {
@@ -191,6 +231,7 @@ function ProfileStep({
 	showRecovery: boolean
 }) {
 	const d = dark
+	const [showPassword, setShowPassword] = useState(false)
 	const [industryOpen, setIndustryOpen] = useState(false)
 	// countriesnow.space's /countries/states endpoint returns real state /
 	// province arrays per country (the previous /countries endpoint returned
@@ -371,6 +412,48 @@ function ProfileStep({
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
 						>
+							Phone Number
+						</label>
+						<input
+							type='tel'
+							placeholder='+1234567890'
+							value={profile.phone}
+							onChange={(e) =>
+								update('phone', e.target.value.replace(/[^\d+]/g, ''))
+							}
+							className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
+						/>
+					</div>
+				</div>
+
+				{/* Row 2 (Password + Staff Size) */}
+				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
+					<div className='relative'>
+						<label
+							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
+						>
+							Password
+						</label>
+						<input
+							type={showPassword ? 'text' : 'password'}
+							placeholder='••••••••'
+							value={profile.password}
+							onChange={(e) => update('password', e.target.value)}
+							className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
+						/>
+						<button
+							type='button'
+							onClick={() => setShowPassword(!showPassword)}
+							className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+							aria-label='Toggle password visibility'
+						>
+							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+						</button>
+					</div>
+					<div>
+						<label
+							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
+						>
 							Staff Size
 						</label>
 						<input
@@ -388,8 +471,6 @@ function ProfileStep({
 								}
 							}}
 							onChange={(e) =>
-								// Keep only digits so a pasted decimal/symbol can't
-								// reach the backend. Backend also validates.
 								update(
 									'staffSize',
 									e.target.value.replace(/[^\d]/g, '')
@@ -405,14 +486,10 @@ function ProfileStep({
 					</div>
 				</div>
 
-				{/* Row 3 (Years + Country/State). Country and State are native
-				    <select> elements — same pattern as the Business Info page in
-				    dashboard/settings. Native selects render as OS-level popovers
-				    that escape every stacking context, so the row-level z-lift
-				    we needed for the custom Industry dropdown isn't required
-				    here. The /countries/states endpoint returns real state arrays
-				    per country (not city lists), matching the dashboard. */}
-				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
+				{/* Row 3 (Business Name + Industry). When Industry dropdown is
+					open, lift this row's stacking context so the absolute panel
+					isn't clipped by Email/Staff/Years rows below it. */}
+				<div className={`grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6 ${industryOpen ? 'relative z-40' : ''}`}>
 					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
@@ -1087,6 +1164,8 @@ export default function GeneralTestPage() {
 
 	const [profile, setProfile] = useState<ProfileData>({
 		leadEmail: '',
+		phone: '',
+		password: '',
 		staffSize: '',
 		businessName: '',
 		industry: '',
@@ -1175,11 +1254,14 @@ export default function GeneralTestPage() {
 		if (!profile.leadEmail.trim()) missing.push('email')
 		else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.leadEmail.trim()))
 			missing.push('a valid email')
+		if (!profile.phone.trim()) missing.push('phone number')
+		else if (!/^\+?\d{10,15}$/.test(profile.phone.trim()))
+			missing.push('a valid phone number')
+		if (!profile.password.trim()) missing.push('password')
 		if (!profile.businessName.trim()) missing.push('business name')
 		if (!profile.staffSize.trim()) missing.push('staff size')
 		if (!profile.industry.trim()) missing.push('industry')
 		if (!profile.location.trim()) missing.push('location')
-		if (!profile.operatingYears.trim()) missing.push('years in operation')
 		if (missing.length > 0) {
 			setError(`Please provide ${missing.join(', ')}.`)
 			return
@@ -1199,6 +1281,11 @@ export default function GeneralTestPage() {
 		setError(null)
 		setShowRecovery(false)
 		setStep('preparing')
+		// Stash the password so it can be used at registration if the user
+		// isn't already registered; cleared once the session is established.
+		if (typeof window !== 'undefined' && profile.password.trim()) {
+			localStorage.setItem('pica.freeScanPassword', profile.password.trim())
+		}
 		try {
 			const res = await fetch(`${API_BASE}/assessment/start`, {
 				method: 'POST',
@@ -1208,17 +1295,42 @@ export default function GeneralTestPage() {
 			const data = await res.json()
 
 			if (res.status === 409) {
+				// Account already exists — route to login so the user signs in
 				setStep('profile')
-				setShowRecovery(true)
+				setShowRecovery(false)
 				setError(
 					data.message ||
-						'You already completed this assessment. Check your email for your report, or log in to your dashboard to view it.',
+						'An account with this email already exists. Please log in to continue.'
 				)
+				// Offer a direct login link so the user doesn't have to hunt for it
+				setTimeout(() => {
+					if (typeof window !== 'undefined') {
+						window.location.href = '/Auth/login'
+					}
+				}, 100)
 				return
 			}
 
 			if (!res.ok)
 				throw new Error(data.message || 'Failed to start assessment')
+
+			// Auto-establish the session so the user lands straight in the
+			// dashboard after the scan — no separate login step required.
+			if (
+				typeof window !== 'undefined' &&
+				data.accessToken &&
+				data.refreshToken &&
+				data.user
+			) {
+				setSession(
+					data.accessToken,
+					data.refreshToken,
+					data.user,
+					true
+				)
+				// Clear the stashed password — it's no longer needed.
+				localStorage.removeItem('pica.freeScanPassword')
+			}
 
 			const isResumed = /resuming/i.test(data.message ?? '')
 			setSessionId(data.sessionId)

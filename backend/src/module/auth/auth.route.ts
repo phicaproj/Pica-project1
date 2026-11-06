@@ -14,6 +14,7 @@ import {
   resetPassword,
   verifyAdminOTP,
   verifyEmail,
+  verifyEmailLink,
   verifyResetOtp,
 } from './auth.controller';
 
@@ -24,6 +25,7 @@ authRouter.post('/signup-claim/preview', authLimiter, previewSignupClaim);
 authRouter.post('/signup-claim', authLimiter, claimSignup);
 authRouter.post('/login', authLimiter, login);
 authRouter.post('/verify-email', authLimiter, verifyEmail);
+authRouter.get('/verify-email-link', authLimiter, verifyEmailLink);
 authRouter.post('/resend-verification', authLimiter, resendVerification);
 authRouter.post('/admin/login', authLimiter, loginAdmin);
 authRouter.post('/admin/verify-otp', authLimiter, verifyAdminOTP);

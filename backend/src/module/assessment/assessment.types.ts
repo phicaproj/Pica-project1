@@ -26,12 +26,24 @@ export const startAssessmentInput = z.object({
   businessName: requiredText('Business name'),
   industry: requiredText('Industry'),
   location: requiredText('Location'),
-  operatingYears: requiredText('Operating years'),
+  operatingYears: requiredText('Operating years').optional(),
+  // Optional contact details captured during the free scan profile step.
+  // Stored client-side and passed through at registration; not persisted on
+  // the session row until a schema migration adds the columns.
+  phone: z.string().trim().max(30, 'Phone must be under 30 characters').optional(),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least one special character, lowercase letter, uppercase letter, and number'
+    )
+    .optional(),
   // Annual revenue used to feed the SMALL/MEDIUM classifier; business size
   // is now staff-only (see assessment.service.ts). The column is kept on
   // AssessmentSession for history, so we still accept it when provided.
   annualRevenue: z.string().trim().max(100, 'Annual revenue must be under 100 characters').optional(),
-});
+}).passthrough();
 
 export const assessmentSessionParams = z.object({
   sessionId: z.string({ error: 'Session ID is required' }).uuid('Session ID must be a valid UUID'),
@@ -59,6 +71,19 @@ export type StartAssessmentResponse = {
   message: string;
   sessionId: string;
   businessSize: 'SMALL' | 'MEDIUM';
+  accessToken?: string;
+  refreshToken?: string;
+  user?: {
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+    businessName: string | null;
+    phone: string | null;
+    avatarUrl: string | null;
+    isVerified: boolean;
+    role: string;
+  };
 };
 
 export type AnswerAssessmentResponse = {

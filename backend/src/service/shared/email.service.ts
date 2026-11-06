@@ -186,6 +186,32 @@ export async function sendWelcomeEmail(
   });
 }
 
+// Email verification link (no code) — sent after free-scan auto-registration.
+// The user clicks the link to confirm their inbox; no OTP entry required.
+export async function sendEmailVerificationLinkEmail(
+  toEmail: string,
+  verifyLink: string
+): Promise<SendEmailResponse> {
+  const html = renderEmail({
+    heading: `Verify your ${BRAND} email`,
+    preheader: 'Click the button below to confirm your email address.',
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Thanks for creating your PICA account.</p>
+      <p style="margin:0 0 16px 0;">Please verify your email address by clicking the button below:</p>
+      ${ctaButton(verifyLink, 'Verify Email')}
+      <p style="margin:0 0 8px 0; color:${MUTED_COLOR}; font-size:13px;">Or paste this link into your browser:</p>
+      <p style="margin:0 0 16px 0; word-break:break-all;"><a href="${verifyLink}" style="color:${BRAND_COLOR};">${verifyLink}</a></p>
+      <p style="margin:0; color:${MUTED_COLOR}; font-size:13px;">This link expires in 24 hours. If you didn't create this account, you can safely ignore this email.</p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Verify your ${BRAND} email address`,
+    htmlContent: html,
+  });
+}
+
 // Admin LOGIN one-time code. (Sent during admin sign-in, NOT password reset.)
 export async function sendPasswordResetEmail(
   toEmail: string,

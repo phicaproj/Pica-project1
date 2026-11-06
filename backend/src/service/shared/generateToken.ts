@@ -53,6 +53,11 @@ export interface SignupClaimTokenPayload {
   purpose: 'signup-claim';
 }
 
+export interface EmailVerifyLinkTokenPayload {
+  email: string;
+  purpose: 'email-verify-link';
+}
+
 export function generateAccessToken(payload: TokenPayload) {
   return jwt.sign(payload, JWT_ACCESS_SECRET as jwt.Secret, {
     expiresIn: JWT_ACCESS_EXPIRE as jwt.SignOptions['expiresIn'],
@@ -193,5 +198,28 @@ export function verifySignupClaimToken(token: string): SignupClaimTokenPayload {
     return decoded;
   } catch (error) {
     throw new AppError('Invalid or expired signup link', BAD_REQUEST);
+  }
+}
+
+export function generateEmailVerifyLinkToken(payload: EmailVerifyLinkTokenPayload) {
+  return jwt.sign(payload, JWT_INVITE_SECRET as jwt.Secret, {
+    expiresIn: JWT_INVITE_EXPIRE as jwt.SignOptions['expiresIn'],
+  });
+}
+
+export function verifyEmailVerifyLinkToken(token: string): EmailVerifyLinkTokenPayload {
+  try {
+    const decoded = jwt.verify(
+      token,
+      JWT_INVITE_SECRET as jwt.Secret
+    ) as EmailVerifyLinkTokenPayload;
+
+    if (decoded.purpose !== 'email-verify-link') {
+      throw new AppError('Invalid email verification link', BAD_REQUEST);
+    }
+
+    return decoded;
+  } catch (error) {
+    throw new AppError('Invalid or expired email verification link', BAD_REQUEST);
   }
 }

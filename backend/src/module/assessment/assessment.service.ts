@@ -1,4 +1,5 @@
 import { BusinessSize, Phase, Prisma, SessionStatus } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import prisma from '../../Config/db';
 import AppError from '../../service/shared/appError';
 import {
@@ -11,8 +12,14 @@ import {
 import { computeScoring } from '../scoring/scoring.service';
 import type { ScoringResultPayload } from '../scoring/scoring.types';
 import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
-import { sendReportEmail } from '../../service/shared/email.service';
+import { sendEmailVerificationLinkEmail, sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
+import {
+  generateAccessToken,
+  generateEmailVerifyLinkToken,
+  generateRefreshToken,
+} from '../../service/shared/generateToken';
+import { APP_URL } from '../../Config/env';
 import type {
   AnswerAssessmentInput,
   MyPhase2BPillarsResponse,
@@ -84,6 +91,74 @@ export async function startAssessmentService(
   const leadEmail = data.leadEmail.trim().toLowerCase();
   const businessSize = computeBusinessSize(data.staffSize);
 
+  // ── Auto-registration: check if a User already owns this email ──
+  const existingUser = await prisma.user.findUnique({
+    where: { email: leadEmail },
+    select: { id: true, email: true, role: true, isVerified: true },
+  });
+
+  if (existingUser) {
+    // Account already exists — frontend must route to login instead of creating
+    throw new AppError(
+      'An account with this email already exists. Please log in to continue.',
+      CONFLICT
+    );
+  }
+
+  // Hash the password provided during the free-scan profile step
+  const passwordHash = data.password
+    ? await bcrypt.hash(data.password, 10)
+    : null;
+
+  // Create the user account immediately so the user is logged in post-scan
+  const user = await prisma.user.create({
+    data: {
+      email: leadEmail,
+      passwordHash,
+      firstName: null,
+      lastName: null,
+      businessName: data.businessName || null,
+      phone: data.phone || null,
+      businessSize,
+      staffSize: data.staffSize || null,
+      industry: data.industry || null,
+      operatingYears: data.operatingYears || null,
+      country: data.location || null,
+      state: null,
+      isVerified: false, // requires email verification via link
+      role: 'USER',
+      status: 'ACTIVE',
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+      role: true,
+    },
+  });
+
+  // Issue access + refresh tokens so the user lands straight in the dashboard
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  // Send the email verification link (no code required). Non-blocking.
+  const verifyLinkToken = generateEmailVerifyLinkToken({
+    email: user.email,
+    purpose: 'email-verify-link',
+  });
+  const verifyLink = `${APP_URL.replace(/\/+$/, '')}/Auth/verify-email-link?token=${encodeURIComponent(
+    verifyLinkToken
+  )}`;
+  await sendEmailVerificationLinkEmail(user.email, verifyLink).catch((err) => {
+    console.error('Failed to send email verification link:', err);
+  });
+
   const existingSession = await prisma.assessmentSession.findFirst({
     where: {
       leadEmail,
@@ -108,6 +183,19 @@ export async function startAssessmentService(
         'An assessment session is already in progress for this email. Resuming the existing session.',
       sessionId: existingSession.id,
       businessSize: existingSession.businessSize ?? businessSize,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        businessName: user.businessName,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        isVerified: user.isVerified,
+        role: user.role,
+      },
     };
   }
 
@@ -221,11 +309,12 @@ export async function startAssessmentService(
       phase: Phase.PHASE1,
       status: SessionStatus.IN_PROGRESS,
       leadEmail,
+      userId: user.id,
       staffSize: data.staffSize,
       businessName: data.businessName,
       industry: data.industry,
       location: data.location,
-      operatingYears: data.operatingYears,
+      operatingYears: data.operatingYears ?? '',
       // Column is required on the schema and kept for history. Default to ''
       // when the FE omits it (it no longer feeds business-size classification).
       annualRevenue: data.annualRevenue ?? '',
@@ -241,6 +330,19 @@ export async function startAssessmentService(
     message: 'Assessment session started successfully',
     sessionId: session.id,
     businessSize,
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: user.isVerified,
+      role: user.role,
+    },
   };
 }
 

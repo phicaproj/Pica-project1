@@ -15,11 +15,14 @@ import {
 } from '../../service/shared/http';
 import {
   generateAccessToken,
+  generateEmailVerifyLinkToken,
   generateOtpToken,
   generatePasswordResetToken,
   generateRefreshToken,
   hashOtpCode,
   otpCodeMatches,
+  type EmailVerifyLinkTokenPayload,
+  verifyEmailVerifyLinkToken,
   verifyInviteToken,
   verifyOtpToken,
   verifyPasswordResetToken,
@@ -28,11 +31,12 @@ import {
 } from '../../service/shared/generateToken';
 import {
   adminCodeEmail,
+  sendEmailVerificationLinkEmail,
   sendPasswordResetEmail,
   sendVerificationEmail,
   sendWelcomeEmail,
 } from '../../service/shared/email.service';
-import type { RefreshTokenInput,
+import type {
   AcceptInviteInput,
   AcceptInviteResponse,
   AdminLoginResponse,
@@ -41,6 +45,7 @@ import type { RefreshTokenInput,
   LoginInput,
   LoginResponse,
   MeResponse,
+  RefreshTokenInput,
   RegisterInput,
   RegisterResponse,
   ResendVerificationInput,
@@ -53,6 +58,7 @@ import type { RefreshTokenInput,
   VerifyAdminOTPInput,
   VerifyAdminOTPResponse,
   VerifyEmailInput,
+  VerifyEmailLinkResponse,
   VerifyEmailResponse,
   VerifyResetOtpInput,
   VerifyResetOtpResponse,
@@ -717,6 +723,38 @@ export async function verifyEmailService(data: VerifyEmailInput): Promise<Verify
     },
     accessToken,
     refreshToken,
+  };
+}
+
+// Verifies an email via a link (no OTP code). Sets isVerified: true and
+// returns a success message. The frontend page handles the redirect.
+export async function verifyEmailLinkService(
+  data: { token: string }
+): Promise<VerifyEmailLinkResponse> {
+  const payload = verifyEmailVerifyLinkToken(data.token);
+
+  const normalizedEmail = payload.email.trim().toLowerCase();
+
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: { id: true, email: true, isVerified: true, role: true },
+  });
+
+  if (!user) {
+    throw new AppError('Account no longer exists', NOT_FOUND);
+  }
+
+  if (!user.isVerified) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { isVerified: true },
+    });
+  }
+
+  return {
+    message: 'Email verified successfully',
+    email: user.email,
+    verified: true,
   };
 }
 

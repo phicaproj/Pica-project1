@@ -406,9 +406,9 @@ export default function ResultPage() {
 					</div>
 				</section>
 
-				{/* Registration CTA */}
+				{/* Go to Dashboard CTA */}
 				<section
-					id='create-account'
+					id='go-to-dashboard'
 					className='relative overflow-hidden rounded-3xl border border-orange-400/20 bg-gradient-to-br from-[#0e2b2b] via-[#111827] to-[#19132b]'
 				>
 					<div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(45,212,191,0.14),transparent_40%)]' />
@@ -417,27 +417,27 @@ export default function ResultPage() {
 							<ArrowRight className='h-6 w-6 text-orange-400' />
 						</div>
 						<h2 className='max-w-2xl text-2xl font-extrabold text-white md:text-3xl'>
-							Turn this snapshot into a plan.
+							View your dashboard
 						</h2>
 						<p className='max-w-2xl text-sm leading-7 text-gray-300 md:text-base'>
-							Create your free PICA account to save this report, track
-							your scores over time, and unlock the full diagnostic
-							when you&apos;re ready.
+							Your account is ready and your snapshot is saved. Open
+							your dashboard to track your scores over time and
+							unlock the full diagnostic when you&apos;re ready.
 						</p>
 						<Link
-							href='/Auth/signup'
+							href='/dashboard'
 							className='inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3.5 text-sm font-bold text-white shadow-[0_12px_30px_rgba(249,115,22,0.25)] transition hover:bg-orange-600 sm:w-auto'
 						>
-							Register Free Account
+							Go to Dashboard
 							<ArrowRight className='h-4 w-4' />
 						</Link>
 						<p className='text-xs text-gray-400'>
-							Already have an account?{' '}
+							Already logged out?{' '}
 							<Link
 								href='/Auth/login'
 								className='font-semibold text-teal-300 underline decoration-teal-300/40 underline-offset-4 transition hover:text-teal-200'
 							>
-								Log in
+								Log in again
 							</Link>
 						</p>
 					</div>

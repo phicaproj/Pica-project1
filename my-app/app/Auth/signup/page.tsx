@@ -131,7 +131,10 @@ export default function SignUpPage() {
 		staffSize: '',
 		industry: '',
 		operatingYears: '',
-		password: '',
+		password:
+			typeof window !== 'undefined'
+				? localStorage.getItem('pica.freeScanPassword') || ''
+				: '',
 		country: '',
 		state: '',
 	})

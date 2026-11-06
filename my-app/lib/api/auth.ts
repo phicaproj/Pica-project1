@@ -8,8 +8,10 @@ import {
 	RESET_OTP_TOKEN_KEY,
 	RESET_PASSWORD_TOKEN_KEY,
 	setStoredUser,
+	type ApiResult,
 	type AuthUser,
 	type BusinessSize,
+	API_BASE_URL,
 } from './config'
 
 // Sign-up + login payloads — kept narrow on purpose: they're the only two
@@ -272,6 +274,40 @@ export const verifyEmail = async ({
 	}
 
 	return res
+}
+
+export type VerifyEmailLinkResponse = {
+	message: string
+	email: string
+	verified: boolean
+}
+
+// Verifies email via a link (no OTP code). Called from the email verification
+// page after the user clicks the link in their inbox.
+export const verifyEmailLink = async ({
+	token,
+}: {
+	token: string
+}): Promise<ApiResult<VerifyEmailLinkResponse>> => {
+	try {
+		const res = await fetch(`${API_BASE_URL}/auth/verify-email-link?token=${encodeURIComponent(token)}`, {
+			method: 'GET',
+			headers: { 'Content-Type': 'application/json' },
+		})
+		const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+
+		if (!res.ok) {
+			const message =
+				(typeof json.message === 'string' && json.message) ||
+				`Request failed with status ${res.status}`
+			return { data: null, error: { message } }
+		}
+
+		return { data: json as VerifyEmailLinkResponse, error: null }
+	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Network error'
+		return { data: null, error: { message } }
+	}
 }
 
 export const resendVerification = async ({ email }: { email: string }) => {
