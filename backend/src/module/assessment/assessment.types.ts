@@ -84,6 +84,7 @@ export type StartAssessmentResponse = {
     isVerified: boolean;
     role: string;
   };
+  accountExists?: boolean;
 };
 
 export type AnswerAssessmentResponse = {

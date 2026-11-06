@@ -1295,19 +1295,13 @@ export default function GeneralTestPage() {
 			const data = await res.json()
 
 			if (res.status === 409) {
-				// Account already exists — route to login so the user signs in
+				// Account already exists — show an error so the user knows to log in
 				setStep('profile')
 				setShowRecovery(false)
 				setError(
 					data.message ||
 						'An account with this email already exists. Please log in to continue.'
 				)
-				// Offer a direct login link so the user doesn't have to hunt for it
-				setTimeout(() => {
-					if (typeof window !== 'undefined') {
-						window.location.href = '/Auth/login'
-					}
-				}, 100)
 				return
 			}
 
