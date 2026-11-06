@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { verifyEmailLink } from '@/lib/authClient'
 import { useTheme } from '@/components/ThemeContext'
 import { getAccessToken } from '@/lib/api/config'
@@ -11,15 +11,21 @@ export default function VerifyEmailLinkPage() {
 	const { dark } = useTheme()
 	const d = dark
 	const router = useRouter()
-	const searchParams = useSearchParams()
-	const token = searchParams.get('token') || ''
 
+	const [token, setToken] = useState<string>('')
 	const [loading, setLoading] = useState(true)
 	const [verified, setVerified] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 
+	// Read the token from the URL on the client only — SSR-safe.
 	useEffect(() => {
-		if (!token) {
+		if (typeof window === 'undefined') return
+
+		const params = new URLSearchParams(window.location.search)
+		const t = params.get('token') || ''
+		setToken(t)
+
+		if (!t) {
 			setError('No verification token provided.')
 			setLoading(false)
 			return
@@ -27,7 +33,7 @@ export default function VerifyEmailLinkPage() {
 
 		;(async () => {
 			try {
-				const res = await verifyEmailLink({ token })
+				const res = await verifyEmailLink({ token: t })
 				if (res.error || !res.data) {
 					setError(res.error?.message ?? 'Failed to verify email.')
 					setLoading(false)
@@ -40,9 +46,9 @@ export default function VerifyEmailLinkPage() {
 				setLoading(false)
 			}
 		})()
-	}, [token])
+	}, [])
 
-	// Auto-redirect after verification: dashboard if logged in, else login
+	// Auto-redirect after verification: dashboard if logged in, else login.
 	useEffect(() => {
 		if (!verified || loading) return
 
