@@ -4,7 +4,7 @@ import { Payment } from './payment.model';
 import { IPaymentCreate } from './payment.types';
 import { DigitalResource } from '../resource/resource.model';
 import { initializeTransaction, newPaymentReference, verifyTransaction } from '../../service/shared/paystack.service';
-import { sendDigitalResourceEmail } from '../../service/shared/email.service';
+import { sendBeauvisionDigitalResourceEmail } from '../service/beauvision-email.service';
 
 // Helper function to send email with the digital resource file attached
 async function processAndSendResourceEmail(resource: any, payment: any, buyerName: string | null) {
@@ -34,7 +34,7 @@ async function processAndSendResourceEmail(resource: any, payment: any, buyerNam
            }
         }
 
-        await sendDigitalResourceEmail({
+        await sendBeauvisionDigitalResourceEmail({
            toEmail: payment.email,
            buyerName: buyerName,
            resourceTitle: resource.title,

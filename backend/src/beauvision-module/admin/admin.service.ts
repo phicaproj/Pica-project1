@@ -27,10 +27,10 @@ import {
   IBeauvisionAdminStatusUpdate,
 } from './admin.types';
 import {
-  sendAdminCredentialsEmail,
-  sendAdminInviteEmail,
-  sendAdminPasswordResetLinkEmail,
-} from '../../service/shared/email.service';
+  sendBeauvisionAdminCredentialsEmail,
+  sendBeauvisionAdminInviteEmail,
+  sendBeauvisionAdminPasswordResetLinkEmail,
+} from '../service/beauvision-email.service';
 import { BEAUVISION_APP_URL } from '../../Config/env';
 
 const BEAUVISION_BASE_URL = BEAUVISION_APP_URL.replace(/\/$/, '');
@@ -83,7 +83,7 @@ export class AdminService {
       activatedAt: new Date(),
     });
 
-    await sendAdminCredentialsEmail({
+    await sendBeauvisionAdminCredentialsEmail({
       toEmail: admin.email,
       name: admin.name,
       password: plainPassword,
@@ -114,7 +114,7 @@ export class AdminService {
       activatedAt: null,
     });
 
-    const sent = await sendAdminInviteEmail(
+    const sent = await sendBeauvisionAdminInviteEmail(
       admin.email,
       inviteLinkFor(admin.email),
       role === 'OWNER' ? 'SUPER ADMIN' : role
@@ -153,7 +153,7 @@ export class AdminService {
       throw new AppError('Cannot resend an invite to a disabled admin', CONFLICT);
     }
 
-    const sent = await sendAdminInviteEmail(
+    const sent = await sendBeauvisionAdminInviteEmail(
       admin.email,
       inviteLinkFor(admin.email),
       admin.role === 'OWNER' ? 'SUPER ADMIN' : admin.role
@@ -388,7 +388,7 @@ export class AdminService {
     });
     const resetUrl = `${BEAUVISION_BASE_URL}/admin/reset-password?token=${token}`;
 
-    await sendAdminPasswordResetLinkEmail(admin.email, resetUrl).catch((err) => {
+    await sendBeauvisionAdminPasswordResetLinkEmail(admin.email, resetUrl).catch((err) => {
       console.error('Failed to send password reset email:', err);
     });
 

@@ -137,14 +137,16 @@ export type AuthUser = {
   permissions?: string[];
 };
 
-// Registration always leaves the account unverified: it returns an OTP token
-// (never access tokens) and the client must complete email verification before
-// it can log in.
+// Registration creates the account and issues access + refresh tokens
+// immediately so the user can proceed straight to the dashboard. A welcome /
+// verification email is still sent in the background but does not block
+// dashboard access.
 export type RegisterResponse = {
   message: string;
-  requiresVerification: true;
-  otpToken: string;
-  email: string;
+  requiresVerification: false;
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
 };
 
 export type LoginResponse = {

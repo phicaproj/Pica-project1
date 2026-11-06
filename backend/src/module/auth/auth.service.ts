@@ -144,19 +144,49 @@ export async function registerService(data: RegisterInput): Promise<RegisterResp
     select: {
       id: true,
       email: true,
+      firstName: true,
+      lastName: true,
+      businessName: true,
+      phone: true,
+      avatarUrl: true,
+      isVerified: true,
+      role: true,
     },
   });
 
   await linkPhase1SessionsToUser(user.id, user.email);
 
-  // Hard email-verification gate: the account is created unverified and must
-  const otpToken = await issueEmailVerification(user.email);
+  // Issue access + refresh tokens immediately so the user can proceed straight
+  // to the dashboard without a separate login step.
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken = generateAccessToken(tokenPayload);
+  const refreshToken = generateRefreshToken(tokenPayload);
+
+  // Send the welcome / verification email in the background. It does not block
+  // dashboard access — the account is created and authenticated right away.
+  try {
+    await sendWelcomeEmail(user.email, user.businessName ?? user.email);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Error sending welcome email:', message);
+  }
 
   return {
-    message: 'Registration successful. Check your email for a verification code.',
-    requiresVerification: true,
-    otpToken,
-    email: user.email,
+    message: 'Registration successful. Welcome to PICA.',
+    requiresVerification: false,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      businessName: user.businessName,
+      phone: user.phone,
+      avatarUrl: user.avatarUrl,
+      isVerified: user.isVerified,
+      role: user.role,
+    },
+    accessToken,
+    refreshToken,
   };
 }
 

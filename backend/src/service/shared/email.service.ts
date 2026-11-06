@@ -329,22 +329,12 @@ export async function sendReportEmail({
   businessName,
   pdfBuffer,
   reportPdfUrl,
-  createPasswordUrl,
 }: {
   toEmail: string;
   businessName: string;
   pdfBuffer: Buffer;
   reportPdfUrl: string;
-  createPasswordUrl?: string | null;
 }): Promise<SendEmailResponse> {
-  const createAccountCta = createPasswordUrl
-    ? `
-      <p style="margin:0 0 8px 0;">Want to save this report and track your progress? Create your ${BRAND} password and we'll set up your account from the details you already gave us.</p>
-      ${ctaButton(createPasswordUrl, 'Create your PICA password')}
-      <p style="margin:0 0 20px 0; color:${MUTED_COLOR}; font-size:13px;">This secure link is valid for 20 days.</p>
-    `
-    : '';
-
   const html = renderEmail({
     heading: 'Your Snapshot Report is ready',
     preheader: `Your ${BRAND} Business Health Report is attached.`,
@@ -352,7 +342,6 @@ export async function sendReportEmail({
       <p style="margin:0 0 16px 0;">Hi ${businessName},</p>
       <p style="margin:0 0 16px 0;">Thank you for completing the ${BRAND} Business Health Assessment.</p>
       <p style="margin:0 0 8px 0;">Your full report is attached to this email as a PDF.</p>
-      ${createAccountCta}
       ${ctaButton(reportPdfUrl, 'Download your report')}
     `,
   });

@@ -88,16 +88,18 @@ export const getMe = async () => {
 
 export type RegisterResponse = {
 	message: string
-	requiresVerification: true
-	otpToken: string
-	email: string
+	requiresVerification: false
+	user: AuthUser
+	accessToken: string
+	refreshToken: string
 }
 
 export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
 	// Contact name + staff size + sector + years are mandatory at signup; the
 	// backend still snapshots any matching Phase 1 session data for the
-	// optional location fields we don't send. Registration always returns a
-	// verification-pending response (no tokens) — the email must be confirmed.
+	// optional location fields we don't send. Registration now issues access +
+	// refresh tokens immediately so the user can proceed straight to the
+	// dashboard without a separate login step.
 	const body: Record<string, string> = {
 		firstName: payload.firstName.trim(),
 		lastName: payload.lastName.trim(),
@@ -111,7 +113,13 @@ export const SignUp = async ({ payload }: { payload: SignUpPayload }) => {
 	}
 	if (payload.country?.trim()) body.country = payload.country.trim()
 	if (payload.state?.trim()) body.state = payload.state.trim()
-	return apiFetch<RegisterResponse>('/auth/register', body)
+	const res = await apiFetch<RegisterResponse>('/auth/register', body)
+
+	if (res.data && typeof window !== 'undefined') {
+		setSession(res.data.accessToken, res.data.refreshToken, res.data.user)
+	}
+
+	return res
 }
 
 export type SignupClaimPreviewResponse = {

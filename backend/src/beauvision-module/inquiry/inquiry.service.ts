@@ -2,15 +2,15 @@ import AppError from '../../service/shared/appError';
 import { NOT_FOUND } from '../../service/shared/http';
 import { ServiceInquiry } from './inquiry.model';
 import { IServiceInquiryCreate } from './inquiry.types';
-import { sendInquiryEmail } from '../../service/shared/email.service';
+import { sendBeauvisionInquiryEmail } from '../service/beauvision-email.service';
 
 export class InquiryService {
   static async createInquiry(data: IServiceInquiryCreate) {
     const inquiry = await ServiceInquiry.create(data);
     
-    // Call the sendInquiryEmail function to send an email notification to the admin
+    // Call the sendBeauvisionInquiryEmail function to send an email notification to the admin
     const adminEmail = 'admin@beauvisiongroup.com';
-    await sendInquiryEmail(adminEmail, data).catch((err) => {
+    await sendBeauvisionInquiryEmail(adminEmail, data).catch((err) => {
       console.error('Failed to send inquiry email:', err);
     });
 

@@ -13,8 +13,6 @@ import type { ScoringResultPayload } from '../scoring/scoring.types';
 import { generateReportPDF, generateSnapshotPDF } from '../../service/shared/pdf.service';
 import { sendReportEmail } from '../../service/shared/email.service';
 import { uploadPdf } from '../../service/shared/storage.service';
-import { generateSignupClaimToken } from '../../service/shared/generateToken';
-import { APP_URL } from '../../Config/env';
 import type {
   AnswerAssessmentInput,
   MyPhase2BPillarsResponse,
@@ -455,24 +453,12 @@ function deliverReportInBackground(params: {
         data: { reportPdfUrl, generatedAt: new Date() },
       });
 
-      const createPasswordUrl =
-        phase === Phase.PHASE1 && recipientEmail && !session?.userId
-          ? `${APP_URL.replace(/\/+$/, '')}/Auth/create-password#token=${encodeURIComponent(
-              generateSignupClaimToken({
-                sessionId,
-                email: recipientEmail.trim().toLowerCase(),
-                purpose: 'signup-claim',
-              })
-            )}`
-          : null;
-
       if (recipientEmail) {
         await sendReportEmail({
           toEmail: recipientEmail,
           businessName,
           pdfBuffer,
           reportPdfUrl,
-          createPasswordUrl,
         });
       }
     } catch (error) {

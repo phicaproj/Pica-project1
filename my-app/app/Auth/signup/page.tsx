@@ -192,20 +192,12 @@ export default function SignUpPage() {
 			setSubmitError(res.error.message)
 		} else {
 			setIsLoading(false)
-			// Registration returns a verification-pending response; the OTP token is
-			// stashed by SignUp/Login helpers. Send the user to the code screen.
-			if (res.data && typeof window !== 'undefined') {
-				sessionStorage.setItem(
-					'pica.emailVerifyOtpToken',
-					res.data.otpToken,
-				)
+			// Registration now issues access + refresh tokens immediately and
+			// SignUp() establishes the session. Send the user straight to their
+			// dashboard (or the stored `next` redirect target).
+			if (typeof window !== 'undefined') {
+				router.push(appendNext('/dashboard', nextPath))
 			}
-			router.push(
-				appendNext(
-					`/Auth/verify-code?email=${encodeURIComponent(form.email)}&type=email-verify`,
-					nextPath,
-				),
-			)
 		}
 	}
 

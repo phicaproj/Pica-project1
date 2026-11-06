@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Login } from '@/lib/authClient'
+import { Login, getStoredUser, getAccessToken } from '@/lib/authClient'
 import { useTheme } from '@/components/ThemeContext'
 import { appendNext, safeNextPath } from '@/lib/redirect'
 
@@ -66,6 +66,16 @@ export default function LoginPage() {
 	useEffect(() => {
 		if (typeof window !== 'undefined') {
 			const params = new URLSearchParams(window.location.search)
+
+			// If a session is already stored, send the user straight to their
+			// dashboard instead of showing the login form.
+			const storedUser = getStoredUser()
+			const accessToken = getAccessToken()
+			if (storedUser && accessToken) {
+				router.push(safeNextPath(params.get('next')))
+				return
+			}
+
 			if (params.get('reason') === 'inactivity') {
 				setInactivityLoggedOut(true)
 			}
