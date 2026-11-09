@@ -262,7 +262,7 @@ function EmptyState({ user }: { user: AuthUser | null }) {
 						<div className='flex flex-wrap gap-3'>
 							<Link
 								href='/dashboard/strategic-scan'
-								className='inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition'
+								className='inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-base font-bold shadow-xl shadow-orange-500/30 transition-all hover:scale-[1.05] active:scale-95 sm:w-auto'
 							>
 								Start Your First Strategic Scan
 								<Sparkles className='w-4 h-4' />
@@ -425,7 +425,7 @@ function ActiveState({
 					</div>
 					<Link
 						href='/dashboard/strategic-scan'
-						className='flex-shrink-0 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold transition'
+						className='flex-shrink-0 inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-base font-bold shadow-xl shadow-orange-500/30 transition-all hover:scale-[1.05] active:scale-95'
 					>
 						Resume Strategic Scan <ArrowRight className='w-4 h-4' />
 					</Link>

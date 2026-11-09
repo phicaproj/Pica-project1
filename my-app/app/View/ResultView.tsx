@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useTheme } from '@/components/ThemeContext'
-import { API_BASE_URL as API_BASE } from '@/lib/api/config'
+import { API_BASE_URL as API_BASE, getAccessToken } from '@/lib/api/config'
 import {
 	Download,
 	Loader,
@@ -150,7 +150,12 @@ export default function ResultPage() {
 		setLoading(true)
 		setError(null)
 		try {
-			const res = await fetch(`${API_BASE}/result/${sessionId}`)
+			const token = getAccessToken()
+			const res = await fetch(`${API_BASE}/result/${sessionId}`, {
+				headers: {
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+			})
 			const data = await res.json().catch(() => ({}))
 			if (!res.ok) {
 				throw new Error(data.message || 'Failed to load your result')
@@ -174,8 +179,13 @@ export default function ResultPage() {
 		if (!sessionId) return
 		setDownloadMode(mode)
 		try {
+			const token = getAccessToken()
 			const query = mode === 'presentation' ? '?theme=dark' : ''
-			const res = await fetch(`${API_BASE}/result/${sessionId}/pdf${query}`)
+			const res = await fetch(`${API_BASE}/result/${sessionId}/pdf${query}`, {
+				headers: {
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
+			})
 			if (!res.ok) {
 				const body = await res.json().catch(() => ({}))
 				throw new Error(body.message || 'Failed to download report')
