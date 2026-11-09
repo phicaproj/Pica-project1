@@ -69,6 +69,7 @@ interface ProfileData {
 	leadEmail: string
 	phone: string
 	password: string
+	confirmPassword: string
 	staffSize: string
 	businessName: string
 	industry: string
@@ -450,41 +451,63 @@ function ProfileStep({
 							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
 						</button>
 					</div>
-					<div>
+					<div className='relative'>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
 						>
-							Staff Size
+							Confirm Password
 						</label>
 						<input
-							type='number'
-							min={1}
-							step={1}
-							inputMode='numeric'
-							placeholder='Number of employees'
-							value={profile.staffSize}
-							onKeyDown={(e) => {
-								// Block decimal point, exponent and sign — staff size
-								// is a whole positive number.
-								if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
-									e.preventDefault()
-								}
-							}}
-							onChange={(e) =>
-								update(
-									'staffSize',
-									e.target.value.replace(/[^\d]/g, '')
-								)
-							}
-							className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-400'}`}
+							type={showPassword ? 'text' : 'password'}
+							placeholder='••••••••'
+							value={profile.confirmPassword}
+							onChange={(e) => update('confirmPassword', e.target.value)}
+							className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
 						/>
-						<p
-							className={`mt-2 text-[11px] ${d ? 'text-gray-500' : 'text-gray-500'}`}
+						<button
+							type='button'
+							onClick={() => setShowPassword(!showPassword)}
+							className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+							aria-label='Toggle confirm password visibility'
 						>
-							50 or fewer = Small business · more than 50 = Medium
-						</p>
+							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+						</button>
 					</div>
+				<div>
+					<label
+						className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
+					>
+						Staff Size
+					</label>
+					<input
+						type='number'
+						min={1}
+						step={1}
+						inputMode='numeric'
+						placeholder='Number of employees'
+						value={profile.staffSize}
+						onKeyDown={(e) => {
+							// Block decimal point, exponent and sign — staff size
+							// is a whole positive number.
+							if (['.', 'e', 'E', '+', '-'].includes(e.key)) {
+								e.preventDefault()
+							}
+						}}
+						onChange={(e) =>
+							update(
+								'staffSize',
+								e.target.value.replace(/[^\d]/g, '')
+							)
+						}
+						className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-teal-400'}`}
+					/>
+					<p
+						className={`mt-2 text-[11px] ${d ? 'text-gray-500' : 'text-gray-500'}`}
+					>
+						50 or fewer = Small business · more than 50 = Medium
+					</p>
 				</div>
+			</div>
 
 				{/* Row 3 (Business Name + Industry). When Industry dropdown is
 					open, lift this row's stacking context so the absolute panel
@@ -1166,6 +1189,7 @@ export default function GeneralTestPage() {
 		leadEmail: '',
 		phone: '',
 		password: '',
+		confirmPassword: '',
 		staffSize: '',
 		businessName: '',
 		industry: '',
@@ -1258,6 +1282,8 @@ export default function GeneralTestPage() {
 		else if (!/^\+?\d{10,15}$/.test(profile.phone.trim()))
 			missing.push('a valid phone number')
 		if (!profile.password.trim()) missing.push('password')
+		else if (!profile.confirmPassword.trim()) missing.push('confirm password')
+		else if (profile.password.trim() !== profile.confirmPassword.trim()) missing.push('passwords do not match')
 		if (!profile.businessName.trim()) missing.push('business name')
 		if (!profile.staffSize.trim()) missing.push('staff size')
 		if (!profile.industry.trim()) missing.push('industry')
@@ -1290,7 +1316,13 @@ export default function GeneralTestPage() {
 			const res = await fetch(`${API_BASE}/assessment/start`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(profile),
+				body: JSON.stringify(
+					Object.fromEntries(
+						Object.entries(profile).filter(
+							([k]) => k !== 'confirmPassword',
+						),
+					),
+				),
 			})
 			const data = await res.json()
 
