@@ -294,10 +294,17 @@ export default function ResultPage() {
 							</p>
 
 							<div className='mt-6 flex flex-wrap gap-3'>
+								<Link
+									href='/pages/pricing'
+									className='inline-flex items-center gap-2 rounded-xl bg-orange-500 px-7 py-3.5 text-base font-bold text-white shadow-[0_0_30px_rgba(249,115,22,0.45)] ring-2 ring-orange-300/40 transition hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-[0_0_40px_rgba(249,115,22,0.6)]'
+								>
+									Explore Full Diagnostic
+									<ArrowRight className='h-5 w-5' />
+								</Link>
 								<button
 									onClick={() => handleDownloadPdf('standard')}
 									disabled={downloadMode !== null}
-									className='inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white transition hover:bg-orange-600 disabled:opacity-50'
+									className='inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-50'
 								>
 									{downloadMode === 'standard' ? (
 										<>
@@ -326,13 +333,6 @@ export default function ResultPage() {
 										</>
 									)}
 								</button>
-								<Link
-									href='/pages/pricing'
-									className='inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10'
-								>
-									Explore Full Diagnostic
-									<ArrowRight className='h-4 w-4' />
-								</Link>
 							</div>
 						</div>
 					</div>
