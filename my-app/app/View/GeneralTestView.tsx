@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useTheme } from '@/components/ThemeContext'
+import PasswordStrength from '@/components/ui/PasswordStrength'
 import { setLastSessionId, setSession } from '@/lib/authClient'
 import { API_BASE_URL as API_BASE } from '@/lib/api/config'
 import {
@@ -233,6 +234,7 @@ function ProfileStep({
 }) {
 	const d = dark
 	const [showPassword, setShowPassword] = useState(false)
+	const [passwordFocused, setPasswordFocused] = useState(false)
 	const [industryOpen, setIndustryOpen] = useState(false)
 	// countriesnow.space's /countries/states endpoint returns real state /
 	// province arrays per country (the previous /countries endpoint returned
@@ -429,49 +431,61 @@ function ProfileStep({
 
 				{/* Row 2 (Password + Staff Size) */}
 				<div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-4 md:mb-6'>
-					<div className='relative'>
+					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
 						>
 							Password
 						</label>
-						<input
-							type={showPassword ? 'text' : 'password'}
-							placeholder='••••••••'
-							value={profile.password}
-							onChange={(e) => update('password', e.target.value)}
-							className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
+						<div className='relative'>
+							<input
+								type={showPassword ? 'text' : 'password'}
+								placeholder='••••••••'
+								value={profile.password}
+								onChange={(e) => update('password', e.target.value)}
+								onFocus={() => setPasswordFocused(true)}
+								onBlur={() => setPasswordFocused(false)}
+								className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
+							/>
+							<button
+								type='button'
+								onMouseDown={(e) => e.preventDefault()}
+								onClick={() => setShowPassword(!showPassword)}
+								className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+								aria-label='Toggle password visibility'
+							>
+								{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+							</button>
+						</div>
+						<PasswordStrength
+							password={profile.password}
+							visible={passwordFocused}
+							dark={d}
 						/>
-						<button
-							type='button'
-							onClick={() => setShowPassword(!showPassword)}
-							className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
-							aria-label='Toggle password visibility'
-						>
-							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
-						</button>
 					</div>
-					<div className='relative'>
+					<div>
 						<label
 							className={`text-xs font-bold uppercase tracking-widest block mb-2 ${d ? 'text-gray-400' : 'text-gray-500'}`}
 						>
 							Confirm Password
 						</label>
-						<input
-							type={showPassword ? 'text' : 'password'}
-							placeholder='••••••••'
-							value={profile.confirmPassword}
-							onChange={(e) => update('confirmPassword', e.target.value)}
-							className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
-						/>
-						<button
-							type='button'
-							onClick={() => setShowPassword(!showPassword)}
-							className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
-							aria-label='Toggle confirm password visibility'
-						>
-							{showPassword ? <EyeOffIcon /> : <EyeIcon />}
-						</button>
+						<div className='relative'>
+							<input
+								type={showPassword ? 'text' : 'password'}
+								placeholder='••••••••'
+								value={profile.confirmPassword}
+								onChange={(e) => update('confirmPassword', e.target.value)}
+								className={`w-full pr-12 px-4 py-3 rounded-xl border text-sm outline-none transition ${d ? 'bg-[#0d1117] border-white/10 text-white placeholder-gray-600 focus:border-[#00ffaa]/50' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-teal-400'}`}
+							/>
+							<button
+								type='button'
+								onClick={() => setShowPassword(!showPassword)}
+								className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+								aria-label='Toggle confirm password visibility'
+							>
+								{showPassword ? <EyeOffIcon /> : <EyeIcon />}
+							</button>
+						</div>
 					</div>
 				<div>
 					<label

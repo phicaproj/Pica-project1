@@ -7,6 +7,7 @@ import { ChevronDown, MapPin } from 'lucide-react'
 import { SignUp } from '@/lib/authClient'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@/components/ThemeContext'
+import PasswordStrength from '@/components/ui/PasswordStrength'
 import { appendNext, safeNextPath } from '@/lib/redirect'
 
 // Hoisted out of SignUpPage so the icon component identities are stable and
@@ -66,6 +67,7 @@ export default function SignUpPage() {
 	const { dark } = useTheme()
 	const d = dark
 	const [showPassword, setShowPassword] = useState(false)
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 	const [showPasswordHint, setShowPasswordHint] = useState(false)
 	const [agreed, setAgreed] = useState(false)
 	const [isLoading, setIsLoading] = useState(false)
@@ -135,6 +137,10 @@ export default function SignUpPage() {
 			typeof window !== 'undefined'
 				? localStorage.getItem('pica.freeScanPassword') || ''
 				: '',
+		confirmPassword:
+			typeof window !== 'undefined'
+				? localStorage.getItem('pica.freeScanPassword') || ''
+				: '',
 		country: '',
 		state: '',
 	})
@@ -176,6 +182,11 @@ export default function SignUpPage() {
 		if (!form.country.trim()) newErrors.country = 'Country is required'
 		if (!form.state.trim()) newErrors.state = 'State is required'
 		if (!form.password) newErrors.password = 'Password is required'
+		if (!form.confirmPassword) {
+			newErrors.confirmPassword = 'Please confirm your password'
+		} else if (form.password !== form.confirmPassword) {
+			newErrors.confirmPassword = 'Passwords do not match'
+		}
 		if (!agreed) newErrors.agreed = 'You must accept the terms'
 		return newErrors
 	}
@@ -189,7 +200,9 @@ export default function SignUpPage() {
 			setIsLoading(false)
 			return
 		}
-		const res = await SignUp({ payload: form })
+		const payload = { ...form }
+		delete (payload as { confirmPassword?: string }).confirmPassword
+		const res = await SignUp({ payload })
 		if (res.error) {
 			setIsLoading(false)
 			setSubmitError(res.error.message)
@@ -836,6 +849,9 @@ export default function SignUpPage() {
 									/>
 									<button
 										type='button'
+										onMouseDown={(e) =>
+											e.preventDefault()
+										}
 										onClick={() =>
 											setShowPassword(
 												!showPassword,
@@ -856,41 +872,69 @@ export default function SignUpPage() {
 									</p>
 								)}
 
-								{/* Password hint tooltip */}
-								{showPasswordHint && (
-									<div className={`absolute left-0 top-full mt-2 md:left-full md:top-0 md:mt-0 md:ml-3 z-50 border rounded-2xl shadow-lg p-4 w-64 ${d ? 'bg-[#1c2333] border-white/10' : 'bg-white border-gray-200'}`}>
-										<p className={`text-sm font-semibold mb-2 ${d ? 'text-white' : 'text-gray-900'}`}>
-											Your password
-											should
-											contain:
-										</p>
-										<ul className='space-y-1'>
-											{[
-												'A Uppercase letter e.g (E)',
-												'An Lowercase letter e.g (a)',
-												'A special character e.g. (!@#)',
-												'A number e.g (1)',
-												'8 characters minimum',
-											].map(
-												(
-													rule,
-												) => (
-													<li
-														key={
-															rule
-														}
-														className={`flex items-start gap-2 text-sm ${d ? 'text-gray-400' : 'text-gray-600'}`}>
-														<span className='mt-0.5 text-gray-500'>
-															•
-														</span>
-														{
-															rule
-														}
-													</li>
-												),
-											)}
-										</ul>
-									</div>
+								<PasswordStrength
+									password={form.password}
+									visible={showPasswordHint}
+									dark={d}
+								/>
+							</div>
+
+							{/* Confirm Password */}
+							<div>
+								<label
+									htmlFor='signup-confirm-password'
+									className={`block text-sm font-medium mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}
+								>
+									Confirm Password
+								</label>
+								<div className='relative'>
+									<input
+										id='signup-confirm-password'
+										type={
+											showConfirmPassword
+												? 'text'
+												: 'password'
+										}
+										placeholder='Confirm Password*'
+										value={
+											form.confirmPassword
+										}
+										onChange={(e) =>
+											handleChange(
+												'confirmPassword',
+												e.target
+													.value,
+											)
+										}
+										className={`w-full pl-4 py-3.5 rounded-xl border text-base focus:outline-none focus:ring-2 focus:border-transparent transition pr-12 ${d ? 'bg-[#0d1117] text-white placeholder-gray-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} ${
+											errors.confirmPassword
+												? 'border-red-500 focus:ring-red-400'
+												: d ? 'border-white/10 focus:ring-[#f97316]/50' : 'border-gray-200 focus:ring-[#f97316]/50'
+										}`}
+									/>
+									<button
+										type='button'
+										onMouseDown={(e) =>
+											e.preventDefault()
+										}
+										onClick={() =>
+											setShowConfirmPassword(
+												!showConfirmPassword,
+											)
+										}
+										className='absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-300'
+										aria-label='Toggle confirm password visibility'>
+										{showConfirmPassword ? (
+											<EyeOffIcon />
+										) : (
+											<EyeIcon />
+										)}
+									</button>
+								</div>
+								{errors.confirmPassword && (
+									<p className='text-red-500 text-sm mt-1'>
+										{errors.confirmPassword}
+									</p>
 								)}
 							</div>
 
