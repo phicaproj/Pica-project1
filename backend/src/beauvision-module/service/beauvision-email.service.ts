@@ -269,6 +269,85 @@ export async function sendBeauvisionDigitalResourceEmail({
   });
 }
 
+export async function sendBeauvisionCouponEmail({
+  toEmail,
+  code,
+  description,
+  amountOff,
+  percentOff,
+  expiresAt,
+}: {
+  toEmail: string;
+  code: string;
+  description?: string | null;
+  amountOff: number;
+  percentOff: number;
+  expiresAt?: Date | null;
+}): Promise<SendEmailResponse> {
+  const benefit =
+    percentOff > 0
+      ? `${percentOff}% off`
+      : `₦${amountOff.toLocaleString('en-NG')} off`;
+  const expiryLine = expiresAt
+    ? `<p style="margin:0 0 16px 0; color:${MUTED_COLOR}; font-size:13px;">This code expires on ${new Date(
+        expiresAt
+      ).toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' })}.</p>`
+    : '';
+  const descriptionLine = description
+    ? `<p style="margin:0 0 16px 0; color:${MUTED_COLOR}; font-size:13px;">${description}</p>`
+    : '';
+
+  const html = renderEmail({
+    heading: `You've received a discount code`,
+    preheader: `Use code ${code} at checkout.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Enjoy <strong>${benefit}</strong> on any paid Beauvision product with the code below. Enter it at checkout to apply your discount.</p>
+      ${codeBlock(code)}
+      ${descriptionLine}
+      ${expiryLine}
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your Beauvision discount code — ${code}`,
+    htmlContent: html,
+  });
+}
+
+export async function sendBeauvisionResourceLinkEmail({
+  toEmail,
+  buyerName,
+  resourceTitle,
+  link,
+}: {
+  toEmail: string;
+  buyerName: string | null;
+  resourceTitle: string;
+  link: string;
+}): Promise<SendEmailResponse> {
+  const greetingName = buyerName ?? 'there';
+
+  const html = renderEmail({
+    heading: `Here is your resource`,
+    preheader: `Thank you for purchasing ${resourceTitle}.`,
+    bodyHtml: `
+      <p style="margin:0 0 16px 0;">Hi ${greetingName},</p>
+      <p style="margin:0 0 16px 0;">Thank you for your purchase of <strong>${resourceTitle}</strong>!</p>
+      <p style="margin:0 0 16px 0;">Use the button below to access your resource.</p>
+      ${ctaButton(link, 'Access resource')}
+      <p style="margin:0 0 8px 0; color:${MUTED_COLOR}; font-size:13px;">Or paste this link into your browser:</p>
+      <p style="margin:0 0 16px 0; word-break:break-all;"><a href="${link}" style="color:${BRAND_COLOR};">${link}</a></p>
+    `,
+  });
+
+  return sendBrevoEmail({
+    toEmail,
+    subject: `Your purchase: ${resourceTitle} — Beauvision`,
+    htmlContent: html,
+  });
+}
+
 export async function sendBeauvisionInquiryEmail(
   toEmail: string,
   inquiry: { name: string; email: string; companyName?: string; serviceRequested: string; message?: string }

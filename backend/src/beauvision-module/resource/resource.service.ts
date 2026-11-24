@@ -1,7 +1,7 @@
 import AppError from '../../service/shared/appError';
 import { NOT_FOUND } from '../../service/shared/http';
 import { DigitalResource } from './resource.model';
-import { IDigitalResourceCreate } from './resource.types';
+import { IDigitalResourceCreate, IDigitalResourceUpdate } from './resource.types';
 import { deleteObject, extractKeyFromUrl } from '../storage/beauvision.storage.service';
 
 export class ResourceService {
@@ -9,9 +9,10 @@ export class ResourceService {
     return DigitalResource.create(data);
   }
 
-  static async getAllResources(includeUnpublished = false) {
-    const filter = includeUnpublished ? {} : { isPublished: true };
-    return DigitalResource.find(filter).sort({ createdAt: -1 });
+  static async getAllResources(includeUnpublished = false, filter: Record<string, unknown> = {}) {
+    const where: Record<string, unknown> = { ...filter };
+    if (!includeUnpublished) where.isPublished = true;
+    return DigitalResource.find(where).sort({ createdAt: -1 });
   }
 
   static async getResourceById(resourceId: string) {
@@ -20,7 +21,7 @@ export class ResourceService {
     return resource;
   }
 
-  static async updateResource(resourceId: string, data: Partial<IDigitalResourceCreate>) {
+  static async updateResource(resourceId: string, data: IDigitalResourceUpdate) {
     const resource = await DigitalResource.findByIdAndUpdate(resourceId, data, { new: true });
     if (!resource) throw new AppError('Resource not found', NOT_FOUND);
     return resource;

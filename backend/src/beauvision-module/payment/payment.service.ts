@@ -4,7 +4,8 @@ import { Payment } from './payment.model';
 import { IPaymentCreate } from './payment.types';
 import { DigitalResource } from '../resource/resource.model';
 import { initializeTransaction, newPaymentReference, verifyTransaction } from '../../service/shared/paystack.service';
-import { sendBeauvisionDigitalResourceEmail } from '../service/beauvision-email.service';
+import { sendBeauvisionDigitalResourceEmail, sendBeauvisionResourceLinkEmail } from '../service/beauvision-email.service';
+import { BeauvisionCouponService } from '../coupon/coupon.service';
 
 // Helper function to send email with the digital resource file attached
 async function processAndSendResourceEmail(resource: any, payment: any, buyerName: string | null) {
@@ -45,8 +46,19 @@ async function processAndSendResourceEmail(resource: any, payment: any, buyerNam
       } else {
         console.error(`Failed to fetch resource file from ${resource.fileUrl}: ${response.statusText}`);
       }
+    } else if (resource.videoUrl || resource.youtubeUrl) {
+      // Link-only resource (e.g. long-form video hosted on Google Drive/YouTube).
+      // Deliver the link instead of an attachment.
+      const link = resource.videoUrl || resource.youtubeUrl;
+      await sendBeauvisionResourceLinkEmail({
+        toEmail: payment.email,
+        buyerName,
+        resourceTitle: resource.title,
+        link,
+      });
+      console.log(`Successfully sent access link for ${resource.title} to ${payment.email}`);
     } else {
-      console.error(`Resource ${resource.title} has no fileUrl`);
+      console.error(`Resource ${resource.title} has no fileUrl or link`);
     }
   } catch (e) {
     console.error('Failed to send digital resource email:', e);
@@ -54,7 +66,12 @@ async function processAndSendResourceEmail(resource: any, payment: any, buyerNam
 }
 
 export class PaymentService {
-  static async initializePayment(data: { resourceIds: string[]; email: string; name: string }) {
+  static async initializePayment(data: {
+    resourceIds: string[];
+    email: string;
+    name: string;
+    couponCode?: string;
+  }) {
     // 1. Fetch resources from DB to get the TRUE total price
     const resources = await DigitalResource.find({ _id: { $in: data.resourceIds } });
     if (resources.length !== data.resourceIds.length) {
@@ -69,17 +86,40 @@ export class PaymentService {
 
     const totalPrice = resources.reduce((sum, resource) => sum + resource.price, 0);
 
+    // Apply an optional coupon across the whole cart (coupons are valid on all
+    // paid products). The coupon rules live in BeauvisionCouponService so the
+    // public /validate endpoint and this flow can never diverge.
+    let appliedCouponCode: string | undefined;
+    let discountAmount = 0;
+    let finalAmount = totalPrice;
+
+    if (data.couponCode) {
+      const pricing = await BeauvisionCouponService.validateAndPrice(data.couponCode, totalPrice);
+      appliedCouponCode = pricing.code;
+      discountAmount = pricing.discountAmount;
+      finalAmount = pricing.finalAmount;
+    }
+
     const reference = newPaymentReference('BEAU');
     
-    // If the total price is free, skip paystack entirely
-    if (totalPrice === 0) {
+    // If the final amount is free, skip paystack entirely
+    if (finalAmount === 0) {
       const payment = await Payment.create({
         resourceIds: data.resourceIds,
         email: data.email,
         amount: 0,
+        couponCode: appliedCouponCode,
+        discountAmount,
         status: 'SUCCESS',
         reference,
       });
+
+      // Record the redemption for a fully-discounted order.
+      if (appliedCouponCode) {
+        await BeauvisionCouponService.consumeCoupon(appliedCouponCode).catch((e) =>
+          console.error('Failed to record coupon redemption:', e)
+        );
+      }
 
       // Send the free resources to the buyer's email
       for (const resource of resources) {
@@ -97,12 +137,13 @@ export class PaymentService {
     // Paystack service handles the conversion to kobo
     const paystackData = await initializeTransaction({
       email: data.email,
-      amount: totalPrice,
+      amount: finalAmount,
       reference,
       metadata: {
         project: 'BEAUVISION',
         resourceIds: JSON.stringify(data.resourceIds), // Storing array as JSON string
-        name: data.name
+        name: data.name,
+        ...(appliedCouponCode ? { couponCode: appliedCouponCode } : {}),
       },
     });
 
@@ -110,7 +151,9 @@ export class PaymentService {
     const payment = await Payment.create({
       resourceIds: data.resourceIds,
       email: data.email,
-      amount: totalPrice, // Storing normal unit
+      amount: finalAmount, // Storing normal unit (post-discount)
+      couponCode: appliedCouponCode,
+      discountAmount,
       status: 'PENDING',
       reference,
     });
@@ -134,8 +177,20 @@ export class PaymentService {
   }
 
   static async updatePaymentStatus(reference: string, status: 'SUCCESS' | 'FAILED' | 'PENDING') {
+    const existing = await Payment.findOne({ reference });
+    if (!existing) throw new AppError('Payment not found', NOT_FOUND);
+
+    const wasSuccess = existing.status === 'SUCCESS';
     const payment = await Payment.findOneAndUpdate({ reference }, { status }, { new: true });
     if (!payment) throw new AppError('Payment not found', NOT_FOUND);
+
+    // Record the coupon redemption only on the first transition to SUCCESS.
+    if (status === 'SUCCESS' && !wasSuccess && payment.couponCode) {
+      await BeauvisionCouponService.consumeCoupon(payment.couponCode).catch((e) =>
+        console.error('Failed to record coupon redemption:', e)
+      );
+    }
+
     return payment;
   }
 }
@@ -185,8 +240,9 @@ export async function handleBeauvisionWebhookService(params: {
       return { message: 'One or more resources not found in DB, ignoring.' };
     }
 
-    const totalPrice = resources.reduce((sum, res) => sum + res.price, 0);
-    const expectedAmount = Math.round(totalPrice * 100);
+    // payment.amount already reflects any coupon discount applied at init, so
+    // compare against that instead of recomputing the raw resource sum.
+    const expectedAmount = Math.round(payment.amount * 100);
     if (amountPaidInKobo < expectedAmount) {
       console.error(`[Beauvision Webhook] Partial payment received. Expected ${expectedAmount}, got ${amountPaidInKobo}`);
       await Payment.findOneAndUpdate({ reference }, { status: 'FAILED' });
@@ -206,6 +262,13 @@ export async function handleBeauvisionWebhookService(params: {
 
     // Mark successful
     await Payment.findOneAndUpdate({ reference }, { status: 'SUCCESS' });
+
+    // Record the coupon redemption now that the order is paid.
+    if (payment.couponCode) {
+      await BeauvisionCouponService.consumeCoupon(payment.couponCode).catch((e) =>
+        console.error('Failed to record coupon redemption:', e)
+      );
+    }
     
     // Send email with file
     for (const resource of resources) {

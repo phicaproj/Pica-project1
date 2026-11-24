@@ -6,28 +6,54 @@ import { CreateResourceSchema, UpdateResourceSchema } from './resource.types';
 import { uploadObject } from '../storage/beauvision.storage.service';
 import AppError from '../../service/shared/appError';
 
+// Derive a short file extension/format from the uploaded file name or mimetype.
+function deriveFileFormat(file: Express.Multer.File): string {
+  const fromName = file.originalname.split('.').pop();
+  if (fromName && fromName.toLowerCase() !== file.originalname.toLowerCase()) {
+    return fromName.toLowerCase();
+  }
+  const subtype = file.mimetype.split('/').pop();
+  return (subtype ?? 'file').toLowerCase();
+}
+
+function assertHasSource(data: {
+  fileUrl?: string;
+  videoUrl?: string;
+  youtubeUrl?: string;
+}, hasUpload: boolean) {
+  const hasLink = Boolean(data.fileUrl || data.videoUrl || data.youtubeUrl);
+  if (!hasUpload && !hasLink) {
+    throw new AppError(
+      'Provide a resource file, a video link, or a YouTube link',
+      BAD_REQUEST
+    );
+  }
+}
+
 export const createResource = catchErrors(async (req: Request, res: Response) => {
   const data = CreateResourceSchema.parse(req.body);
-  
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  
-  if (!files || !files.resourceFile || files.resourceFile.length === 0) {
-    throw new AppError('Resource file is required', BAD_REQUEST);
+
+  const files = (req.files as { [fieldname: string]: Express.Multer.File[] }) || {};
+
+  // Upload resource file (document or short video) if present.
+  const resourceFile = files.resourceFile?.[0];
+  if (resourceFile) {
+    const resourceKey = `resources/${Date.now()}-${resourceFile.originalname}`;
+    const resourceUpload = await uploadObject({
+      key: resourceKey,
+      body: resourceFile.buffer,
+      contentType: resourceFile.mimetype,
+    });
+    data.fileUrl = resourceUpload.url;
+    if (!data.fileFormat) data.fileFormat = deriveFileFormat(resourceFile);
   }
 
-  // Upload resource file
-  const resourceFile = files.resourceFile[0];
-  const resourceKey = `resources/${Date.now()}-${resourceFile.originalname}`;
-  const resourceUpload = await uploadObject({
-    key: resourceKey,
-    body: resourceFile.buffer,
-    contentType: resourceFile.mimetype,
-  });
-  data.fileUrl = resourceUpload.url;
+  // A resource must have either an uploaded file or an external link.
+  assertHasSource(data, Boolean(resourceFile));
 
   // Upload cover image (if provided)
-  if (files.coverImage && files.coverImage.length > 0) {
-    const coverFile = files.coverImage[0];
+  const coverFile = files.coverImage?.[0];
+  if (coverFile) {
     const coverKey = `resources/covers/${Date.now()}-${coverFile.originalname}`;
     const coverUpload = await uploadObject({
       key: coverKey,
@@ -35,18 +61,12 @@ export const createResource = catchErrors(async (req: Request, res: Response) =>
       contentType: coverFile.mimetype,
     });
     data.coverImageUrl = coverUpload.url;
-  } else {
-    data.coverImageUrl = ''; // Or some default
   }
 
-  // Explicit casting as strings, since they are populated now
-  const resourceData = {
-    ...data,
-    coverImageUrl: data.coverImageUrl as string,
-    fileUrl: data.fileUrl as string,
-  };
+  // Free resources are always priced at 0.
+  if (data.pricingType === 'free') data.price = 0;
 
-  const resource = await ResourceService.createResource(resourceData);
+  const resource = await ResourceService.createResource(data);
   res.status(CREATED).json({
     status: true,
     message: 'Resource created successfully',
@@ -56,7 +76,17 @@ export const createResource = catchErrors(async (req: Request, res: Response) =>
 
 export const getResources = catchErrors(async (req: Request, res: Response) => {
   const includeUnpublished = req.query.all === 'true';
-  const resources = await ResourceService.getAllResources(includeUnpublished);
+  const filter: Record<string, unknown> = {};
+
+  // Free vs paid tabs and type filtering on the public site.
+  const pricingType = req.query.pricingType as string | undefined;
+  if (pricingType === 'free' || pricingType === 'paid') {
+    filter.pricingType = pricingType;
+  }
+  const category = req.query.category as string | undefined;
+  if (category) filter.category = category;
+
+  const resources = await ResourceService.getAllResources(includeUnpublished, filter);
   res.status(OK).json({
     status: true,
     message: 'Resources retrieved successfully',
@@ -75,10 +105,10 @@ export const getResourceById = catchErrors(async (req: Request, res: Response) =
 
 export const updateResource = catchErrors(async (req: Request, res: Response) => {
   const data = UpdateResourceSchema.parse(req.body);
-  
+
   const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
-  if (files && files.resourceFile && files.resourceFile.length > 0) {
+  if (files?.resourceFile?.[0]) {
     const resourceFile = files.resourceFile[0];
     const resourceKey = `resources/${Date.now()}-${resourceFile.originalname}`;
     const resourceUpload = await uploadObject({
@@ -87,9 +117,10 @@ export const updateResource = catchErrors(async (req: Request, res: Response) =>
       contentType: resourceFile.mimetype,
     });
     data.fileUrl = resourceUpload.url;
+    if (!data.fileFormat) data.fileFormat = deriveFileFormat(resourceFile);
   }
 
-  if (files && files.coverImage && files.coverImage.length > 0) {
+  if (files?.coverImage?.[0]) {
     const coverFile = files.coverImage[0];
     const coverKey = `resources/covers/${Date.now()}-${coverFile.originalname}`;
     const coverUpload = await uploadObject({
@@ -99,6 +130,8 @@ export const updateResource = catchErrors(async (req: Request, res: Response) =>
     });
     data.coverImageUrl = coverUpload.url;
   }
+
+  if (data.pricingType === 'free') data.price = 0;
 
   const resource = await ResourceService.updateResource(req.params.id as string, data);
   res.status(OK).json({

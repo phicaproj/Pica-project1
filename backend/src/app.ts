@@ -20,6 +20,10 @@ import beauPaymentRouter from './beauvision-module/payment/payment.routes';
 import beauResourceRouter from './beauvision-module/resource/resource.routes';
 import beauBlogRouter from './beauvision-module/blog/blog.routes';
 import beauConsultationRouter from './beauvision-module/consultation/consultation.routes';
+import { couponAdminRouter as beauCouponAdminRouter, couponPublicRouter as beauCouponPublicRouter } from './beauvision-module/coupon/coupon.routes';
+import { faqAdminRouter as beauFaqAdminRouter, faqPublicRouter as beauFaqPublicRouter } from './beauvision-module/faq/faq.routes';
+import { testimonialAdminRouter as beauTestimonialAdminRouter, testimonialPublicRouter as beauTestimonialPublicRouter } from './beauvision-module/testimonial/testimonial.routes';
+import { mediaAdminRouter as beauMediaAdminRouter, mediaPublicRouter as beauMediaPublicRouter } from './beauvision-module/media/media.routes';
 
 import couponRouter from './module/coupon/coupon.routes';
 import subscriptionRouter from './module/subscription/subscription.routes';
@@ -103,6 +107,14 @@ app.use('/api/beauvision/payment', beauPaymentRouter);
 app.use('/api/beauvision/resource', beauResourceRouter);
 app.use('/api/beauvision/blog', beauBlogRouter);
 app.use('/api/beauvision/consultation', beauConsultationRouter);
+app.use('/api/beauvision/coupon', beauCouponPublicRouter);
+app.use('/api/beauvision/admin/coupons', beauCouponAdminRouter);
+app.use('/api/beauvision/faqs', beauFaqPublicRouter);
+app.use('/api/beauvision/testimonials', beauTestimonialPublicRouter);
+app.use('/api/beauvision/media', beauMediaPublicRouter);
+app.use('/api/beauvision/admin/faqs', beauFaqAdminRouter);
+app.use('/api/beauvision/admin/testimonials', beauTestimonialAdminRouter);
+app.use('/api/beauvision/admin/media', beauMediaAdminRouter);
 
 // OpenAPI / Swagger docs — built once on boot from the Zod-driven registry.
 const openApiDocument = buildOpenApiDocument();
